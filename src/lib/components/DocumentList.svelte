@@ -50,8 +50,8 @@
   }
 </script>
 
-<aside class="flex h-full w-72 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 p-2">
-  <div class="flex items-center justify-between ">
+<aside class="flex h-full w-72 flex-col gap-2 border-r border-slate-800 bg-slate-900/50">
+  <div class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
       <span class="text-sm font-semibold text-slate-200">Documents</span>
     </div>
@@ -87,9 +87,9 @@
     </div>
   </div>
 
-  <div class="relative">
+  <div class="relative px-2">
     <svg
-        class="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
         viewBox="0 0 20 20"
         fill="none"
         stroke="currentColor"
@@ -103,7 +103,7 @@
         onkeydown={handleSearchKeydown}
         aria-label="Search documents"
         placeholder="Search documents..."
-        class="w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-8 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500" />
+        class="w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-6 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500" />
     </div>
 
   <div class="flex min-h-0 flex-1 flex-col  overflow-y-auto">
