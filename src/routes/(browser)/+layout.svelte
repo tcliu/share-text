@@ -17,6 +17,7 @@
   let selectedDocumentRefreshToken = $state(0)
   let deleteTarget = $state<string | null>(null)
   let leftPaneCollapsed = $state(false)
+  let adminDialogOpen = $state(false)
 
   const selectedId = $derived($page.params.id ?? null)
 
@@ -67,6 +68,17 @@
     leftPaneCollapsed = !leftPaneCollapsed
   }
 
+  function handleAdminDelete(id: string) {
+    void documentsState.refreshList()
+    if (editorGuardState.editorGuard?.getCurrentDocumentId() === id) {
+      void goto('/')
+    }
+  }
+
+  function handleAdminChange() {
+    void documentsState.refreshList()
+  }
+
   function handleConfirmDiscard() {
     const action = editorGuardState.handleConfirmDiscard()
     if (!action) return
@@ -111,8 +123,8 @@
   {#if leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               fill-rule="evenodd"
               d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
@@ -134,6 +146,7 @@
       onRename={documentsState.commitRename}
       onLoadMore={documentsState.loadMore}
       onToggleCollapse={toggleLeftPane}
+      onOpenAdmin={() => (adminDialogOpen = true)}
       deletePending={deleteTarget !== null} />
   {/if}
   <main class="flex min-w-0 flex-1">{@render children()}</main>
@@ -161,4 +174,14 @@
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />
+{/if}
+
+{#if adminDialogOpen}
+  {#await import('$lib/components/AdminDialog.svelte') then module}
+    {@const AdminDialog = module.default}
+    <AdminDialog
+      onClose={() => (adminDialogOpen = false)}
+      onAdminDelete={handleAdminDelete}
+      onAdminChange={handleAdminChange} />
+  {/await}
 {/if}

@@ -3,6 +3,7 @@
   import type { DocumentSummary } from '$lib/documents'
   import EditableName from './EditableName.svelte'
   import Button from './Button.svelte'
+  import SearchInput from './SearchInput.svelte'
 
   interface Props {
     documents: DocumentSummary[]
@@ -16,6 +17,7 @@
     onRename: (id: string, name: string) => Promise<boolean | void>
     onLoadMore: () => void
     onToggleCollapse: () => void
+    onOpenAdmin: () => void
     deletePending: boolean
   }
 
@@ -31,6 +33,7 @@
     onRename,
     onLoadMore,
     onToggleCollapse,
+    onOpenAdmin,
     deletePending,
   }: Props = $props()
 
@@ -38,9 +41,7 @@
 
   const normalizedQuery = $derived(searchQuery.trim().toLowerCase())
   const visibleDocuments = $derived(
-    normalizedQuery
-      ? documents.filter(document => document.name.toLowerCase().includes(normalizedQuery))
-      : documents,
+    normalizedQuery ? documents.filter(document => document.name.toLowerCase().includes(normalizedQuery)) : documents,
   )
 
   let loadMoreSentinel = $state<HTMLElement | null>(null)
@@ -100,8 +101,8 @@
     </div>
     <div class="flex items-center gap-1">
       <Button size="sm" ariaLabel="Collapse document list" tooltip="Collapse document list" onClick={onToggleCollapse}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               fill-rule="evenodd"
               d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
@@ -110,8 +111,8 @@
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={onNew}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               fill-rule="evenodd"
               d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z"
@@ -120,40 +121,43 @@
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="Refresh" tooltip="Refresh" onClick={onRefresh} disabled={loading}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button size="sm" ariaLabel="Admin settings" tooltip="Admin settings" onClick={onOpenAdmin}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.993 6.993 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+              clip-rule="evenodd" />
           </svg>
         {/snippet}
       </Button>
     </div>
   </div>
 
-  <div class="relative px-2">
-    <svg
-      class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9M11.7 11.7l3.3 3.3" />
-    </svg>
-    <input
-      type="search"
-      bind:value={searchQuery}
-      onkeydown={handleSearchKeydown}
-      aria-label="Search documents"
-      placeholder="Search documents..."
-      class="w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-6 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500" />
-  </div>
+  <SearchInput
+    bind:value={searchQuery}
+    onkeydown={handleSearchKeydown}
+    ariaLabel="Search documents"
+    placeholder="Search documents..."
+    wrapperClass="px-2" />
 
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
     {#if loading && documents.length === 0}
       <p class="p-2 text-sm text-slate-500">Loading documents...</p>
     {:else if visibleDocuments.length === 0}
-      <p class="p-2 text-sm text-slate-500">{documents.length === 0 ? 'No documents yet. Use New to create one.' : 'No documents match your filter.'}</p>
+      <p class="p-2 text-sm text-slate-500">
+        {documents.length === 0 ? 'No documents yet. Use New to create one.' : 'No documents match your filter.'}
+      </p>
     {:else}
       <div class="flex flex-col">
         {#each visibleDocuments as document (document.id)}
@@ -177,8 +181,8 @@
               onClick={event => handleDeleteClick(event, document.id)}
               onKeyDown={handleDeleteKeydown}
               className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
-              {#snippet children()}
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              {#snippet icon()}
+                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                   <path
                     fill-rule="evenodd"
                     d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
