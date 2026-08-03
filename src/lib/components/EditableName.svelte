@@ -105,8 +105,8 @@
         onClick={(e) => { e.stopPropagation(); startRename() }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
         className="bg-transparent p-0 text-slate-400 hover:text-cyan-300">
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               d="M2.695 14.763l-1.262 3.154a.5.5 0 0 0 .65.65l3.155-1.262a3 3 0 0 0 1.417-.582L14.76 8.582a3 3 0 0 0-3.162-3.162l-8.003 9.343ZM15.344 3.91a3 3 0 0 0-3.647.647l-9.447 11.07a1 1 0 0 0 .21 1.534l1.262.248a1 1 0 0 0 1.09-.244l7.894-7.357a3 3 0 0 0 .73-3.773Z" />
           </svg>

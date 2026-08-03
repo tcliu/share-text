@@ -127,8 +127,8 @@
         tooltip="Copy"
         onClick={handleCopy}
         disabled={content.length === 0}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <rect x="7" y="7" width="10" height="10" rx="1.5" />
             <path d="M13 7V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
           </svg>
@@ -139,8 +139,8 @@
         ariaLabel="Upload"
         tooltip="Upload"
         onClick={handleUploadClick}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 16V7m0 0 3.5 3.5M10 7 6.5 10.5M4 4h12" />
           </svg>
         {/snippet}
@@ -151,15 +151,15 @@
         tooltip="Download"
         onClick={handleDownload}
         disabled={content.length === 0}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 16h12" />
           </svg>
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={onReset} disabled={!dirty || saving}>
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
           </svg>
@@ -173,8 +173,8 @@
         disabled={!dirty || saving}
         variant="primary"
         accent="cyan">
-        {#snippet children()}
-          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path
               d="M4 2h9l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm0 2v13h12V7.7L12.3 4H4Zm2 2v3h6V4H6v2Zm1 7h6v1H7v-1Z" />
           </svg>

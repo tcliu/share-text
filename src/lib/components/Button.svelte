@@ -55,6 +55,8 @@
     rose: 'border border-rose-500/40 bg-rose-500/10 text-rose-200 hover:border-rose-400 hover:text-rose-100',
   }
 
+  const iconSizeClass = $derived(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
+
   const baseClass = $derived.by(() => {
     const common = `${size === 'sm' ? 'inline-flex h-8 w-8 items-center justify-center rounded-md' : 'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold'} transition disabled:cursor-not-allowed disabled:opacity-40`
     if (variant === 'primary') {
@@ -80,12 +82,12 @@
   {#if pending}
     <span class="inline-flex items-center gap-2">
       <Spinner className="h-4 w-4" />
-      {#if icon}{@render icon()}{/if}
+      {#if icon}<span class={`${iconSizeClass} [&_svg]:h-full [&_svg]:w-full`}>{@render icon()}</span>{/if}
       {@render children?.()}
     </span>
   {:else if icon}
     <span class="inline-flex items-center gap-2">
-      {@render icon()}
+      <span class={`${iconSizeClass} [&_svg]:h-full [&_svg]:w-full`}>{@render icon()}</span>
       {@render children?.()}
     </span>
   {:else}
