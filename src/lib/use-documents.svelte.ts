@@ -1,0 +1,111 @@
+import { toast } from 'svelte-sonner'
+import { goto } from '$app/navigation'
+import type { DocumentSummary } from '$lib/documents'
+import { createDocument, deleteDocument, fetchDocumentSummaries, updateDocument } from '$lib/documents'
+import { clearDraft } from '$lib/document-drafts'
+
+export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
+
+export interface UseDocumentsOptions {
+  onDocumentDeleted?: (id: string) => void
+  pageSize?: number
+}
+
+export function useDocuments(options: UseDocumentsOptions = {}) {
+  const pageSize = options.pageSize ?? DEFAULT_DOCUMENTS_PAGE_SIZE
+
+  let documents = $state<DocumentSummary[]>([])
+  let loadingDocuments = $state(false)
+  let documentsError = $state<string | null>(null)
+  let hasMore = $state(false)
+
+  async function refreshList() {
+    loadingDocuments = true
+    documentsError = null
+    try {
+      const response = await fetchDocumentSummaries(pageSize, 0)
+      documents = response.documents
+      hasMore = response.hasMore
+    } catch (error) {
+      documentsError = error instanceof Error ? error.message : 'Failed to load documents'
+    } finally {
+      loadingDocuments = false
+    }
+  }
+
+  async function loadMore() {
+    if (!hasMore || loadingDocuments) return
+
+    loadingDocuments = true
+    documentsError = null
+    try {
+      const response = await fetchDocumentSummaries(pageSize, documents.length)
+      documents = [...documents, ...response.documents]
+      hasMore = response.hasMore
+    } catch (error) {
+      documentsError = error instanceof Error ? error.message : 'Failed to load documents'
+    } finally {
+      loadingDocuments = false
+    }
+  }
+
+  async function performCreate() {
+    try {
+      const document = await createDocument()
+      await refreshList()
+      await goto(`/${document.id}`)
+      return document
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create document')
+      return null
+    }
+  }
+
+  async function performDelete(id: string) {
+    try {
+      await deleteDocument(id)
+      clearDraft(id)
+      toast.success('Document deleted')
+      await refreshList()
+      options.onDocumentDeleted?.(id)
+      return true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete document')
+      return false
+    }
+  }
+
+  async function commitRename(id: string, name: string) {
+    try {
+      const updated = await updateDocument(id, { name })
+      documents = documents.map(document =>
+        document.id === id ? { id: document.id, name: updated.name, updatedAt: updated.updatedAt } : document,
+      )
+      toast.success('Document renamed')
+      return true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+      return false
+    }
+  }
+
+  return {
+    get documents() {
+      return documents
+    },
+    get loadingDocuments() {
+      return loadingDocuments
+    },
+    get documentsError() {
+      return documentsError
+    },
+    get hasMore() {
+      return hasMore
+    },
+    refreshList,
+    loadMore,
+    performCreate,
+    performDelete,
+    commitRename,
+  }
+}
