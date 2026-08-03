@@ -103,7 +103,7 @@
   })
 
   $effect(() => {
-    documentsState.refreshList()
+    void documentsState.refreshList()
   })
 </script>
 
