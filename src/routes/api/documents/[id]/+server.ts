@@ -10,9 +10,10 @@ import {
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
+import { getDocumentKeyLength, getMaxContentLength } from '$lib/server/settings'
 
-function parseDocumentId(value: string | undefined) {
-  if (!value || !isDocumentKey(value)) {
+async function parseDocumentId(value: string | undefined) {
+  if (!value || !isDocumentKey(value, await getDocumentKeyLength())) {
     return null
   }
   return value
@@ -23,7 +24,7 @@ function isBodyRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export const GET: RequestHandler = async ({ params }) => {
-  const id = parseDocumentId(params.id)
+  const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -37,7 +38,7 @@ export const GET: RequestHandler = async ({ params }) => {
 }
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
-  const id = parseDocumentId(params.id)
+  const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -69,7 +70,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
 
   if (content !== undefined) {
     try {
-      assertContentWithinLimit(content)
+      assertContentWithinLimit(content, await getMaxContentLength())
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
     }
@@ -92,7 +93,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
 }
 
 export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
-  const id = parseDocumentId(params.id)
+  const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

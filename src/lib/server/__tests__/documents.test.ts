@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEFAULT_DOCUMENT_NAME,
   KEY_LENGTH,
   MAX_CONTENT_BYTES,
   MAX_NAME_LENGTH,
@@ -8,17 +7,22 @@ import {
   contentByteSize,
   generateDocumentKey,
   isDocumentKey,
-  nextDefaultDocumentName,
+  isUniqueKeyViolation,
   normalizeName,
   toDocument,
   toDocumentSummary,
 } from '$lib/server/documents'
 
 describe('isDocumentKey', () => {
-  it('accepts six lowercase alphanumeric characters', () => {
+  it('accepts six lowercase alphanumeric characters by default', () => {
     expect(isDocumentKey('a1b2c3')).toBe(true)
     expect(isDocumentKey('000000')).toBe(true)
     expect(isDocumentKey('zzz999')).toBe(true)
+  })
+
+  it('accepts keys of a custom length', () => {
+    expect(isDocumentKey('a1b2c3d4', 8)).toBe(true)
+    expect(isDocumentKey('z0z0z0z0z0', 10)).toBe(true)
   })
 
   it('rejects malformed values', () => {
@@ -27,11 +31,13 @@ describe('isDocumentKey', () => {
     expect(isDocumentKey('abcdefg')).toBe(false)
     expect(isDocumentKey('ABC123')).toBe(false)
     expect(isDocumentKey('abc-def')).toBe(false)
+    expect(isDocumentKey('a1b2c3', 8)).toBe(false)
+    expect(isDocumentKey('a1b2c3d4', 6)).toBe(false)
   })
 })
 
 describe('generateDocumentKey', () => {
-  it('produces keys of the expected length from the allowed charset', () => {
+  it('produces keys of the default length from the allowed charset', () => {
     for (let i = 0; i < 100; i++) {
       const key = generateDocumentKey()
       expect(key).toHaveLength(KEY_LENGTH)
@@ -39,9 +45,41 @@ describe('generateDocumentKey', () => {
     }
   })
 
+  it('produces keys of a custom length', () => {
+    for (let i = 0; i < 100; i++) {
+      const key = generateDocumentKey(10)
+      expect(key).toHaveLength(10)
+      expect(isDocumentKey(key, 10)).toBe(true)
+    }
+  })
+
   it('produces unique keys', () => {
     const seen = new Set(Array.from({ length: 1000 }, generateDocumentKey))
     expect(seen.size).toBe(1000)
+  })
+})
+
+describe('isUniqueKeyViolation', () => {
+  it('detects a Postgres unique_violation', () => {
+    const error = new Error('duplicate key value violates unique constraint "documents_key_key"')
+    ;(error as Error & { code?: string }).code = '23505'
+    expect(isUniqueKeyViolation(error)).toBe(true)
+  })
+
+  it('detects a SQLite unique constraint failure', () => {
+    const error = new Error('UNIQUE constraint failed: documents.key')
+    ;(error as Error & { errcode?: number }).errcode = 2067
+    expect(isUniqueKeyViolation(error)).toBe(true)
+  })
+
+  it('falls back to the message for unique constraint failures', () => {
+    expect(isUniqueKeyViolation(new Error('UNIQUE constraint failed: documents.key'))).toBe(true)
+  })
+
+  it('rejects unrelated errors', () => {
+    expect(isUniqueKeyViolation(new Error('connection refused'))).toBe(false)
+    expect(isUniqueKeyViolation('not an error')).toBe(false)
+    expect(isUniqueKeyViolation(null)).toBe(false)
   })
 })
 
@@ -64,33 +102,6 @@ describe('normalizeName', () => {
   })
 })
 
-describe('nextDefaultDocumentName', () => {
-  it('uses the default name when it is available', () => {
-    expect(nextDefaultDocumentName([])).toBe(DEFAULT_DOCUMENT_NAME)
-    expect(nextDefaultDocumentName(['Notes', 'Todo'])).toBe(DEFAULT_DOCUMENT_NAME)
-  })
-
-  it('appends an index starting at 1 when the default name is taken', () => {
-    expect(nextDefaultDocumentName([DEFAULT_DOCUMENT_NAME])).toBe(`${DEFAULT_DOCUMENT_NAME} 1`)
-    expect(nextDefaultDocumentName([DEFAULT_DOCUMENT_NAME, `${DEFAULT_DOCUMENT_NAME} 1`])).toBe(
-      `${DEFAULT_DOCUMENT_NAME} 2`,
-    )
-  })
-
-  it('fills the first available index, reusing gaps', () => {
-    expect(nextDefaultDocumentName([DEFAULT_DOCUMENT_NAME, `${DEFAULT_DOCUMENT_NAME} 2`])).toBe(
-      `${DEFAULT_DOCUMENT_NAME} 1`,
-    )
-    expect(nextDefaultDocumentName([DEFAULT_DOCUMENT_NAME, `${DEFAULT_DOCUMENT_NAME} 1`, `${DEFAULT_DOCUMENT_NAME} 2`])).toBe(
-      `${DEFAULT_DOCUMENT_NAME} 3`,
-    )
-  })
-
-  it('ignores unrelated indexed names', () => {
-    expect(nextDefaultDocumentName([DEFAULT_DOCUMENT_NAME, 'Untitled Copy 1'])).toBe(`${DEFAULT_DOCUMENT_NAME} 1`)
-  })
-})
-
 describe('contentByteSize', () => {
   it('counts UTF-8 bytes', () => {
     expect(contentByteSize('hello')).toBe(5)
@@ -100,11 +111,17 @@ describe('contentByteSize', () => {
 
 describe('assertContentWithinLimit', () => {
   it('accepts content within the limit', () => {
-    expect(() => assertContentWithinLimit('x'.repeat(MAX_CONTENT_BYTES - 1))).not.toThrow()
+    expect(() => assertContentWithinLimit('x'.repeat(MAX_CONTENT_BYTES - 1), MAX_CONTENT_BYTES)).not.toThrow()
   })
 
-  it('rejects content over the limit', () => {
-    expect(() => assertContentWithinLimit('x'.repeat(MAX_CONTENT_BYTES + 1))).toThrow('1 MB limit')
+  it('rejects content over the 1 MB byte limit', () => {
+    expect(() => assertContentWithinLimit('x'.repeat(MAX_CONTENT_BYTES + 1), MAX_CONTENT_BYTES + 1000)).toThrow(
+      '1 MB limit',
+    )
+  })
+
+  it('rejects content over the character limit', () => {
+    expect(() => assertContentWithinLimit('x'.repeat(100), 50)).toThrow('50-character limit')
   })
 })
 

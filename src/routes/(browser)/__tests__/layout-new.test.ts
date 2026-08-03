@@ -9,7 +9,7 @@ import { setPage } from '../../../test/mocks/app-stores'
 const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
 const newDoc = {
   id: 'newdoc',
-  name: 'Untitled',
+  name: 'newdoc',
   updatedAt: '2026-08-03T00:00:00.000Z',
   updatedBy: '203.0.113.7',
   content: '',
@@ -53,7 +53,7 @@ describe('New document flow', () => {
     expect(goto).toHaveBeenCalledWith('/newdoc')
 
     await waitFor(() => {
-      expect(queryByText('Untitled')).toBeTruthy()
+      expect(queryByText('newdoc')).toBeTruthy()
     })
   })
 
@@ -70,7 +70,7 @@ describe('New document flow', () => {
 
     await waitFor(() => {
       expect(queryByText('Existing')).toBeTruthy()
-      expect(queryByText('Untitled')).toBeTruthy()
+      expect(queryByText('newdoc')).toBeTruthy()
     })
   })
 })

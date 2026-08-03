@@ -6,39 +6,14 @@ import {
   DocumentLimitError,
   fetchDocumentSummaries,
   insertDocument,
-  nextDefaultDocumentName,
   normalizeName,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
+import { parseNonNegativeInt, parsePositiveInt } from '$lib/server/parse-query'
+import { getMaxContentLength } from '$lib/server/settings'
 
 function isBodyRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function parsePositiveInt(value: string | null) {
-  if (value === null) {
-    return null
-  }
-
-  if (!/^\d+$/.test(value)) {
-    return null
-  }
-
-  const parsed = Number.parseInt(value, 10)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
-}
-
-function parseNonNegativeInt(value: string | null) {
-  if (value === null) {
-    return 0
-  }
-
-  if (!/^\d+$/.test(value)) {
-    return null
-  }
-
-  const parsed = Number.parseInt(value, 10)
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
 }
 
 export const GET: RequestHandler = async ({ url, getClientAddress }) => {
@@ -75,15 +50,12 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   const rawContent = typeof body.content === 'string' ? body.content : ''
   const ip = getClientAddress()
 
-  let name: string
+  let name: string | undefined
   try {
     if (rawName) {
       name = normalizeName(rawName)
-    } else {
-      const summaries = await fetchDocumentSummaries({ by: ip })
-      name = nextDefaultDocumentName(summaries.map(summary => summary.name))
     }
-    assertContentWithinLimit(rawContent)
+    assertContentWithinLimit(rawContent, await getMaxContentLength())
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
   }
@@ -107,7 +79,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
       logEvent({
         ip,
         action: 'document_limit',
-        details: { name, level: 'WARN' },
+        details: { name: name ?? null, level: 'WARN' },
       })
       return json({ error: error.message }, { status: 403 })
     }

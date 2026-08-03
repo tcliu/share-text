@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const documentsMocks = vi.hoisted(() => ({
   fetchDocumentSummaries: vi.fn(),
   insertDocument: vi.fn(),
-  nextDefaultDocumentName: vi.fn(),
 }))
 
 vi.mock('$lib/server/documents', async () => {
@@ -12,7 +11,18 @@ vi.mock('$lib/server/documents', async () => {
     ...actual,
     fetchDocumentSummaries: documentsMocks.fetchDocumentSummaries,
     insertDocument: documentsMocks.insertDocument,
-    nextDefaultDocumentName: documentsMocks.nextDefaultDocumentName,
+  }
+})
+
+const settingsMocks = vi.hoisted(() => ({
+  getMaxContentLength: vi.fn(),
+}))
+
+vi.mock('$lib/server/settings', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/settings')>('$lib/server/settings')
+  return {
+    ...actual,
+    getMaxContentLength: settingsMocks.getMaxContentLength,
   }
 })
 
@@ -61,11 +71,10 @@ describe('GET /api/documents', () => {
 describe('POST /api/documents', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    documentsMocks.fetchDocumentSummaries.mockResolvedValue([])
-    documentsMocks.nextDefaultDocumentName.mockReturnValue('Untitled')
+    settingsMocks.getMaxContentLength.mockResolvedValue(1024 * 1024)
     documentsMocks.insertDocument.mockResolvedValue({
       id: 'a1b2c3',
-      name: 'Untitled',
+      name: 'a1b2c3',
       content: '',
       updatedAt: '2026-08-03T00:00:00.000Z',
       updatedBy: '127.0.0.1',
@@ -98,5 +107,50 @@ describe('POST /api/documents', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Unsupported fields in request body' })
+  })
+
+  it('creates a document without a name so the generated key becomes its name', async () => {
+    const response = await POST({
+      request: new Request('http://localhost/api/documents', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+      getClientAddress: () => '127.0.0.1',
+    } as never)
+
+    expect(response.status).toBe(201)
+    expect(documentsMocks.insertDocument).toHaveBeenCalledWith({
+      name: undefined,
+      content: '',
+      by: '127.0.0.1',
+    })
+    await expect(response.json()).resolves.toEqual({
+      document: {
+        id: 'a1b2c3',
+        name: 'a1b2c3',
+        content: '',
+        updatedAt: '2026-08-03T00:00:00.000Z',
+        updatedBy: '127.0.0.1',
+      },
+    })
+  })
+
+  it('normalizes and passes an explicit name', async () => {
+    const response = await POST({
+      request: new Request('http://localhost/api/documents', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: '  Meeting notes  ' }),
+      }),
+      getClientAddress: () => '127.0.0.1',
+    } as never)
+
+    expect(response.status).toBe(201)
+    expect(documentsMocks.insertDocument).toHaveBeenCalledWith({
+      name: 'Meeting notes',
+      content: '',
+      by: '127.0.0.1',
+    })
   })
 })

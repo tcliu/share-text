@@ -1,34 +1,15 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
+import { logEvent } from './logging'
+import { getDocumentKeyLength, getMaxDocumentsPerUser } from './settings'
 
-export const DEFAULT_DOCUMENT_NAME = 'Untitled'
 export const MAX_NAME_LENGTH = 200
 export const MAX_CONTENT_BYTES = 1024 * 1024
 export const KEY_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 export const KEY_LENGTH = 6
+export const MAX_KEY_ATTEMPTS = 5
 
 export class DocumentLimitError extends Error {}
-
-export const MAX_DOCUMENTS_PER_USER = readMaxDocumentsPerUser()
-export const MAX_CONTENT_LENGTH = readMaxContentLength()
-
-function readMaxDocumentsPerUser() {
-  const raw = process.env.MAX_DOCUMENTS_PER_IP?.trim()
-  if (!raw) {
-    return 10
-  }
-  const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : 10
-}
-
-function readMaxContentLength() {
-  const raw = process.env.MAX_CONTENT_LENGTH?.trim()
-  if (!raw) {
-    return MAX_CONTENT_BYTES
-  }
-  const value = Number(raw)
-  return Number.isInteger(value) && value > 0 ? value : MAX_CONTENT_BYTES
-}
 
 export interface DocumentSummary {
   id: string
@@ -50,12 +31,12 @@ interface DocumentRow {
   updated_at: Date | string
 }
 
-export function generateDocumentKey() {
+export function generateDocumentKey(length = KEY_LENGTH) {
   const chars: string[] = []
-  const byteLength = Math.ceil((KEY_LENGTH * 256) / KEY_CHARS.length)
+  const byteLength = Math.ceil((length * 256) / KEY_CHARS.length)
   const bytes = randomBytes(byteLength)
   let offset = 0
-  for (let i = 0; i < KEY_LENGTH; i++) {
+  for (let i = 0; i < length; i++) {
     let random = bytes[offset++]
     // Rejection sampling keeps each position uniform despite char count not
     // dividing 256.
@@ -67,8 +48,30 @@ export function generateDocumentKey() {
   return chars.join('')
 }
 
-export function isDocumentKey(value: string) {
-  return /^[0-9a-z]{6}$/.test(value)
+const documentKeyRegexCache = new Map<number, RegExp>()
+
+export function isDocumentKey(value: string, length = KEY_LENGTH) {
+  let regex = documentKeyRegexCache.get(length)
+  if (!regex) {
+    regex = new RegExp(`^[0-9a-z]{${length}}$`)
+    documentKeyRegexCache.set(length, regex)
+  }
+  return regex.test(value)
+}
+
+export function isUniqueKeyViolation(error: unknown) {
+  if (!(error instanceof Error)) {
+    return false
+  }
+  const code = (error as Error & { code?: unknown }).code
+  if (code === '23505') {
+    return true
+  }
+  const errcode = (error as Error & { errcode?: unknown }).errcode
+  if (errcode === 2067) {
+    return true
+  }
+  return error.message.includes('UNIQUE constraint failed')
 }
 
 export function normalizeName(value: string) {
@@ -82,28 +85,16 @@ export function normalizeName(value: string) {
   return name
 }
 
-export function nextDefaultDocumentName(existingNames: string[]) {
-  const used = new Set(existingNames)
-  if (!used.has(DEFAULT_DOCUMENT_NAME)) {
-    return DEFAULT_DOCUMENT_NAME
-  }
-  let index = 1
-  while (used.has(`${DEFAULT_DOCUMENT_NAME} ${index}`)) {
-    index += 1
-  }
-  return `${DEFAULT_DOCUMENT_NAME} ${index}`
-}
-
 export function contentByteSize(content: string) {
   return Buffer.byteLength(content, 'utf8')
 }
 
-export function assertContentWithinLimit(content: string) {
+export function assertContentWithinLimit(content: string, maxContentLength: number) {
   if (contentByteSize(content) > MAX_CONTENT_BYTES) {
     throw new Error('content exceeds the 1 MB limit')
   }
-  if (content.length > MAX_CONTENT_LENGTH) {
-    throw new Error(`content exceeds the ${MAX_CONTENT_LENGTH}-character limit`)
+  if (content.length > maxContentLength) {
+    throw new Error(`content exceeds the ${maxContentLength}-character limit`)
   }
 }
 
@@ -176,9 +167,10 @@ export async function countDocumentsByCreator(by: string) {
 }
 
 export async function assertWithinDocumentLimit(by: string) {
-  if (await countDocumentsByCreator(by) >= MAX_DOCUMENTS_PER_USER) {
+  const maxDocuments = await getMaxDocumentsPerUser()
+  if (await countDocumentsByCreator(by) >= maxDocuments) {
     throw new DocumentLimitError(
-      `Each IP can create at most ${MAX_DOCUMENTS_PER_USER} documents`,
+      `Each IP can create at most ${maxDocuments} documents`,
     )
   }
 }
@@ -191,16 +183,128 @@ export async function fetchDocument(id: string) {
   return row ? toDocument(row) : null
 }
 
-export async function insertDocument(options: { name: string; content: string; by: string }) {
-  await assertWithinDocumentLimit(options.by)
-  const key = generateDocumentKey()
-  const result = await runQuery<DocumentRow>(
-    `insert into documents (key, name, content, created_by, updated_by, created_at, updated_at)
-     values ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
-     returning id, key, name, content, updated_by, updated_at`,
-    [key, options.name, options.content, options.by, options.by],
+export interface AdminDocumentSummary {
+  id: string
+  name: string
+  createdBy: string
+  updatedBy: string
+  createdAt: string
+  updatedAt: string
+  contentSize: number
+}
+
+export interface AdminDocument extends AdminDocumentSummary {
+  content: string
+}
+
+interface AdminDocumentRow {
+  key: string
+  name: string
+  created_by: string
+  updated_by: string
+  created_at: Date | string
+  updated_at: Date | string
+  content_size: number | string
+}
+
+interface AdminDocumentDetailRow extends AdminDocumentRow {
+  content: string
+}
+
+function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
+  return {
+    id: row.key,
+    name: row.name,
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+    createdAt: toIsoString(row.created_at),
+    updatedAt: toIsoString(row.updated_at),
+    contentSize: Number(row.content_size ?? 0),
+  }
+}
+
+export interface ListDocumentsForAdminOptions {
+  search?: string
+  by?: string
+  limit?: number
+  offset?: number
+}
+
+export async function listDocumentsForAdmin(options: ListDocumentsForAdminOptions = {}) {
+  const { search, by, limit, offset = 0 } = options
+  const conditions: string[] = []
+  const params: unknown[] = []
+  let index = 1
+
+  if (search) {
+    conditions.push(`lower(name) like $${index}`)
+    params.push(`%${search.toLowerCase()}%`)
+    index += 1
+  }
+  if (by) {
+    conditions.push(`created_by = $${index}`)
+    params.push(by)
+    index += 1
+  }
+
+  const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
+
+  const countResult = await runQuery<{ count: number | string }>(
+    `select count(*) as count from documents${whereClause}`,
+    params,
   )
-  return toDocument(result.rows[0])
+  const total = Number(countResult.rows[0]?.count ?? 0)
+
+  let sql = `select key, name, created_by, updated_by, created_at, updated_at, length(content) as content_size
+    from documents${whereClause} order by updated_at desc`
+  const listParams = [...params]
+  if (limit !== undefined) {
+    sql += ` limit $${index}`
+    listParams.push(limit)
+    index += 1
+    sql += ` offset $${index}`
+    listParams.push(offset)
+  }
+
+  const result = await runQuery<AdminDocumentRow>(sql, listParams)
+  return { documents: result.rows.map(toAdminDocumentSummary), total }
+}
+
+export async function fetchDocumentForAdmin(id: string) {
+  const result = await runQuery<AdminDocumentDetailRow>(
+    `select key, name, content, created_by, updated_by, created_at, updated_at, length(content) as content_size
+     from documents where key = $1`,
+    [id],
+  )
+  const row = result.rows[0]
+  return row ? { ...toAdminDocumentSummary(row), content: row.content } : null
+}
+
+export async function insertDocument(options: { name?: string; content: string; by: string }) {
+  await assertWithinDocumentLimit(options.by)
+  const keyLength = await getDocumentKeyLength()
+  for (let attempt = 1; ; attempt++) {
+    const key = generateDocumentKey(keyLength)
+    const name = options.name ?? key
+    try {
+      const result = await runQuery<DocumentRow>(
+        `insert into documents (key, name, content, created_by, updated_by, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
+         returning id, key, name, content, updated_by, updated_at`,
+        [key, name, options.content, options.by, options.by],
+      )
+      return toDocument(result.rows[0])
+    } catch (error) {
+      if (!isUniqueKeyViolation(error) || attempt >= MAX_KEY_ATTEMPTS) {
+        throw error
+      }
+      logEvent({
+        ip: options.by,
+        action: 'document_key_collision',
+        details: { key, attempt, level: 'WARN' },
+      })
+    }
+  }
 }
 
 export async function updateDocument(id: string, options: { name?: string; content?: string; by: string }) {

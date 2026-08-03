@@ -8,11 +8,13 @@ import {
   deleteDocument,
   DocumentLimitError,
   fetchDocument,
+  fetchDocumentForAdmin,
   fetchDocumentSummaries,
   insertDocument,
-  MAX_DOCUMENTS_PER_USER,
+  listDocumentsForAdmin,
   updateDocument,
 } from '$lib/server/documents'
+import { getMaxDocumentsPerUser, setSettingValue } from '$lib/server/settings'
 
 beforeEach(async () => {
   const db = await getDb()
@@ -34,6 +36,25 @@ describe('documents against the SQLite backend (dev profile)', () => {
 
   it('returns null when fetching an unknown id', async () => {
     expect(await fetchDocument('zzzzzz')).toBeNull()
+  })
+
+  it('uses the generated key as the name when no name is provided', async () => {
+    const created = await insertDocument({ content: '', by: '127.0.0.1' })
+
+    expect(created.id).toMatch(/^[0-9a-z]{6}$/)
+    expect(created.name).toBe(created.id)
+  })
+
+  it('respects a custom document_key_length setting', async () => {
+    await setSettingValue('document_key_length', 8)
+    try {
+      const created = await insertDocument({ content: '', by: '10.0.0.77' })
+
+      expect(created.id).toMatch(/^[0-9a-z]{8}$/)
+      expect(created.name).toBe(created.id)
+    } finally {
+      await setSettingValue('document_key_length', 6)
+    }
   })
 
   it('lists summaries ordered by most recently updated', async () => {
@@ -94,7 +115,8 @@ describe('documents against the SQLite backend (dev profile)', () => {
   })
 
   it('caps how many documents one IP can create', async () => {
-    for (let i = 0; i < MAX_DOCUMENTS_PER_USER; i++) {
+    const maxDocuments = await getMaxDocumentsPerUser()
+    for (let i = 0; i < maxDocuments; i++) {
       await insertDocument({ name: `doc ${i}`, content: '', by: '10.0.0.99' })
     }
 
@@ -104,5 +126,45 @@ describe('documents against the SQLite backend (dev profile)', () => {
 
     const other = await insertDocument({ name: 'other ip', content: '', by: '10.0.0.98' })
     expect(other.id).toMatch(/^[0-9a-z]{6}$/)
+  })
+
+  it('applies a runtime max_documents_per_ip setting', async () => {
+    await setSettingValue('max_documents_per_ip', 1)
+    try {
+      await insertDocument({ name: 'only', content: '', by: '10.0.0.50' })
+      await expect(
+        insertDocument({ name: 'over limit', content: '', by: '10.0.0.50' }),
+      ).rejects.toBeInstanceOf(DocumentLimitError)
+    } finally {
+      await setSettingValue('max_documents_per_ip', 10)
+    }
+  })
+
+  it('lists documents for admin with search, creator filter, and metadata', async () => {
+    const created = await insertDocument({ name: 'Alpha notes', content: 'hello', by: '10.0.0.7' })
+    await insertDocument({ name: 'Beta doc', content: '', by: '10.0.0.8' })
+
+    const all = await listDocumentsForAdmin()
+    expect(all.total).toBe(2)
+    expect(all.documents.map(document => document.name).sort()).toEqual(['Alpha notes', 'Beta doc'])
+    expect(all.documents.find(document => document.name === 'Alpha notes')).toEqual(
+      expect.objectContaining({
+        id: created.id,
+        name: 'Alpha notes',
+        createdBy: '10.0.0.7',
+        contentSize: 5,
+      }),
+    )
+
+    const searched = await listDocumentsForAdmin({ search: 'alpha' })
+    expect(searched.total).toBe(1)
+    expect(searched.documents[0].name).toBe('Alpha notes')
+
+    const byCreator = await listDocumentsForAdmin({ by: '10.0.0.8' })
+    expect(byCreator.total).toBe(1)
+    expect(byCreator.documents[0].name).toBe('Beta doc')
+
+    const adminDoc = await fetchDocumentForAdmin(created.id)
+    expect(adminDoc).toEqual(expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7' }))
   })
 })

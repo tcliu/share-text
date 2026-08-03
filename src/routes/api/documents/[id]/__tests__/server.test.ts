@@ -12,11 +12,27 @@ vi.mock('$lib/server/documents', async () => {
   }
 })
 
+const settingsMocks = vi.hoisted(() => ({
+  getDocumentKeyLength: vi.fn(),
+  getMaxContentLength: vi.fn(),
+}))
+
+vi.mock('$lib/server/settings', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/settings')>('$lib/server/settings')
+  return {
+    ...actual,
+    getDocumentKeyLength: settingsMocks.getDocumentKeyLength,
+    getMaxContentLength: settingsMocks.getMaxContentLength,
+  }
+})
+
 import { PUT } from '../+server'
 
 describe('PUT /api/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
+    settingsMocks.getMaxContentLength.mockResolvedValue(1024 * 1024)
   })
 
   it('rejects non-object JSON payloads', async () => {
