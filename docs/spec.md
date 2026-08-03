@@ -12,7 +12,8 @@ synchronizes through a small fetch-based JSON API.
 
 - `/` — empty-state page prompting the user to select or create a document.
 - `/{doc-id}` — the editor. `[id]/+page.server.ts` validates the id against the
-  six-character `^[0-9a-z]{6}$` key format and throws a 404 when invalid or when
+  configured `^[0-9a-z]{n}$` key format (length `n` from
+  `document_key_length`, default 6) and throws a 404 when invalid or when
   the document does not exist; the page component renders server data, then
   re-fetches the document client-side on refresh.
 - `/api/documents` — `GET` returns summaries of the documents created by the
@@ -21,6 +22,17 @@ synchronizes through a small fetch-based JSON API.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, or both and returns the updated document; `DELETE` removes it
   (204). Validation failures return 400, unknown ids 404.
+- `/api/admin/login` — `POST` verifies admin credentials, sets an HTTP-only
+  signed session cookie, and is rate-limited per IP. `/api/admin/logout`
+  clears the cookie. `/api/admin/session` reports whether admin is configured
+  and whether the caller is authenticated.
+- `/api/admin/settings` — `GET` returns resolved application properties with
+  their source; `PUT` accepts `{ settings: [{ key, value }] }` and updates or,
+  when `value` is `null`, deletes the override (reverting to env/default).
+- `/api/admin/documents` — `GET` lists every document across all IPs with
+  search (`search`), creator filter (`by`), and pagination.
+- `/api/admin/documents/[id]` — `GET` returns one document with metadata;
+  `PUT` renames it; `DELETE` removes it.
 
 ## Data Layer
 
@@ -35,19 +47,41 @@ synchronizes through a small fetch-based JSON API.
   - `db-pg.ts` uses a `pg` connection `Pool` configured from `DATABASE_URL`.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
   public `key`, `name`, `content`, `created_by`/`updated_by` IPs,
-  `created_at`/`updated_at`) and the `idx_documents_updated_at` index.
-- Document keys are six characters from `0-9a-z` generated with rejection
-  sampling over `crypto` random bytes.
+  `created_at`/`updated_at`), the `idx_documents_updated_at` index, and the
+  `app_config` key/value table that stores runtime property overrides.
+- Document keys are `document_key_length` characters (default 6) from `0-9a-z`
+  generated with rejection sampling over `crypto` random bytes; insert retries
+  on unique-key collisions up to `MAX_KEY_ATTEMPTS` times. A document created
+  without a name is named after its generated key.
+
+## Admin
+
+- `src/lib/server/admin-auth.ts` hashes admin passwords with scrypt
+  (`ADMIN_PASSWORD_HASH`, or `ADMIN_PASSWORD` for dev), issues HMAC-signed
+  session tokens (`SESSION_SECRET`), verifies the session cookie, and rate
+  limits failed logins in memory per IP.
+- `src/hooks.server.ts` guards every `/api/admin/*` route except `login` and
+  `session`, returning 401 for requests without a valid session cookie.
+- `src/lib/server/settings.ts` defines the runtime-adjustable properties and
+  resolves them with precedence database override > environment > default,
+  cached in memory for a short TTL and invalidated on write.
+- `src/lib/admin.ts` is the fetch-based admin API client; `AdminDialog.svelte`
+  (opened from the gear icon in the left-pane header) provides sign-in plus the
+  Properties and Documents tabs.
+- Admin mutations are logged (`admin_login`, `admin_login_failed`,
+  `admin_logout`, `admin_setting_update`, `admin_setting_reset`,
+  `admin_document_rename`, `admin_document_delete`).
 
 ## Limits
 
 - `MAX_DOCUMENTS_PER_IP` (default 10) caps how many documents a single client IP
-  can create (`created_by`); exceeding it returns 403.
-- Content is capped at a hard 1 MB byte limit plus `MAX_CONTENT_LENGTH` (default
-  1048576) characters; both are enforced on create and update. Names are
+  can create (`created_by`); exceeding it returns 403. It, the content limit,
+  and `DOCUMENT_KEY_LENGTH` (default 6, the generated id character count) are
+  resolved at request time from `app_config` overrides or env.
+- Content is capped at a hard 1 MiB byte limit plus `MAX_CONTENT_LENGTH` (default
+  1048576) characters; both are enforced on create and update.
+- Default names are the document's own generated key. Names are
   trimmed, required, and limited to 200 characters.
-- Default names (`Untitled`, `Untitled 2`, ...) are computed server-side against
-  the existing names.
 
 ## Client State
 

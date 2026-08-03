@@ -120,6 +120,33 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   so the search box and editor reflect changes made by other users. Documents
   removed by others disappear from the list automatically.
 
+## Admin Dialog
+
+- A gear icon in the left-pane header opens the **Admin** dialog.
+- Unauthenticated visitors see a sign-in form. If no admin password source is
+  configured, the dialog reports that admin is disabled instead.
+- Successful sign-in sets an HTTP-only, `SameSite=strict` signed session cookie
+  (24h TTL). Failed sign-ins are rate-limited per IP (5 per 15 minutes). All
+  `/api/admin/*` routes except `login` and `session` require a valid session.
+- The dialog has two tabs:
+  - **Properties** — application properties (`max_documents_per_ip`,
+    `max_content_length`). Each row shows its effective value and source
+    (`Saved`/`Environment`/`Default`), an inline editor, and a revert button
+    that deletes the database override. **Apply** persists changes, **Reload**
+    re-fetches, **Reset** restores the draft to the current values.
+  - **Documents** — every document across all IPs with search, pagination,
+    read-only content view, inline rename, and delete (behind a confirm dialog).
+- Editing a property or deleting/renaming a document triggers a refresh of the
+  normal left-pane list; deleting the currently open document navigates to `/`.
+
+### Runtime properties
+
+- `.env*` values are boot-time defaults; the `app_config` table holds runtime
+  overrides. Resolution precedence is database > environment > default.
+- Overrides are cached in memory for a short TTL and invalidated on write, so
+  document create/save paths do not hit the database on every request while
+  admin edits take effect immediately.
+
 ### Concurrency tradeoff
 
 Writes are last-write-wins. If two users edit the same document concurrently,

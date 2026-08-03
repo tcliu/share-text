@@ -59,6 +59,10 @@ Keys:
 | `SQLITE_PATH` | Dev SQLite file (default `.data/share-text-dev.sqlite`) |
 | `MAX_DOCUMENTS_PER_IP` | Max documents a single client IP can create (default 10) |
 | `MAX_CONTENT_LENGTH` | Max document content length in chars (editor + uploads, default 1048576), subject to a separate hard 1 MiB UTF-8 byte cap |
+| `ADMIN_USERNAME` | Admin login username (default `admin`) |
+| `ADMIN_PASSWORD` | Plain admin password (dev convenience; prefer a hash) |
+| `ADMIN_PASSWORD_HASH` | scrypt admin password hash for production (`node scripts/hash-password.mjs <password>`) |
+| `SESSION_SECRET` | Secret signing the admin session cookie (required in `prod`) |
 
 ## Database Setup
 
@@ -89,6 +93,23 @@ the list automatically. Documents created by other IPs are reached by their
 Double-click a name (or use the pencil icon next to it) to rename. No
 `DATABASE_URL` is needed — documents are stored in a local SQLite file at
 `.data/share-text-dev.sqlite` (created on first run).
+
+## Admin
+
+The gear icon in the left-pane header opens an admin dialog. Sign in with the
+configured `ADMIN_USERNAME`/`ADMIN_PASSWORD` (or `ADMIN_PASSWORD_HASH` in
+production). Two tabs are available after sign-in:
+
+- **Properties** — view and edit application properties
+  (`MAX_DOCUMENTS_PER_IP`, `MAX_CONTENT_LENGTH`). Values are resolved at runtime
+  with precedence database override > environment > built-in default, and each
+  row shows its current source. A per-row revert button deletes the database
+  override and falls back to the environment/default value.
+- **Documents** — browse every document across all client IPs with search and
+  pagination, view contents, rename, and delete.
+
+Admin API endpoints live under `/api/admin/*` and are protected by a signed,
+HTTP-only admin session cookie; the session expires after 24 hours.
 
 ## Quality Checks
 
