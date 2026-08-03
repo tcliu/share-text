@@ -13,6 +13,8 @@
   let currentId = $state('')
   let documentName = $state('')
   let savedContent = $state('')
+  let documentUpdatedAt = $state('')
+  let documentUpdatedBy = $state('')
   let content = $state('')
   let saving = $state(false)
   let refreshing = $state(false)
@@ -24,7 +26,8 @@
     id: currentId,
     name: documentName,
     content: savedContent,
-    updatedAt: data.document.updatedAt,
+    updatedAt: documentUpdatedAt,
+    updatedBy: documentUpdatedBy,
   }))
 
   function flushDraft() {
@@ -61,6 +64,9 @@
     try {
       const document = await fetchDocument(id)
       if (!document || document.id !== currentId) return
+      documentName = document.name
+      documentUpdatedAt = document.updatedAt
+      documentUpdatedBy = document.updatedBy
       savedContent = document.content
       content = document.content
     } catch (error) {
@@ -75,6 +81,8 @@
     if (document.id === currentId) return
     currentId = document.id
     documentName = document.name
+    documentUpdatedAt = document.updatedAt
+    documentUpdatedBy = document.updatedBy
     savedContent = document.content
     content = loadDraft(document.id) ?? document.content
   })
@@ -103,6 +111,8 @@
       const updated = await updateDocument(currentId, { content })
       clearDraft(currentId)
       savedContent = updated.content
+      documentUpdatedAt = updated.updatedAt
+      documentUpdatedBy = updated.updatedBy
       content = updated.content
       toast.success('Document saved')
       await context.refreshList()
@@ -124,6 +134,8 @@
     try {
       const updated = await updateDocument(currentId, { name })
       documentName = updated.name
+      documentUpdatedAt = updated.updatedAt
+      documentUpdatedBy = updated.updatedBy
       toast.success('Document renamed')
       await context.refreshList()
     } catch (error) {

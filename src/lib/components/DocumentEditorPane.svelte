@@ -67,7 +67,7 @@
       content = text
       toast.success('File uploaded')
     } catch (error) {
-      toast.error('Failed to read file')
+      toast.error(error instanceof Error ? error.message : 'Failed to read file')
     } finally {
       if (fileInputRef) {
         fileInputRef.value = ''
@@ -85,7 +85,7 @@
       await navigator.clipboard.writeText(content)
       toast.success('Copied to clipboard')
     } catch (error) {
-      toast.error('Failed to copy')
+      toast.error(error instanceof Error ? error.message : 'Failed to copy')
     }
   }
 
@@ -100,6 +100,17 @@
     anchor.remove()
     URL.revokeObjectURL(url)
   }
+
+  function pad(value: number) {
+    return String(value).padStart(2, '0')
+  }
+
+  const formattedTimestamp = $derived.by(() => {
+    const date = new Date(document.updatedAt)
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(
+      date.getUTCHours(),
+    )}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`
+  })
 </script>
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
@@ -188,7 +199,15 @@
     onchange={handleFileChange} />
 
   <div class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-    <span>{dirty ? 'Unsaved changes' : 'No changes'}</span>
+    <span>
+      Last updated at
+      <span class="text-slate-300">{formattedTimestamp}</span>
+      {#if document.updatedBy}
+        <span>
+          by <span class="text-slate-300">{document.updatedBy}</span>
+        </span>
+      {/if}
+    </span>
     <span class="flex items-center gap-3">
       {#if refreshing}
         <span class="text-slate-500">Refreshing...</span>

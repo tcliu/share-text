@@ -34,6 +34,7 @@ export interface DocumentSummary {
   id: string
   name: string
   updatedAt: string
+  updatedBy: string
 }
 
 export interface Document extends DocumentSummary {
@@ -45,6 +46,7 @@ interface DocumentRow {
   key: string
   name: string
   content: string
+  updated_by: string
   updated_at: Date | string
 }
 
@@ -110,6 +112,7 @@ export function toDocumentSummary(row: DocumentRow): DocumentSummary {
     id: row.key,
     name: row.name,
     updatedAt: toIsoString(row.updated_at),
+    updatedBy: row.updated_by,
   }
 }
 
@@ -129,7 +132,7 @@ function runQuery<T>(sql: string, params: unknown[] = []) {
 }
 
 export async function fetchDocumentSummaries(limit?: number, offset: number = 0) {
-  let sql = 'select key, name, updated_at from documents order by updated_at desc'
+  let sql = 'select key, name, updated_by, updated_at from documents order by updated_at desc'
   const params: unknown[] = []
 
   if (limit !== undefined) {
@@ -160,7 +163,7 @@ export async function assertWithinDocumentLimit(by: string) {
 }
 
 export async function fetchDocument(id: string) {
-  const result = await runQuery<DocumentRow>('select key, name, content, updated_at from documents where key = $1', [
+  const result = await runQuery<DocumentRow>('select key, name, content, updated_by, updated_at from documents where key = $1', [
     id,
   ])
   const row = result.rows[0]
@@ -173,7 +176,7 @@ export async function insertDocument(options: { name: string; content: string; b
   const result = await runQuery<DocumentRow>(
     `insert into documents (key, name, content, created_by, updated_by, created_at, updated_at)
      values ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
-     returning id, key, name, content, updated_at`,
+     returning id, key, name, content, updated_by, updated_at`,
     [key, options.name, options.content, options.by, options.by],
   )
   return toDocument(result.rows[0])
@@ -206,7 +209,7 @@ export async function updateDocument(id: string, options: { name?: string; conte
   values.push(id)
 
   const result = await runQuery<DocumentRow>(
-    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, updated_at`,
+    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, updated_by, updated_at`,
     values,
   )
   const row = result.rows[0]

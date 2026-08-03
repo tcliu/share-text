@@ -6,8 +6,14 @@ import Layout from '../+layout.svelte'
 import { goto } from '$app/navigation'
 import { setPage } from '../../../test/mocks/app-stores'
 
-const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z' }
-const newDoc = { id: 'newdoc', name: 'Untitled', updatedAt: '2026-08-03T00:00:00.000Z', content: '' }
+const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
+const newDoc = {
+  id: 'newdoc',
+  name: 'Untitled',
+  updatedAt: '2026-08-03T00:00:00.000Z',
+  updatedBy: '203.0.113.7',
+  content: '',
+}
 
 function mockFetch() {
   return vi.fn().mockImplementation((url: string, init?: RequestInit) => {

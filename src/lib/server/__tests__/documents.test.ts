@@ -114,6 +114,7 @@ describe('row mapping', () => {
     key: 'a1b2c3',
     name: 'Notes',
     content: 'body',
+    updated_by: '203.0.113.7',
     updated_at: new Date('2026-08-02T12:00:00.000Z'),
   }
 
@@ -122,6 +123,7 @@ describe('row mapping', () => {
       id: row.key,
       name: 'Notes',
       updatedAt: '2026-08-02T12:00:00.000Z',
+      updatedBy: '203.0.113.7',
     })
   })
 
@@ -131,6 +133,7 @@ describe('row mapping', () => {
       name: 'Notes',
       content: 'body',
       updatedAt: '2026-08-02T12:00:00.000Z',
+      updatedBy: '203.0.113.7',
     })
   })
 

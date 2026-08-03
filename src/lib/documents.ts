@@ -2,6 +2,7 @@ export interface DocumentSummary {
   id: string
   name: string
   updatedAt: string
+  updatedBy: string
 }
 
 export interface Document extends DocumentSummary {
@@ -15,7 +16,8 @@ export interface DocumentListResponse {
 
 const BASE_PATH = '/api/documents'
 
-export async function fetchDocumentSummaries(limit?: number, offset: number = 0): Promise<DocumentListResponse> {
+export async function fetchDocumentSummaries(options: { limit?: number; offset?: number } = {}): Promise<DocumentListResponse> {
+  const { limit, offset = 0 } = options
   const params = new URLSearchParams()
   if (limit !== undefined) {
     params.set('limit', limit.toString())
@@ -30,7 +32,7 @@ export async function fetchDocumentSummaries(limit?: number, offset: number = 0)
   const response = await fetch(url)
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error('Failed to load documents')
+    throw new Error(body.error ?? 'Failed to load documents')
   }
   return {
     documents: Array.isArray(body.documents) ? body.documents : [],

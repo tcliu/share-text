@@ -7,7 +7,7 @@ import {
   updateDocument,
 } from '$lib/documents'
 
-const summary = { id: 'a1b2c3', name: 'Notes', updatedAt: '2026-08-02T12:00:00.000Z' }
+const summary = { id: 'a1b2c3', name: 'Notes', updatedAt: '2026-08-02T12:00:00.000Z', updatedBy: '203.0.113.7' }
 
 function mockFetch(response: { ok: boolean; status: number; body: unknown }) {
   return vi.fn().mockResolvedValue({
@@ -29,14 +29,14 @@ describe('fetchDocumentSummaries', () => {
   })
 
   it('throws on error responses', async () => {
-    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 500, body: {} }))
-    await expect(fetchDocumentSummaries()).rejects.toThrow('Failed to load documents')
+    vi.stubGlobal('fetch', mockFetch({ ok: false, status: 500, body: { error: 'backend exploded' } }))
+    await expect(fetchDocumentSummaries()).rejects.toThrow('backend exploded')
   })
 
   it('passes limit and offset parameters', async () => {
     const fetchMock = mockFetch({ ok: true, status: 200, body: { documents: [summary], hasMore: true } })
     vi.stubGlobal('fetch', fetchMock)
-    await fetchDocumentSummaries(20, 40)
+    await fetchDocumentSummaries({ limit: 20, offset: 40 })
     expect(fetchMock).toHaveBeenCalledWith('/api/documents?limit=20&offset=40')
   })
 })

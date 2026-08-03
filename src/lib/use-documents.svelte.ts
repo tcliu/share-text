@@ -23,7 +23,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     loadingDocuments = true
     documentsError = null
     try {
-      const response = await fetchDocumentSummaries(pageSize, 0)
+      const response = await fetchDocumentSummaries({ limit: pageSize, offset: 0 })
       documents = response.documents
       hasMore = response.hasMore
     } catch (error) {
@@ -39,7 +39,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     loadingDocuments = true
     documentsError = null
     try {
-      const response = await fetchDocumentSummaries(pageSize, documents.length)
+      const response = await fetchDocumentSummaries({ limit: pageSize, offset: documents.length })
       documents = [...documents, ...response.documents]
       hasMore = response.hasMore
     } catch (error) {
@@ -79,7 +79,9 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     try {
       const updated = await updateDocument(id, { name })
       documents = documents.map(document =>
-        document.id === id ? { id: document.id, name: updated.name, updatedAt: updated.updatedAt } : document,
+        document.id === id
+          ? { id: document.id, name: updated.name, updatedAt: updated.updatedAt, updatedBy: updated.updatedBy }
+          : document,
       )
       toast.success('Document renamed')
       return true

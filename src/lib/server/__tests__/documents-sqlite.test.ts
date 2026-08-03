@@ -62,7 +62,7 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
     const db = await getDb()
     const afterCreate = await db.query<{ created_by: string; updated_by: string; created_at: string }>(
-      'select created_by, updated_by, created_at from documents where key = ?',
+      'select created_by, updated_by, created_at from documents where key = $1',
       [created.id],
     )
     expect(afterCreate.rows[0]).toMatchObject({ created_by: '10.0.0.1', updated_by: '10.0.0.1' })
@@ -70,7 +70,7 @@ describe('documents against the SQLite backend (dev profile)', () => {
 
     await updateDocument(created.id, { content: 'edited', by: '203.0.113.7' })
     const afterUpdate = await db.query<{ updated_by: string; created_by: string }>(
-      'select created_by, updated_by from documents where key = ?',
+      'select created_by, updated_by from documents where key = $1',
       [created.id],
     )
     expect(afterUpdate.rows[0]).toMatchObject({ created_by: '10.0.0.1', updated_by: '203.0.113.7' })
