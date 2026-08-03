@@ -1,0 +1,11 @@
+.svelte-kit/
+build/
+node_modules/
+.sqlite
+.data/
+.env.*
+!.env.example
+.vercel/
+.agent/
+.tmp/
+.vercel
