@@ -77,7 +77,9 @@ if (jsonPayload) {
       if (Array.isArray(parsed.alias)) parsed.alias.forEach(pushCandidate);
       if (Array.isArray(parsed.aliases)) parsed.aliases.forEach(pushCandidate);
     }
-  } catch {}
+  } catch (error) {
+    console.error('Failed to parse deploy output JSON:', error?.message || error);
+  }
 }
 
 for (const match of raw.match(/https?:\/\/[^\s"']+/g) || []) {
@@ -107,7 +109,9 @@ if (index === -1) {
 try {
   const parsed = JSON.parse(raw.slice(index));
   process.stdout.write(String(parsed?.readyState || '').trim());
-} catch {}
+} catch (error) {
+  console.error('Failed to parse deployment inspect JSON:', error?.message || error);
+}
 EOF
 }
 
@@ -222,7 +226,8 @@ const { readFileSync } = require('fs');
 try {
   const state = JSON.parse(readFileSync(process.env.STATE_FILE, 'utf8'));
   process.stdout.write(String(state.managedDomain || '').trim());
-} catch {
+} catch (error) {
+  console.error('Failed to read managed domain state:', error?.message || error);
   process.stdout.write('');
 }
 EOF
