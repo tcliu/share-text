@@ -41,7 +41,7 @@ function parseNonNegativeInt(value: string | null) {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : null
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   const limitParam = url.searchParams.get('limit')
   const offsetParam = url.searchParams.get('offset')
 
@@ -52,7 +52,11 @@ export const GET: RequestHandler = async ({ url }) => {
     return json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
-  const documents = await fetchDocumentSummaries(limit !== null ? limit : undefined, offset)
+  const documents = await fetchDocumentSummaries({
+    by: getClientAddress(),
+    limit: limit !== null ? limit : undefined,
+    offset,
+  })
 
   return json({ documents, hasMore: limit !== undefined && documents.length === limit })
 }
@@ -69,13 +73,14 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 
   const rawName = typeof body.name === 'string' && body.name.trim() !== '' ? body.name : null
   const rawContent = typeof body.content === 'string' ? body.content : ''
+  const ip = getClientAddress()
 
   let name: string
   try {
     if (rawName) {
       name = normalizeName(rawName)
     } else {
-      const summaries = await fetchDocumentSummaries()
+      const summaries = await fetchDocumentSummaries({ by: ip })
       name = nextDefaultDocumentName(summaries.map(summary => summary.name))
     }
     assertContentWithinLimit(rawContent)
@@ -83,7 +88,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     return json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
   }
 
-  const ip = getClientAddress()
   const startedAt = Date.now()
   try {
     const document = await insertDocument({ name, content: rawContent, by: ip })

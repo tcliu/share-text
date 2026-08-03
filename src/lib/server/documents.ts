@@ -131,18 +131,39 @@ function runQuery<T>(sql: string, params: unknown[] = []) {
   return getDb().then(db => db.query<T>(sql, params))
 }
 
-export async function fetchDocumentSummaries(limit?: number, offset: number = 0) {
-  let sql = 'select key, name, updated_by, updated_at from documents order by updated_at desc'
+export interface FetchDocumentSummariesOptions {
+  by?: string
+  limit?: number
+  offset?: number
+}
+
+export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
+  const { by, limit, offset = 0 } = options
+  const sql = 'select key, name, updated_by, updated_at from documents'
   const params: unknown[] = []
+  const conditions: string[] = []
+
+  if (by !== undefined) {
+    conditions.push('created_by = $1')
+    params.push(by)
+  }
+
+  let query = sql
+  if (conditions.length > 0) {
+    query += ' where ' + conditions.join(' and ')
+  }
+
+  query += ' order by updated_at desc'
 
   if (limit !== undefined) {
-    sql += ' limit $1'
+    const base = params.length
+    query += ` limit $${base + 1}`
     params.push(limit)
-    sql += ' offset $2'
+    query += ` offset $${base + 2}`
     params.push(offset)
   }
 
-  const result = await runQuery<DocumentRow>(sql, params)
+  const result = await runQuery<DocumentRow>(query, params)
   return result.rows.map(toDocumentSummary)
 }
 

@@ -80,10 +80,12 @@ In `dev` the schema is also applied automatically when the server first starts.
 npm run dev
 ```
 
-Open `http://localhost:5173`. The left pane lists all shared documents, most
-recently edited first. The search box filters the list in place. Click a name to
-navigate to `/{doc-id}` and load that document's content into the editor. Click
-**New document** to create one; it is added to the list automatically.
+Open `http://localhost:5173`. The left pane lists the documents created by your
+current client IP, most recently edited first. The search box filters the list
+in place. Click a name to navigate to `/{doc-id}` and load that document's
+content into the editor. Click **New document** to create one; it is added to
+the list automatically. Documents created by other IPs are reached by their
+`/{doc-id}` URL.
 Double-click a name (or use the pencil icon next to it) to rename. No
 `DATABASE_URL` is needed — documents are stored in a local SQLite file at
 `.data/share-text-dev.sqlite` (created on first run).

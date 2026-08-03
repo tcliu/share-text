@@ -25,22 +25,32 @@ describe('GET /api/documents', () => {
   })
 
   it('rejects invalid pagination parameters', async () => {
-    const response = await GET({ url: new URL('http://localhost/api/documents?limit=20abc&offset=-1') } as never)
+    const response = await GET({
+      url: new URL('http://localhost/api/documents?limit=20abc&offset=-1'),
+      getClientAddress: () => '127.0.0.1',
+    } as never)
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Invalid pagination parameters' })
     expect(documentsMocks.fetchDocumentSummaries).not.toHaveBeenCalled()
   })
 
-  it('passes validated limit and offset to the data layer', async () => {
+  it('passes the client IP and validated pagination to the data layer', async () => {
     documentsMocks.fetchDocumentSummaries.mockResolvedValue([
       { id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' },
     ])
 
-    const response = await GET({ url: new URL('http://localhost/api/documents?limit=20&offset=40') } as never)
+    const response = await GET({
+      url: new URL('http://localhost/api/documents?limit=20&offset=40'),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith(20, 40)
+    expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith({
+      by: '203.0.113.9',
+      limit: 20,
+      offset: 40,
+    })
     await expect(response.json()).resolves.toEqual({
       documents: [{ id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' }],
       hasMore: false,

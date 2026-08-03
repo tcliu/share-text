@@ -15,8 +15,9 @@ synchronizes through a small fetch-based JSON API.
   six-character `^[0-9a-z]{6}$` key format and throws a 404 when invalid or when
   the document does not exist; the page component renders server data, then
   re-fetches the document client-side on refresh.
-- `/api/documents` — `GET` returns all document summaries; `POST` creates a
-  document (201) and enforces the per-IP create limit.
+- `/api/documents` — `GET` returns summaries of the documents created by the
+  requesting client IP (`created_by`); `POST` creates a document (201) and
+  enforces the per-IP create limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, or both and returns the updated document; `DELETE` removes it
   (204). Validation failures return 400, unknown ids 404.

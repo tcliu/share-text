@@ -46,6 +46,16 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(summaries[0]).not.toHaveProperty('content')
   })
 
+  it('scopes summaries to documents created by the given IP', async () => {
+    const mine = await insertDocument({ name: 'mine', content: '', by: '10.0.0.7' })
+    await insertDocument({ name: 'theirs', content: '', by: '10.0.0.8' })
+    const editedByMe = await insertDocument({ name: 'shared', content: '', by: '10.0.0.8' })
+    await updateDocument(editedByMe.id, { content: 'edited', by: '10.0.0.7' })
+
+    const summaries = await fetchDocumentSummaries({ by: '10.0.0.7' })
+    expect(summaries.map((summary: { id: string }) => summary.id)).toEqual([mine.id])
+  })
+
   it('updates name and content', async () => {
     const created = await insertDocument({ name: 'old', content: 'old body', by: '127.0.0.1' })
     const updated = await updateDocument(created.id, { name: 'new', content: 'new body', by: '10.0.0.5' })

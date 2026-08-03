@@ -17,8 +17,9 @@ The page is split into two vertical panes.
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
     document**, and **Refresh** icon buttons (all with tooltips).
-  - The pane lists all shared documents, most recently edited first. New
-    documents are added to the list automatically.
+  - The pane lists the documents created by the current client IP, most recently
+    edited first. New documents are added to the list automatically. Documents
+    created by other IPs stay reachable by their `/{doc-id}` URL.
   - A search box below the header filters the list in place with a
     case-insensitive name substring; with an empty query every loaded document
     is shown.
@@ -113,10 +114,11 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 ## Shared Editing Model
 
-- The left pane lists all shared documents, most recently edited first.
-- **Refresh** re-fetches the full document set and the selected document so the
-  search box and editor reflect changes made by other users. Documents removed
-  by others disappear from the list automatically.
+- The left pane lists the documents created by the current client IP, most
+  recently edited first; documents created by other IPs are reached by URL.
+- **Refresh** re-fetches the current IP's document set and the selected document
+  so the search box and editor reflect changes made by other users. Documents
+  removed by others disappear from the list automatically.
 
 ### Concurrency tradeoff
 
