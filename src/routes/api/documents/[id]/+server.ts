@@ -16,6 +16,10 @@ function parseDocumentId(value: string | undefined) {
   return value
 }
 
+function isBodyRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export const GET: RequestHandler = async ({ params }) => {
   const id = parseDocumentId(params.id)
   if (!id) {
@@ -37,8 +41,21 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
 
   const body = await request.json().catch(() => ({}))
+  if (!isBodyRecord(body)) {
+    return json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const bodyKeys = Object.keys(body)
+  if (bodyKeys.some(key => key !== 'name' && key !== 'content')) {
+    return json({ error: 'Unsupported fields in request body' }, { status: 400 })
+  }
+
   const name = typeof body.name === 'string' ? body.name : undefined
   const content = typeof body.content === 'string' ? body.content : undefined
+
+  if (name === undefined && content === undefined) {
+    return json({ error: 'Request body must include name or content' }, { status: 400 })
+  }
 
   if (name !== undefined) {
     try {
