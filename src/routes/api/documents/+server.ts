@@ -2,12 +2,14 @@ import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
+  contentByteSize,
   DocumentLimitError,
   fetchDocumentSummaries,
   insertDocument,
   nextDefaultDocumentName,
   normalizeName,
 } from '$lib/server/documents'
+import { logEvent } from '$lib/server/logging'
 
 function isBodyRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -81,11 +83,28 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     return json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
   }
 
+  const ip = getClientAddress()
+  const startedAt = Date.now()
   try {
-    const document = await insertDocument({ name, content: rawContent, by: getClientAddress() })
+    const document = await insertDocument({ name, content: rawContent, by: ip })
+    logEvent({
+      ip,
+      action: 'document_create',
+      details: {
+        id: document.id,
+        name: document.name,
+        content_size: contentByteSize(rawContent),
+        elapsed_ms: Date.now() - startedAt,
+      },
+    })
     return json({ document }, { status: 201 })
   } catch (error) {
     if (error instanceof DocumentLimitError) {
+      logEvent({
+        ip,
+        action: 'document_limit',
+        details: { name, level: 'WARN' },
+      })
       return json({ error: error.message }, { status: 403 })
     }
     throw error
