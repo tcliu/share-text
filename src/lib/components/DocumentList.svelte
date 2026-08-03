@@ -43,11 +43,28 @@
       : documents,
   )
 
+  let loadMoreSentinel = $state<HTMLElement | null>(null)
+
   function handleSearchKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       searchQuery = ''
     }
   }
+
+  $effect(() => {
+    const sentinel = loadMoreSentinel
+    if (!sentinel || loading || !hasMore || normalizedQuery) return
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0]?.isIntersecting) onLoadMore()
+      },
+      { rootMargin: '200px' },
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  })
 </script>
 
 <aside class="flex h-full w-72 flex-col gap-2 border-r border-slate-800 bg-slate-900/50">
@@ -141,13 +158,11 @@
           </div>
         {/each}
         {#if hasMore && !normalizedQuery}
-          <button
-            type="button"
-            onclick={onLoadMore}
-            disabled={loading}
-            class="mx-2 my-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-300 transition hover:border-cyan-500 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
-            {loading ? 'Loading...' : 'Show more'}
-          </button>
+          <div
+            bind:this={loadMoreSentinel}
+            class="flex min-h-10 items-center justify-center py-2 text-sm text-slate-500">
+            {loading ? 'Loading more...' : ''}
+          </div>
         {/if}
       </div>
     {/if}
