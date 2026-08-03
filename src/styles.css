@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #020617;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+button,
+[role="button"],
+a {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+.st-tooltip {
+  @apply pointer-events-none fixed z-[60] whitespace-nowrap rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 shadow-lg transition-opacity duration-150;
+  opacity: 0;
+}
