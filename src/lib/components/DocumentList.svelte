@@ -51,6 +51,32 @@
     }
   }
 
+  function handleRowClick(id: string) {
+    goto(`/${id}`)
+  }
+
+  function handleRowKeydown(event: KeyboardEvent, id: string) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleRowClick(id)
+    }
+  }
+
+  function handleRename(id: string, name: string) {
+    return onRename(id, name)
+  }
+
+  function handleDeleteClick(event: MouseEvent, id: string) {
+    event.stopPropagation()
+    onDelete(id)
+  }
+
+  function handleDeleteKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.stopPropagation()
+    }
+  }
+
   $effect(() => {
     const sentinel = loadMoreSentinel
     if (!sentinel || loading || !hasMore || normalizedQuery) return
@@ -106,55 +132,60 @@
 
   <div class="relative px-2">
     <svg
-        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-        viewBox="0 0 20 20"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9M11.7 11.7l3.3 3.3" />
-      </svg>
-      <input
-        type="search"
-        bind:value={searchQuery}
-        onkeydown={handleSearchKeydown}
-        aria-label="Search documents"
-        placeholder="Search documents..."
-        class="w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-6 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500" />
-    </div>
+      class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 4a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9M11.7 11.7l3.3 3.3" />
+    </svg>
+    <input
+      type="search"
+      bind:value={searchQuery}
+      onkeydown={handleSearchKeydown}
+      aria-label="Search documents"
+      placeholder="Search documents..."
+      class="w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-6 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500" />
+  </div>
 
-  <div class="flex min-h-0 flex-1 flex-col  overflow-y-auto">
+  <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
     {#if loading && documents.length === 0}
       <p class="p-2 text-sm text-slate-500">Loading documents...</p>
     {:else if visibleDocuments.length === 0}
       <p class="p-2 text-sm text-slate-500">{documents.length === 0 ? 'No documents yet. Use New to create one.' : 'No documents match your filter.'}</p>
     {:else}
-      <div class="flex flex-col ">
+      <div class="flex flex-col">
         {#each visibleDocuments as document (document.id)}
-          <div class={`group flex cursor-pointer items-center gap-2 p-2 transition ${document.id === selectedId ? 'rounded-md bg-slate-800/70' : 'rounded-md hover:bg-slate-800/40'}`} role="button" tabindex="0" onclick={() => goto(`/${document.id}`)} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goto(`/${document.id}`) } }}>
+          <div
+            class={`group flex cursor-pointer items-center gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}
+            role="button"
+            tabindex="0"
+            onclick={() => handleRowClick(document.id)}
+            onkeydown={event => handleRowKeydown(event, document.id)}>
             <EditableName
               name={document.name}
               fontSizeClass="text-[13px]"
               className={document.id === selectedId ? 'text-cyan-300' : 'text-slate-300'}
-              onRename={(name) => onRename(document.id, name)}
-              onActivate={() => goto(`/${document.id}`)} />
+              onRename={name => handleRename(document.id, name)}
+              onActivate={() => handleRowClick(document.id)} />
             <Button
-                size="sm"
-                ariaLabel="Delete document"
-                tooltip="Delete"
-                tooltipAlign="right"
-                onClick={(e) => { e.stopPropagation(); onDelete(document.id) }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-                className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
-                {#snippet children()}
-                  <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                      fill-rule="evenodd"
-                      d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
-                      clip-rule="evenodd" />
-                  </svg>
-                {/snippet}
-              </Button>
+              size="sm"
+              ariaLabel="Delete document"
+              tooltip="Delete"
+              tooltipAlign="right"
+              onClick={event => handleDeleteClick(event, document.id)}
+              onKeyDown={handleDeleteKeydown}
+              className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
+              {#snippet children()}
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
+                    clip-rule="evenodd" />
+                </svg>
+              {/snippet}
+            </Button>
           </div>
         {/each}
         {#if hasMore && !normalizedQuery}
