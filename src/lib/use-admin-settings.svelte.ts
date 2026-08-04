@@ -19,9 +19,17 @@ export function useAdminSettings(onSignedOut: () => void) {
   }
 
   async function load() {
-    const loaded = await fetchAdminSettings()
-    settings = loaded
-    draftValues = Object.fromEntries(loaded.map(setting => [setting.key, String(setting.value)]))
+    try {
+      const loaded = await fetchAdminSettings()
+      settings = loaded
+      draftValues = Object.fromEntries(loaded.map(setting => [setting.key, String(setting.value)]))
+      return true
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load settings')
+      }
+      return false
+    }
   }
 
   function apply() {
@@ -64,10 +72,6 @@ export function useAdminSettings(onSignedOut: () => void) {
     pending = true
     try {
       await load()
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to reload settings')
-      }
     } finally {
       pending = false
     }

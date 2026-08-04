@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { toast } from 'svelte-sonner'
   import BaseDialog from './BaseDialog.svelte'
   import Spinner from './Spinner.svelte'
   import LoginPanel from './LoginPanel.svelte'
   import AdminPanel from './AdminPanel.svelte'
-  import { fetchAdminSession } from '$lib/admin'
+  import { AdminAuthError, fetchAdminSession } from '$lib/admin'
 
   interface Props {
     onClose: () => void
@@ -16,16 +17,24 @@
 
   type AuthState = 'checking' | 'unconfigured' | 'unauthenticated' | 'authenticated'
   let authState = $state<AuthState>('checking')
+  let sessionError = $state<string | null>(null)
 
   async function checkSession() {
     try {
       const session = await fetchAdminSession()
+      sessionError = null
       if (!session.configured) {
         authState = 'unconfigured'
       } else {
         authState = session.authenticated ? 'authenticated' : 'unauthenticated'
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof AdminAuthError) {
+        sessionError = null
+      } else {
+        sessionError = error instanceof Error ? error.message : 'Failed to check admin session'
+        toast.error(sessionError)
+      }
       authState = 'unauthenticated'
     }
   }
@@ -46,6 +55,7 @@
 {:else}
   <LoginPanel
     configured={authState !== 'unconfigured'}
+    message={sessionError}
     onAuthenticated={() => (authState = 'authenticated')}
     {onClose} />
 {/if}

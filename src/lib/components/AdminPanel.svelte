@@ -89,7 +89,7 @@
   }
 
   onMount(() => {
-    void settingsState.load()
+    void settingsState.reload()
   })
 </script>
 

@@ -8,11 +8,12 @@
 
   interface Props {
     configured: boolean
+    message?: string | null
     onAuthenticated: () => void
     onClose: () => void
   }
 
-  let { configured, onAuthenticated, onClose }: Props = $props()
+  let { configured, message = null, onAuthenticated, onClose }: Props = $props()
 
   let username = $state('')
   let password = $state('')
@@ -38,6 +39,9 @@
 
 <BaseDialog title="Admin" maxWidth="md" pending={loginPending} onCancel={onClose}>
   {#if configured}
+    {#if message}
+      <p class="mt-4 rounded-xl border border-amber-800 bg-amber-950/40 p-3 text-sm text-amber-100">{message}</p>
+    {/if}
     <form
       class="mt-5 space-y-3"
       onsubmit={e => {
