@@ -246,7 +246,7 @@
   <input
     bind:this={fileInputRef}
     type="file"
-    accept="text/plain,.txt,.md,.json,.csv,.html,.css,.js,.ts,.svelte,application/json,text/markdown"
+    accept="text/plain,.txt,.md,.json,.csv,.html,.js,.xml,.yml,.yaml,application/json,text/markdown,text/html,text/xml,text/javascript"
     class="hidden"
     onchange={handleFileChange} />
 
