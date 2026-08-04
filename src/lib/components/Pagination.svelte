@@ -82,7 +82,7 @@
   }
 </script>
 
-<div class="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+<div class="flex flex-wrap items-center gap-1.5 text-[13px] text-slate-400">
   <button
     type="button"
     aria-label="Previous page"
@@ -112,7 +112,7 @@
         onkeydown={handlePageInputKeydown}
         ariaLabel="Current page"
         showControls={false}
-        className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-cyan-500 bg-slate-950 text-center text-sm font-semibold text-cyan-300 outline-none focus:border-2" />
+        className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-cyan-500 bg-slate-950 text-center text-[13px] font-semibold text-cyan-300 outline-none focus:border-2" />
     {:else}
       <button type="button" onclick={() => goToPage(pageNum)} class={pageButtonClass}>{pageNum}</button>
     {/if}
@@ -137,7 +137,7 @@
     </svg>
   </button>
 
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-1.5">
     <span>Page size</span>
     <div class="relative">
       <SelectDropdown
@@ -145,7 +145,8 @@
         activeValue={String(pageSize)}
         ariaLabel="Page size"
         options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-        onSelect={handlePageSizeChange} />
+        onSelect={handlePageSizeChange}
+        buttonClass="inline-flex min-w-24 items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-[13px] text-slate-100 outline-none transition hover:border-cyan-500" />
     </div>
   </div>
 </div>

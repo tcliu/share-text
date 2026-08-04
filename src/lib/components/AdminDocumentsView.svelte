@@ -93,7 +93,7 @@
       <table
         class="w-full min-w-[60rem] border-separate border-spacing-0 text-[13px] [&_tr:last-child_td]:border-b-0">
         <thead>
-          <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr class="text-left text-xs font-medium text-slate-500">
             <th
               class="sticky top-0 z-10 w-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur">
               <Checkbox
