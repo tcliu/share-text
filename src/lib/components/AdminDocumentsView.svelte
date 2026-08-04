@@ -91,7 +91,7 @@
 
     <div class="max-h-[min(50vh,32rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout">
       <table
-        class="w-full min-w-[44rem] border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0">
+        class="w-full min-w-[60rem] border-separate border-spacing-0 text-[13px] [&_tr:last-child_td]:border-b-0">
         <thead>
           <tr class="text-left text-xs uppercase tracking-wide text-slate-500">
             <th
@@ -103,11 +103,11 @@
                 disabled={documentsState.documents.length === 0}
                 onChange={() => documentsState.toggleAllOnCurrentPage()} />
             </th>
-            <th class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-[40%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Name</th>
-            <th class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-24 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Length</th>
-            <th class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-32 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Updated by</th>
             <th class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Updated time</th>
@@ -137,7 +137,7 @@
                     ariaLabel={`Select document ${document.name}`}
                     onChange={checked => documentsState.toggleSelection(document.id, checked)} />
                 </td>
-                <td class="max-w-0 border-b border-slate-800/50 px-3 py-2">
+                <td class="w-[40%] max-w-0 border-b border-slate-800/50 px-3 py-2">
                   {#if documentsState.renamingId === document.id}
                     <div class="flex items-center gap-1.5">
                       <input
