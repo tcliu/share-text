@@ -22,9 +22,16 @@
 
   const columns: DataTableColumn<AdminDocumentSummary>[] = [
     {
+      key: 'id',
+      header: 'ID',
+      widthClass: 'w-[16%]',
+      cellClass: 'text-slate-500',
+      cell: idCell,
+    },
+    {
       key: 'name',
       header: 'Name',
-      widthClass: 'w-[50%]',
+      widthClass: 'w-[34%]',
       cellClass: 'max-w-0',
       cell: nameCell,
     },
@@ -135,6 +142,10 @@
     onPageChange={nextPage => documentsState.handlePageChange(nextPage)}
     onPageSizeChange={size => documentsState.handlePageSizeChange(size)} />
 {/if}
+
+{#snippet idCell(document: AdminDocumentSummary)}
+  <span class="block truncate font-mono text-xs">{document.id}</span>
+{/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
   {#if documentsState.renamingId === document.id}
