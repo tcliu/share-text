@@ -6,7 +6,7 @@
     children?: Snippet
   }
 
-  let { className = 'mt-6 flex flex-wrap items-center justify-end gap-3', children }: Props = $props()
+  let { className = 'flex flex-wrap items-center justify-end gap-3', children }: Props = $props()
 </script>
 
 <div class={className}>

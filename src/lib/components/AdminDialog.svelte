@@ -46,7 +46,7 @@
 
 {#if authState === 'checking'}
   <BaseDialog title="Admin" maxWidth="md" onCancel={onClose}>
-    <div class="flex items-center justify-center py-10">
+      <div class="flex items-center justify-center pb-10">
       <Spinner className="h-6 w-6" />
     </div>
   </BaseDialog>

@@ -135,7 +135,9 @@
       <h2 class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
         {title}
       </h2>
-      {@render children?.()}
+      <div class="mt-4">
+        {@render children?.()}
+      </div>
     </section>
   </div>
 </div>

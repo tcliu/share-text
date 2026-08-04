@@ -31,13 +31,15 @@
 </script>
 
 <BaseDialog {badgeColor} {badgeLabel} {title} {onCancel} {dismissKeydownCapture}>
-  <p class="mt-3 text-sm leading-6 text-slate-400">{message}</p>
-  <DialogActions>
-    {#snippet children()}
-      <Button variant="primary" accent={confirmColor} onClick={onConfirm}>
-        {confirmLabel}
-      </Button>
-      <Button onClick={onCancel}>{cancelLabel}</Button>
-    {/snippet}
-  </DialogActions>
+  <div class="flex flex-col gap-4">
+    <p class="text-sm leading-6 text-slate-400">{message}</p>
+    <DialogActions>
+      {#snippet children()}
+        <Button variant="primary" accent={confirmColor} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+        <Button onClick={onCancel}>{cancelLabel}</Button>
+      {/snippet}
+    </DialogActions>
+  </div>
 </BaseDialog>

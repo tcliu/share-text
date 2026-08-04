@@ -40,10 +40,10 @@
 <BaseDialog title="Admin" maxWidth="md" pending={loginPending} onCancel={onClose}>
   {#if configured}
     {#if message}
-      <p class="mt-4 rounded-xl border border-amber-800 bg-amber-950/40 p-3 text-sm text-amber-100">{message}</p>
+      <p class="rounded-xl border border-amber-800 bg-amber-950/40 p-3 text-sm text-amber-100">{message}</p>
     {/if}
     <form
-      class="mt-5 space-y-3"
+      class="flex flex-col gap-4"
       onsubmit={e => {
         e.preventDefault()
         void handleLogin()
@@ -62,10 +62,10 @@
         <label for="admin-password" class="mb-1.5 block text-sm font-medium text-slate-200">Password</label>
         <PasswordInput id="admin-password" bind:value={password} disabled={loginPending} />
       </div>
-      <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="mt-2 w-full">Sign in</Button>
+      <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">Sign in</Button>
     </form>
   {:else}
-    <p class="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
+    <p class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
       Admin authentication is not configured. Set <span class="font-semibold text-slate-100">ADMIN_PASSWORD</span>
       or{' '}
       <span class="font-semibold text-slate-100">ADMIN_PASSWORD_HASH</span> in the server environment to enable it.
