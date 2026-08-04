@@ -2,7 +2,7 @@
   import { toast } from 'svelte-sonner'
   import type { Document } from '$lib/documents'
   import ConfirmDialog from './ConfirmDialog.svelte'
-  import EditableName from './EditableName.svelte'
+  import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
 
@@ -107,19 +107,17 @@
 
   const formattedTimestamp = $derived.by(() => {
     const date = new Date(document.updatedAt)
-    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ${pad(
-      date.getUTCHours(),
-    )}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`
+    if (Number.isNaN(date.getTime())) return document.updatedAt
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
   })
 </script>
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
   <div class="flex items-center justify-between gap-3">
-    <EditableName
-      name={document.name}
-      fontSizeClass="text-[15px]"
+    <EditableText
+      text={document.name}
       className="font-semibold text-slate-200"
-      onRename={onRename} />
+      onChange={onRename} />
     <div class="flex items-center gap-1">
       <Button
         size="sm"

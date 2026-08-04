@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import type { DocumentSummary } from '$lib/documents'
-  import EditableName from './EditableName.svelte'
+  import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
   import SearchInput from './SearchInput.svelte'
 
@@ -167,11 +167,11 @@
             tabindex="0"
             onclick={() => handleRowClick(document.id)}
             onkeydown={event => handleRowKeydown(event, document.id)}>
-            <EditableName
-              name={document.name}
-              fontSizeClass="text-[13px]"
+            <EditableText
+              text={document.name}
+              size="sm"
               className={document.id === selectedId ? 'text-cyan-300' : 'text-slate-300'}
-              onRename={name => handleRename(document.id, name)}
+              onChange={name => handleRename(document.id, name)}
               onActivate={() => handleRowClick(document.id)} />
             <Button
               size="sm"
