@@ -27,13 +27,13 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     return json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
-  const documents = await fetchDocumentSummaries({
+  const { documents, hasMore } = await fetchDocumentSummaries({
     by: getClientAddress(),
     limit: limit !== null ? limit : undefined,
     offset,
   })
 
-  return json({ documents, hasMore: limit !== undefined && documents.length === limit })
+  return json({ documents, hasMore })
 }
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {

@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ url }) => {
     return json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
-  const { documents, total } = await listDocumentsForAdmin({
+  const { documents, total, hasMore } = await listDocumentsForAdmin({
     search,
     by,
     limit: limit !== null ? limit : undefined,
@@ -26,6 +26,6 @@ export const GET: RequestHandler = async ({ url }) => {
   return json({
     documents,
     total,
-    hasMore: limit !== undefined && documents.length === limit,
+    hasMore,
   })
 }

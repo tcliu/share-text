@@ -8,6 +8,7 @@ export const MAX_CONTENT_BYTES = 1024 * 1024
 export const KEY_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 export const KEY_LENGTH = 6
 export const MAX_KEY_ATTEMPTS = 5
+const documentKeyCharsRegex = /^[0-9a-z]+$/
 
 export class DocumentLimitError extends Error {}
 
@@ -57,6 +58,10 @@ export function isDocumentKey(value: string, length = KEY_LENGTH) {
     documentKeyRegexCache.set(length, regex)
   }
   return regex.test(value)
+}
+
+export function isDocumentKeyChars(value: string) {
+  return documentKeyCharsRegex.test(value)
 }
 
 export function isUniqueKeyViolation(error: unknown) {
@@ -128,6 +133,11 @@ export interface FetchDocumentSummariesOptions {
   offset?: number
 }
 
+export interface FetchDocumentSummariesResult {
+  documents: DocumentSummary[]
+  hasMore: boolean
+}
+
 export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
   const { by, limit, offset = 0 } = options
   const sql = 'select key, name, updated_by, updated_at from documents'
@@ -149,13 +159,17 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
   if (limit !== undefined) {
     const base = params.length
     query += ` limit $${base + 1}`
-    params.push(limit)
+    params.push(limit + 1)
     query += ` offset $${base + 2}`
     params.push(offset)
   }
 
   const result = await runQuery<DocumentRow>(query, params)
-  return result.rows.map(toDocumentSummary)
+  const rows = limit !== undefined ? result.rows.slice(0, limit) : result.rows
+  return {
+    documents: rows.map(toDocumentSummary),
+    hasMore: limit !== undefined ? result.rows.length > limit : false,
+  }
 }
 
 export async function countDocumentsByCreator(by: string) {
@@ -267,7 +281,11 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   }
 
   const result = await runQuery<AdminDocumentRow>(sql, listParams)
-  return { documents: result.rows.map(toAdminDocumentSummary), total }
+  return {
+    documents: result.rows.map(toAdminDocumentSummary),
+    total,
+    hasMore: limit !== undefined ? offset + result.rows.length < total : false,
+  }
 }
 
 export async function fetchDocumentForAdmin(id: string) {

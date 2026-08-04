@@ -20,18 +20,6 @@ vi.mock('$lib/server/documents', async () => {
   }
 })
 
-const settingsMocks = vi.hoisted(() => ({
-  getDocumentKeyLength: vi.fn(),
-}))
-
-vi.mock('$lib/server/settings', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/settings')>('$lib/server/settings')
-  return {
-    ...actual,
-    getDocumentKeyLength: settingsMocks.getDocumentKeyLength,
-  }
-})
-
 import { GET } from '../documents/+server'
 import { DELETE, GET as GET_ONE, PUT } from '../documents/[id]/+server'
 
@@ -48,7 +36,7 @@ const summary = {
 describe('GET /api/admin/documents', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    documentsMocks.listDocumentsForAdmin.mockResolvedValue({ documents: [summary], total: 1 })
+    documentsMocks.listDocumentsForAdmin.mockResolvedValue({ documents: [summary], total: 1, hasMore: false })
   })
 
   it('returns paginated documents with total', async () => {
@@ -75,7 +63,6 @@ describe('GET /api/admin/documents', () => {
 describe('GET /api/admin/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
   })
 
@@ -89,15 +76,19 @@ describe('GET /api/admin/documents/[id]', () => {
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue(null)
     const response = await GET_ONE({ params: { id: 'a1b2c3' } } as never)
     expect(response.status).toBe(404)
-    const invalid = await GET_ONE({ params: { id: 'BAD' } } as never)
+    const invalid = await GET_ONE({ params: { id: 'bad-id' } } as never)
     expect(invalid.status).toBe(404)
+  })
+
+  it('accepts valid lowercase ids even when they do not match a former configured length', async () => {
+    const response = await GET_ONE({ params: { id: 'abcd1234' } } as never)
+    expect(response.status).toBe(200)
   })
 })
 
 describe('PUT /api/admin/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
     documentsMocks.updateDocument.mockResolvedValue({
       id: 'a1b2c3',
@@ -153,7 +144,6 @@ describe('PUT /api/admin/documents/[id]', () => {
 describe('DELETE /api/admin/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
     documentsMocks.fetchDocument.mockResolvedValue({ ...summary, content: 'hello world' })
     documentsMocks.deleteDocument.mockResolvedValue(true)
   })

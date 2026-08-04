@@ -5,15 +5,14 @@ import {
   deleteDocument,
   fetchDocument,
   fetchDocumentForAdmin,
-  isDocumentKey,
+  isDocumentKeyChars,
   normalizeName,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
-import { getDocumentKeyLength } from '$lib/server/settings'
 
 async function parseDocumentId(value: string | undefined) {
-  if (!value || !isDocumentKey(value, await getDocumentKeyLength())) {
+  if (!value || !isDocumentKeyChars(value)) {
     return null
   }
   return value
@@ -61,6 +60,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
 
   const ip = getClientAddress()
+  const startedAt = Date.now()
   const updated = await updateDocument(id, { name, by: ip })
   if (!updated) {
     return json({ error: 'Document not found' }, { status: 404 })
@@ -69,7 +69,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   logEvent({
     ip,
     action: 'admin_document_rename',
-    details: { id, old_name: existing.name, new_name: name },
+    details: { id, old_name: existing.name, new_name: name, content_size: contentByteSize(updated.content), elapsed_ms: Date.now() - startedAt },
   })
 
   const document = {
@@ -97,6 +97,7 @@ export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
   }
 
   const ip = getClientAddress()
+  const startedAt = Date.now()
   const deleted = await deleteDocument(id)
   if (!deleted) {
     return json({ error: 'Document not found' }, { status: 404 })
@@ -105,7 +106,12 @@ export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
   logEvent({
     ip,
     action: 'admin_document_delete',
-    details: { id, name: existing.name, content_size: contentByteSize(existing.content) },
+    details: {
+      id,
+      name: existing.name,
+      content_size: contentByteSize(existing.content),
+      elapsed_ms: Date.now() - startedAt,
+    },
   })
 
   return new Response(null, { status: 204 })

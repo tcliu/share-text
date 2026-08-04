@@ -31,7 +31,7 @@ import { GET, POST } from '../+server'
 describe('GET /api/documents', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    documentsMocks.fetchDocumentSummaries.mockResolvedValue([])
+    documentsMocks.fetchDocumentSummaries.mockResolvedValue({ documents: [], hasMore: false })
   })
 
   it('rejects invalid pagination parameters', async () => {
@@ -46,9 +46,10 @@ describe('GET /api/documents', () => {
   })
 
   it('passes the client IP and validated pagination to the data layer', async () => {
-    documentsMocks.fetchDocumentSummaries.mockResolvedValue([
-      { id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' },
-    ])
+    documentsMocks.fetchDocumentSummaries.mockResolvedValue({
+      documents: [{ id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' }],
+      hasMore: true,
+    })
 
     const response = await GET({
       url: new URL('http://localhost/api/documents?limit=20&offset=40'),
@@ -63,7 +64,7 @@ describe('GET /api/documents', () => {
     })
     await expect(response.json()).resolves.toEqual({
       documents: [{ id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' }],
-      hasMore: false,
+      hasMore: true,
     })
   })
 })

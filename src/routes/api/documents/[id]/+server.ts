@@ -5,15 +5,15 @@ import {
   contentByteSize,
   deleteDocument,
   fetchDocument,
-  isDocumentKey,
+  isDocumentKeyChars,
   normalizeName,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
-import { getDocumentKeyLength, getMaxContentLength } from '$lib/server/settings'
+import { getMaxContentLength } from '$lib/server/settings'
 
 async function parseDocumentId(value: string | undefined) {
-  if (!value || !isDocumentKey(value, await getDocumentKeyLength())) {
+  if (!value || !isDocumentKeyChars(value)) {
     return null
   }
   return value

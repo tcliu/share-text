@@ -6,6 +6,7 @@ import {
   assertContentWithinLimit,
   contentByteSize,
   generateDocumentKey,
+  isDocumentKeyChars,
   isDocumentKey,
   isUniqueKeyViolation,
   normalizeName,
@@ -33,6 +34,19 @@ describe('isDocumentKey', () => {
     expect(isDocumentKey('abc-def')).toBe(false)
     expect(isDocumentKey('a1b2c3', 8)).toBe(false)
     expect(isDocumentKey('a1b2c3d4', 6)).toBe(false)
+  })
+})
+
+describe('isDocumentKeyChars', () => {
+  it('accepts lowercase alphanumeric ids of varying lengths', () => {
+    expect(isDocumentKeyChars('a1b2c3')).toBe(true)
+    expect(isDocumentKeyChars('abcd1234')).toBe(true)
+  })
+
+  it('rejects malformed ids', () => {
+    expect(isDocumentKeyChars('')).toBe(false)
+    expect(isDocumentKeyChars('ABC123')).toBe(false)
+    expect(isDocumentKeyChars('abc-def')).toBe(false)
   })
 })
 

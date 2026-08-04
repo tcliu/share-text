@@ -63,8 +63,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     await updateDocument(first.id, { content: 'touched', by: '192.168.1.2' })
 
     const summaries = await fetchDocumentSummaries()
-    expect(summaries.map((summary: { id: string }) => summary.id)).toEqual([first.id, second.id])
-    expect(summaries[0]).not.toHaveProperty('content')
+    expect(summaries.documents.map((summary: { id: string }) => summary.id)).toEqual([first.id, second.id])
+    expect(summaries.documents[0]).not.toHaveProperty('content')
+    expect(summaries.hasMore).toBe(false)
   })
 
   it('scopes summaries to documents created by the given IP', async () => {
@@ -74,7 +75,17 @@ describe('documents against the SQLite backend (dev profile)', () => {
     await updateDocument(editedByMe.id, { content: 'edited', by: '10.0.0.7' })
 
     const summaries = await fetchDocumentSummaries({ by: '10.0.0.7' })
-    expect(summaries.map((summary: { id: string }) => summary.id)).toEqual([mine.id])
+    expect(summaries.documents.map((summary: { id: string }) => summary.id)).toEqual([mine.id])
+  })
+
+  it('reports hasMore when more rows exist past the requested limit', async () => {
+    await insertDocument({ name: 'one', content: '', by: '127.0.0.1' })
+    await insertDocument({ name: 'two', content: '', by: '127.0.0.1' })
+
+    const summaries = await fetchDocumentSummaries({ limit: 1 })
+
+    expect(summaries.documents).toHaveLength(1)
+    expect(summaries.hasMore).toBe(true)
   })
 
   it('updates name and content', async () => {
