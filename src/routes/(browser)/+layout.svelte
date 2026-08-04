@@ -162,6 +162,32 @@
           </svg>
         {/snippet}
       </Button>
+      <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={handleNew}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z"
+              clip-rule="evenodd" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel="Refresh"
+        tooltip="Refresh"
+        onClick={handleRefresh}
+        disabled={documentsState.loadingDocuments}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
+          </svg>
+        {/snippet}
+      </Button>
     </div>
   {:else}
     <DocumentList

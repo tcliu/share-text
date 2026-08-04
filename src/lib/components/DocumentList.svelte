@@ -129,7 +129,7 @@
   style={width !== undefined ? `width: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
-      <span class="text-sm font-semibold text-slate-200">Documents</span>
+      <span class="p-1 text-md font-semibold text-slate-200">ShareDoc</span>
     </div>
     <div class="flex items-center gap-1">
       <Button size="sm" ariaLabel="Collapse document list" tooltip="Collapse document list" onClick={onToggleCollapse}>
@@ -202,7 +202,7 @@
             <EditableText
               text={document.name}
               size="sm"
-              className={document.id === selectedId ? 'text-cyan-300' : 'text-slate-300'}
+              className="text-slate-300"
               onChange={name => handleRename(document.id, name)}
               onActivate={() => handleRowClick(document.id)} />
             <Button

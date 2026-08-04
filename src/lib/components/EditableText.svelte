@@ -73,7 +73,6 @@
   $effect(() => {
     if (!editing) return
     input?.focus()
-    input?.select()
   })
 
   onDestroy(() => {
@@ -95,7 +94,7 @@
   <div class="group flex min-w-0 flex-1 items-center gap-1">
     <button
       type="button"
-      class={`${sizeFontClass[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition hover:text-cyan-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
+      class={`${sizeFontClass[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
       title="Double-click to edit"
       onclick={(e) => { e.stopPropagation(); scheduleActivate() }}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
