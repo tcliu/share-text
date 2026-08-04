@@ -44,6 +44,18 @@ describe('setting resolution', () => {
     })
   })
 
+  it('ignores out-of-range environment values and falls back to the default', async () => {
+    process.env.DOCUMENT_KEY_LENGTH = '99'
+
+    expect(await getDocumentKeyLength()).toBe(6)
+
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'document_key_length')).toMatchObject({
+      value: 6,
+      source: 'default',
+    })
+  })
+
   it('lets a database override win over the environment', async () => {
     process.env.MAX_DOCUMENTS_PER_IP = '25'
     await setSettingValue('max_documents_per_ip', 50)
@@ -52,6 +64,22 @@ describe('setting resolution', () => {
     expect(settings.find(setting => setting.key === 'max_documents_per_ip')).toMatchObject({
       value: 50,
       source: 'database',
+    })
+  })
+
+  it('ignores out-of-range database overrides and falls back to env/default', async () => {
+    const db = await getDb()
+    await db.query(
+      'insert into app_config (key, value, updated_at) values ($1, $2, current_timestamp)',
+      ['document_key_length', '99'],
+    )
+
+    expect(await getDocumentKeyLength()).toBe(6)
+
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'document_key_length')).toMatchObject({
+      value: 6,
+      source: 'default',
     })
   })
 

@@ -54,6 +54,10 @@ interface SettingRow {
   value: string
 }
 
+function getSettingDefinition(key: string) {
+  return SETTING_DEFINITIONS.find(item => item.key === key)
+}
+
 function readNumber(value: string | undefined): number | null {
   if (value === undefined) {
     return null
@@ -62,11 +66,15 @@ function readNumber(value: string | undefined): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
+function isWithinRange(value: number, definition: SettingDefinition) {
+  return value >= definition.min && value <= definition.max
+}
+
 export function resolveSettingSource(definition: SettingDefinition, dbValue: string | null): SettingSource {
-  if (dbValue !== null) {
+  if (dbValue !== null && isWithinRange(readNumber(dbValue) ?? Number.NaN, definition)) {
     return 'database'
   }
-  if (readNumber(process.env[definition.envKey]) !== null) {
+  if (isWithinRange(readNumber(process.env[definition.envKey]) ?? Number.NaN, definition)) {
     return 'environment'
   }
   return 'default'
@@ -76,15 +84,15 @@ export function getEffectiveSettingValue(definition: SettingDefinition, dbValue:
   const envValue = readNumber(process.env[definition.envKey])
   if (dbValue !== null) {
     const stored = readNumber(dbValue)
-    if (stored !== null) {
+    if (stored !== null && isWithinRange(stored, definition)) {
       return stored
     }
   }
-  return envValue ?? definition.defaultValue
+  return envValue !== null && isWithinRange(envValue, definition) ? envValue : definition.defaultValue
 }
 
 export async function getSettingValue(key: string): Promise<number> {
-  const definition = SETTING_DEFINITIONS.find(item => item.key === key)
+  const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
@@ -113,7 +121,7 @@ const SETTINGS_CACHE_TTL_MS = 5000
 const valueCache = new Map<string, { value: number; expiresAt: number }>()
 
 async function readSettingValue(key: string) {
-  const definition = SETTING_DEFINITIONS.find(item => item.key === key)
+  const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
@@ -146,7 +154,7 @@ export async function listSettings(): Promise<ResolvedSetting[]> {
 }
 
 export function validateSettingValue(key: string, value: unknown): number {
-  const definition = SETTING_DEFINITIONS.find(item => item.key === key)
+  const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
@@ -161,7 +169,7 @@ export function validateSettingValue(key: string, value: unknown): number {
 }
 
 export async function setSettingValue(key: string, value: unknown) {
-  const definition = SETTING_DEFINITIONS.find(item => item.key === key)
+  const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
@@ -177,11 +185,17 @@ export async function setSettingValue(key: string, value: unknown) {
 }
 
 export async function deleteSettingValue(key: string) {
-  const definition = SETTING_DEFINITIONS.find(item => item.key === key)
+  const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
   const db = await getDb()
   await db.query('delete from app_config where key = $1', [key])
   invalidateSettingCache(key)
+}
+
+export function assertKnownSettingKey(key: string) {
+  if (!getSettingDefinition(key)) {
+    throw new Error(`Unknown setting: ${key}`)
+  }
 }
