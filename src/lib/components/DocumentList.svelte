@@ -19,6 +19,8 @@
     onToggleCollapse: () => void
     onOpenAdmin: () => void
     deletePending: boolean
+    width?: number
+    onMinWidthChange?: (minWidth: number) => void
   }
 
   let {
@@ -35,6 +37,8 @@
     onToggleCollapse,
     onOpenAdmin,
     deletePending,
+    width,
+    onMinWidthChange,
   }: Props = $props()
 
   let searchQuery = $state('')
@@ -45,6 +49,45 @@
   )
 
   let loadMoreSentinel = $state<HTMLElement | null>(null)
+  let headerRef = $state<HTMLElement | null>(null)
+
+  // Captured into a plain let so the measurement effect is not re-triggered by
+  // the parent re-creating this callback on every splitter drag frame.
+  // svelte-ignore state_referenced_locally
+  let minWidthChangeCallback = onMinWidthChange
+
+  function measureHeaderMinWidth() {
+    const header = headerRef
+    if (!header || typeof document === 'undefined') return 0
+    const clone = header.cloneNode(true) as HTMLElement
+    clone.style.position = 'fixed'
+    clone.style.visibility = 'hidden'
+    clone.style.width = 'max-content'
+    clone.style.left = '-9999px'
+    document.body.appendChild(clone)
+    const minWidth = Math.ceil(clone.getBoundingClientRect().width)
+    clone.remove()
+    return minWidth
+  }
+
+  $effect(() => {
+    const header = headerRef
+    if (!header) return
+    const reportMinWidth = () => {
+      const minWidth = measureHeaderMinWidth()
+      if (minWidth > 0) {
+        minWidthChangeCallback?.(minWidth)
+      }
+    }
+    if (typeof ResizeObserver === 'undefined') {
+      reportMinWidth()
+      return
+    }
+    const observer = new ResizeObserver(reportMinWidth)
+    observer.observe(header)
+    reportMinWidth()
+    return () => observer.disconnect()
+  })
 
   function handleSearchKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
@@ -94,8 +137,10 @@
   })
 </script>
 
-<aside class="flex h-full w-72 flex-col gap-2 border-r border-slate-800 bg-slate-900/50">
-  <div class="flex items-center justify-between px-2 pt-2">
+<aside
+  class="flex h-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50"
+  style={width !== undefined ? `width: ${width}px` : undefined}>
+  <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
       <span class="text-sm font-semibold text-slate-200">Documents</span>
     </div>

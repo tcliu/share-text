@@ -4,10 +4,18 @@
   import { goto } from '$app/navigation'
   import { setShareTextContext } from '$lib/share-text-context'
   import DocumentList from '$lib/components/DocumentList.svelte'
+  import Splitter from '$lib/components/Splitter.svelte'
   import Button from '$lib/components/Button.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
+  import {
+    loadSplitPaneWidth,
+    saveSplitPaneWidth,
+    SPLIT_PANE_DEFAULT_WIDTH,
+    SPLIT_PANE_MAX_WIDTH,
+    SPLIT_PANE_MIN_WIDTH,
+  } from '$lib/split-pane'
 
   let { children } = $props()
 
@@ -18,6 +26,12 @@
   let deleteTarget = $state<string | null>(null)
   let leftPaneCollapsed = $state(false)
   let adminDialogOpen = $state(false)
+  let leftPaneWidth = $state(SPLIT_PANE_DEFAULT_WIDTH)
+  let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
+
+  $effect(() => {
+    leftPaneWidth = loadSplitPaneWidth()
+  })
 
   const selectedId = $derived($page.params.id ?? null)
 
@@ -66,6 +80,22 @@
 
   function toggleLeftPane() {
     leftPaneCollapsed = !leftPaneCollapsed
+  }
+
+  function handleSplitPaneChange(value: number) {
+    leftPaneWidth = value
+  }
+
+  function handleSplitPaneDragEnd() {
+    saveSplitPaneWidth(leftPaneWidth)
+  }
+
+  function handleMinWidthChange(minWidth: number) {
+    const effectiveMin = Math.min(SPLIT_PANE_MAX_WIDTH, Math.max(SPLIT_PANE_MIN_WIDTH, minWidth))
+    leftPaneMinWidth = effectiveMin
+    if (leftPaneWidth < effectiveMin) {
+      leftPaneWidth = effectiveMin
+    }
   }
 
   function handleAdminDelete(id: string) {
@@ -140,6 +170,7 @@
       error={documentsState.documentsError}
       {selectedId}
       hasMore={documentsState.hasMore}
+      width={leftPaneWidth}
       onNew={handleNew}
       onRefresh={handleRefresh}
       onDelete={handleDelete}
@@ -147,7 +178,14 @@
       onLoadMore={documentsState.loadMore}
       onToggleCollapse={toggleLeftPane}
       onOpenAdmin={() => (adminDialogOpen = true)}
+      onMinWidthChange={handleMinWidthChange}
       deletePending={deleteTarget !== null} />
+    <Splitter
+      value={leftPaneWidth}
+      min={leftPaneMinWidth}
+      max={SPLIT_PANE_MAX_WIDTH}
+      onChange={handleSplitPaneChange}
+      onDragEnd={handleSplitPaneDragEnd} />
   {/if}
   <main class="flex min-w-0 flex-1">{@render children()}</main>
 </div>
