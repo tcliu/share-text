@@ -6,10 +6,12 @@
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
   import { githubDark } from '@uiw/codemirror-theme-github'
+  import { getDocumentType } from '$lib/document-types'
 
   interface Props {
     content: string
     editable?: boolean
+    docType?: string
     containerClass?: string
     editorClass?: string
     editorAriaLabel?: string
@@ -22,6 +24,7 @@
   let {
     content = $bindable(),
     editable = true,
+    docType = 'text',
     containerClass = '',
     editorClass = '',
     editorAriaLabel = 'Content',
@@ -40,9 +43,10 @@
     return true
   }
 
-  function createEditorExtensions(): Extension[] {
+  function createEditorExtensions(languageExtensions: Extension[] = []): Extension[] {
     return [
       githubDark,
+      ...languageExtensions,
       EditorView.editable.of(editable),
       lineNumbers(),
       history(),
@@ -132,19 +136,25 @@
 
   $effect(() => {
     void recreateKey
+    void docType
     let cancelled = false
     tick()
-      .then(() => {
+      .then(async () => {
         if (cancelled || !editorContainerRef) {
           editorView?.destroy()
           editorView = null
           return
         }
+        const languageExtension = await getDocumentType(docType).editorLanguage()
+        if (cancelled) {
+          return
+        }
+        const languageExtensions = languageExtension ? [languageExtension] : []
         editorView?.destroy()
         editorView = new EditorView({
           state: EditorState.create({
             doc: content,
-            extensions: createEditorExtensions(),
+            extensions: createEditorExtensions(languageExtensions),
           }),
           parent: editorContainerRef,
         })
@@ -154,7 +164,7 @@
       })
       .catch(error => {
         if (!cancelled) {
-          console.error('Failed to initialize editor', error)
+          console.error('Failed to load editor language support', error)
         }
       })
     return () => {

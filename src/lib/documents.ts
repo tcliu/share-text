@@ -1,6 +1,7 @@
 export interface DocumentSummary {
   id: string
   name: string
+  documentType: string
   updatedAt: string
   updatedBy: string
 }
@@ -52,11 +53,11 @@ export async function fetchDocument(id: string): Promise<Document | null> {
   return body.document ?? null
 }
 
-export async function createDocument(): Promise<Document> {
+export async function createDocument(options: { name?: string; content?: string; documentType?: string } = {}): Promise<Document> {
   const response = await fetch(BASE_PATH, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify(options),
   })
   const body = await response.json().catch(() => ({}))
   if (!response.ok) {
@@ -67,7 +68,7 @@ export async function createDocument(): Promise<Document> {
 
 export async function updateDocument(
   id: string,
-  options: { name?: string; content?: string },
+  options: { name?: string; content?: string; documentType?: string },
 ): Promise<Document> {
   const response = await fetch(`${BASE_PATH}/${id}`, {
     method: 'PUT',

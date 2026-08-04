@@ -145,6 +145,7 @@ describe('row mapping', () => {
     key: 'a1b2c3',
     name: 'Notes',
     content: 'body',
+    document_type: 'text',
     updated_by: '203.0.113.7',
     updated_at: new Date('2026-08-02T12:00:00.000Z'),
   }
@@ -153,6 +154,7 @@ describe('row mapping', () => {
     expect(toDocumentSummary(row)).toEqual({
       id: row.key,
       name: 'Notes',
+      documentType: 'text',
       updatedAt: '2026-08-02T12:00:00.000Z',
       updatedBy: '203.0.113.7',
     })
@@ -162,6 +164,7 @@ describe('row mapping', () => {
     expect(toDocument(row)).toEqual({
       id: row.key,
       name: 'Notes',
+      documentType: 'text',
       content: 'body',
       updatedAt: '2026-08-02T12:00:00.000Z',
       updatedBy: '203.0.113.7',

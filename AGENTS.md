@@ -15,6 +15,7 @@ Apply the reference documents in `AI_CONFIG_DIR/references/` (shared with `../ai
 - `reliability.md` — state safety, async flows, concurrency, event logging.
 - `logging.md` — structured server-side event logging, action naming, and key information for troubleshooting.
 - `ui-patterns.md` — UI and interaction conventions.
+- `type-registry.md` — definition-driven type dispatch (behavior/render lambdas in a registry instead of `if (type === ...)` switches); the document type registry in `src/lib/document-types.ts` follows this pattern.
 - `bash.md` — shell scripting conventions for scripts.
 
 Read the applicable reference file when writing or reviewing code in the covered area, and verify its rules.

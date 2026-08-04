@@ -20,6 +20,7 @@ export interface AdminSetting {
 export interface AdminDocumentSummary {
   id: string
   name: string
+  documentType: string
   createdBy: string
   updatedBy: string
   createdAt: string
@@ -147,10 +148,5 @@ export async function renameAdminDocument(id: string, name: string): Promise<Adm
 
 export async function deleteAdminDocument(id: string): Promise<void> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, { method: 'DELETE' })
-  if (response.status === 401) {
-    throw new AdminAuthError()
-  }
-  if (!response.ok && response.status !== 204) {
-    throw new Error('Failed to delete document')
-  }
+  await parseResponse(response, 'Failed to delete document')
 }

@@ -79,7 +79,7 @@ describe('PUT /api/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Request body must include name or content' })
+    await expect(response.json()).resolves.toEqual({ error: 'Request body must include name, content, or documentType' })
     expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
   })
 })

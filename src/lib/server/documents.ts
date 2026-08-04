@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
 import { logEvent } from './logging'
-import { getDocumentKeyLength, getMaxDocumentsPerUser } from './settings'
+import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentsPerUser } from './settings'
+import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
 
 export const MAX_NAME_LENGTH = 200
 export const MAX_CONTENT_BYTES = 1024 * 1024
@@ -10,11 +11,20 @@ export const KEY_LENGTH = 6
 export const MAX_KEY_ATTEMPTS = 5
 const documentKeyCharsRegex = /^[0-9a-z]+$/
 
+export const DOCUMENT_TYPES = DOCUMENT_TYPE_VALUES
+
+export type DocumentType = DocumentTypeValue
+
+export function isValidDocumentType(value: unknown): value is DocumentType {
+  return isDocumentTypeValue(value)
+}
+
 export class DocumentLimitError extends Error {}
 
 export interface DocumentSummary {
   id: string
   name: string
+  documentType: DocumentType
   updatedAt: string
   updatedBy: string
 }
@@ -28,6 +38,7 @@ interface DocumentRow {
   key: string
   name: string
   content: string
+  document_type: string
   updated_by: string
   updated_at: Date | string
 }
@@ -107,6 +118,7 @@ export function toDocumentSummary(row: DocumentRow): DocumentSummary {
   return {
     id: row.key,
     name: row.name,
+    documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
     updatedAt: toIsoString(row.updated_at),
     updatedBy: row.updated_by,
   }
@@ -140,7 +152,7 @@ export interface FetchDocumentSummariesResult {
 
 export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
   const { by, limit, offset = 0 } = options
-  const sql = 'select key, name, updated_by, updated_at from documents'
+  const sql = 'select key, name, document_type, updated_by, updated_at from documents'
   const params: unknown[] = []
   const conditions: string[] = []
 
@@ -190,7 +202,7 @@ export async function assertWithinDocumentLimit(by: string) {
 }
 
 export async function fetchDocument(id: string) {
-  const result = await runQuery<DocumentRow>('select key, name, content, updated_by, updated_at from documents where key = $1', [
+  const result = await runQuery<DocumentRow>('select key, name, content, document_type, updated_by, updated_at from documents where key = $1', [
     id,
   ])
   const row = result.rows[0]
@@ -200,6 +212,7 @@ export async function fetchDocument(id: string) {
 export interface AdminDocumentSummary {
   id: string
   name: string
+  documentType: DocumentType
   createdBy: string
   updatedBy: string
   createdAt: string
@@ -214,6 +227,7 @@ export interface AdminDocument extends AdminDocumentSummary {
 interface AdminDocumentRow {
   key: string
   name: string
+  document_type: string
   created_by: string
   updated_by: string
   created_at: Date | string
@@ -223,12 +237,14 @@ interface AdminDocumentRow {
 
 interface AdminDocumentDetailRow extends AdminDocumentRow {
   content: string
+  document_type: string
 }
 
 function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
   return {
     id: row.key,
     name: row.name,
+    documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
     createdBy: row.created_by,
     updatedBy: row.updated_by,
     createdAt: toIsoString(row.created_at),
@@ -240,6 +256,7 @@ function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
 const ADMIN_SORT_COLUMNS: Record<string, string> = {
   id: 'key',
   name: 'name',
+  documentType: 'document_type',
   length: 'content_size',
   updatedBy: 'updated_by',
   updatedAt: 'updated_at',
@@ -248,6 +265,7 @@ const ADMIN_SORT_COLUMNS: Record<string, string> = {
 const ADMIN_SEARCH_COLUMNS: Record<string, string> = {
   id: 'key',
   name: 'name',
+  documentType: 'document_type',
   updatedBy: 'updated_by',
 }
 
@@ -298,7 +316,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   )
   const total = Number(countResult.rows[0]?.count ?? 0)
 
-  let sql = `select key, name, created_by, updated_by, created_at, updated_at, length(content) as content_size
+  let sql = `select key, name, document_type, created_by, updated_by, created_at, updated_at, length(content) as content_size
     from documents${whereClause} order by ${sortColumn} ${sortDir}`
   const listParams = [...params]
   if (limit !== undefined) {
@@ -319,15 +337,15 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
 
 export async function fetchDocumentForAdmin(id: string) {
   const result = await runQuery<AdminDocumentDetailRow>(
-    `select key, name, content, created_by, updated_by, created_at, updated_at, length(content) as content_size
+    `select key, name, content, document_type, created_by, updated_by, created_at, updated_at, length(content) as content_size
      from documents where key = $1`,
     [id],
   )
   const row = result.rows[0]
-  return row ? { ...toAdminDocumentSummary(row), content: row.content } : null
+  return row ? { ...toAdminDocumentSummary(row), content: row.content, documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType } : null
 }
 
-export async function insertDocument(options: { name?: string; content: string; by: string }) {
+export async function insertDocument(options: { name?: string; content: string; documentType?: DocumentType; by: string }) {
   await assertWithinDocumentLimit(options.by)
   const keyLength = await getDocumentKeyLength()
   for (let attempt = 1; ; attempt++) {
@@ -335,10 +353,10 @@ export async function insertDocument(options: { name?: string; content: string; 
     const name = options.name ?? key
     try {
       const result = await runQuery<DocumentRow>(
-        `insert into documents (key, name, content, created_by, updated_by, created_at, updated_at)
-         values ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
-         returning id, key, name, content, updated_by, updated_at`,
-        [key, name, options.content, options.by, options.by],
+        `insert into documents (key, name, content, document_type, created_by, updated_by, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6, current_timestamp, current_timestamp)
+         returning id, key, name, content, document_type, updated_by, updated_at`,
+        [key, name, options.content, options.documentType ?? 'text', options.by, options.by],
       )
       return toDocument(result.rows[0])
     } catch (error) {
@@ -354,7 +372,7 @@ export async function insertDocument(options: { name?: string; content: string; 
   }
 }
 
-export async function updateDocument(id: string, options: { name?: string; content?: string; by: string }) {
+export async function updateDocument(id: string, options: { name?: string; content?: string; documentType?: DocumentType; by: string }) {
   const updates: string[] = []
   const values: unknown[] = []
   let index = 1
@@ -365,8 +383,15 @@ export async function updateDocument(id: string, options: { name?: string; conte
     index += 1
   }
   if (options.content !== undefined) {
+    const maxContentLength = await getMaxContentLength()
+    assertContentWithinLimit(options.content, maxContentLength)
     updates.push(`content = $${index}`)
     values.push(options.content)
+    index += 1
+  }
+  if (options.documentType !== undefined) {
+    updates.push(`document_type = $${index}`)
+    values.push(options.documentType)
     index += 1
   }
 
@@ -381,7 +406,7 @@ export async function updateDocument(id: string, options: { name?: string; conte
   values.push(id)
 
   const result = await runQuery<DocumentRow>(
-    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, updated_by, updated_at`,
+    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, document_type, updated_by, updated_at`,
     values,
   )
   const row = result.rows[0]

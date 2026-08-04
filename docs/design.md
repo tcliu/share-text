@@ -36,7 +36,7 @@ The page is split into two vertical panes.
   - When a document is selected (`/{doc-id}`), it shows:
     - a header row with the document name on the left and a button panel on the
       right containing five icon buttons with tooltips — **Copy**, **Upload**,
-      **Download**, **Reset**, and **Save** (in that order),
+      **Export**, **Reset**, and **Save** (in that order),
     - a CodeMirror plain-text editor that fills the rest of the pane,
     - a footer with dirty state and character count.
 
@@ -58,8 +58,8 @@ The page is split into two vertical panes.
   snapshot (the server content, or an empty string when the document was never
   saved). It is disabled while the document is clean.
 - **Copy** copies the editor content to the clipboard (disabled when empty).
-- **Download** downloads the content as a `{name}.txt` file (disabled when
-  empty).
+- **Export** downloads the content as a `{name}.{extension}` file, where the
+  extension is determined by the selected document type (disabled when empty).
 - **Upload** loads a local text file into the editor. When the document is
   dirty, it asks for confirmation first, because uploading replaces the editor
   content. Files longer than the content limit are rejected.

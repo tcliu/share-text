@@ -5,6 +5,7 @@ import {
   contentByteSize,
   deleteDocument,
   fetchDocument,
+  isValidDocumentType,
   normalizeName,
   updateDocument,
 } from '$lib/server/documents'
@@ -38,15 +39,16 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
 
   const bodyKeys = Object.keys(body)
-  if (bodyKeys.some(key => key !== 'name' && key !== 'content')) {
+  if (bodyKeys.some(key => key !== 'name' && key !== 'content' && key !== 'documentType')) {
     return json({ error: 'Unsupported fields in request body' }, { status: 400 })
   }
 
   const name = typeof body.name === 'string' ? body.name : undefined
   const content = typeof body.content === 'string' ? body.content : undefined
+  const docType = typeof body.documentType === 'string' ? body.documentType : undefined
 
-  if (name === undefined && content === undefined) {
-    return json({ error: 'Request body must include name or content' }, { status: 400 })
+  if (name === undefined && content === undefined && docType === undefined) {
+    return json({ error: 'Request body must include name, content, or documentType' }, { status: 400 })
   }
 
   if (name !== undefined) {
@@ -65,9 +67,13 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     }
   }
 
+  if (docType !== undefined && !isValidDocumentType(docType)) {
+    return json({ error: 'Invalid document type' }, { status: 400 })
+  }
+
   const ip = getClientAddress()
   const startedAt = Date.now()
-  const document = await updateDocument(id, { name, content, by: ip })
+  const document = await updateDocument(id, { name, content, documentType: docType, by: ip })
   if (!document) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -75,6 +81,9 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   const details: Record<string, unknown> = { id, name: document.name, elapsed_ms: Date.now() - startedAt }
   if (content !== undefined) {
     details.content_size = contentByteSize(content)
+  }
+  if (document.documentType !== undefined) {
+    details.type = document.documentType
   }
   logEvent({ ip, action: 'document_save', details })
 

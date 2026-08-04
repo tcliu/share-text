@@ -11,10 +11,17 @@
     ariaLabel?: string
     align?: 'left' | 'right'
     autoPlace?: boolean
+    filterable?: boolean
+    size?: 'xs' | 'sm' | 'md'
     onSelect: (value: string) => void
     buttonClass?: string
+    controlClass?: string
+    optionClass?: string
     panelClass?: string
   }
+
+  const id = Math.random().toString(36).slice(2)
+  const panelId = `select-dropdown-panel-${id}`
 
   let {
     buttonLabel,
@@ -23,10 +30,37 @@
     ariaLabel,
     align = 'left',
     autoPlace = true,
+    filterable = false,
     onSelect,
-    buttonClass = 'inline-flex min-w-24 items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition hover:border-cyan-500',
+    size = 'sm',
+    buttonClass,
+    controlClass,
+    optionClass,
     panelClass = 'w-32 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
   }: Props = $props()
+
+  const SIZE_CLASS = {
+    xs: { pad: 'py-1', text: 'text-xs', minW: 'min-w-16' },
+    sm: { pad: 'py-2', text: 'text-sm', minW: 'min-w-24' },
+    md: { pad: 'py-2.5', text: 'text-base', minW: 'min-w-24' },
+  } as const
+
+  const resolvedButtonClass = $derived(
+    buttonClass ??
+      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+  )
+
+  const resolvedControlClass = $derived(
+    controlClass ??
+      `${SIZE_CLASS[size].minW} field-sizing-content rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+  )
+
+  const optionRowClass = $derived(
+    optionClass ??
+      `flex w-full items-center justify-between rounded-md px-3 text-left transition ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+  )
+
+  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text} text-slate-500`)
 
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
@@ -35,6 +69,35 @@
   let panelReady = $state(false)
   let panelOriginalParent = $state<ParentNode | null>(null)
   let panelNextSibling = $state<Node | null>(null)
+  let filterText = $state('')
+  let highlightIndex = $state(0)
+
+  const filteredOptions = $derived.by(() => {
+    if (!filterable) {
+      return options
+    }
+    const query = filterText.startsWith(buttonLabel) ? filterText.slice(buttonLabel.length) : filterText
+    const needle = query.trim().toLowerCase()
+    if (needle === '') {
+      return options
+    }
+    return options.filter(
+      option => option.label.toLowerCase().includes(needle) || option.value.toLowerCase().includes(needle),
+    )
+  })
+
+  $effect(() => {
+    if (!open) {
+      filterText = buttonLabel
+    }
+  })
+
+  $effect(() => {
+    void filteredOptions
+    if (open && highlightIndex !== 0) {
+      highlightIndex = 0
+    }
+  })
 
   function close() {
     open = false
@@ -44,9 +107,35 @@
     open = !open
   }
 
+  function openPanel() {
+    open = true
+  }
+
+  function handleControlFocus() {
+    openPanel()
+  }
+
   function select(value: string) {
     onSelect(value)
     close()
+  }
+
+  function handleControlKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (filteredOptions.length === 0) return
+      highlightIndex = (highlightIndex + 1) % filteredOptions.length
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (filteredOptions.length === 0) return
+      highlightIndex = (highlightIndex - 1 + filteredOptions.length) % filteredOptions.length
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const option = filteredOptions[highlightIndex] ?? filteredOptions[0]
+      if (option) {
+        select(option.value)
+      }
+    }
   }
 
   function attachPanelToBody() {
@@ -101,6 +190,10 @@
       if (event.key === 'Escape') {
         event.stopImmediatePropagation()
         event.preventDefault()
+        if (filterable && filterText && filterText !== buttonLabel) {
+          filterText = ''
+          return
+        }
         close()
       }
     }
@@ -125,44 +218,76 @@
 </script>
 
 <div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null}>
-  <button
-    type="button"
-    aria-label={ariaLabel}
-    aria-haspopup="listbox"
-    aria-expanded={open}
-    onclick={toggle}
-    class={buttonClass}>
-    <span>{buttonLabel}</span>
-    <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fill-rule="evenodd"
-        d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
-        clip-rule="evenodd" />
-    </svg>
-  </button>
+  {#if filterable}
+    <div class="relative">
+      <input
+        type="text"
+        bind:value={filterText}
+        role="combobox"
+        aria-label={ariaLabel}
+        aria-autocomplete="list"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        aria-activedescendant={open && filteredOptions[highlightIndex] ? `${panelId}-option-${highlightIndex}` : undefined}
+        onfocus={handleControlFocus}
+        onkeydown={handleControlKeydown}
+        class={resolvedControlClass} />
+      <svg
+        class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        aria-hidden="true">
+        <path
+          fill-rule="evenodd"
+          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
+          clip-rule="evenodd" />
+      </svg>
+    </div>
+  {:else}
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      onclick={toggle}
+      class={resolvedButtonClass}>
+      <span>{buttonLabel}</span>
+      <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path
+          fill-rule="evenodd"
+          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
+          clip-rule="evenodd" />
+      </svg>
+    </button>
+  {/if}
   {#if open}
     <div
       bind:this={panelRef}
+      id={panelId}
       role="listbox"
+      aria-label={ariaLabel}
       class:invisible={!panelReady}
       class={`fixed left-0 top-0 z-50 will-change-transform ${panelClass}`}
       style={`transform: translate(${panelStyle.left}px, ${panelStyle.top}px);`}>
-      {#each options as option}
+      {#if filteredOptions.length === 0}
+        <div class={emptyClass}>No options</div>
+      {/if}
+      {#each filteredOptions as option, index}
         <button
           type="button"
+          id={`${panelId}-option-${index}`}
           role="option"
-          aria-selected={option.value === activeValue}
+          aria-selected={option.value === activeValue || index === highlightIndex}
           onclick={() => select(option.value)}
-          class={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[13px] transition ${option.value === activeValue ? 'bg-cyan-500/15 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'}`}>
+          onmouseenter={() => (highlightIndex = index)}
+          class={`${optionRowClass} ${
+            index === highlightIndex
+              ? 'bg-slate-800 text-cyan-200'
+              : option.value === activeValue
+                ? 'bg-cyan-500/15 text-cyan-200'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'
+          }`}>
           <span>{option.label}</span>
-          {#if option.value === activeValue}
-            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z"
-                clip-rule="evenodd" />
-            </svg>
-          {/if}
         </button>
       {/each}
     </div>

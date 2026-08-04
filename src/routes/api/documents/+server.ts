@@ -6,6 +6,7 @@ import {
   DocumentLimitError,
   fetchDocumentSummaries,
   insertDocument,
+  isValidDocumentType,
   normalizeName,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
@@ -39,12 +40,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     return json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  if (Object.keys(body).some(key => key !== 'name' && key !== 'content')) {
+  if (Object.keys(body).some(key => key !== 'name' && key !== 'content' && key !== 'documentType')) {
     return json({ error: 'Unsupported fields in request body' }, { status: 400 })
   }
 
   const rawName = typeof body.name === 'string' && body.name.trim() !== '' ? body.name : null
   const rawContent = typeof body.content === 'string' ? body.content : ''
+  const rawType = typeof body.documentType === 'string' ? body.documentType : undefined
   const ip = getClientAddress()
 
   let name: string | undefined
@@ -57,9 +59,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     return json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
   }
 
+  if (rawType !== undefined && !isValidDocumentType(rawType)) {
+    return json({ error: 'Invalid document type' }, { status: 400 })
+  }
+
   const startedAt = Date.now()
   try {
-    const document = await insertDocument({ name, content: rawContent, by: ip })
+    const document = await insertDocument({ name, content: rawContent, documentType: rawType, by: ip })
     logEvent({
       ip,
       action: 'document_create',

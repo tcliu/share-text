@@ -27,7 +27,7 @@
     {
       key: 'id',
       header: 'ID',
-      widthClass: 'w-[16%]',
+      widthClass: 'w-[15%]',
       sortable: true,
       searchable: true,
       cell: idCell,
@@ -35,16 +35,24 @@
     {
       key: 'name',
       header: 'Name',
-      widthClass: 'w-[34%]',
+      widthClass: 'w-[25%]',
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
       cell: nameCell,
     },
     {
+      key: 'documentType',
+      header: 'Type',
+      widthClass: 'w-[12%]',
+      sortable: true,
+      searchable: true,
+      cell: documentTypeCell,
+    },
+    {
       key: 'length',
       header: 'Length',
-      widthClass: 'w-[14%]',
+      widthClass: 'w-[12%]',
       cellClass: 'text-slate-400',
       sortable: true,
       cell: lengthCell,
@@ -115,6 +123,13 @@
     size="sm"
     className="text-slate-200"
     onChange={name => void documentsState.rename(document.id, name)} />
+{/snippet}
+
+{#snippet documentTypeCell(document: AdminDocumentSummary)}
+  <Copyable
+    text={document.documentType}
+    className="text-slate-400 capitalize"
+    copyAriaLabel={`Copy document type ${document.documentType}`} />
 {/snippet}
 
 {#snippet lengthCell(document: AdminDocumentSummary)}

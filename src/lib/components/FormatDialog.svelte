@@ -1,0 +1,66 @@
+<script lang="ts">
+  import { tick } from 'svelte'
+  import BaseDialog from './BaseDialog.svelte'
+  import DialogActions from './DialogActions.svelte'
+  import Button from './Button.svelte'
+  import NumberInput from './NumberInput.svelte'
+
+  interface Props {
+    show: boolean
+    title: string
+    hasIndent?: boolean
+    initialIndent?: number
+    buttonLabel?: string
+    onConfirm: (indent: number) => void
+    onCancel: () => void
+  }
+
+  let {
+    show,
+    title,
+    hasIndent = true,
+    initialIndent = 2,
+    buttonLabel = 'Apply',
+    onConfirm,
+    onCancel,
+  }: Props = $props()
+
+  let indent = $state('2')
+  let numberInputRef = $state<ReturnType<typeof NumberInput> | null>(null)
+
+  $effect(() => {
+    if (!show) return
+    indent = String(initialIndent)
+    tick().then(() => numberInputRef?.focus())
+  })
+
+  function handleConfirm() {
+    const parsed = Number.parseInt(indent, 10)
+    const resolved = Number.isNaN(parsed) ? initialIndent : parsed
+    onConfirm(resolved)
+  }
+</script>
+
+{#if show}
+  <BaseDialog title={title} maxWidth="md" {onCancel}>
+    <div class="flex flex-col gap-4">
+      {#if hasIndent}
+        <label class="flex flex-col gap-1.5 text-sm text-slate-300">
+          <span>Indentation (spaces)</span>
+          <NumberInput
+            bind:this={numberInputRef}
+            bind:value={indent}
+            min={0}
+            max={8}
+            ariaLabel="Indentation (spaces)"
+            className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-500" />
+        </label>
+      {/if}
+      <DialogActions>
+        {#snippet children()}
+          <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel}</Button>
+        {/snippet}
+      </DialogActions>
+    </div>
+  </BaseDialog>
+{/if}

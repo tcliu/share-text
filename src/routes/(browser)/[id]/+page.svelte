@@ -1,7 +1,9 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import type { PageProps } from './$types'
-  import { fetchDocument, updateDocument, type Document } from '$lib/documents'
+  import { fetchDocument, updateDocument, createDocument, type Document } from '$lib/documents'
+  import { goto } from '$app/navigation'
+  import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
   import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
@@ -13,18 +15,22 @@
   let currentId = $state('')
   let documentName = $state('')
   let savedContent = $state('')
+  let documentType = $state('text')
+  let savedDocumentType = $state('text')
   let documentUpdatedAt = $state('')
   let documentUpdatedBy = $state('')
   let content = $state('')
+  let docType = $state('text')
   let saving = $state(false)
   let refreshing = $state(false)
   let draftTimer: ReturnType<typeof setTimeout> | null = null
 
-  const dirty = $derived(content !== savedContent)
+  const dirty = $derived(content !== savedContent || docType !== savedDocumentType)
 
   const savedDocument = $derived.by<Document>(() => ({
     id: currentId,
     name: documentName,
+    documentType: savedDocumentType,
     content: savedContent,
     updatedAt: documentUpdatedAt,
     updatedBy: documentUpdatedBy,
@@ -65,10 +71,13 @@
       const document = await fetchDocument(id)
       if (!document || document.id !== currentId) return
       documentName = document.name
+      savedDocumentType = document.documentType
+      documentType = document.documentType
       documentUpdatedAt = document.updatedAt
       documentUpdatedBy = document.updatedBy
       savedContent = document.content
       content = document.content
+      docType = document.documentType
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to load document')
     } finally {
@@ -81,10 +90,13 @@
     if (document.id === currentId) return
     currentId = document.id
     documentName = document.name
+    savedDocumentType = document.documentType
+    documentType = document.documentType
     documentUpdatedAt = document.updatedAt
     documentUpdatedBy = document.updatedBy
     savedContent = document.content
     content = loadDraft(document.id) ?? document.content
+    docType = document.documentType
   })
 
   $effect(() => {
@@ -106,14 +118,26 @@
 
   async function handleSave() {
     if (!dirty || saving) return
+    const currentType = getDocumentType(docType)
+    const validation = await currentType.validate(content)
+    if (!validation.valid) {
+      toast.error('Cannot save: ' + (validation.error ?? `Invalid ${currentType.label}`))
+      return
+    }
     saving = true
     try {
-      const updated = await updateDocument(currentId, { content })
+      const options: { content?: string; documentType?: string } = {}
+      if (content !== savedContent) options.content = content
+      if (docType !== savedDocumentType) options.documentType = docType
+      const updated = await updateDocument(currentId, options)
       clearDraft(currentId)
       savedContent = updated.content
+      savedDocumentType = updated.documentType
+      documentType = updated.documentType
       documentUpdatedAt = updated.updatedAt
       documentUpdatedBy = updated.updatedBy
       content = updated.content
+      docType = updated.documentType
       toast.success('Document saved')
       await context.refreshList()
     } catch (error) {
@@ -127,6 +151,7 @@
     if (!dirty || saving) return
     clearDraft(currentId)
     content = savedContent
+    docType = savedDocumentType
   }
 
   async function handleRename(name: string) {
@@ -140,6 +165,24 @@
       await context.refreshList()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+    }
+  }
+
+  function handleTypeChange(type: string) {
+    docType = type
+  }
+
+  async function handleClone() {
+    if (!currentId) return
+    const cloneName = documentName ? `${documentName} (copy)` : undefined
+    try {
+      const created = await createDocument({ name: cloneName, content, documentType: docType })
+      clearDraft(created.id)
+      toast.success('Document cloned')
+      await context.refreshList()
+      await goto(`/${created.id}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to clone document')
     }
   }
 
@@ -158,10 +201,13 @@
   <DocumentEditorPane
     document={savedDocument}
     bind:content
+    bind:docType
     {saving}
     refreshing={refreshing || context.loadingDocuments}
     maxContentLength={data.maxContentLength}
     onSave={handleSave}
     onReset={handleReset}
-    onRename={handleRename} />
+    onRename={handleRename}
+    onTypeChange={handleTypeChange}
+    onClone={handleClone} />
 {/if}

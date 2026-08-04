@@ -3,6 +3,7 @@ create table if not exists documents (
   key text unique not null,
   name text not null,
   content text not null default '',
+  document_type text not null default 'text',
   created_by text not null,
   updated_by text not null,
   created_at timestamptz not null default current_timestamp,

@@ -2,6 +2,7 @@
   interface Props {
     content: string
     editable?: boolean
+    docType?: string
     containerClass?: string
     editorClass?: string
     editorAriaLabel?: string
@@ -14,6 +15,7 @@
   let {
     content = $bindable(),
     editable = true,
+    docType = 'text',
     containerClass = '',
     editorClass = '',
     editorAriaLabel = 'Content',
@@ -24,7 +26,7 @@
   }: Props = $props()
 
   let EditorComponent = $state<any>(null)
-  let editorInstance = $state<any>(null)
+  let editorInstance = $state<{ focus: () => void } | null>(null)
   let loadError = $state('')
 
   function handleContentChange(nextContent: string) {
@@ -62,6 +64,7 @@
     bind:this={editorInstance}
     {content}
     {editable}
+    {docType}
     {containerClass}
     {editorClass}
     {editorAriaLabel}

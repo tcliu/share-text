@@ -31,6 +31,10 @@
 
   let inputEl = $state<HTMLInputElement | null>(null)
 
+  export function focus() {
+    inputEl?.focus()
+  }
+
   const currentValue = $derived(Number.parseFloat(value))
   const isAtMax = $derived(max !== undefined && !Number.isNaN(currentValue) && currentValue >= max)
   const isAtMin = $derived(min !== undefined && !Number.isNaN(currentValue) && currentValue <= min)

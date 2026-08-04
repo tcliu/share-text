@@ -4,31 +4,41 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
+  import SelectDropdown from './SelectDropdown.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
+  import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
+
+  const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
   interface Props {
     document: Document
     content: string
+    docType: string
     saving: boolean
     refreshing?: boolean
     maxContentLength?: number
     onSave: () => void
     onReset: () => void
     onRename: (name: string) => void
+    onTypeChange: (type: string) => void
+    onClone: () => void
   }
 
   let {
     document,
     content = $bindable(),
+    docType = $bindable(),
     saving,
     refreshing = false,
     maxContentLength = 0,
     onSave,
     onReset,
     onRename,
+    onTypeChange,
+    onClone,
   }: Props = $props()
 
-  const dirty = $derived(content !== document.content)
+  const dirty = $derived(content !== document.content || docType !== document.documentType)
 
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
@@ -89,16 +99,24 @@
     }
   }
 
-  function handleDownload() {
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+  function handleExport() {
+    const currentType = getDocumentType(docType)
+    const blob = new Blob([content], { type: `${currentType.mimeType};charset=utf-8` })
     const url = URL.createObjectURL(blob)
     const anchor = globalThis.document.createElement('a')
     anchor.href = url
-    anchor.download = `${document.name || 'document'}.txt`
+    anchor.download = `${document.name || 'document'}.${currentType.extension}`
     globalThis.document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
     URL.revokeObjectURL(url)
+  }
+
+  function handleTypeSelect(value: string) {
+    if (value !== docType) {
+      docType = value
+      onTypeChange(value)
+    }
   }
 
   function pad(value: number) {
@@ -110,6 +128,9 @@
     if (Number.isNaN(date.getTime())) return document.updatedAt
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
   })
+
+  const currentType = $derived(getDocumentType(docType))
+  const activeTypeLabel = $derived(currentType.label)
 </script>
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
@@ -119,6 +140,25 @@
       className="font-semibold text-slate-200"
       onChange={onRename} />
     <div class="flex items-center gap-1">
+      <SelectDropdown
+        buttonLabel={activeTypeLabel}
+        options={DOCUMENT_TYPE_OPTIONS}
+        activeValue={docType}
+        ariaLabel="Document type"
+        filterable={true}
+        size="sm"
+        onSelect={handleTypeSelect}
+        align="right"
+        autoPlace={true} />
+      {#if currentType.actions}
+        {#await currentType.actions() then Actions}
+          <Actions
+            type={currentType}
+            content={content}
+            onContentChange={(value: string) => (content = value)}
+            onTypeChange={handleTypeSelect} />
+        {/await}
+      {/if}
       <Button
         size="sm"
         ariaLabel="Copy"
@@ -129,6 +169,19 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <rect x="7" y="7" width="10" height="10" rx="1.5" />
             <path d="M13 7V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel="Clone document"
+        tooltip="Clone"
+        onClick={onClone}
+        disabled={content.length === 0}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3" y="3" width="10" height="10" rx="1.5" />
+            <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
           </svg>
         {/snippet}
       </Button>
@@ -145,9 +198,9 @@
       </Button>
       <Button
         size="sm"
-        ariaLabel="Download"
-        tooltip="Download"
-        onClick={handleDownload}
+        ariaLabel="Export"
+        tooltip="Export"
+        onClick={handleExport}
         disabled={content.length === 0}>
         {#snippet icon()}
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -183,6 +236,7 @@
 
   <LazyCodeEditor
     bind:content
+    {docType}
     autoFocus={true}
     recreateKey={document.id}
     {maxContentLength}

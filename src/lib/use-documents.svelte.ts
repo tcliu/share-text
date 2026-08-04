@@ -80,7 +80,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
       const updated = await updateDocument(id, { name })
       documents = documents.map(document =>
         document.id === id
-          ? { id: document.id, name: updated.name, updatedAt: updated.updatedAt, updatedBy: updated.updatedBy }
+          ? { id: document.id, name: updated.name, documentType: updated.documentType, updatedAt: updated.updatedAt, updatedBy: updated.updatedBy }
           : document,
       )
       toast.success('Document renamed')
