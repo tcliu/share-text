@@ -86,12 +86,21 @@ describe('PUT /api/admin/settings', () => {
   })
 
   it('rejects an unknown setting key', async () => {
-    settingsMocks.setSettingValue.mockRejectedValue(new Error('Unknown setting: nope'))
-
     const response = await PUT(putEvent({ settings: [{ key: 'nope', value: 5 }] }))
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Unknown setting: nope' })
+    expect(settingsMocks.setSettingValue).not.toHaveBeenCalled()
+  })
+
+  it('does not apply earlier items when a later setting is invalid', async () => {
+    const response = await PUT(
+      putEvent({ settings: [{ key: 'max_documents_per_ip', value: 50 }, { key: 'nope', value: 5 }] }),
+    )
+
+    expect(response.status).toBe(400)
+    expect(settingsMocks.setSettingValue).not.toHaveBeenCalled()
+    expect(settingsMocks.deleteSettingValue).not.toHaveBeenCalled()
   })
 
   it('rejects a body without a settings array', async () => {

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { deleteSettingValue, listSettings, setSettingValue } from '$lib/server/settings'
+import { assertKnownSettingKey, deleteSettingValue, listSettings, setSettingValue, validateSettingValue } from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
 
 function isBodyRecord(value: unknown): value is Record<string, unknown> {
@@ -20,6 +20,8 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   const before = await listSettings()
   const beforeValues = new Map(before.map(setting => [setting.key, setting.value]))
   const ip = getClientAddress()
+  const startedAt = Date.now()
+  const updates: Array<{ key: string; value: number | null }> = []
 
   for (const item of body.settings) {
     if (!isBodyRecord(item) || typeof item.key !== 'string') {
@@ -27,31 +29,46 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     }
     if (item.value === null) {
       try {
-        await deleteSettingValue(item.key)
-        logEvent({
-          ip,
-          action: 'admin_setting_reset',
-          details: { key: item.key, old_value: beforeValues.get(item.key) ?? null },
-        })
+        assertKnownSettingKey(item.key)
+        updates.push({ key: item.key, value: null })
       } catch (error) {
         return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
       }
       continue
     }
     try {
-      const normalized = await setSettingValue(item.key, item.value)
-      logEvent({
-        ip,
-        action: 'admin_setting_update',
-        details: {
-          key: item.key,
-          old_value: beforeValues.get(item.key) ?? null,
-          new_value: normalized,
-        },
-      })
+      updates.push({ key: item.key, value: validateSettingValue(item.key, item.value) })
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
     }
+  }
+
+  for (const update of updates) {
+    if (update.value === null) {
+      await deleteSettingValue(update.key)
+      logEvent({
+        ip,
+        action: 'admin_setting_reset',
+        details: {
+          key: update.key,
+          old_value: beforeValues.get(update.key) ?? null,
+          elapsed_ms: Date.now() - startedAt,
+        },
+      })
+      continue
+    }
+
+    await setSettingValue(update.key, update.value)
+    logEvent({
+      ip,
+      action: 'admin_setting_update',
+      details: {
+        key: update.key,
+        old_value: beforeValues.get(update.key) ?? null,
+        new_value: update.value,
+        elapsed_ms: Date.now() - startedAt,
+      },
+    })
   }
 
   return json({ settings: await listSettings() })
