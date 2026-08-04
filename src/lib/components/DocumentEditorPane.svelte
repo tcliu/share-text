@@ -6,6 +6,8 @@
   import Button from './Button.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
+  import Splitter from './Splitter.svelte'
+  import PreviewPane from './PreviewPane.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -42,6 +44,12 @@
 
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
+  let showPreview = $state(false)
+  let editorWidth = $state(0)
+  let splitContainerRef = $state<HTMLDivElement | null>(null)
+  let splitContainerWidth = $state(0)
+
+  const SPLIT_MIN = 200
 
   function openFilePicker() {
     fileInputRef?.click()
@@ -59,6 +67,28 @@
     uploadConfirmOpen = false
     openFilePicker()
   }
+
+  function togglePreview() {
+    showPreview = !showPreview
+    if (showPreview && splitContainerWidth > 0) {
+      editorWidth = Math.floor(splitContainerWidth / 2)
+    }
+  }
+
+  $effect(() => {
+    const container = splitContainerRef
+    if (!container) return
+
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width ?? 0
+      splitContainerWidth = width
+      if (!showPreview && width > 0) {
+        editorWidth = Math.floor(width / 2)
+      }
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  })
 
   async function handleFileChange() {
     const file = fileInputRef?.files?.[0]
@@ -159,6 +189,24 @@
             onTypeChange={handleTypeSelect} />
         {/await}
       {/if}
+      {#if currentType.preview}
+        <Button
+          size="sm"
+          ariaLabel="Toggle preview"
+          tooltip={showPreview ? 'Hide preview' : 'Preview'}
+          variant={showPreview ? 'outline' : 'secondary'}
+          onClick={togglePreview}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2 10c3-4 6-6 8-6s5 2 8 6c-3 4-6 6-8 6s-5-2-8-6Z" />
+              <circle cx="10" cy="10" r="3" />
+              {#if showPreview}
+                <line x1="3" y1="3" x2="17" y2="17" />
+              {/if}
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Copy"
@@ -234,14 +282,40 @@
     </div>
   </div>
 
-  <LazyCodeEditor
-    bind:content
-    {docType}
-    autoFocus={true}
-    recreateKey={document.id}
-    {maxContentLength}
-    containerClass="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500"
-    editorClass="h-full" />
+  {#if showPreview && currentType.preview}
+    <div bind:this={splitContainerRef} class="mt-3 flex min-h-0 flex-1 overflow-hidden">
+      <div style="width: {editorWidth}px" class="min-w-0 overflow-hidden">
+        <LazyCodeEditor
+          bind:content
+          {docType}
+          autoFocus={true}
+          recreateKey={document.id}
+          {maxContentLength}
+          containerClass="h-full overflow-hidden rounded-l-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500"
+          editorClass="h-full" />
+      </div>
+      <Splitter
+        value={editorWidth}
+        min={SPLIT_MIN}
+        max={splitContainerWidth - SPLIT_MIN}
+        onChange={(value: number) => (editorWidth = value)}
+        ariaLabel="Resize editor and preview panes" />
+      <div class="min-w-0 flex-1 overflow-hidden">
+        <PreviewPane
+          preview={currentType.preview}
+          {content} />
+      </div>
+    </div>
+  {:else}
+    <LazyCodeEditor
+      bind:content
+      {docType}
+      autoFocus={true}
+      recreateKey={document.id}
+      {maxContentLength}
+      containerClass="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500"
+      editorClass="h-full" />
+  {/if}
 
   <input
     bind:this={fileInputRef}

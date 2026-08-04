@@ -44,6 +44,10 @@ export interface TypeActionsProps {
   onTypeChange: (type: string) => void
 }
 
+export interface PreviewProps {
+  content: string
+}
+
 export interface DocumentTypeDefinition {
   value: DocumentTypeValue
   label: string
@@ -54,6 +58,7 @@ export interface DocumentTypeDefinition {
   format?: FormatSpec
   convertTo?: ConversionSpec
   actions?: () => Promise<Component<TypeActionsProps>>
+  preview?: () => Promise<Component<PreviewProps>>
 }
 
 export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
@@ -117,6 +122,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     mimeType: 'text/plain',
     editorLanguage: () => import('@codemirror/lang-markdown').then(m => m.markdown()),
     validate: async () => ({ valid: true }),
+    preview: () => import('./components/MarkdownPreview.svelte').then(m => m.default),
   },
   {
     value: 'xml',

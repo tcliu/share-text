@@ -68,6 +68,11 @@ export function toSqliteSql(sql) {
     .replaceAll('current_timestamp', "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
 }
 
+export function getSchemaName(env = process.env) {
+  const loadedEnv = loadScriptEnv(env)
+  return (loadedEnv.SCHEMA_NAME || '').trim()
+}
+
 export function createDbPool(env = process.env) {
   const databaseURL = getDatabaseURL(env)
 

@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "format": "prettier --write '**/*.{js,ts,svelte}'",
     "env:sync:vercel": "node ./scripts/sync-vercel-env.mjs",
-    "schema:apply": "node ./scripts/apply-schema.mjs"
+    "schema:apply": "node ./scripts/apply-schema.mjs",
+    "schema:recreate": "node ./scripts/recreate-schema.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
@@ -28,6 +29,7 @@
     "@codemirror/state": "^6.7.0",
     "@codemirror/view": "^6.43.4",
     "@uiw/codemirror-theme-github": "^4.25.10",
+    "marked": "^18.0.9",
     "pg": "^8.16.3",
     "svelte-sonner": "^1.1.1",
     "yaml": "^2.9.0"

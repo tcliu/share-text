@@ -11,10 +11,19 @@ function getPool() {
     throw new Error('Missing DATABASE_URL for database access')
   }
 
+  const schemaName = (process.env.SCHEMA_NAME || '').trim()
+
   pool = new Pool({
     connectionString: databaseURL,
     max: 10,
   })
+
+  if (schemaName) {
+    pool.on('connect', (client) => {
+      client.query(`set search_path to "${schemaName}"`)
+    })
+  }
+
   return pool
 }
 
