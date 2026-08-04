@@ -6,28 +6,28 @@
   import { onDestroy, onMount } from 'svelte'
 
   interface Props {
-    badgeColor?: 'rose' | 'emerald' | 'cyan' | 'violet' | 'amber'
-    badgeLabel?: string
-    title: string
+    title?: string
     titleClass?: string
+    className?: string
     maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     pending?: boolean
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
     onCancel: () => void
+    header?: import('svelte').Snippet
     children?: import('svelte').Snippet
   }
 
   let {
-    badgeColor = 'rose',
-    badgeLabel = '',
     title,
     titleClass = '',
+    className = '',
     maxWidth = 'md',
     pending = false,
     allowPendingCancel = false,
     dismissKeydownCapture = true,
     onCancel,
+    header,
     children,
   }: Props = $props()
 
@@ -79,14 +79,6 @@
     }
   }
 
-  const colorClasses: Record<string, string> = {
-    rose: 'text-rose-300',
-    emerald: 'text-emerald-300',
-    cyan: 'text-cyan-300',
-    violet: 'text-violet-300',
-    amber: 'text-amber-300',
-  }
-
   const maxWidthClasses: Record<string, string> = {
     md: 'max-w-md',
     lg: 'max-w-lg',
@@ -120,7 +112,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="flex min-h-full items-center justify-center" onclick={e => e.stopPropagation()}>
       <section
-        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass}">
+        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass} {className}">
       <button
         type="button"
         aria-label="Close dialog"
@@ -131,14 +123,13 @@
           ><path
             d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
       </button>
-      {#if badgeLabel}
-        <p class="text-xs font-semibold uppercase tracking-[0.24em] {colorClasses[badgeColor]}">
-          {badgeLabel}
-        </p>
+      {#if header}
+        {@render header()}
+      {:else if title}
+        <h2 class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
+          {title}
+        </h2>
       {/if}
-      <h2 class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
-        {title}
-      </h2>
       <div class="mt-4 flex flex-col">
         {@render children?.()}
       </div>

@@ -152,8 +152,6 @@
     title="Delete document?"
     message={`"${documentsState.deleteTarget.name}" will be permanently deleted for everyone.`}
     confirmLabel="Delete"
-    badgeColor="rose"
-    badgeLabel="Confirm"
     confirmColor="rose"
     onConfirm={() => void documentsState.confirmDelete()}
     onCancel={() => (documentsState.deleteTarget = null)} />
@@ -164,8 +162,6 @@
     title={`Delete ${documentsState.selectedCount} document${documentsState.selectedCount === 1 ? '' : 's'}?`}
     message="The selected documents will be permanently deleted for everyone."
     confirmLabel="Delete"
-    badgeColor="rose"
-    badgeLabel="Confirm"
     confirmColor="rose"
     onConfirm={() => void documentsState.confirmBulkDelete()}
     onCancel={() => (documentsState.bulkDeleteOpen = false)} />

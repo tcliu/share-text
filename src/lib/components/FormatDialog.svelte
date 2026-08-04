@@ -11,6 +11,8 @@
     hasIndent?: boolean
     initialIndent?: number
     buttonLabel?: string
+    className?: string
+    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     onConfirm: (indent: number) => void
     onCancel: () => void
   }
@@ -21,6 +23,8 @@
     hasIndent = true,
     initialIndent = 2,
     buttonLabel = 'Apply',
+    className = '',
+    maxWidth = 'md',
     onConfirm,
     onCancel,
   }: Props = $props()
@@ -42,7 +46,7 @@
 </script>
 
 {#if show}
-  <BaseDialog title={title} maxWidth="md" {onCancel}>
+  <BaseDialog {title} {className} {maxWidth} {onCancel}>
     <div class="flex flex-col gap-4">
       {#if hasIndent}
         <label class="flex flex-col gap-1.5 text-sm text-slate-300">

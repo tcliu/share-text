@@ -273,9 +273,7 @@
   <ConfirmDialog
     title="Discard unsaved changes?"
     message="You have unsaved changes. Uploading a file will discard them and replace the editor content."
-    confirmLabel="Discard & Upload"
-    badgeColor="amber"
-    badgeLabel="Confirm"
+    confirmLabel="OK"
     confirmColor="amber"
     onConfirm={handleUploadConfirm}
     onCancel={() => (uploadConfirmOpen = false)} />

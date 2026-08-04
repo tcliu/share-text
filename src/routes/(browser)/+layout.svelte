@@ -220,9 +220,7 @@
   <ConfirmDialog
     title="Discard unsaved changes?"
     message="This document has unsaved changes that will be lost."
-    confirmLabel="Discard"
-    badgeColor="amber"
-    badgeLabel="Confirm"
+    confirmLabel="OK"
     confirmColor="amber"
     onConfirm={handleConfirmDiscard}
     onCancel={editorGuardState.handleCancelDiscard} />
@@ -233,8 +231,6 @@
     title="Delete document?"
     message="This document will be permanently deleted."
     confirmLabel="Delete"
-    badgeColor="rose"
-    badgeLabel="Confirm"
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />

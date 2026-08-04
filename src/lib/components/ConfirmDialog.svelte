@@ -8,8 +8,8 @@
     message: string
     confirmLabel: string
     cancelLabel?: string
-    badgeColor?: 'rose' | 'emerald' | 'cyan' | 'violet' | 'amber'
-    badgeLabel?: string
+    className?: string
+    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     confirmColor?: 'rose' | 'amber' | 'emerald' | 'cyan'
     dismissKeydownCapture?: boolean
     onConfirm: () => void
@@ -21,8 +21,8 @@
     message,
     confirmLabel,
     cancelLabel = 'Cancel',
-    badgeColor = 'rose',
-    badgeLabel = 'Confirm',
+    className = '',
+    maxWidth = 'md',
     confirmColor = 'rose',
     dismissKeydownCapture = false,
     onConfirm,
@@ -30,7 +30,7 @@
   }: Props = $props()
 </script>
 
-<BaseDialog {badgeColor} {badgeLabel} {title} {onCancel} {dismissKeydownCapture}>
+<BaseDialog {title} {className} {maxWidth} {onCancel} {dismissKeydownCapture}>
   <div class="flex flex-col gap-4">
     <p class="text-sm leading-6 text-slate-400">{message}</p>
     <DialogActions>

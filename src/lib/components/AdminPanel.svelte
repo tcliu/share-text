@@ -167,8 +167,6 @@
     title="Discard unsaved settings changes?"
     message="Your unsaved changes to application properties will be lost."
     confirmLabel="Discard"
-    badgeColor="amber"
-    badgeLabel="Confirm"
     confirmColor="amber"
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />

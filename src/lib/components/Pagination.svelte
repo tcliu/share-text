@@ -7,6 +7,7 @@
     pageSize: number
     currentPage: number
     size?: 'xs' | 'sm' | 'md' | 'lg'
+    className?: string
     pageSizeOptions?: number[]
     onPageChange: (page: number) => void
     onPageSizeChange: (size: number) => void
@@ -17,6 +18,7 @@
     pageSize,
     currentPage,
     size = 'sm',
+    className = '',
     pageSizeOptions = [10, 20, 50],
     onPageChange,
     onPageSizeChange,
@@ -131,7 +133,7 @@
   }
 </script>
 
-<div class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400">
+<div class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
   <button
     type="button"
     aria-label="Previous page"
