@@ -5,23 +5,12 @@ import {
   contentByteSize,
   deleteDocument,
   fetchDocument,
-  isDocumentKeyChars,
   normalizeName,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
+import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
-
-async function parseDocumentId(value: string | undefined) {
-  if (!value || !isDocumentKeyChars(value)) {
-    return null
-  }
-  return value
-}
-
-function isBodyRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 export const GET: RequestHandler = async ({ params }) => {
   const id = await parseDocumentId(params.id)

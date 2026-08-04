@@ -10,11 +10,8 @@ import {
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
 import { parseNonNegativeInt, parsePositiveInt } from '$lib/server/parse-query'
+import { isBodyRecord } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
-
-function isBodyRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
 
 export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   const limitParam = url.searchParams.get('limit')

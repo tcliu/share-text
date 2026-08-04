@@ -6,6 +6,7 @@ import {
   renameAdminDocument,
   type AdminDocumentSummary,
 } from '$lib/admin'
+import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
 
 export function useAdminDocuments(params: {
   onSignedOut: () => void
@@ -13,23 +14,25 @@ export function useAdminDocuments(params: {
   onAdminChange: () => void
 }) {
   const { onSignedOut, onAdminDelete, onAdminChange } = params
+
   let documents = $state<AdminDocumentSummary[]>([])
   let loaded = $state(false)
   let total = $state(0)
   let page = $state(1)
   let pageSize = $state(10)
-  let searchQuery = $state('')
-  let searchInput = $state('')
-  let searchKeys = $state<string[]>([])
-  let sortBy = $state('updatedAt')
-  let sortDir = $state<'asc' | 'desc'>('desc')
-  let searchTimer: ReturnType<typeof setTimeout> | null = null
   let loading = $state(false)
   let deleteTarget = $state<AdminDocumentSummary | null>(null)
   let deletingPending = $state(false)
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
+
+  const searchState = useAdminDocumentsSearch({
+    onParamsChange() {
+      page = 1
+      void load()
+    },
+  })
 
   const selectedCount = $derived(selectedIds.size)
   const currentPageAllSelected = $derived(
@@ -49,12 +52,12 @@ export function useAdminDocuments(params: {
     loading = true
     try {
       const response = await fetchAdminDocuments({
-        search: searchQuery,
-        searchKeys,
+        search: searchState.searchQuery,
+        searchKeys: searchState.searchKeys,
         limit: pageSize,
         offset: (page - 1) * pageSize,
-        sortBy,
-        order: sortDir,
+        sortBy: searchState.sortBy,
+        order: searchState.sortDir,
       })
       documents = response.documents
       total = response.total
@@ -73,35 +76,6 @@ export function useAdminDocuments(params: {
     }
   }
 
-  function handleSearchInput() {
-    if (searchTimer) {
-      clearTimeout(searchTimer)
-    }
-    searchTimer = setTimeout(() => {
-      searchTimer = null
-      searchQuery = searchInput.trim()
-      page = 1
-      void load()
-    }, 400)
-  }
-
-  function handleSearchKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      if (searchTimer) {
-        clearTimeout(searchTimer)
-        searchTimer = null
-      }
-      searchQuery = searchInput.trim()
-      page = 1
-      void load()
-    } else if (event.key === 'Escape') {
-      searchInput = ''
-      searchQuery = ''
-      page = 1
-      void load()
-    }
-  }
-
   function handlePageChange(nextPage: number) {
     page = nextPage
     void load()
@@ -109,13 +83,6 @@ export function useAdminDocuments(params: {
 
   function handlePageSizeChange(size: number) {
     pageSize = size
-    page = 1
-    void load()
-  }
-
-  function handleSort(key: string, direction: 'asc' | 'desc') {
-    sortBy = key
-    sortDir = direction
     page = 1
     void load()
   }
@@ -232,25 +199,25 @@ export function useAdminDocuments(params: {
       return pageSize
     },
     get searchInput() {
-      return searchInput
+      return searchState.searchInput
     },
     set searchInput(value: string) {
-      searchInput = value
+      searchState.searchInput = value
     },
     get searchQuery() {
-      return searchQuery
+      return searchState.searchQuery
     },
     get searchKeys() {
-      return searchKeys
+      return searchState.searchKeys
     },
     set searchKeys(value: string[]) {
-      searchKeys = value
+      searchState.searchKeys = value
     },
     get sortBy() {
-      return sortBy
+      return searchState.sortBy
     },
     get sortDir() {
-      return sortDir
+      return searchState.sortDir
     },
     get loading() {
       return loading
@@ -286,11 +253,11 @@ export function useAdminDocuments(params: {
       return currentPageSomeSelected
     },
     load,
-    handleSearchInput,
-    handleSearchKeydown,
+    handleSearchInput: searchState.handleSearchInput,
+    handleSearchKeydown: searchState.handleSearchKeydown,
     handlePageChange,
     handlePageSizeChange,
-    handleSort,
+    handleSort: searchState.handleSort,
     toggleAllOnCurrentPage,
     toggleSelection,
     confirmBulkDelete,

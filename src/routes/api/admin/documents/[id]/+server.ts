@@ -5,22 +5,11 @@ import {
   deleteDocument,
   fetchDocument,
   fetchDocumentForAdmin,
-  isDocumentKeyChars,
   normalizeName,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
-
-async function parseDocumentId(value: string | undefined) {
-  if (!value || !isDocumentKeyChars(value)) {
-    return null
-  }
-  return value
-}
-
-function isBodyRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
+import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
   const id = await parseDocumentId(params.id)

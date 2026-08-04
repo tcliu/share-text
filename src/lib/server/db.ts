@@ -26,3 +26,10 @@ export async function getDb(): Promise<Db> {
     dbPromise = null
   }
 }
+
+export async function closeDb(): Promise<void> {
+  if (db) {
+    await db.close()
+    db = null
+  }
+}

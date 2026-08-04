@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import type { DocumentSummary } from '$lib/documents'
+  import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
   import SearchInput from './SearchInput.svelte'
@@ -56,25 +57,11 @@
   // svelte-ignore state_referenced_locally
   let minWidthChangeCallback = onMinWidthChange
 
-  function measureHeaderMinWidth() {
-    const header = headerRef
-    if (!header || typeof document === 'undefined') return 0
-    const clone = header.cloneNode(true) as HTMLElement
-    clone.style.position = 'fixed'
-    clone.style.visibility = 'hidden'
-    clone.style.width = 'max-content'
-    clone.style.left = '-9999px'
-    document.body.appendChild(clone)
-    const minWidth = Math.ceil(clone.getBoundingClientRect().width)
-    clone.remove()
-    return minWidth
-  }
-
   $effect(() => {
     const header = headerRef
     if (!header) return
     const reportMinWidth = () => {
-      const minWidth = measureHeaderMinWidth()
+      const minWidth = measureHeaderMinWidth(header)
       if (minWidth > 0) {
         minWidthChangeCallback?.(minWidth)
       }

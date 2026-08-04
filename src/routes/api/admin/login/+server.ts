@@ -11,10 +11,7 @@ import {
 } from '$lib/server/admin-auth'
 import { logEvent } from '$lib/server/logging'
 import { resolveProfile } from '$lib/server/profile'
-
-function isBodyRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
+import { isBodyRecord } from '$lib/server/request-utils'
 
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const ip = getClientAddress()

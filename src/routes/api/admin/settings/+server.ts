@@ -2,10 +2,7 @@ import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { assertKnownSettingKey, deleteSettingValue, listSettings, setSettingValue, validateSettingValue } from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
-
-function isBodyRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
+import { isBodyRecord } from '$lib/server/request-utils'
 
 export const GET: RequestHandler = async () => {
   return json({ settings: await listSettings() })
