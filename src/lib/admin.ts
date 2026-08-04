@@ -99,20 +99,32 @@ export async function resetAdminSetting(key: string): Promise<AdminSetting[]> {
 export async function fetchAdminDocuments(
   options: {
     search?: string
+    searchKeys?: string[]
     limit?: number
     offset?: number
+    sortBy?: string
+    order?: 'asc' | 'desc'
   } = {},
 ): Promise<AdminDocumentListResponse> {
-  const { search, limit, offset = 0 } = options
+  const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()
   if (search) {
     params.set('search', search)
+  }
+  if (searchKeys && searchKeys.length > 0) {
+    params.set('search-keys', searchKeys.join(','))
   }
   if (limit !== undefined) {
     params.set('limit', limit.toString())
   }
   if (offset > 0) {
     params.set('offset', offset.toString())
+  }
+  if (sortBy) {
+    params.set('sortBy', sortBy)
+  }
+  if (order) {
+    params.set('order', order)
   }
 
   const queryString = params.toString()
@@ -121,12 +133,6 @@ export async function fetchAdminDocuments(
   const response = await fetch(url)
   const body = await parseResponse<AdminDocumentListResponse>(response, 'Failed to load documents')
   return body
-}
-
-export async function fetchAdminDocument(id: string): Promise<AdminDocument> {
-  const response = await fetch(`${BASE_PATH}/documents/${id}`)
-  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to load document')
-  return body.document
 }
 
 export async function renameAdminDocument(id: string, name: string): Promise<AdminDocument> {

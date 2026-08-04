@@ -2,10 +2,8 @@ import { toast } from 'svelte-sonner'
 import {
   AdminAuthError,
   deleteAdminDocument,
-  fetchAdminDocument,
   fetchAdminDocuments,
   renameAdminDocument,
-  type AdminDocument,
   type AdminDocumentSummary,
 } from '$lib/admin'
 
@@ -22,17 +20,16 @@ export function useAdminDocuments(params: {
   let pageSize = $state(10)
   let searchQuery = $state('')
   let searchInput = $state('')
+  let searchKeys = $state<string[]>([])
+  let sortBy = $state('updatedAt')
+  let sortDir = $state<'asc' | 'desc'>('desc')
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   let loading = $state(false)
-  let viewingDocument = $state<AdminDocument | null>(null)
   let deleteTarget = $state<AdminDocumentSummary | null>(null)
   let deletingPending = $state(false)
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
-  let renamingId = $state<string | null>(null)
-  let renameValue = $state('')
-  let renamePending = $state(false)
 
   const selectedCount = $derived(selectedIds.size)
   const currentPageAllSelected = $derived(
@@ -53,8 +50,11 @@ export function useAdminDocuments(params: {
     try {
       const response = await fetchAdminDocuments({
         search: searchQuery,
+        searchKeys,
         limit: pageSize,
         offset: (page - 1) * pageSize,
+        sortBy,
+        order: sortDir,
       })
       documents = response.documents
       total = response.total
@@ -113,6 +113,13 @@ export function useAdminDocuments(params: {
     void load()
   }
 
+  function handleSort(key: string, direction: 'asc' | 'desc') {
+    sortBy = key
+    sortDir = direction
+    page = 1
+    void load()
+  }
+
   function toggleAllOnCurrentPage() {
     if (currentPageAllSelected) {
       const next = new Set(selectedIds)
@@ -167,47 +174,13 @@ export function useAdminDocuments(params: {
     }
   }
 
-  async function viewDocument(summary: AdminDocumentSummary) {
-    loading = true
-    try {
-      viewingDocument = await fetchAdminDocument(summary.id)
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load document')
-      }
-    } finally {
-      loading = false
-    }
-  }
-
-  function backToList() {
-    viewingDocument = null
-  }
-
-  function startRename(summary: AdminDocumentSummary) {
-    renamingId = summary.id
-    renameValue = summary.name
-  }
-
-  function cancelRename() {
-    renamingId = null
-    renameValue = ''
-  }
-
-  async function confirmRename() {
-    const id = renamingId
-    const name = renameValue.trim()
-    if (!id || !name) {
+  async function rename(id: string, name: string) {
+    const value = name.trim()
+    if (!value) {
       return
     }
-    renamePending = true
     try {
-      await renameAdminDocument(id, name)
-      if (viewingDocument?.id === id) {
-        viewingDocument = { ...viewingDocument, name }
-      }
-      renamingId = null
-      renameValue = ''
+      await renameAdminDocument(id, value)
       toast.success('Document renamed')
       void load()
       onAdminChange()
@@ -215,8 +188,6 @@ export function useAdminDocuments(params: {
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : 'Failed to rename document')
       }
-    } finally {
-      renamePending = false
     }
   }
 
@@ -229,9 +200,6 @@ export function useAdminDocuments(params: {
     deletingPending = true
     try {
       await deleteAdminDocument(target.id)
-      if (viewingDocument?.id === target.id) {
-        viewingDocument = null
-      }
       const next = new Set(selectedIds)
       next.delete(target.id)
       selectedIds = next
@@ -244,16 +212,6 @@ export function useAdminDocuments(params: {
       }
     } finally {
       deletingPending = false
-    }
-  }
-
-  function handleRenameSelected() {
-    if (selectedCount !== 1) {
-      return
-    }
-    const selected = documents.find(document => selectedIds.has(document.id))
-    if (selected) {
-      startRename(selected)
     }
   }
 
@@ -282,11 +240,20 @@ export function useAdminDocuments(params: {
     get searchQuery() {
       return searchQuery
     },
+    get searchKeys() {
+      return searchKeys
+    },
+    set searchKeys(value: string[]) {
+      searchKeys = value
+    },
+    get sortBy() {
+      return sortBy
+    },
+    get sortDir() {
+      return sortDir
+    },
     get loading() {
       return loading
-    },
-    get viewingDocument() {
-      return viewingDocument
     },
     get deleteTarget() {
       return deleteTarget
@@ -318,32 +285,16 @@ export function useAdminDocuments(params: {
     get currentPageSomeSelected() {
       return currentPageSomeSelected
     },
-    get renamingId() {
-      return renamingId
-    },
-    get renameValue() {
-      return renameValue
-    },
-    set renameValue(value: string) {
-      renameValue = value
-    },
-    get renamePending() {
-      return renamePending
-    },
     load,
     handleSearchInput,
     handleSearchKeydown,
     handlePageChange,
     handlePageSizeChange,
+    handleSort,
     toggleAllOnCurrentPage,
     toggleSelection,
     confirmBulkDelete,
-    viewDocument,
-    backToList,
-    startRename,
-    cancelRename,
-    confirmRename,
+    rename,
     confirmDelete,
-    handleRenameSelected,
   }
 }
