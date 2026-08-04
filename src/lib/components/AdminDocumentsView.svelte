@@ -103,13 +103,13 @@
                 disabled={documentsState.documents.length === 0}
                 onChange={() => documentsState.toggleAllOnCurrentPage()} />
             </th>
-            <th class="sticky top-0 z-10 w-[40%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-[50%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Name</th>
-            <th class="sticky top-0 z-10 w-24 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-[14%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Length</th>
-            <th class="sticky top-0 z-10 w-32 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-[18%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Updated by</th>
-            <th class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
+            <th class="sticky top-0 z-10 w-[18%] border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur"
               >Updated time</th>
           </tr>
         </thead>
@@ -137,7 +137,7 @@
                     ariaLabel={`Select document ${document.name}`}
                     onChange={checked => documentsState.toggleSelection(document.id, checked)} />
                 </td>
-                <td class="w-[40%] max-w-0 border-b border-slate-800/50 px-3 py-2">
+                <td class="w-[50%] max-w-0 border-b border-slate-800/50 px-3 py-2">
                   {#if documentsState.renamingId === document.id}
                     <div class="flex items-center gap-1.5">
                       <input
