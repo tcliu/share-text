@@ -5,14 +5,9 @@
   interface Props {
     text: string
     onChange: (text: string) => void
-    size?: 'sm' | 'md'
+    size?: 'xs' | 'sm' | 'md' | 'lg'
     className?: string
     onActivate?: () => void
-  }
-
-  const sizeFontClass: Record<'sm' | 'md', string> = {
-    sm: 'text-[13px]',
-    md: 'text-[15px]',
   }
 
   let {
@@ -89,12 +84,12 @@
     onblur={commit}
     data-escape-capture
     aria-label="Edit text"
-    class={`${sizeFontClass[size]} min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100 outline-none transition focus:border-cyan-500`} />
+    class={`text-${size} min-w-0 flex-1 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-100 outline-none transition focus:border-cyan-500`} />
 {:else}
   <div class="group flex min-w-0 flex-1 items-center gap-1">
     <button
       type="button"
-      class={`${sizeFontClass[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
+      class={`text-${size} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
       title="Double-click to edit"
       onclick={(e) => { e.stopPropagation(); scheduleActivate() }}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}

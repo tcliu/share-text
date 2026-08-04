@@ -12,7 +12,7 @@
     align?: 'left' | 'right'
     autoPlace?: boolean
     filterable?: boolean
-    size?: 'xs' | 'sm' | 'md'
+    size?: 'xs' | 'sm' | 'md' | 'lg'
     onSelect: (value: string) => void
     buttonClass?: string
     controlClass?: string
@@ -40,27 +40,28 @@
   }: Props = $props()
 
   const SIZE_CLASS = {
-    xs: { pad: 'py-1', text: 'text-xs', minW: 'min-w-16' },
-    sm: { pad: 'py-2', text: 'text-sm', minW: 'min-w-24' },
-    md: { pad: 'py-2.5', text: 'text-base', minW: 'min-w-24' },
+    xs: { pad: 'py-1', minW: 'min-w-16' },
+    sm: { pad: 'py-2', minW: 'min-w-24' },
+    md: { pad: 'py-2.5', minW: 'min-w-24' },
+    lg: { pad: 'py-3', minW: 'min-w-28' },
   } as const
 
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
   )
 
   const resolvedControlClass = $derived(
     controlClass ??
-      `${SIZE_CLASS[size].minW} field-sizing-content rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+      `${SIZE_CLASS[size].minW} field-sizing-content rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
   )
 
   const optionRowClass = $derived(
     optionClass ??
-      `flex w-full items-center justify-between rounded-md px-3 text-left transition ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text}`,
+      `flex w-full items-center justify-between rounded-md px-3 text-left transition ${SIZE_CLASS[size].pad} text-${size}`,
   )
 
-  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${SIZE_CLASS[size].text} text-slate-500`)
+  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} text-${size} text-slate-500`)
 
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)

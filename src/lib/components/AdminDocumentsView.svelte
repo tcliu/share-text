@@ -111,7 +111,7 @@
       href={`/${document.id}`}
       target="_blank"
       rel="noopener noreferrer"
-      class="block font-mono text-xs text-slate-500 hover:text-cyan-300 hover:underline underline-offset-2">
+      class="block font-mono text-sm text-slate-500 hover:text-cyan-300 hover:underline underline-offset-2">
       {document.id}
     </a>
   </Copyable>

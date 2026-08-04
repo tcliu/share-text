@@ -26,7 +26,7 @@
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-slate-100">{setting.label}</span>
             <span
-              class="rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide {setting.source ===
+              class="rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide {setting.source ===
               'database'
                 ? 'border-cyan-700 bg-cyan-950/50 text-cyan-200'
                 : setting.source === 'environment'
@@ -36,7 +36,7 @@
             </span>
           </div>
           <p class="mt-0.5 text-xs text-slate-500">{setting.description}</p>
-          <p class="mt-0.5 text-[11px] text-slate-600">{setting.key} (env {setting.envKey})</p>
+          <p class="mt-0.5 text-xs text-slate-600">{setting.key} (env {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
           <NumberInput

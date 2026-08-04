@@ -120,9 +120,9 @@
 
   <div class={containerClass}>
     <table
-      class="w-full border-separate border-spacing-0 text-[13px] [&_tr:last-child_td]:border-b-0 {tableClass}">
+      class="w-full border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {tableClass}">
       <thead>
-        <tr class="text-left text-xs font-medium text-slate-500">
+        <tr class="text-left text-sm font-medium text-slate-500">
           {#if selectable}
             <th
               class="sticky top-0 z-10 w-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur">
@@ -184,7 +184,7 @@
           </tr>
         {:else if rows.length === 0}
           <tr>
-            <td colspan={columnCount} class="px-3 py-10 text-center text-[13px] text-slate-500">{emptyMessage}</td>
+            <td colspan={columnCount} class="px-3 py-10 text-center text-sm text-slate-500">{emptyMessage}</td>
           </tr>
         {:else}
           {#each rows as row (rowId(row))}
