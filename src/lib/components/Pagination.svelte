@@ -82,7 +82,7 @@
   }
 </script>
 
-<div class="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+<div class="flex flex-wrap items-center gap-3 text-sm text-slate-400">
   <button
     type="button"
     aria-label="Previous page"

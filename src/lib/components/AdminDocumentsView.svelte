@@ -24,7 +24,7 @@
 </script>
 
 {#if documentsState.viewingDocument}
-  <div class="flex min-h-0 flex-1 flex-col">
+  <div class="flex flex-col">
     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
       <div class="min-w-0">
         <h3 class="truncate text-base font-semibold text-slate-100">{documentsState.viewingDocument.name}</h3>
@@ -78,10 +78,10 @@
       </div>
     </div>
     <pre
-      class="mt-3 min-h-0 flex-1 overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">{documentsState.viewingDocument.content}</pre>
+      class="mt-3 max-h-[min(60vh,36rem)] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">{documentsState.viewingDocument.content}</pre>
   </div>
 {:else}
-  <div class="flex min-h-0 flex-1 flex-col gap-3">
+  <div class="flex flex-col gap-3">
     <SearchInput
       bind:value={documentsState.searchInput}
       oninput={() => documentsState.handleSearchInput()}
@@ -89,7 +89,7 @@
       ariaLabel="Search all documents"
       placeholder="Search documents..." />
 
-    <div class="min-h-0 flex-1 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
+    <div class="max-h-[min(50vh,32rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
       <table
         class="w-full min-w-[44rem] border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0">
         <thead>

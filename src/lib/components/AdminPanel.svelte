@@ -76,12 +76,12 @@
 
 <BaseDialog
   title="Admin"
-  maxWidth="4xl"
+  maxWidth="fit"
   pending={settingsState.pending || documentsState.loading}
   allowPendingCancel
   dismissKeydownCapture={!discardPromptOpen && documentsState.deleteTarget === null && !documentsState.bulkDeleteOpen}
   onCancel={handleCloseRequest}>
-  <div class="flex flex-1 flex-col gap-3">
+  <div class="flex flex-col gap-3">
     <div class="flex items-center justify-between">
       <div class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
         <button

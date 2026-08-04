@@ -10,7 +10,7 @@
     badgeLabel?: string
     title: string
     titleClass?: string
-    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl'
+    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     pending?: boolean
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
@@ -95,6 +95,12 @@
     '3xl': 'max-w-3xl',
     '4xl': 'max-w-4xl',
   }
+
+  const sizeClass = $derived(
+    maxWidth === 'fit'
+      ? 'h-fit w-fit max-w-[90vw]'
+      : `w-full max-w-[90vw] ${maxWidthClasses[maxWidth] ?? 'max-w-md'}`,
+  )
   $effect(() => {
     if (!dismissKeydownCapture) {
       return
@@ -114,9 +120,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="flex min-h-full items-center justify-center" onclick={e => e.stopPropagation()}>
       <section
-        class="relative flex max-h-[calc(100vh-3rem)] w-full flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60 backdrop-blur {maxWidthClasses[
-          maxWidth
-        ] ?? 'max-w-md'}">
+        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass}">
       <button
         type="button"
         aria-label="Close dialog"
@@ -135,7 +139,7 @@
       <h2 class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
         {title}
       </h2>
-      <div class="mt-4">
+      <div class="mt-4 flex flex-col">
         {@render children?.()}
       </div>
     </section>
