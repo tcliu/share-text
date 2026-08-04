@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
 
 describe('document-drafts localStorage helpers', () => {
@@ -42,5 +42,28 @@ describe('document-drafts localStorage helpers', () => {
   it('stores an empty string draft', () => {
     saveDraft('a', '')
     expect(loadDraft('a')).toBe('')
+  })
+
+  it('falls back to in-memory storage when localStorage.setItem throws', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
+
+    saveDraft('a', 'fallback')
+
+    expect(loadDraft('a')).toBe('fallback')
+    setItem.mockRestore()
+  })
+
+  it('clears the in-memory fallback draft', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
+
+    saveDraft('a', 'fallback')
+    clearDraft('a')
+
+    expect(loadDraft('a')).toBeNull()
+    setItem.mockRestore()
   })
 })
