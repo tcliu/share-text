@@ -23,7 +23,8 @@ function getRequestIp(event: { request: Request; getClientAddress: () => string 
   const { request, getClientAddress } = event
   try {
     return getClientAddress()
-  } catch {
+  } catch (error) {
+    console.error('Failed to resolve client address', { error })
     const forwardedFor = request.headers.get('x-forwarded-for')
     if (forwardedFor) {
       return forwardedFor.split(',')[0].trim()
