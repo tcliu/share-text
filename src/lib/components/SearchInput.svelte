@@ -14,7 +14,7 @@
     ariaLabel,
     placeholder = 'Search...',
     wrapperClass = '',
-    inputClass = 'w-full rounded-md border border-slate-700 bg-slate-950 py-1 pl-7 pr-2 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500',
+    inputClass = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 pl-7 text-[13px] text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500',
     oninput,
     onkeydown,
   }: Props = $props()
