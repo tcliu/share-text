@@ -153,7 +153,7 @@
           role="option"
           aria-selected={option.value === activeValue}
           onclick={() => select(option.value)}
-          class={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${option.value === activeValue ? 'bg-cyan-500/15 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'}`}>
+          class={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-[13px] transition ${option.value === activeValue ? 'bg-cyan-500/15 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'}`}>
           <span>{option.label}</span>
           {#if option.value === activeValue}
             <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

@@ -81,7 +81,7 @@
       class="mt-3 max-h-[min(60vh,36rem)] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200 contain-layout">{documentsState.viewingDocument.content}</pre>
   </div>
 {:else}
-  <div class="flex flex-col gap-3">
+  <div class="flex flex-col gap-2">
     <SearchInput
       bind:value={documentsState.searchInput}
       oninput={() => documentsState.handleSearchInput()}
