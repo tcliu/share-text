@@ -78,7 +78,7 @@
       </div>
     </div>
     <pre
-      class="mt-3 max-h-[min(60vh,36rem)] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200">{documentsState.viewingDocument.content}</pre>
+      class="mt-3 max-h-[min(60vh,36rem)] overflow-y-auto whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-sm text-slate-200 contain-layout">{documentsState.viewingDocument.content}</pre>
   </div>
 {:else}
   <div class="flex flex-col gap-3">
@@ -89,7 +89,7 @@
       ariaLabel="Search all documents"
       placeholder="Search documents..." />
 
-    <div class="max-h-[min(50vh,32rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50">
+    <div class="max-h-[min(50vh,32rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout">
       <table
         class="w-full min-w-[44rem] border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0">
         <thead>

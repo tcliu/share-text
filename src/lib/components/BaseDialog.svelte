@@ -98,7 +98,7 @@
 
   const sizeClass = $derived(
     maxWidth === 'fit'
-      ? 'h-fit w-fit max-w-[90vw]'
+      ? 'w-fit max-w-[90vw]'
       : `w-full max-w-[90vw] ${maxWidthClasses[maxWidth] ?? 'max-w-md'}`,
   )
   $effect(() => {
