@@ -21,7 +21,7 @@ vi.mock('$lib/server/documents', async () => {
 })
 
 import { GET } from '../documents/+server'
-import { DELETE, GET as GET_ONE, PUT } from '../documents/[id]/+server'
+import { DELETE, PUT } from '../documents/[id]/+server'
 
 const summary = {
   id: 'a1b2c3',
@@ -47,42 +47,48 @@ describe('GET /api/admin/documents', () => {
     expect(response.status).toBe(200)
     expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith({
       search: 'notes',
+      searchKeys: [],
       by: '',
       limit: 20,
       offset: 0,
+      sortBy: undefined,
+      order: undefined,
     })
     await expect(response.json()).resolves.toEqual({ documents: [summary], total: 1, hasMore: false })
+  })
+
+  it('forwards searchKeys as a list of column keys', async () => {
+    const response = await GET({
+      url: new URL('http://localhost/api/admin/documents?search=alpha&search-keys=id,name,updatedBy'),
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({ search: 'alpha', searchKeys: ['id', 'name', 'updatedBy'] }),
+    )
+  })
+
+  it('forwards sortBy and order parameters', async () => {
+    const response = await GET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=asc') } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'name', order: 'asc' }),
+    )
+  })
+
+  it('ignores an invalid order parameter', async () => {
+    const response = await GET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=sideways') } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
+      expect.objectContaining({ sortBy: 'name', order: undefined }),
+    )
   })
 
   it('rejects invalid pagination parameters', async () => {
     const response = await GET({ url: new URL('http://localhost/api/admin/documents?limit=abc') } as never)
     expect(response.status).toBe(400)
-  })
-})
-
-describe('GET /api/admin/documents/[id]', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
-  })
-
-  it('returns a document with metadata', async () => {
-    const response = await GET_ONE({ params: { id: 'a1b2c3' } } as never)
-    expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({ document: { ...summary, content: 'hello world' } })
-  })
-
-  it('returns 404 for an invalid or missing id', async () => {
-    documentsMocks.fetchDocumentForAdmin.mockResolvedValue(null)
-    const response = await GET_ONE({ params: { id: 'a1b2c3' } } as never)
-    expect(response.status).toBe(404)
-    const invalid = await GET_ONE({ params: { id: 'bad-id' } } as never)
-    expect(invalid.status).toBe(404)
-  })
-
-  it('accepts valid lowercase ids even when they do not match a former configured length', async () => {
-    const response = await GET_ONE({ params: { id: 'abcd1234' } } as never)
-    expect(response.status).toBe(200)
   })
 })
 

@@ -237,23 +237,52 @@ function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
   }
 }
 
+const ADMIN_SORT_COLUMNS: Record<string, string> = {
+  id: 'key',
+  name: 'name',
+  length: 'content_size',
+  updatedBy: 'updated_by',
+  updatedAt: 'updated_at',
+}
+
+const ADMIN_SEARCH_COLUMNS: Record<string, string> = {
+  id: 'key',
+  name: 'name',
+  updatedBy: 'updated_by',
+}
+
 export interface ListDocumentsForAdminOptions {
   search?: string
+  searchKeys?: string[]
   by?: string
   limit?: number
   offset?: number
+  sortBy?: string
+  order?: 'asc' | 'desc'
 }
 
 export async function listDocumentsForAdmin(options: ListDocumentsForAdminOptions = {}) {
-  const { search, by, limit, offset = 0 } = options
+  const { search, searchKeys, by, limit, offset = 0, sortBy, order } = options
+  const sortColumn = ADMIN_SORT_COLUMNS[sortBy ?? 'updatedAt'] ?? ADMIN_SORT_COLUMNS.updatedAt
+  const sortDir = order === 'asc' ? 'asc' : 'desc'
   const conditions: string[] = []
   const params: unknown[] = []
   let index = 1
 
   if (search) {
-    conditions.push(`lower(name) like $${index}`)
-    params.push(`%${search.toLowerCase()}%`)
-    index += 1
+    const searchColumns = (searchKeys && searchKeys.length > 0 ? searchKeys : ['name'])
+      .map(key => ADMIN_SEARCH_COLUMNS[key])
+      .filter((column): column is string => Boolean(column))
+    if (searchColumns.length > 0) {
+      const likeClauses = searchColumns.map(column => `lower(${column}) like $${index}`)
+      for (const _column of searchColumns) {
+        params.push(`%${search.toLowerCase()}%`)
+        index += 1
+      }
+      conditions.push(`(${likeClauses.join(' or ')})`)
+    } else {
+      conditions.push('1 = 0')
+    }
   }
   if (by) {
     conditions.push(`created_by = $${index}`)
@@ -270,7 +299,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   const total = Number(countResult.rows[0]?.count ?? 0)
 
   let sql = `select key, name, created_by, updated_by, created_at, updated_at, length(content) as content_size
-    from documents${whereClause} order by updated_at desc`
+    from documents${whereClause} order by ${sortColumn} ${sortDir}`
   const listParams = [...params]
   if (limit !== undefined) {
     sql += ` limit $${index}`

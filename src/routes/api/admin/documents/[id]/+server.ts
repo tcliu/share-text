@@ -22,20 +22,6 @@ function isBodyRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-export const GET: RequestHandler = async ({ params }) => {
-  const id = await parseDocumentId(params.id)
-  if (!id) {
-    return json({ error: 'Document not found' }, { status: 404 })
-  }
-
-  const document = await fetchDocumentForAdmin(id)
-  if (!document) {
-    return json({ error: 'Document not found' }, { status: 404 })
-  }
-
-  return json({ document })
-}
-
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
   const id = await parseDocumentId(params.id)
   if (!id) {

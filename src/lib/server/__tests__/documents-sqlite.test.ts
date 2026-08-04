@@ -178,4 +178,58 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const adminDoc = await fetchDocumentForAdmin(created.id)
     expect(adminDoc).toEqual(expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7' }))
   })
+
+  it('sorts admin documents by the requested column and direction', async () => {
+    await insertDocument({ name: 'Beta', content: 'x', by: '10.0.0.1' })
+    await insertDocument({ name: 'Alpha', content: 'yyy', by: '10.0.0.1' })
+
+    const byNameAsc = await listDocumentsForAdmin({ sortBy: 'name', order: 'asc' })
+    expect(byNameAsc.documents.map(document => document.name)).toEqual(['Alpha', 'Beta'])
+
+    const byNameDesc = await listDocumentsForAdmin({ sortBy: 'name', order: 'desc' })
+    expect(byNameDesc.documents.map(document => document.name)).toEqual(['Beta', 'Alpha'])
+
+    const byLengthAsc = await listDocumentsForAdmin({ sortBy: 'length', order: 'asc' })
+    expect(byLengthAsc.documents.map(document => document.contentSize)).toEqual([1, 3])
+
+    const byLengthDesc = await listDocumentsForAdmin({ sortBy: 'length', order: 'desc' })
+    expect(byLengthDesc.documents.map(document => document.contentSize)).toEqual([3, 1])
+  })
+
+  it('falls back to the default ordering for unknown sort columns', async () => {
+    await insertDocument({ name: 'Solo', content: '', by: '10.0.0.1' })
+
+    const result = await listDocumentsForAdmin({ sortBy: 'not-a-column', order: 'asc' })
+    expect(result.total).toBe(1)
+    expect(result.documents[0].name).toBe('Solo')
+  })
+
+  it('searches configured admin columns (id, name, updated by) via searchKeys', async () => {
+    const alpha = await insertDocument({ name: 'Alpha notes', content: '', by: '10.0.0.7' })
+    await insertDocument({ name: 'Beta doc', content: '', by: '10.0.0.8' })
+    await updateDocument(alpha.id, { content: 'edited', by: '203.0.113.9' })
+
+    const searchKeys = ['id', 'name', 'updatedBy']
+
+    const byName = await listDocumentsForAdmin({ search: 'alpha', searchKeys })
+    expect(byName.total).toBe(1)
+    expect(byName.documents[0].name).toBe('Alpha notes')
+
+    const byId = await listDocumentsForAdmin({ search: alpha.id, searchKeys })
+    expect(byId.total).toBe(1)
+    expect(byId.documents[0].id).toBe(alpha.id)
+
+    const byUpdatedBy = await listDocumentsForAdmin({ search: '203.0.113.9', searchKeys })
+    expect(byUpdatedBy.total).toBe(1)
+    expect(byUpdatedBy.documents[0].id).toBe(alpha.id)
+
+    const acrossColumns = await listDocumentsForAdmin({ search: '203.0.113.9', searchKeys: ['name', 'updatedBy'] })
+    expect(acrossColumns.total).toBe(1)
+  })
+
+  it('unknown searchKeys are ignored without error', async () => {
+    await insertDocument({ name: 'Only', content: '', by: '10.0.0.1' })
+    const result = await listDocumentsForAdmin({ search: 'only', searchKeys: ['not-a-column'] })
+    expect(result.total).toBe(0)
+  })
 })
