@@ -2,29 +2,17 @@
 
 ## Development Guide
 
-Write and review code against this `AGENTS.md` and the applicable reference documents below. When reviewing code, follow the `code-review` skill definition, reporting findings with severity, location, rule, and fix.
-
-## Reference documents
-
-Apply the reference documents in `AI_CONFIG_DIR/references/` (shared with `../ai`, i.e. the AI conventions workspace). The references that apply to this project:
-
-- `svelte.md` — Svelte 5 runes, server/client boundaries, component conventions, lazy loading, composable extraction.
-- `js-ts.md` — JavaScript/TypeScript code style.
-- `sql.md` — SQL/PostgreSQL schema conventions (lowercase keywords, index naming, separate `create index`).
-- `api-client.md` — fetch-based API client conventions and error handling.
-- `reliability.md` — state safety, async flows, concurrency, event logging.
-- `logging.md` — structured server-side event logging, action naming, and key information for troubleshooting.
-- `ui-patterns.md` — UI and interaction conventions.
-- `type-registry.md` — definition-driven type dispatch (behavior/render lambdas in a registry instead of `if (type === ...)` switches); the document type registry in `src/lib/document-types.ts` follows this pattern.
-- `bash.md` — shell scripting conventions for scripts.
-
-Read the applicable reference file when writing or reviewing code in the covered area, and verify its rules.
+Read this `AGENTS.md` and the applicable shared reference files under `$AI_CONFIG_DIR/references/*.md` before writing or reviewing code. When reviewing code, follow the `code-review` skill definition, reporting findings with severity, location, rule, and fix.
 
 ## Project conventions
 
-- Server persistence goes through the `Db` interface (`src/lib/server/db-types.ts`) with engine-agnostic SQL: use `$n` placeholders and `current_timestamp`, and keep schema DDL portable (the SQLite adapter rewrites `$n` → `?`, `bigserial` → `integer`, and `current_timestamp` → a UTC ISO `strftime` expression).
-- `localStorage` helpers guard against SSR (`typeof localStorage === 'undefined'`) and storage/quota errors, falling back to in-memory state.
-- Every action that changes state or produces an observable side effect (create, save/update, delete, and similar mutations) must be backed by an event log (via `$lib/server/logging`) with key identifying information (document id, name, size, IP, `elapsed_ms`) for troubleshooting, per `logging.md`.
+- Server persistence goes through the `Db` interface (`src/lib/server/db-types.ts`), writing engine-agnostic SQL with `$n` placeholders and `current_timestamp` so DDL stays portable across adapters.
+- Mutations are logged via `$lib/server/logging` with key identifying info (document id, name, size, IP, `elapsed_ms`).
+
+## Keeping references in sync
+
+- When a code change establishes or revises a project-specific convention, update this `AGENTS.md` in the same change.
+- When a code change establishes or revises a generic reusable convention, update the appropriate file under `$AI_CONFIG_DIR/references/` in the same change rather than duplicating it here.
 
 ## Quality checks
 
