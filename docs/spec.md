@@ -12,16 +12,16 @@ synchronizes through a small fetch-based JSON API.
 
 - `/` — empty-state page prompting the user to select or create a document.
 - `/{doc-id}` — the editor. `[id]/+page.server.ts` validates the id against the
-  configured `^[0-9a-z]{n}$` key format (length `n` from
-  `document_key_length`, default 6) and throws a 404 when invalid or when
+  `^[0-9a-z]+$` key character set and throws a 404 when invalid or when
   the document does not exist; the page component renders server data, then
   re-fetches the document client-side on refresh.
 - `/api/documents` — `GET` returns summaries of the documents created by the
   requesting client IP (`created_by`); `POST` creates a document (201) and
   enforces the per-IP create limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
-  `content`, or both and returns the updated document; `DELETE` removes it
-  (204). Validation failures return 400, unknown ids 404.
+  `content`, `documentType`, `tags`, or any combination thereof and returns
+  the updated document; `DELETE` removes it (204). Validation failures return
+  400, unknown ids 404.
 - `/api/admin/login` — `POST` verifies admin credentials, sets an HTTP-only
   signed session cookie, and is rate-limited per IP. `/api/admin/logout`
   clears the cookie. `/api/admin/session` reports whether admin is configured
@@ -31,8 +31,28 @@ synchronizes through a small fetch-based JSON API.
   when `value` is `null`, deletes the override (reverting to env/default).
 - `/api/admin/documents` — `GET` lists every document across all IPs with
   search (`search`), creator filter (`by`), and pagination.
-- `/api/admin/documents/[id]` — `GET` returns one document with metadata;
-  `PUT` renames it; `DELETE` removes it.
+- `/api/admin/documents/[id]` — `PUT` renames a document; `DELETE` removes it.
+
+- `/api/tags` — `GET` returns every distinct tag across all documents, with
+  deduplication on case-insensitive name so each unique tag name appears once.
+
+## Document Types
+
+- `src/lib/document-type-values.ts` defines the eight allowed type constants
+  (`text`, `csv`, `html`, `javascript`, `json`, `markdown`, `xml`, `yaml`) as
+  an `as const` array, the union type, and the `isDocumentTypeValue` guard.
+- `src/lib/document-types.ts` is the type registry: each type entry provides a
+  `label`, file `extension`, `mimeType`, `validate` function, optional
+  `convertTo` specs, a lazy-loaded `actions` component for type-specific
+  toolbar buttons (Format / Convert), and an optional `preview` component
+  (markdown rendering via `marked`).
+- `src/lib/document-type-utils.ts` holds pure formatting, converting, and
+  validation functions (JSON/YAML parse/pretty-print, HTML/XML indent, CSV
+  dialect validation). Per-type language extensions are loaded lazily via
+  dynamic `import()` inside the definition to keep the initial bundle lean.
+- Document create accepts an optional `documentType`; the PUT route validates
+  the type. On save, the editor validates content against the type and rejects
+  invalid content before sending the request.
 
 ## Data Layer
 
@@ -46,7 +66,8 @@ synchronizes through a small fetch-based JSON API.
     schema applied on first start.
   - `db-pg.ts` uses a `pg` connection `Pool` configured from `DATABASE_URL`.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
-  public `key`, `name`, `content`, `created_by`/`updated_by` IPs,
+  public `key`, `name`, `content`, `document_type` (text default),
+  `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,
   `created_at`/`updated_at`), the `idx_documents_updated_at` index, and the
   `app_config` key/value table that stores runtime property overrides.
 - Document keys are `document_key_length` characters (default 6) from `0-9a-z`
@@ -101,6 +122,12 @@ synchronizes through a small fetch-based JSON API.
 - The editor is CodeMirror 6, lazy-loaded via `LazyCodeEditor` (dynamic
   `import()`) so the initial route bundle stays small. A transaction filter caps
   document length at `maxContentLength`.
+- Markdown documents support a split preview pane via `PreviewPane.svelte` which
+  renders the source with `marked`. The split ratio is controlled by a draggable
+  `Splitter`.
+- The `CodeEditor.svelte` wrapper manages the CodeMirror instance lifecycle
+  (create, reconfigure on type change, destroy on unmount) and wires per-type
+  language extensions from the type registry.
 
 ## Concurrency
 
@@ -110,6 +137,12 @@ Writes are last-write-wins with no conflict detection or merge.
 
 - `scripts/apply-schema.mjs` applies `sql/schema.sql` to the dev SQLite database
   or, under `PROFILE=prod`, to the PostgreSQL database.
+- `scripts/recreate-schema.mjs` drops and recreates the schema. In `prod` mode
+  it requires `PROFILE=prod` and confirms with a prompt; in `dev` it is
+  idempotent (runs apply-schema, which is already idempotent).
+- `scripts/hash-password.mjs` generates a scrypt password hash from a plaintext
+  password via `node scripts/hash-password.mjs <password>`, for use as
+  `ADMIN_PASSWORD_HASH`.
 - `scripts/db-config.mjs` centralizes env-file parsing, profile resolution, and
   the SQLite SQL rewrite for scripts.
 - `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel`, upserts the set

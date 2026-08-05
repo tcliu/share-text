@@ -20,25 +20,31 @@ The page is split into two vertical panes.
   - The pane lists the documents created by the current client IP, most recently
     edited first. New documents are added to the list automatically. Documents
     created by other IPs stay reachable by their `/{doc-id}` URL.
-  - A search box below the header filters the list in place with a
-    case-insensitive name substring; with an empty query every loaded document
-    is shown.
-  - A scrollable list of documents, where each row is a link to
-    `/{doc-id}`. The row matching the current URL is highlighted.
+  - A search box below the header (with a clear button) filters the list in
+    place with a case-insensitive name substring; with an empty query every
+    loaded document is shown.
+  - A scrollable list of documents, each row a link to `/{doc-id}`. The row
+    matching the current URL is highlighted. Rows show the document name, a
+    non-text type chip, tag chips, and a **Delete** icon button (with tooltip).
   - Rows use a small font (`text-[13px]`).
-  - Each row has a **Delete** icon button (with tooltip) on the right.
   - Single-click navigates to the document.
+  - The list loads more documents via infinite scroll when scrolling near the
+    bottom.
   - When collapsed, the pane shrinks to a thin rail with a **Show document
     list** icon button that restores it.
 - **Right pane: editor**
   - When nothing is selected (`/`), an empty-state message prompts the user to
     select or create a document.
   - When a document is selected (`/{doc-id}`), it shows:
-    - a header row with the document name on the left and a button panel on the
-      right containing five icon buttons with tooltips — **Copy**, **Upload**,
-      **Export**, **Reset**, and **Save** (in that order),
-    - a CodeMirror plain-text editor that fills the rest of the pane,
-    - a footer with dirty state and character count.
+    - a header row with the editable document name, a document type selector
+      dropdown, and visible tag chips on the left, and a toolbar on the right
+      with icon buttons (all with tooltips): type-specific **Format**/convert
+      actions, **Preview** toggle (markdown), **Copy**, **Clone**, **Upload**,
+      **Export**, **Reset**, **Tags**, and **Save**,
+    - a CodeMirror plain-text editor that fills the rest of the pane (optionally
+      split with a markdown preview pane),
+    - a footer with the last-updated timestamp, updating-by IP, refreshing
+      indicator, and character count (with limit).
 
 ## Navigation
 
@@ -60,9 +66,6 @@ The page is split into two vertical panes.
 - **Copy** copies the editor content to the clipboard (disabled when empty).
 - **Export** downloads the content as a `{name}.{extension}` file, where the
   extension is determined by the selected document type (disabled when empty).
-- **Upload** loads a local text file into the editor. When the document is
-  dirty, it asks for confirmation first, because uploading replaces the editor
-  content. Files longer than the content limit are rejected.
 
 ### Draft persistence
 
@@ -89,10 +92,75 @@ The page is split into two vertical panes.
 - The header and the left-pane row update in place. Renaming never affects
   unsaved editor content.
 
+## Document Types
+
+- A dropdown next to the document name in the editor header selects one of
+  eight types: **Text**, **CSV**, **HTML**, **JavaScript**, **JSON**,
+  **Markdown**, **XML**, or **YAML**. The dropdown is filterable — typing
+  narrows the list.
+- Changing the type marks the document dirty; the new type is persisted on the
+  next save. Each type validates its content before saving and rejects invalid
+  content with a toast explaining the error.
+- Structured types (JSON, HTML, XML, YAML) show type-specific **Format** /
+  **Convert** actions in the editor toolbar:
+  - **Format** reformats the content according to the type (e.g. JSON
+    pretty-print, HTML/XML indent).
+  - **Convert** offers conversion to a related type (JSON ↔ YAML).
+- The selected type determines the export file extension (`{name}.{ext}`),
+  enables per-type syntax highlighting, and influences the upload file filter.
+
+### Preview
+
+- Documents with a **Markdown** type show a **Preview** toggle button in the
+  toolbar. When activated, the editor splits horizontally into two panes: the
+  CodeMirror source on the left and a rendered markdown preview on the right.
+- The split ratio is adjustable via a draggable handle. Toggling preview off
+  restores the full-width editor.
+
+## Tags
+
+- Tags are free-text labels associated with a document, displayed as colored
+  chips next to the document name in both the left-pane rows and the editor
+  header.
+- A **Tags** button in the editor toolbar opens the **Tags dialog**, where the
+  user can add new tags (typing or selecting from existing tags across all
+  documents), remove tags, or reorder them.
+- Each tag gets a deterministic default color from a 16-color palette assigned
+  by a hash of the tag name. The dialog shows the current color assignment and,
+  when adding a tag whose name's default color shares a color family with an
+  existing tag on the same document, picks the next visually distinct color
+  instead. Tags are saved immediately on closing the dialog (they do not
+  participate in the dirty/save flow).
+
+## Clone
+
+- **Clone** in the editor toolbar creates a copy of the current document with a
+  new id. The clone is named `{original-name} (copy)` (or the generated key
+  when the original has no name), inherits the content and type of the source,
+  and the browser navigates to the new document automatically. The clone is
+  owned by the current client IP.
+
+## Split Pane Resize
+
+- The boundary between the document list and the editor is a draggable
+  splitter. The left-pane width is persisted to `localStorage` and restored on
+  reload; the default is 288 px, with a minimum of 160 px and a maximum of
+  480 px.
+- The list pane adjusts its min-width dynamically to match the measured header
+  row content, clipped to the persisted max width, so the header controls
+  always fit.
+
+## Upload
+
+- **Upload** in the editor toolbar loads a local text file into the editor.
+  When the document is dirty, it asks for confirmation first, because
+  uploading replaces the editor content. Files longer than the content limit
+  are rejected.
+
 ## Dialogs
 
 - Confirm dialogs are centered, capped at the viewport
-  (`max-h-[calc(100vh-3rem)]` with `overflow-y-auto`), and mounted only while
+  (`max-h-[90vh]` with `overflow-y-auto`), and mounted only while
   open.
 - The confirm button uses the primary variant with an accent color that matches
   the intent: amber for discard prompts, rose for destructive deletes.
@@ -134,8 +202,9 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
     (`Saved`/`Environment`/`Default`), an inline editor, and a revert button
     that deletes the database override. **Apply** persists changes, **Reload**
     re-fetches, **Reset** restores the draft to the current values.
-  - **Documents** — every document across all IPs with search, pagination,
-    read-only content view, inline rename, and delete (behind a confirm dialog).
+  - **Documents** — every document across all IPs with search, sortable columns,
+    pagination, row-selection with bulk delete, inline rename, and single-row
+    delete (behind a confirm dialog).
 - Editing a property or deleting/renaming a document triggers a refresh of the
   normal left-pane list; deleting the currently open document navigates to `/`.
 
@@ -146,9 +215,3 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 - Overrides are cached in memory for a short TTL and invalidated on write, so
   document create/save paths do not hit the database on every request while
   admin edits take effect immediately.
-
-### Concurrency tradeoff
-
-Writes are last-write-wins. If two users edit the same document concurrently,
-the later `PUT` silently overwrites the earlier one. This keeps the app simple;
-there is no conflict detection or merge.

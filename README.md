@@ -63,6 +63,8 @@ Keys:
 | `ADMIN_PASSWORD` | Plain admin password (dev convenience; prefer a hash) |
 | `ADMIN_PASSWORD_HASH` | scrypt admin password hash for production (`node scripts/hash-password.mjs <password>`) |
 | `SESSION_SECRET` | Secret signing the admin session cookie (required in `prod`) |
+| `SCHEMA_NAME` | PostgreSQL schema name for table isolation in `prod` (default `public`) |
+| `DOCUMENT_KEY_LENGTH` | Generated document id character count (default 6, admin changes take effect for new keys immediately) |
 
 ## Database Setup
 
@@ -84,29 +86,16 @@ In `dev` the schema is also applied automatically when the server first starts.
 npm run dev
 ```
 
-Open `http://localhost:5173`. The left pane lists the documents created by your
-current client IP, most recently edited first. The search box filters the list
-in place. Click a name to navigate to `/{doc-id}` and load that document's
-content into the editor. Click **New document** to create one; it is added to
-the list automatically. Documents created by other IPs are reached by their
-`/{doc-id}` URL.
-Double-click a name (or use the pencil icon next to it) to rename. No
-`DATABASE_URL` is needed — documents are stored in a local SQLite file at
-`.data/share-text-dev.sqlite` (created on first run).
+Open `http://localhost:5173`. No `DATABASE_URL` is needed — documents are stored
+in a local SQLite file at `.data/share-text-dev.sqlite` (created on first run).
 
 ## Admin
 
 The gear icon in the left-pane header opens an admin dialog. Sign in with the
 configured `ADMIN_USERNAME`/`ADMIN_PASSWORD` (or `ADMIN_PASSWORD_HASH` in
-production). Two tabs are available after sign-in:
-
-- **Properties** — view and edit application properties
-  (`MAX_DOCUMENTS_PER_IP`, `MAX_CONTENT_LENGTH`). Values are resolved at runtime
-  with precedence database override > environment > built-in default, and each
-  row shows its current source. A per-row revert button deletes the database
-  override and falls back to the environment/default value.
-- **Documents** — browse every document across all client IPs with search and
-  pagination, view contents, rename, and delete.
+production). Two tabs are available after sign-in: **Properties** (runtime-
+adjustable application properties) and **Documents** (browse all documents
+across all client IPs).
 
 Admin API endpoints live under `/api/admin/*` and are protected by a signed,
 HTTP-only admin session cookie; the session expires after 24 hours.
@@ -155,5 +144,7 @@ npm test
 | `npm run check` | Run svelte-check |
 | `npm test` | Run Vitest |
 | `npm run schema:apply` | Apply `sql/schema.sql` to the dev SQLite database (or `PROFILE=prod` for the prod database) |
+| `npm run schema:recreate` | Drop and recreate the schema (`PROFILE=prod` required, idempotent in `dev`) |
+| `node scripts/hash-password.mjs <password>` | Generate a scrypt password hash for `ADMIN_PASSWORD_HASH` |
 | `npm run env:sync:vercel` | Sync `.env` + `.env.vercel` to Vercel |
 | `npm run deploy` | Deploy to Vercel |
