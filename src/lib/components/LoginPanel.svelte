@@ -1,8 +1,9 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import BaseDialog from './BaseDialog.svelte'
-  import DialogActions from './DialogActions.svelte'
+  import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
+  import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import { login } from '$lib/admin'
 
@@ -49,19 +50,17 @@
         void handleLogin()
       }}
       novalidate>
-      <div>
-        <label for="admin-username" class="mb-1.5 block text-sm font-medium text-slate-200">Username</label>
+      <FormField label="Username" htmlFor="admin-username">
         <input
           id="admin-username"
           bind:value={username}
           type="text"
           autocomplete="username"
           class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
-      </div>
-      <div>
-        <label for="admin-password" class="mb-1.5 block text-sm font-medium text-slate-200">Password</label>
+      </FormField>
+      <FormField label="Password" htmlFor="admin-password">
         <PasswordInput id="admin-password" bind:value={password} disabled={loginPending} />
-      </div>
+      </FormField>
       <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">Sign in</Button>
     </form>
   {:else}
@@ -70,10 +69,10 @@
       or{' '}
       <span class="font-semibold text-slate-100">ADMIN_PASSWORD_HASH</span> in the server environment to enable it.
     </p>
-    <DialogActions>
+    <Buttons>
       {#snippet children()}
         <Button onClick={onClose}>Close</Button>
       {/snippet}
-    </DialogActions>
+    </Buttons>
   {/if}
 </BaseDialog>

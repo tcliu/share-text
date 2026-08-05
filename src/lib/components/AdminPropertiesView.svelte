@@ -1,6 +1,6 @@
 <script lang="ts">
   import Button from './Button.svelte'
-  import DialogActions from './DialogActions.svelte'
+  import Buttons from './Buttons.svelte'
   import NumberInput from './NumberInput.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
@@ -69,7 +69,7 @@
     {/each}
   </div>
 
-  <DialogActions>
+  <Buttons>
     {#snippet children()}
       <Button
         variant="primary"
@@ -82,5 +82,5 @@
       <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>Reload</Button>
       <Button disabled={settingsState.pending || !settingsState.hasUnsavedChanges} onClick={() => settingsState.resetDraft()}>Reset</Button>
     {/snippet}
-  </DialogActions>
+  </Buttons>
 </div>

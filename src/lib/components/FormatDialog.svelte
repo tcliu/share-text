@@ -1,8 +1,9 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import BaseDialog from './BaseDialog.svelte'
-  import DialogActions from './DialogActions.svelte'
+  import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
+  import FormField from './FormField.svelte'
   import NumberInput from './NumberInput.svelte'
 
   interface Props {
@@ -43,14 +44,20 @@
     const resolved = Number.isNaN(parsed) ? initialIndent : parsed
     onConfirm(resolved)
   }
+
+  const dirty = $derived(indent !== String(initialIndent))
+
+  function handleReset() {
+    indent = String(initialIndent)
+    numberInputRef?.focus()
+  }
 </script>
 
 {#if show}
   <BaseDialog {title} {className} {maxWidth} {onCancel}>
     <div class="flex flex-col gap-4">
       {#if hasIndent}
-        <label class="flex flex-col gap-1.5 text-sm text-slate-300">
-          <span>Indentation (spaces)</span>
+        <FormField label="Indentation (spaces)">
           <NumberInput
             bind:this={numberInputRef}
             bind:value={indent}
@@ -58,13 +65,14 @@
             max={8}
             ariaLabel="Indentation (spaces)"
             className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-500" />
-        </label>
+        </FormField>
       {/if}
-      <DialogActions>
+      <Buttons>
         {#snippet children()}
           <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>Reset</Button>
         {/snippet}
-      </DialogActions>
+      </Buttons>
     </div>
   </BaseDialog>
 {/if}

@@ -111,8 +111,8 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="flex min-h-full items-center justify-center" onclick={e => e.stopPropagation()}>
-      <section
-        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass} {className}">
+    <section
+        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass} {className}">
       <button
         type="button"
         aria-label="Close dialog"

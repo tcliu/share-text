@@ -27,11 +27,20 @@
   }: Props = $props()
 
   let visible = $state(false)
+  let input = $state<HTMLInputElement>()
+
+  function toggleVisibility() {
+    visible = !visible
+    requestAnimationFrame(() => {
+      if (input) input.setSelectionRange(input.value.length, input.value.length)
+    })
+  }
 </script>
 
 <div class="relative">
   <input
     {id}
+    bind:this={input}
     bind:value
     {name}
     {placeholder}
@@ -42,7 +51,7 @@
     {oninput}
     class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pr-12 pl-3 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 {className}" />
   <button
-    onclick={() => (visible = !visible)}
+    onclick={toggleVisibility}
     aria-label={visible ? 'Hide password' : 'Show password'}
     type="button"
     {disabled}
