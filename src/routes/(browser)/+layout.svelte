@@ -200,7 +200,6 @@
       onNew={handleNew}
       onRefresh={handleRefresh}
       onDelete={handleDelete}
-      onRename={documentsState.commitRename}
       onLoadMore={documentsState.loadMore}
       onToggleCollapse={toggleLeftPane}
       onOpenAdmin={() => (adminDialogOpen = true)}

@@ -5,10 +5,13 @@
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
+  import TagsDialog from './TagsDialog.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import Splitter from './Splitter.svelte'
   import PreviewPane from './PreviewPane.svelte'
+  import Chip from './Chip.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
+  import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -19,11 +22,13 @@
     saving: boolean
     refreshing?: boolean
     maxContentLength?: number
+    availableTags?: Tag[]
     onSave: () => void
     onReset: () => void
     onRename: (name: string) => void
     onTypeChange: (type: string) => void
     onClone: () => void
+    onTagsSave: (tags: Tag[]) => void
   }
 
   let {
@@ -33,11 +38,13 @@
     saving,
     refreshing = false,
     maxContentLength = 0,
+    availableTags = [],
     onSave,
     onReset,
     onRename,
     onTypeChange,
     onClone,
+    onTagsSave,
   }: Props = $props()
 
   const dirty = $derived(content !== document.content || docType !== document.documentType)
@@ -45,6 +52,7 @@
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
   let showPreview = $state(false)
+  let tagsOpen = $state(false)
   let editorWidth = $state(0)
   let splitContainerRef = $state<HTMLDivElement | null>(null)
   let splitContainerWidth = $state(0)
@@ -161,25 +169,37 @@
 
   const currentType = $derived(getDocumentType(docType))
   const activeTypeLabel = $derived(currentType.label)
+  const documentTags = $derived(document.tags ?? [])
 </script>
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
   <div class="flex items-center justify-between gap-3">
-    <EditableText
-      text={document.name}
-      className="font-semibold text-slate-200"
-      onChange={onRename} />
+    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <EditableText
+        text={document.name}
+        className="font-semibold text-slate-200"
+        onChange={onRename} />
+      <!-- Move document type selector before the tag chips so primary
+           classification sits next to the name, and tags remain as
+           secondary metadata following it. Keep the dropdown compact so
+           it doesn't flex-grow. -->
+      <div class="flex items-center">
+        <SelectDropdown
+          buttonLabel={activeTypeLabel}
+          options={DOCUMENT_TYPE_OPTIONS}
+          activeValue={docType}
+          ariaLabel="Document type"
+          filterable={true}
+          size="sm"
+          onSelect={handleTypeSelect}
+          align="right"
+          autoPlace={true} />
+      </div>
+      {#each documentTags as tag (tag.name)}
+        <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
+      {/each}
+    </div>
     <div class="flex items-center gap-1">
-      <SelectDropdown
-        buttonLabel={activeTypeLabel}
-        options={DOCUMENT_TYPE_OPTIONS}
-        activeValue={docType}
-        ariaLabel="Document type"
-        filterable={true}
-        size="sm"
-        onSelect={handleTypeSelect}
-        align="right"
-        autoPlace={true} />
       {#if currentType.actions}
         {#await currentType.actions() then Actions}
           <Actions
@@ -261,6 +281,14 @@
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.6 3H6a2 2 0 0 0-2 2v4.6a2 2 0 0 0 .59 1.41l4.4 4.4a2 2 0 0 0 2.83 0l3.58-3.58a2 2 0 0 0 0-2.83L11.99 3.6A2 2 0 0 0 10.6 3Z" />
+            <circle cx="7.25" cy="7.25" r="1.25" />
           </svg>
         {/snippet}
       </Button>
@@ -352,3 +380,10 @@
     onConfirm={handleUploadConfirm}
     onCancel={() => (uploadConfirmOpen = false)} />
 {/if}
+
+<TagsDialog
+  open={tagsOpen}
+  tags={document.tags ?? []}
+  {availableTags}
+  onClose={() => (tagsOpen = false)}
+  onSave={onTagsSave} />

@@ -64,6 +64,13 @@ describe('EditableText', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('sizes the input to match the label width when editing starts', async () => {
+    render(EditableText, { text: 'Test', onChange: vi.fn() })
+    await fireEvent.dblClick(screen.getByText('Test'))
+    const input = screen.getByLabelText('Edit text') as HTMLInputElement
+    expect(input.style.getPropertyValue('width')).toBeTruthy()
+  })
+
   it('cancels without onChange when value is unchanged', async () => {
     const onChange = vi.fn()
     render(EditableText, { text: 'Same', onChange })

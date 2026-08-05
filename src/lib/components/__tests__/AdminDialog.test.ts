@@ -115,6 +115,8 @@ describe('AdminDialog', () => {
       {
         id: 'aaaaaa',
         name: 'Doc A',
+        documentType: 'text',
+        tags: [{ name: 'alpha', color: '#00F0FF' }],
         createdBy: '10.0.0.1',
         updatedBy: '10.0.0.2',
         createdAt: '2026-08-01T00:00:00.000Z',
@@ -124,6 +126,11 @@ describe('AdminDialog', () => {
       {
         id: 'bbbbbb',
         name: 'Doc B',
+        documentType: 'markdown',
+        tags: [
+          { name: 'beta', color: '#FFCC00' },
+          { name: 'urgent', color: '#FF6680' },
+        ],
         createdBy: '10.0.0.1',
         updatedBy: '10.0.0.1',
         createdAt: '2026-08-01T00:00:00.000Z',

@@ -2,9 +2,12 @@
   import { goto } from '$app/navigation'
   import type { DocumentSummary } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
-  import EditableText from './EditableText.svelte'
+  import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
   import SearchInput from './SearchInput.svelte'
+  import Chip from './Chip.svelte'
+  import { getDocumentType } from '$lib/document-types'
+  import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
 
   interface Props {
     documents: DocumentSummary[]
@@ -15,7 +18,6 @@
     onNew: () => void
     onRefresh: () => void
     onDelete: (id: string) => void
-    onRename: (id: string, name: string) => Promise<boolean | void>
     onLoadMore: () => void
     onToggleCollapse: () => void
     onOpenAdmin: () => void
@@ -33,7 +35,6 @@
     onNew,
     onRefresh,
     onDelete,
-    onRename,
     onLoadMore,
     onToggleCollapse,
     onOpenAdmin,
@@ -91,10 +92,6 @@
       event.preventDefault()
       handleRowClick(id)
     }
-  }
-
-  function handleRename(id: string, name: string) {
-    return onRename(id, name)
   }
 
   function handleDeleteClick(event: MouseEvent, id: string) {
@@ -194,34 +191,42 @@
       <div class="flex flex-col">
         {#each visibleDocuments as document (document.id)}
           <div
-            class={`group flex cursor-pointer items-center gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}
+            class={`group flex cursor-pointer items-start gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}
             role="button"
             tabindex="0"
             onclick={() => handleRowClick(document.id)}
             onkeydown={event => handleRowKeydown(event, document.id)}>
-            <EditableText
-              text={document.name}
-              size="sm"
-              className="text-slate-300"
-              onChange={name => handleRename(document.id, name)}
-              onActivate={() => handleRowClick(document.id)} />
-            <Button
-              size="sm"
-              ariaLabel="Delete document"
-              tooltip="Delete"
-              tooltipAlign="right"
-              onClick={event => handleDeleteClick(event, document.id)}
-              onKeyDown={handleDeleteKeydown}
-              className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
-              {#snippet icon()}
-                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path
-                    fill-rule="evenodd"
-                    d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
-                    clip-rule="evenodd" />
-                </svg>
-              {/snippet}
-            </Button>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+              <Copyable
+                text={document.name}
+                className="text-sm text-slate-300"
+                copyAriaLabel={`Copy document name ${document.name}`} />
+              {#if document.documentType !== 'text'}
+                <Chip
+                  label={getDocumentType(document.documentType).label}
+                  chipClass={tagChipClass()}
+                  style={tagChipStyle('#F8FAFC')} />
+              {/if}
+            </div>
+            <span class="flex shrink-0">
+              <Button
+                size="sm"
+                ariaLabel="Delete document"
+                tooltip="Delete"
+                tooltipAlign="right"
+                onClick={event => handleDeleteClick(event, document.id)}
+                onKeyDown={handleDeleteKeydown}
+                className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
+                {#snippet icon()}
+                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fill-rule="evenodd"
+                      d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
+                      clip-rule="evenodd" />
+                  </svg>
+                {/snippet}
+              </Button>
+            </span>
           </div>
         {/each}
         {#if hasMore && !normalizedQuery}

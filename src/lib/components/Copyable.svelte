@@ -39,7 +39,7 @@
       {text}
     {/if}
   </span>
-  <span class="opacity-0 transition group-hover:opacity-100">
+  <span class="shrink-0 opacity-0 transition group-hover:opacity-100">
     <Button
       size="sm"
       variant="ghost"

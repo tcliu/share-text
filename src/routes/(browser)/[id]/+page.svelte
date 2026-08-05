@@ -6,6 +6,7 @@
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
   import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
+  import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
 
   let { data }: PageProps = $props()
@@ -17,11 +18,15 @@
   let savedContent = $state('')
   let documentType = $state('text')
   let savedDocumentType = $state('text')
+  let documentTags = $state<Tag[]>([])
   let documentUpdatedAt = $state('')
   let documentUpdatedBy = $state('')
   let content = $state('')
   let docType = $state('text')
   let saving = $state(false)
+  let renaming = $state(false)
+  let cloning = $state(false)
+  let savingTags = $state(false)
   let refreshing = $state(false)
   let draftTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -31,10 +36,27 @@
     id: currentId,
     name: documentName,
     documentType: savedDocumentType,
+    tags: documentTags,
     content: savedContent,
     updatedAt: documentUpdatedAt,
     updatedBy: documentUpdatedBy,
   }))
+
+  const availableTags = $derived.by(() => {
+    const seen = new Set<string>()
+    const tags: Tag[] = []
+    for (const document of context.documents) {
+      for (const tag of document.tags ?? []) {
+        const key = tag.name.trim().toLowerCase()
+        if (!key || seen.has(key)) {
+          continue
+        }
+        seen.add(key)
+        tags.push(tag)
+      }
+    }
+    return tags.sort((a, b) => a.name.localeCompare(b.name))
+  })
 
   function flushDraft() {
     if (draftTimer) {
@@ -75,6 +97,7 @@
       documentType = document.documentType
       documentUpdatedAt = document.updatedAt
       documentUpdatedBy = document.updatedBy
+      documentTags = document.tags ?? []
       savedContent = document.content
       content = document.content
       docType = document.documentType
@@ -85,6 +108,15 @@
     }
   }
 
+  // Keep the header name in sync when the document is renamed from the left
+  // pane (or elsewhere) through the shared documents list.
+  $effect(() => {
+    const summary = context.documents.find(document => document.id === currentId)
+    if (summary && summary.name !== documentName) {
+      documentName = summary.name
+    }
+  })
+
   $effect(() => {
     const document = data.document
     if (document.id === currentId) return
@@ -94,6 +126,7 @@
     documentType = document.documentType
     documentUpdatedAt = document.updatedAt
     documentUpdatedBy = document.updatedBy
+    documentTags = document.tags ?? []
     savedContent = document.content
     content = loadDraft(document.id) ?? document.content
     docType = document.documentType
@@ -155,16 +188,20 @@
   }
 
   async function handleRename(name: string) {
-    if (!currentId || !name) return
+    if (!currentId || !name || renaming) return
+    renaming = true
     try {
       const updated = await updateDocument(currentId, { name })
       documentName = updated.name
       documentUpdatedAt = updated.updatedAt
       documentUpdatedBy = updated.updatedBy
+      documentTags = updated.tags ?? []
       toast.success('Document renamed')
       await context.refreshList()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+    } finally {
+      renaming = false
     }
   }
 
@@ -173,7 +210,8 @@
   }
 
   async function handleClone() {
-    if (!currentId) return
+    if (!currentId || cloning) return
+    cloning = true
     const cloneName = documentName ? `${documentName} (copy)` : undefined
     try {
       const created = await createDocument({ name: cloneName, content, documentType: docType })
@@ -183,6 +221,31 @@
       await goto(`/${created.id}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to clone document')
+    } finally {
+      cloning = false
+    }
+  }
+
+  async function handleTagsSave(tags: Tag[]) {
+    if (!currentId || savingTags) return
+    savingTags = true
+    try {
+      const updated = await updateDocument(currentId, { tags })
+      documentName = updated.name
+      savedDocumentType = updated.documentType
+      documentType = updated.documentType
+      documentTags = updated.tags ?? []
+      documentUpdatedAt = updated.updatedAt
+      documentUpdatedBy = updated.updatedBy
+      savedContent = updated.content
+      content = updated.content
+      docType = updated.documentType
+      toast.success('Tags updated')
+      await context.refreshList()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save tags')
+    } finally {
+      savingTags = false
     }
   }
 
@@ -205,9 +268,11 @@
     {saving}
     refreshing={refreshing || context.loadingDocuments}
     maxContentLength={data.maxContentLength}
+    {availableTags}
     onSave={handleSave}
     onReset={handleReset}
     onRename={handleRename}
     onTypeChange={handleTypeChange}
-    onClone={handleClone} />
+    onClone={handleClone}
+    onTagsSave={handleTagsSave} />
 {/if}

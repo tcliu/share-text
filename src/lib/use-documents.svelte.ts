@@ -1,7 +1,7 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import type { DocumentSummary } from '$lib/documents'
-import { createDocument, deleteDocument, fetchDocumentSummaries, updateDocument } from '$lib/documents'
+import { createDocument, deleteDocument, fetchDocumentSummaries } from '$lib/documents'
 import { clearDraft } from '$lib/document-drafts'
 
 export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
@@ -18,6 +18,8 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   let loadingDocuments = $state(false)
   let documentsError = $state<string | null>(null)
   let hasMore = $state(false)
+
+  let creating = $state(false)
 
   async function refreshList() {
     loadingDocuments = true
@@ -50,6 +52,8 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   }
 
   async function performCreate() {
+    if (creating) return null
+    creating = true
     try {
       const document = await createDocument()
       await refreshList()
@@ -58,6 +62,8 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create document')
       return null
+    } finally {
+      creating = false
     }
   }
 
@@ -75,22 +81,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     }
   }
 
-  async function commitRename(id: string, name: string) {
-    try {
-      const updated = await updateDocument(id, { name })
-      documents = documents.map(document =>
-        document.id === id
-          ? { id: document.id, name: updated.name, documentType: updated.documentType, updatedAt: updated.updatedAt, updatedBy: updated.updatedBy }
-          : document,
-      )
-      toast.success('Document renamed')
-      return true
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to rename document')
-      return false
-    }
-  }
-
   return {
     get documents() {
       return documents
@@ -104,10 +94,12 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     get hasMore() {
       return hasMore
     },
+    get creating() {
+      return creating
+    },
     refreshList,
     loadMore,
     performCreate,
     performDelete,
-    commitRename,
   }
 }

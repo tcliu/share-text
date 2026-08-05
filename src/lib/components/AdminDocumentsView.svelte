@@ -5,6 +5,9 @@
   import EditableText from './EditableText.svelte'
   import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import type { AdminDocumentSummary } from '$lib/admin'
+  import Chip from './Chip.svelte'
+  import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
+  import type { Tag } from '$lib/tag-colors'
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
@@ -19,15 +22,19 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
   }
 
-  function formatSize(value: number) {
-    return value.toLocaleString()
-  }
+function formatSize(value: number) {
+  return value.toLocaleString()
+}
+
+function formatTags(tags: Tag[] | undefined) {
+  return tags?.map(tag => tag.name).join(', ') ?? ''
+}
 
   const columns: DataTableColumn<AdminDocumentSummary>[] = [
     {
       key: 'id',
       header: 'ID',
-      widthClass: 'w-[15%]',
+      widthClass: 'w-[12%]',
       sortable: true,
       searchable: true,
       cell: idCell,
@@ -35,7 +42,7 @@
     {
       key: 'name',
       header: 'Name',
-      widthClass: 'w-[25%]',
+      widthClass: 'w-[22%]',
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -44,15 +51,23 @@
     {
       key: 'documentType',
       header: 'Type',
-      widthClass: 'w-[12%]',
+      widthClass: 'w-[10%]',
       sortable: true,
       searchable: true,
       cell: documentTypeCell,
     },
     {
+      key: 'tags',
+      header: 'Tags',
+      widthClass: 'w-[16%]',
+      cellClass: 'max-w-0',
+      searchable: true,
+      cell: tagsCell,
+    },
+    {
       key: 'length',
       header: 'Length',
-      widthClass: 'w-[12%]',
+      widthClass: 'w-[10%]',
       cellClass: 'text-slate-400',
       sortable: true,
       cell: lengthCell,
@@ -60,7 +75,7 @@
     {
       key: 'updatedBy',
       header: 'Updated by',
-      widthClass: 'w-[18%]',
+      widthClass: 'w-[14%]',
       sortable: true,
       searchable: true,
       cell: updatedByCell,
@@ -68,7 +83,7 @@
     {
       key: 'updatedAt',
       header: 'Updated time',
-      widthClass: 'w-[18%]',
+      widthClass: 'w-[16%]',
       cellClass: 'text-slate-500',
       sortable: true,
       cell: updatedAtCell,
@@ -130,6 +145,21 @@
     text={document.documentType}
     className="text-slate-400 capitalize"
     copyAriaLabel={`Copy document type ${document.documentType}`} />
+{/snippet}
+
+{#snippet tagsCell(document: AdminDocumentSummary)}
+  <Copyable
+    text={formatTags(document.tags)}
+    className="block text-slate-400"
+    copyAriaLabel={`Copy tags for ${document.name}`}>
+    {#if (document.tags ?? []).length > 0}
+      <span class="flex flex-wrap gap-1">
+        {#each document.tags as tag (tag.name)}
+          <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
+        {/each}
+      </span>
+    {/if}
+  </Copyable>
 {/snippet}
 
 {#snippet lengthCell(document: AdminDocumentSummary)}
