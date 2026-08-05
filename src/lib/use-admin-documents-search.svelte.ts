@@ -65,5 +65,11 @@ export function useAdminDocumentsSearch(params: { onParamsChange: () => void }) 
     handleSearchInput,
     handleSearchKeydown,
     handleSort,
+    destroy() {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
+    },
   }
 }

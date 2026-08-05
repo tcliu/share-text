@@ -30,7 +30,7 @@ export function useAdminDocuments(params: {
   const searchState = useAdminDocumentsSearch({
     onParamsChange() {
       page = 1
-      void load()
+      load().catch(() => {})
     },
   })
 
