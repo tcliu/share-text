@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { positionPanel } from '$lib/position-panel.svelte'
+
   interface Option {
     value: string
     label: string
@@ -66,10 +68,6 @@
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
-  let panelStyle = $state({ left: 0, top: 0 })
-  let panelReady = $state(false)
-  let panelOriginalParent = $state<ParentNode | null>(null)
-  let panelNextSibling = $state<Node | null>(null)
   let filterText = $state('')
   let highlightIndex = $state(0)
 
@@ -139,52 +137,8 @@
     }
   }
 
-  function attachPanelToBody() {
-    if (!panelRef || !panelRef.parentNode || panelRef.parentNode === document.body) {
-      return
-    }
-    panelOriginalParent = panelRef.parentNode
-    panelNextSibling = panelRef.nextSibling
-    document.body.appendChild(panelRef)
-  }
-
-  function restorePanelParent() {
-    if (!panelRef || !panelOriginalParent) {
-      return
-    }
-    if (panelNextSibling && panelNextSibling.parentNode === panelOriginalParent) {
-      panelOriginalParent.insertBefore(panelRef, panelNextSibling)
-    } else {
-      panelOriginalParent.appendChild(panelRef)
-    }
-    panelOriginalParent = null
-    panelNextSibling = null
-  }
-
-  function updatePanelPosition() {
-    if (!open || !containerRef || !panelRef) {
-      return
-    }
-    const rect = containerRef.getBoundingClientRect()
-    const panelWidth = panelRef.offsetWidth
-    const panelHeight = panelRef.offsetHeight
-    let left = align === 'right' ? rect.right - panelWidth : rect.left
-    left = Math.max(8, Math.min(left, window.innerWidth - panelWidth - 8))
-    const spaceBelow = window.innerHeight - rect.bottom
-    const spaceAbove = rect.top
-    let top = rect.bottom + 8
-    if (autoPlace && spaceBelow < panelHeight && spaceAbove > spaceBelow) {
-      top = rect.top - 8 - panelHeight
-    }
-    top = Math.max(8, Math.min(top, window.innerHeight - panelHeight - 8))
-    panelStyle = { left, top }
-    panelReady = true
-  }
-
   $effect(() => {
     if (!open) {
-      panelReady = false
-      restorePanelParent()
       return
     }
     function handleKeydownCapture(event: KeyboardEvent) {
@@ -204,14 +158,9 @@
         close()
       }
     }
-    attachPanelToBody()
-    updatePanelPosition()
-    window.addEventListener('resize', updatePanelPosition)
     window.addEventListener('keydown', handleKeydownCapture, true)
     document.addEventListener('mousedown', handlePointerDown)
     return () => {
-      restorePanelParent()
-      window.removeEventListener('resize', updatePanelPosition)
       window.removeEventListener('keydown', handleKeydownCapture, true)
       document.removeEventListener('mousedown', handlePointerDown)
     }
@@ -229,7 +178,9 @@
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-activedescendant={open && filteredOptions[highlightIndex] ? `${panelId}-option-${highlightIndex}` : undefined}
+        aria-activedescendant={open && filteredOptions[highlightIndex]
+          ? `${panelId}-option-${highlightIndex}`
+          : undefined}
         onfocus={handleControlFocus}
         onkeydown={handleControlKeydown}
         class={resolvedControlClass} />
@@ -267,9 +218,8 @@
       id={panelId}
       role="listbox"
       aria-label={ariaLabel}
-      class:invisible={!panelReady}
-      class={`fixed left-0 top-0 z-50 will-change-transform ${panelClass}`}
-      style={`transform: translate(${panelStyle.left}px, ${panelStyle.top}px);`}>
+      use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
+      class={`fixed left-0 top-0 z-50 will-change-transform ${panelClass}`}>
       {#if filteredOptions.length === 0}
         <div class={emptyClass}>No options</div>
       {/if}
