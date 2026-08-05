@@ -6,8 +6,16 @@ import {
   fetchDocumentSummaries,
   updateDocument,
 } from '$lib/documents'
+import type { Tag } from '$lib/tag-colors'
 
-const summary = { id: 'a1b2c3', name: 'Notes', updatedAt: '2026-08-02T12:00:00.000Z', updatedBy: '203.0.113.7' }
+const summary = {
+  id: 'a1b2c3',
+  name: 'Notes',
+  documentType: 'text',
+  tags: [{ name: 'alpha', color: '#00F0FF' }],
+  updatedAt: '2026-08-02T12:00:00.000Z',
+  updatedBy: '203.0.113.7',
+}
 
 function mockFetch(response: { ok: boolean; status: number; body: unknown }) {
   return vi.fn().mockResolvedValue({
@@ -75,6 +83,24 @@ describe('updateDocument', () => {
       expect.objectContaining({
         method: 'PUT',
         body: JSON.stringify({ name: 'Notes', content: 'new' }),
+      }),
+    )
+  })
+
+  it('PUTs tags updates', async () => {
+    const tags: Tag[] = [
+      { name: 'alpha', color: '#00F0FF' },
+      { name: 'beta', color: '#FF6680' },
+    ]
+    const document = { ...summary, tags, content: 'body' }
+    const fetchMock = mockFetch({ ok: true, status: 200, body: { document } })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await updateDocument(summary.id, { tags })).toEqual(document)
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/documents/${summary.id}`,
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ tags }),
       }),
     )
   })

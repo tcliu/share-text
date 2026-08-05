@@ -17,7 +17,6 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   const before = await listSettings()
   const beforeValues = new Map(before.map(setting => [setting.key, setting.value]))
   const ip = getClientAddress()
-  const startedAt = Date.now()
   const updates: Array<{ key: string; value: number | null }> = []
 
   for (const item of body.settings) {
@@ -41,6 +40,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   }
 
   for (const update of updates) {
+    const opStartedAt = Date.now()
     if (update.value === null) {
       await deleteSettingValue(update.key)
       logEvent({
@@ -49,7 +49,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
         details: {
           key: update.key,
           old_value: beforeValues.get(update.key) ?? null,
-          elapsed_ms: Date.now() - startedAt,
+          elapsed_ms: Date.now() - opStartedAt,
         },
       })
       continue
@@ -63,7 +63,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
         key: update.key,
         old_value: beforeValues.get(update.key) ?? null,
         new_value: update.value,
-        elapsed_ms: Date.now() - startedAt,
+        elapsed_ms: Date.now() - opStartedAt,
       },
     })
   }

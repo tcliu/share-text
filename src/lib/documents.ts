@@ -1,7 +1,10 @@
+import type { Tag } from './tag-colors'
+
 export interface DocumentSummary {
   id: string
   name: string
   documentType: string
+  tags: Tag[]
   updatedAt: string
   updatedBy: string
 }
@@ -68,7 +71,7 @@ export async function createDocument(options: { name?: string; content?: string;
 
 export async function updateDocument(
   id: string,
-  options: { name?: string; content?: string; documentType?: string },
+  options: { name?: string; content?: string; documentType?: string; tags?: Tag[] },
 ): Promise<Document> {
   const response = await fetch(`${BASE_PATH}/${id}`, {
     method: 'PUT',

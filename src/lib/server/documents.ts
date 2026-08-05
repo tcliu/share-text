@@ -3,6 +3,7 @@ import { getDb } from './db'
 import { logEvent } from './logging'
 import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentsPerUser } from './settings'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
+import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
 
 export const MAX_NAME_LENGTH = 200
 export const MAX_CONTENT_BYTES = 1024 * 1024
@@ -25,6 +26,7 @@ export interface DocumentSummary {
   id: string
   name: string
   documentType: DocumentType
+  tags: Tag[]
   updatedAt: string
   updatedBy: string
 }
@@ -39,8 +41,78 @@ interface DocumentRow {
   name: string
   content: string
   document_type: string
+  tags: string | null
   updated_by: string
   updated_at: Date | string
+}
+
+function parseTags(value: string | null | undefined): Tag[] {
+  if (!value) {
+    return []
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+
+    const tags: Tag[] = []
+    const seen = new Set<string>()
+    for (const item of parsed) {
+      if (typeof item === 'string') {
+        const name = item.trim()
+        const key = name.toLowerCase()
+        if (!name || seen.has(key)) {
+          continue
+        }
+        seen.add(key)
+        tags.push({ name, color: getDefaultTagColor(name) })
+      } else if (item && typeof item === 'object' && typeof (item as { name?: unknown }).name === 'string') {
+        const name = (item as { name: string }).name.trim()
+        const key = name.toLowerCase()
+        if (!name || seen.has(key)) {
+          continue
+        }
+        seen.add(key)
+        const rawColor = (item as { color?: unknown }).color
+        const color = typeof rawColor === 'string' && isTagColor(rawColor) ? rawColor : getDefaultTagColor(name)
+        tags.push({ name, color })
+      }
+    }
+    return tags
+  } catch {
+    return []
+  }
+}
+
+function serializeTags(tags: Tag[] | undefined): string {
+  if (!tags) {
+    return '[]'
+  }
+
+  const seen = new Set<string>()
+  const normalized: Tag[] = []
+  for (const rawTag of tags) {
+    const name = rawTag.name.trim()
+    const key = name.toLowerCase()
+    if (!name || seen.has(key)) {
+      continue
+    }
+    seen.add(key)
+    const color = isTagColor(rawTag.color) ? rawTag.color : getDefaultTagColor(name)
+    normalized.push({ name, color })
+  }
+
+  normalized.sort((a, b) => a.name.localeCompare(b.name))
+
+  const result: Tag[] = []
+  for (const tag of normalized) {
+    const prev = result[result.length - 1]
+    const color = prev && sameColorFamily(tag.color, prev.color) ? pickTagColor(tag.name, [prev.color]) : tag.color
+    result.push({ name: tag.name, color })
+  }
+  return JSON.stringify(result)
 }
 
 export function generateDocumentKey(length = KEY_LENGTH) {
@@ -119,6 +191,7 @@ export function toDocumentSummary(row: DocumentRow): DocumentSummary {
     id: row.key,
     name: row.name,
     documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
+    tags: parseTags(row.tags),
     updatedAt: toIsoString(row.updated_at),
     updatedBy: row.updated_by,
   }
@@ -152,7 +225,7 @@ export interface FetchDocumentSummariesResult {
 
 export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
   const { by, limit, offset = 0 } = options
-  const sql = 'select key, name, document_type, updated_by, updated_at from documents'
+  const sql = 'select key, name, document_type, tags, updated_by, updated_at from documents'
   const params: unknown[] = []
   const conditions: string[] = []
 
@@ -202,7 +275,7 @@ export async function assertWithinDocumentLimit(by: string) {
 }
 
 export async function fetchDocument(id: string) {
-  const result = await runQuery<DocumentRow>('select key, name, content, document_type, updated_by, updated_at from documents where key = $1', [
+  const result = await runQuery<DocumentRow>('select key, name, content, document_type, tags, updated_by, updated_at from documents where key = $1', [
     id,
   ])
   const row = result.rows[0]
@@ -213,6 +286,7 @@ export interface AdminDocumentSummary {
   id: string
   name: string
   documentType: DocumentType
+  tags: Tag[]
   createdBy: string
   updatedBy: string
   createdAt: string
@@ -228,6 +302,7 @@ interface AdminDocumentRow {
   key: string
   name: string
   document_type: string
+  tags: string | null
   created_by: string
   updated_by: string
   created_at: Date | string
@@ -245,6 +320,7 @@ function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
     id: row.key,
     name: row.name,
     documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
+    tags: parseTags(row.tags),
     createdBy: row.created_by,
     updatedBy: row.updated_by,
     createdAt: toIsoString(row.created_at),
@@ -266,6 +342,7 @@ const ADMIN_SEARCH_COLUMNS: Record<string, string> = {
   id: 'key',
   name: 'name',
   documentType: 'document_type',
+  tags: 'tags',
   updatedBy: 'updated_by',
 }
 
@@ -288,6 +365,10 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   let index = 1
 
   if (search) {
+    // Case-insensitive substring search. Uses leading-wildcard LIKE patterns
+    // which defeat B-tree index scans. Acceptable for SQLite (no trigram index
+    // available) and small-to-medium Postgres datasets. For large Postgres
+    // deployments, add a pg_trgm GIN index on the searchable columns.
     const searchColumns = (searchKeys && searchKeys.length > 0 ? searchKeys : ['name'])
       .map(key => ADMIN_SEARCH_COLUMNS[key])
       .filter((column): column is string => Boolean(column))
@@ -316,7 +397,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   )
   const total = Number(countResult.rows[0]?.count ?? 0)
 
-  let sql = `select key, name, document_type, created_by, updated_by, created_at, updated_at, length(content) as content_size
+  let sql = `select key, name, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size
     from documents${whereClause} order by ${sortColumn} ${sortDir}`
   const listParams = [...params]
   if (limit !== undefined) {
@@ -337,7 +418,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
 
 export async function fetchDocumentForAdmin(id: string) {
   const result = await runQuery<AdminDocumentDetailRow>(
-    `select key, name, content, document_type, created_by, updated_by, created_at, updated_at, length(content) as content_size
+    `select key, name, content, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size
      from documents where key = $1`,
     [id],
   )
@@ -353,10 +434,10 @@ export async function insertDocument(options: { name?: string; content: string; 
     const name = options.name ?? key
     try {
       const result = await runQuery<DocumentRow>(
-        `insert into documents (key, name, content, document_type, created_by, updated_by, created_at, updated_at)
-         values ($1, $2, $3, $4, $5, $6, current_timestamp, current_timestamp)
-         returning id, key, name, content, document_type, updated_by, updated_at`,
-        [key, name, options.content, options.documentType ?? 'text', options.by, options.by],
+        `insert into documents (key, name, content, document_type, tags, created_by, updated_by, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, current_timestamp, current_timestamp)
+         returning id, key, name, content, document_type, tags, updated_by, updated_at`,
+        [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by],
       )
       return toDocument(result.rows[0])
     } catch (error) {
@@ -372,7 +453,10 @@ export async function insertDocument(options: { name?: string; content: string; 
   }
 }
 
-export async function updateDocument(id: string, options: { name?: string; content?: string; documentType?: DocumentType; by: string }) {
+export async function updateDocument(
+  id: string,
+  options: { name?: string; content?: string; documentType?: DocumentType; tags?: Tag[]; by: string },
+) {
   const updates: string[] = []
   const values: unknown[] = []
   let index = 1
@@ -394,6 +478,11 @@ export async function updateDocument(id: string, options: { name?: string; conte
     values.push(options.documentType)
     index += 1
   }
+  if (options.tags !== undefined) {
+    updates.push(`tags = $${index}`)
+    values.push(serializeTags(options.tags))
+    index += 1
+  }
 
   if (updates.length === 0) {
     return null
@@ -406,14 +495,52 @@ export async function updateDocument(id: string, options: { name?: string; conte
   values.push(id)
 
   const result = await runQuery<DocumentRow>(
-    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, document_type, updated_by, updated_at`,
+    `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, document_type, tags, updated_by, updated_at`,
     values,
   )
   const row = result.rows[0]
   return row ? toDocument(row) : null
 }
 
+
 export async function deleteDocument(id: string) {
   const result = await runQuery('delete from documents where key = $1', [id])
   return (result.rowCount ?? 0) > 0
+}
+
+/**
+ * Return the distinct set of tags across all documents.
+ * This works with both SQLite (tags stored as JSON text) and Postgres.
+ *
+ * Cached in memory for 5 seconds to avoid full-table scans on every
+ * request. Invalidated on document create, update (when tags change),
+ * and delete.
+ */
+let tagsCache: { tags: Tag[]; ts: number } | null = null
+
+export function invalidateTagsCache() {
+  tagsCache = null
+}
+
+export async function listDistinctTags() {
+  if (tagsCache && Date.now() - tagsCache.ts < 5000) {
+    return tagsCache.tags
+  }
+
+  const result = await runQuery<{ tags: string | null }>('select tags from documents')
+  const seen = new Map<string, Tag>()
+  for (const row of result.rows) {
+    const parsed = parseTags(row.tags)
+    for (const tag of parsed) {
+      const key = tag.name.trim().toLowerCase()
+      if (!key) continue
+      if (!seen.has(key)) {
+        seen.set(key, { name: tag.name, color: tag.color })
+      }
+    }
+  }
+  const tags = Array.from(seen.values())
+  tags.sort((a, b) => a.name.localeCompare(b.name))
+  tagsCache = { tags, ts: Date.now() }
+  return tags
 }

@@ -15,7 +15,11 @@ export async function getDb(): Promise<Db> {
   }
 
   dbPromise = (async () => {
-    const initialized = resolveProfile() === 'prod' ? createPgDb() : await createSqliteDb()
+    const profile = resolveProfile()
+    const initialized = profile === 'prod' ? createPgDb() : await createSqliteDb()
+    if (profile === 'prod') {
+      await initialized.query("alter table documents add column if not exists tags text not null default '[]'")
+    }
     db = initialized
     return initialized
   })()

@@ -13,6 +13,7 @@ import {
   toDocument,
   toDocumentSummary,
 } from '$lib/server/documents'
+import { getDefaultTagColor, nextTagColor, pickTagColor, sameColorFamily, TAG_COLORS } from '$lib/tag-colors'
 
 describe('isDocumentKey', () => {
   it('accepts six lowercase alphanumeric characters by default', () => {
@@ -146,6 +147,7 @@ describe('row mapping', () => {
     name: 'Notes',
     content: 'body',
     document_type: 'text',
+    tags: '[{"name":"alpha","color":"#00F0FF"},{"name":"beta","color":"#FF6680"}]',
     updated_by: '203.0.113.7',
     updated_at: new Date('2026-08-02T12:00:00.000Z'),
   }
@@ -155,6 +157,10 @@ describe('row mapping', () => {
       id: row.key,
       name: 'Notes',
       documentType: 'text',
+      tags: [
+        { name: 'alpha', color: '#00F0FF' },
+        { name: 'beta', color: '#FF6680' },
+      ],
       updatedAt: '2026-08-02T12:00:00.000Z',
       updatedBy: '203.0.113.7',
     })
@@ -165,6 +171,10 @@ describe('row mapping', () => {
       id: row.key,
       name: 'Notes',
       documentType: 'text',
+      tags: [
+        { name: 'alpha', color: '#00F0FF' },
+        { name: 'beta', color: '#FF6680' },
+      ],
       content: 'body',
       updatedAt: '2026-08-02T12:00:00.000Z',
       updatedBy: '203.0.113.7',
@@ -173,5 +183,37 @@ describe('row mapping', () => {
 
   it('normalizes string timestamps', () => {
     expect(toDocument({ ...row, updated_at: '2026-08-02T12:00:00.000Z' }).updatedAt).toBe('2026-08-02T12:00:00.000Z')
+  })
+
+  it('maps legacy string tag rows to tags with default colours', () => {
+    const summary = toDocumentSummary({ ...row, tags: '["alpha","beta"]' })
+    expect(summary.tags).toEqual([
+      { name: 'alpha', color: getDefaultTagColor('alpha') },
+      { name: 'beta', color: getDefaultTagColor('beta') },
+    ])
+  })
+})
+
+describe('pickTagColor', () => {
+  it('keeps the default colour when it does not conflict', () => {
+    const color = pickTagColor('alpha', [])
+    expect(color).toBe(getDefaultTagColor('alpha'))
+  })
+
+  it('avoids a neighbour from the same colour family', () => {
+    const color = pickTagColor('alpha', ['#00F0FF'])
+    expect(sameColorFamily(color, '#00F0FF')).toBe(false)
+  })
+})
+
+describe('nextTagColor', () => {
+  it('looks up the colour by index', () => {
+    expect(nextTagColor(0)).toBe('#00F0FF')
+    expect(nextTagColor(1)).toBe('#FF6680')
+    expect(nextTagColor(2)).toBe('#00FF99')
+  })
+
+  it('cycles when the palette is exhausted', () => {
+    expect(nextTagColor(TAG_COLORS.length)).toBe('#00F0FF')
   })
 })

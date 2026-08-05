@@ -15,6 +15,7 @@ import {
   updateDocument,
 } from '$lib/server/documents'
 import { getMaxDocumentsPerUser, setSettingValue } from '$lib/server/settings'
+import { sameColorFamily } from '$lib/tag-colors'
 
 beforeEach(async () => {
   const db = await getDb()
@@ -28,6 +29,7 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(created.id).toMatch(/^[0-9a-z]{6}$/)
     expect(created.name).toBe('Notes')
     expect(created.content).toBe('body')
+    expect(created.tags).toEqual([])
     expect(Number.isNaN(new Date(created.updatedAt).getTime())).toBe(false)
 
     const fetched = await fetchDocument(created.id)
@@ -96,9 +98,47 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(await fetchDocument(created.id)).toEqual(updated)
   })
 
-  it('returns null when updating an unknown id', async () => {
-    expect(await updateDocument('zzzzzz', { name: 'x', by: '127.0.0.1' })).toBeNull()
+  it('stores and returns document tags', async () => {
+    const created = await insertDocument({ name: 'tagged', content: 'body', by: '127.0.0.1' })
+
+    const updated = await updateDocument(created.id, {
+      tags: [
+        { name: 'Beta', color: '#00F0FF' },
+        { name: 'alpha', color: '#FF6680' },
+        { name: 'alpha', color: '#FFCC00' },
+      ],
+      by: '10.0.0.5',
+    })
+
+    const expectedTags = [
+      { name: 'alpha', color: '#FF6680' },
+      { name: 'Beta', color: '#00F0FF' },
+    ]
+    expect(updated?.tags).toEqual(expectedTags)
+    expect((await fetchDocument(created.id))?.tags).toEqual(expectedTags)
+
+    const adminDoc = await fetchDocumentForAdmin(created.id)
+    expect(adminDoc?.tags).toEqual(expectedTags)
   })
+
+  it('reassigns adjacent tag colours for contrast', async () => {
+    const created = await insertDocument({ name: 'contrast', content: 'body', by: '127.0.0.1' })
+
+    const updated = await updateDocument(created.id, {
+      tags: [
+        { name: 'alpha', color: '#00F0FF' },
+        { name: 'beta', color: '#80F3FF' },
+      ],
+      by: '10.0.0.5',
+    })
+
+    const tags = updated?.tags ?? []
+    expect(tags.map(tag => tag.name)).toEqual(['alpha', 'beta'])
+    expect(sameColorFamily(tags[0].color, tags[1].color)).toBe(false)
+  })
+
+  it('returns null when updating an unknown id', async () => {
+    expect(await updateDocument('zzzzzz', { name: 'x', by: '127.0.0.1' })).toBeNull()  })
 
   it('records the creating and last-updating IP along with created_at', async () => {
     const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
@@ -162,6 +202,7 @@ describe('documents against the SQLite backend (dev profile)', () => {
       expect.objectContaining({
         id: created.id,
         name: 'Alpha notes',
+        tags: [],
         createdBy: '10.0.0.7',
         contentSize: 5,
       }),
@@ -176,7 +217,7 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(byCreator.documents[0].name).toBe('Beta doc')
 
     const adminDoc = await fetchDocumentForAdmin(created.id)
-    expect(adminDoc).toEqual(expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7' }))
+    expect(adminDoc).toEqual(expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7', tags: [] }))
   })
 
   it('sorts admin documents by the requested column and direction', async () => {
@@ -204,12 +245,13 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(result.documents[0].name).toBe('Solo')
   })
 
-  it('searches configured admin columns (id, name, updated by) via searchKeys', async () => {
+  it('searches configured admin columns (id, name, tags, updated by) via searchKeys', async () => {
     const alpha = await insertDocument({ name: 'Alpha notes', content: '', by: '10.0.0.7' })
     await insertDocument({ name: 'Beta doc', content: '', by: '10.0.0.8' })
     await updateDocument(alpha.id, { content: 'edited', by: '203.0.113.9' })
+    await updateDocument(alpha.id, { tags: [{ name: 'urgent', color: '#FF6680' }], by: '203.0.113.9' })
 
-    const searchKeys = ['id', 'name', 'updatedBy']
+    const searchKeys = ['id', 'name', 'tags', 'updatedBy']
 
     const byName = await listDocumentsForAdmin({ search: 'alpha', searchKeys })
     expect(byName.total).toBe(1)
@@ -222,6 +264,10 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const byUpdatedBy = await listDocumentsForAdmin({ search: '203.0.113.9', searchKeys })
     expect(byUpdatedBy.total).toBe(1)
     expect(byUpdatedBy.documents[0].id).toBe(alpha.id)
+
+    const byTags = await listDocumentsForAdmin({ search: 'urgent', searchKeys })
+    expect(byTags.total).toBe(1)
+    expect(byTags.documents[0].id).toBe(alpha.id)
 
     const acrossColumns = await listDocumentsForAdmin({ search: '203.0.113.9', searchKeys: ['name', 'updatedBy'] })
     expect(acrossColumns.total).toBe(1)

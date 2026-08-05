@@ -26,6 +26,8 @@ import { DELETE, PUT } from '../documents/[id]/+server'
 const summary = {
   id: 'a1b2c3',
   name: 'Notes',
+  documentType: 'text',
+  tags: [{ name: 'alpha', color: '#00F0FF' }],
   createdBy: '10.0.0.1',
   updatedBy: '10.0.0.2',
   createdAt: '2026-08-01T00:00:00.000Z',
@@ -100,6 +102,8 @@ describe('PUT /api/admin/documents/[id]', () => {
       id: 'a1b2c3',
       name: 'Renamed',
       content: 'hello world',
+      documentType: 'text',
+      tags: [{ name: 'alpha', color: '#00F0FF' }],
       updatedAt: '2026-08-03T00:00:00.000Z',
       updatedBy: '203.0.113.9',
     })
@@ -123,6 +127,8 @@ describe('PUT /api/admin/documents/[id]', () => {
       document: {
         id: 'a1b2c3',
         name: 'Renamed',
+  tags: [{ name: 'alpha', color: '#00F0FF' }],
+        documentType: 'text',
         createdBy: '10.0.0.1',
         updatedBy: '203.0.113.9',
         createdAt: '2026-08-01T00:00:00.000Z',

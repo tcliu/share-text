@@ -4,6 +4,7 @@ create table if not exists documents (
   name text not null,
   content text not null default '',
   document_type text not null default 'text',
+  tags text not null default '[]',
   created_by text not null,
   updated_by text not null,
   created_at timestamptz not null default current_timestamp,
@@ -16,6 +17,6 @@ create table if not exists app_config (
   updated_at timestamptz not null default current_timestamp
 );
 
-drop index if exists documents_updated_at_idx;
+drop index if exists idx_documents_updated_at;
 
 create index if not exists idx_documents_updated_at on documents (updated_at desc);

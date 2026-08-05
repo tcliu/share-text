@@ -50,6 +50,8 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   const document = {
     id: updated.id,
     name: updated.name,
+    tags: updated.tags,
+    documentType: updated.documentType,
     createdBy: existing.createdBy,
     updatedBy: updated.updatedBy,
     createdAt: existing.createdAt,

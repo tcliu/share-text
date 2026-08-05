@@ -1,3 +1,5 @@
+import type { Tag } from './tag-colors'
+
 export class AdminAuthError extends Error {
   constructor(message = 'Admin authentication required') {
     super(message)
@@ -21,6 +23,7 @@ export interface AdminDocumentSummary {
   id: string
   name: string
   documentType: string
+  tags: Tag[]
   createdBy: string
   updatedBy: string
   createdAt: string
