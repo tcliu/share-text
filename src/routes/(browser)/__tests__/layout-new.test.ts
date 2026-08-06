@@ -36,7 +36,9 @@ describe('New document flow', () => {
     vi.stubGlobal('fetch', mockFetch())
   })
 
-  it('creates a document, navigates to it, and shows it in the list', async () => {
+  it('navigates to the draft page without creating a document', async () => {
+    const fetchMock = mockFetch()
+    vi.stubGlobal('fetch', fetchMock)
     const { getByLabelText, queryByText } = render(Layout, {
       children: (() => '') as unknown as Snippet,
     })
@@ -48,13 +50,9 @@ describe('New document flow', () => {
     await fireEvent.click(getByLabelText('New document'))
 
     await waitFor(() => {
-      expect(goto).toHaveBeenCalled()
+      expect(goto).toHaveBeenCalledWith('/new')
     })
-    expect(goto).toHaveBeenCalledWith('/newdoc')
-
-    await waitFor(() => {
-      expect(queryByText('newdoc')).toBeTruthy()
-    })
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
   })
 
   it('keeps other documents visible after selecting one', async () => {

@@ -23,12 +23,15 @@
     refreshing?: boolean
     maxContentLength?: number
     availableTags?: Tag[]
+    savedName?: string
     onSave: () => void
     onReset: () => void
-    onRename: (name: string) => void
+    onRename?: (name: string) => void
     onTypeChange: (type: string) => void
-    onClone: () => void
-    onTagsSave: (tags: Tag[]) => void
+    onClone?: () => void
+    cloneDisabled?: boolean
+    focusOnReset?: boolean
+    onTagsSave?: (tags: Tag[]) => void
   }
 
   let {
@@ -39,15 +42,31 @@
     refreshing = false,
     maxContentLength = 0,
     availableTags = [],
+    savedName,
     onSave,
     onReset,
     onRename,
     onTypeChange,
     onClone,
+    cloneDisabled = false,
+    focusOnReset = false,
     onTagsSave,
   }: Props = $props()
 
-  const dirty = $derived(content !== document.content || docType !== document.documentType)
+  const dirty = $derived(
+    content !== document.content ||
+      docType !== document.documentType ||
+      document.name !== (savedName ?? document.name),
+  )
+
+  let editorRef = $state<{ focus: () => void } | null>(null)
+
+  function handleResetClick() {
+    onReset()
+    if (focusOnReset) {
+      editorRef?.focus()
+    }
+  }
 
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
@@ -181,10 +200,14 @@
          tags flex-wrap across however many rows they need. -->
     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <div class="flex min-w-0 items-center gap-2">
-        <EditableText
-          text={document.name}
-          className="font-semibold text-slate-200"
-          onChange={onRename} />
+        {#if onRename}
+          <EditableText
+            text={document.name}
+            className="font-semibold text-slate-200"
+            onChange={onRename} />
+        {:else}
+          <span class="font-semibold text-slate-200">{document.name}</span>
+        {/if}
         <div class="flex flex-none items-center">
           <SelectDropdown
             buttonLabel={activeTypeLabel}
@@ -247,19 +270,21 @@
           </svg>
         {/snippet}
       </Button>
-      <Button
-        size="sm"
-        ariaLabel="Clone document"
-        tooltip="Clone"
-        onClick={onClone}
-        disabled={content.length === 0}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <rect x="3" y="3" width="10" height="10" rx="1.5" />
-            <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if onClone || cloneDisabled}
+        <Button
+          size="sm"
+          ariaLabel="Clone document"
+          tooltip="Clone"
+          onClick={onClone}
+          disabled={cloneDisabled || content.length === 0}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3" y="3" width="10" height="10" rx="1.5" />
+              <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Upload"
@@ -283,7 +308,7 @@
           </svg>
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={onReset} disabled={!dirty || saving}>
+      <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!dirty || saving}>
         {#snippet icon()}
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
@@ -291,14 +316,16 @@
           </svg>
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.6 3H6a2 2 0 0 0-2 2v4.6a2 2 0 0 0 .59 1.41l4.4 4.4a2 2 0 0 0 2.83 0l3.58-3.58a2 2 0 0 0 0-2.83L11.99 3.6A2 2 0 0 0 10.6 3Z" />
-            <circle cx="7.25" cy="7.25" r="1.25" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if onTagsSave}
+        <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.6 3H6a2 2 0 0 0-2 2v4.6a2 2 0 0 0 .59 1.41l4.4 4.4a2 2 0 0 0 2.83 0l3.58-3.58a2 2 0 0 0 0-2.83L11.99 3.6A2 2 0 0 0 10.6 3Z" />
+              <circle cx="7.25" cy="7.25" r="1.25" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Save"
@@ -321,6 +348,7 @@
     <div bind:this={splitContainerRef} class="mt-3 flex min-h-0 flex-1 overflow-hidden">
       <div style="width: {editorWidth}px" class="min-w-0 overflow-hidden">
         <LazyCodeEditor
+          bind:this={editorRef}
           bind:content
           {docType}
           autoFocus={true}
@@ -343,6 +371,7 @@
     </div>
   {:else}
     <LazyCodeEditor
+      bind:this={editorRef}
       bind:content
       {docType}
       autoFocus={true}
@@ -360,15 +389,17 @@
     onchange={handleFileChange} />
 
   <div class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
-    <span>
-      Last updated at
-      <span class="text-slate-300">{formattedTimestamp}</span>
-      {#if document.updatedBy}
-        <span>
-          by <span class="text-slate-300">{document.updatedBy}</span>
-        </span>
-      {/if}
-    </span>
+    {#if document.updatedAt}
+      <span>
+        Last updated at
+        <span class="text-slate-300">{formattedTimestamp}</span>
+        {#if document.updatedBy}
+          <span>
+            by <span class="text-slate-300">{document.updatedBy}</span>
+          </span>
+        {/if}
+      </span>
+    {/if}
     <span class="flex items-center gap-3">
       {#if refreshing}
         <span class="text-slate-500">Refreshing...</span>
@@ -388,9 +419,11 @@
     onCancel={() => (uploadConfirmOpen = false)} />
 {/if}
 
-<TagsDialog
-  open={tagsOpen}
-  tags={document.tags ?? []}
-  {availableTags}
-  onClose={() => (tagsOpen = false)}
-  onSave={onTagsSave} />
+{#if onTagsSave}
+  <TagsDialog
+    open={tagsOpen}
+    tags={document.tags ?? []}
+    {availableTags}
+    onClose={() => (tagsOpen = false)}
+    onSave={onTagsSave} />
+{/if}

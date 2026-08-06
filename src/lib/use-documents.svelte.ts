@@ -1,7 +1,7 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import type { DocumentSummary } from '$lib/documents'
-import { createDocument, deleteDocument, fetchDocumentSummaries } from '$lib/documents'
+import { deleteDocument, fetchDocumentSummaries } from '$lib/documents'
 import { clearDraft } from '$lib/document-drafts'
 
 export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
@@ -52,16 +52,10 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   }
 
   async function performCreate() {
-    if (creating) return null
+    if (creating) return
     creating = true
     try {
-      const document = await createDocument()
-      await refreshList()
-      await goto(`/${document.id}`)
-      return document
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create document')
-      return null
+      await goto('/new')
     } finally {
       creating = false
     }
