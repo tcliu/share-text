@@ -173,33 +173,40 @@
 </script>
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
-  <div class="flex items-center justify-between gap-3">
+  <div class="flex items-start justify-between gap-3">
+    <!-- Name + type stay together as one group (A). Tags form a second
+         flex-none group (B): when A + B fit side by side they share one
+         row; when the remaining space can't hold all tags, B does not
+         shrink, so the whole tag group wraps onto its own row below and
+         tags flex-wrap across however many rows they need. -->
     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-      <EditableText
-        text={document.name}
-        className="font-semibold text-slate-200"
-        onChange={onRename} />
-      <!-- Move document type selector before the tag chips so primary
-           classification sits next to the name, and tags remain as
-           secondary metadata following it. Keep the dropdown compact so
-           it doesn't flex-grow. -->
-      <div class="flex items-center">
-        <SelectDropdown
-          buttonLabel={activeTypeLabel}
-          options={DOCUMENT_TYPE_OPTIONS}
-          activeValue={docType}
-          ariaLabel="Document type"
-          filterable={true}
-          size="sm"
-          onSelect={handleTypeSelect}
-          align="right"
-          autoPlace={true} />
+      <div class="flex min-w-0 items-center gap-2">
+        <EditableText
+          text={document.name}
+          className="font-semibold text-slate-200"
+          onChange={onRename} />
+        <div class="flex flex-none items-center">
+          <SelectDropdown
+            buttonLabel={activeTypeLabel}
+            options={DOCUMENT_TYPE_OPTIONS}
+            activeValue={docType}
+            ariaLabel="Document type"
+            filterable={true}
+            size="sm"
+            onSelect={handleTypeSelect}
+            align="right"
+            autoPlace={true} />
+        </div>
       </div>
-      {#each documentTags as tag (tag.name)}
-        <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
-      {/each}
+      {#if documentTags.length > 0}
+        <div class="flex flex-none flex-wrap items-center gap-1.5">
+          {#each documentTags as tag (tag.name)}
+            <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
+          {/each}
+        </div>
+      {/if}
     </div>
-    <div class="flex items-center gap-1">
+    <div class="flex flex-none items-center gap-1">
       {#if currentType.actions}
         {#await currentType.actions() then Actions}
           <Actions
