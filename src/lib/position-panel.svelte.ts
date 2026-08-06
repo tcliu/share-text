@@ -66,7 +66,14 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
       top = rect.top - VIEWPORT_MARGIN - panelHeight
     }
     top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - panelHeight - VIEWPORT_MARGIN))
-    node.style.transform = `translate(${left}px, ${top}px)`
+    // Position the panel using top/left instead of a CSS transform.
+    // Firefox may include transformed fixed elements in the page's scroll extents,
+    // which causes unexpected vertical scroll when overlays are opened inside
+    // an overflow-auto container (observed in dialogs). Using top/left avoids
+    // that behavior while still allowing exact placement.
+    node.style.transform = ''
+    node.style.left = `${left}px`
+    node.style.top = `${top}px`
     node.style.visibility = 'visible'
   }
 
@@ -78,6 +85,11 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
     scrollableAncestor = null
     triggerObserver = null
     panelObserver = null
+    // Clear any positioning styles we set to avoid leaving visual artifacts
+    // if the node is reused or reinserted elsewhere.
+    node.style.transform = ''
+    node.style.left = ''
+    node.style.top = ''
     restorePanelParent()
   }
 
@@ -87,6 +99,11 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
     const { getTrigger, getOpen } = options()
     if (!getOpen()) {
       node.style.visibility = 'hidden'
+      // Clear positioning when the panel is hidden so it doesn't affect
+      // any measuring or leftover layout in some browsers.
+      node.style.transform = ''
+      node.style.left = ''
+      node.style.top = ''
       restorePanelParent()
       return
     }

@@ -148,18 +148,18 @@ function formatTags(tags: Tag[] | undefined) {
 {/snippet}
 
 {#snippet tagsCell(document: AdminDocumentSummary)}
-  <Copyable
-    text={formatTags(document.tags)}
-    className="block text-slate-400"
-    copyAriaLabel={`Copy tags for ${document.name}`}>
-    {#if (document.tags ?? []).length > 0}
+  {#if (document.tags ?? []).length > 0}
+    <Copyable
+      text={formatTags(document.tags)}
+      className="block text-slate-400"
+      copyAriaLabel={`Copy tags for ${document.name}`}>
       <span class="flex flex-wrap gap-1">
         {#each document.tags as tag (tag.name)}
           <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
         {/each}
       </span>
-    {/if}
-  </Copyable>
+    </Copyable>
+  {/if}
 {/snippet}
 
 {#snippet lengthCell(document: AdminDocumentSummary)}
