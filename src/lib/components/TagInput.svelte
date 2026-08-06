@@ -29,13 +29,10 @@
   let activeIndex = $state(0)
   let dropdownOpen = $state(false)
   let navigated = $state(false)
-  /* removedNames previously prevented recently-removed tags from
-     reappearing in the options list.  That behaviour is surprising:
-     when a tag is removed it should be available again immediately.
-     Drop removedNames and rely on the current `value` check instead. */
   let closeTimer: ReturnType<typeof setTimeout> | null = null
   let internalUpdate = false
   let containerRef = $state<HTMLDivElement | null>(null)
+  let inputRef = $state<HTMLInputElement | null>(null)
 
   $effect(() => {
     void value
@@ -86,6 +83,7 @@
     const key = normalizeName(name)
     internalUpdate = true
     value = value.filter(existing => normalizeName(existing.name) !== key)
+    inputRef?.focus()
   }
 
   const filteredTags = $derived.by(() => {
@@ -183,6 +181,7 @@
           onRemove={() => removeTag(tag.name)} />
       {/each}
       <input
+        bind:this={inputRef}
         {id}
         bind:value={inputValue}
         type="text"
