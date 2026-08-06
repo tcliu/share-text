@@ -8,6 +8,7 @@
     disabled?: boolean
     className?: string
     showControls?: boolean
+    id?: string
     ariaLabel?: string
     onkeydown?: (event: KeyboardEvent) => void
     oninput?: (event: Event) => void
@@ -23,6 +24,7 @@
     disabled = false,
     className = '',
     showControls = true,
+    id,
     ariaLabel,
     onkeydown,
     oninput,
@@ -118,6 +120,7 @@
   class={`flex items-stretch ${showControls ? 'overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500' : ''}`}>
   <input
     bind:this={inputEl}
+    {id}
     type="text"
     inputmode="numeric"
     {placeholder}

@@ -11,9 +11,7 @@
   let { label, htmlFor, className = '', children }: Props = $props()
 </script>
 
-<div class={className}>
-  <label for={htmlFor} class="flex flex-col gap-1.5 text-sm text-slate-300">
-    <span>{label}</span>
-    {@render children?.()}
-  </label>
+<div class="flex flex-col gap-1.5 {className}">
+  <label for={htmlFor} class="w-fit cursor-pointer text-sm text-slate-300">{label}</label>
+  {@render children?.()}
 </div>

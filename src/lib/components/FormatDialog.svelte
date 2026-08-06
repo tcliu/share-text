@@ -57,8 +57,9 @@
   <BaseDialog {title} {className} {maxWidth} {onCancel}>
     <div class="flex flex-col gap-4">
       {#if hasIndent}
-        <FormField label="Indentation (spaces)">
+        <FormField label="Indentation (spaces)" htmlFor="format-indent-input">
           <NumberInput
+            id="format-indent-input"
             bind:this={numberInputRef}
             bind:value={indent}
             min={0}
