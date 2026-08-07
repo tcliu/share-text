@@ -35,7 +35,14 @@ export default defineConfig(async ({ command, mode }) => {
     plugins,
     server: {
       watch: {
-        ignored: ['**/.vercel/**', '**/.svelte-kit/output/**'],
+        ignored: [
+          '**/.vercel/**',
+          '**/.data/**',
+          '**/.tmp/**',
+          '**/.svelte-kit/**',
+          '**/coverage/**',
+          '**/.git/**',
+        ],
       },
     },
     resolve: isTest
