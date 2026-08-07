@@ -143,6 +143,7 @@
       isDirty: () => dirty,
       confirmDiscard: () => {
         content = savedContent
+        docType = savedDocumentType
       },
       getCurrentDocumentId: () => currentId,
     })

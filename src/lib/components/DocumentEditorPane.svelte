@@ -165,11 +165,20 @@
     URL.revokeObjectURL(url)
   }
 
-  function handleTypeSelect(value: string) {
-    if (value !== docType) {
-      docType = value
-      onTypeChange(value)
+  async function handleTypeSelect(value: string) {
+    if (value === docType) return
+    const fromType = getDocumentType(docType)
+    const toType = getDocumentType(value)
+    if (fromType.convertTo?.target === value) {
+      const result = await fromType.convertTo.convert(content)
+      if (!result.ok) {
+        toast.error('Cannot convert: ' + (result.error ?? 'Invalid content'))
+        return
+      }
+      content = result.value ?? ''
     }
+    docType = value
+    onTypeChange(value)
   }
 
   function pad(value: number) {
@@ -253,8 +262,7 @@
           <Actions
             type={currentType}
             content={content}
-            onContentChange={(value: string) => (content = value)}
-            onTypeChange={handleTypeSelect} />
+            onContentChange={(value: string) => (content = value)} />
         {/await}
       {/if}
       <Button

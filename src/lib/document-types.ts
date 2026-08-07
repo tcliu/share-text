@@ -28,7 +28,7 @@ export interface ConversionResult {
 export interface ConversionSpec {
   target: DocumentTypeValue
   targetLabel: string
-  convert: (text: string, indent: number) => Promise<ConversionResult>
+  convert: (text: string) => Promise<ConversionResult>
 }
 
 export interface FormatSpec {
@@ -41,7 +41,6 @@ export interface TypeActionsProps {
   type: DocumentTypeDefinition
   content: string
   onContentChange: (value: string) => void
-  onTypeChange: (type: string) => void
 }
 
 export interface PreviewProps {
