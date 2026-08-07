@@ -19,6 +19,8 @@ export interface ShareTextContext {
   registerEditorGuard: (guard: EditorGuard) => void
   unregisterEditorGuard: () => void
   canLeaveCurrentDocument: () => boolean
+  registerEditorFocus: (focus: () => void) => void
+  unregisterEditorFocus: () => void
 }
 
 const KEY = Symbol('share-text-context')

@@ -28,6 +28,7 @@
   let adminDialogOpen = $state(false)
   let leftPaneWidth = $state(SPLIT_PANE_DEFAULT_WIDTH)
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
+  let editorFocus = $state<(() => void) | null>(null)
 
   $effect(() => {
     leftPaneWidth = loadSplitPaneWidth()
@@ -42,6 +43,10 @@
   async function handleNew() {
     if (!editorGuardState.canLeaveCurrentDocument()) {
       editorGuardState.requestDiscard({ kind: 'new' })
+      return
+    }
+    if ($page.url.pathname === '/new') {
+      editorFocus?.()
       return
     }
     await documentsState.performCreate()
@@ -142,6 +147,12 @@
     registerEditorGuard: editorGuardState.registerEditorGuard,
     unregisterEditorGuard: editorGuardState.unregisterEditorGuard,
     canLeaveCurrentDocument: editorGuardState.canLeaveCurrentDocument,
+    registerEditorFocus: (focus: () => void) => {
+      editorFocus = focus
+    },
+    unregisterEditorFocus: () => {
+      editorFocus = null
+    },
   })
 
   $effect(() => {

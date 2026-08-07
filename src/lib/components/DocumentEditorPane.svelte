@@ -13,6 +13,7 @@
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
   import { usePreviewMode, SPLIT_MIN_PCT } from './use-preview-mode.svelte'
+  import { getShareTextContext } from '$lib/share-text-context'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -70,6 +71,11 @@
     }
   })
 
+  $effect(() => {
+    context.registerEditorFocus(() => editorRef?.focus())
+    return () => context.unregisterEditorFocus()
+  })
+
   function handleResetClick() {
     onReset()
     if (focusOnReset) {
@@ -84,6 +90,8 @@
   const currentType = $derived(getDocumentType(docType))
   const hasPreview = () => Boolean(currentType.preview)
   const previewState = usePreviewMode(hasPreview)
+
+  const context = getShareTextContext()
 
   function openFilePicker() {
     fileInputRef?.click()
