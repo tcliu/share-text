@@ -7,30 +7,49 @@
     onDragEnd?: () => void
     ariaLabel?: string
     className?: string
+    unit?: 'px' | '%'
   }
 
-  let { value, min, max, onChange, onDragEnd, ariaLabel = 'Resize split panes', className = '' }: Props = $props()
+  let {
+    value,
+    min,
+    max,
+    onChange,
+    onDragEnd,
+    ariaLabel = 'Resize split panes',
+    className = '',
+    unit = 'px',
+  }: Props = $props()
 
   let handleRef = $state<HTMLElement | null>(null)
   let dragging = $state(false)
   let startX = 0
   let startValue = 0
+  let containerWidth = 0
 
   function clampWidth(next: number) {
     return Math.min(max, Math.max(min, next))
+  }
+
+  function deltaToUnits(deltaX: number) {
+    if (unit === '%') {
+      return containerWidth > 0 ? (deltaX / containerWidth) * 100 : 0
+    }
+    return deltaX
   }
 
   function handlePointerDown(event: PointerEvent) {
     dragging = true
     startX = event.clientX
     startValue = value
+    containerWidth = handleRef?.parentElement?.clientWidth ?? 0
     handleRef?.setPointerCapture(event.pointerId)
     event.preventDefault()
   }
 
   function handlePointerMove(event: PointerEvent) {
     if (!dragging) return
-    onChange(clampWidth(startValue + event.clientX - startX))
+    onChange(clampWidth(startValue + deltaToUnits(event.clientX - startX)))
   }
 
   function handlePointerUp(event: PointerEvent) {
@@ -51,9 +70,9 @@
   function handleKeydown(event: KeyboardEvent) {
     let delta = 0
     if (event.key === 'ArrowLeft') {
-      delta = -16
+      delta = unit === '%' ? -1 : -16
     } else if (event.key === 'ArrowRight') {
-      delta = 16
+      delta = unit === '%' ? 1 : 16
     } else if (event.key === 'Home') {
       onChange(min)
       onDragEnd?.()

@@ -73,6 +73,40 @@ describe('Splitter', () => {
     expect(onChange).toHaveBeenLastCalledWith(288)
   })
 
+  it('converts drag deltas to percentages in % mode', async () => {
+    const { onChange, onDragEnd } = setup({ value: 50, min: 10, max: 90, unit: '%' })
+    const handle = getHandle()
+    handle.setPointerCapture = vi.fn()
+    handle.hasPointerCapture = vi.fn(() => true)
+    handle.releasePointerCapture = vi.fn()
+    Object.defineProperty(handle, 'parentElement', { value: { clientWidth: 500 } })
+
+    await fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 })
+    await fireEvent.pointerMove(handle, { clientX: 125, pointerId: 1 })
+    expect(onChange).toHaveBeenLastCalledWith(55)
+    await fireEvent.pointerUp(handle, { pointerId: 1 })
+    expect(onDragEnd).toHaveBeenCalledTimes(1)
+  })
+
+  it('clamps percentage values and steps by 1 with arrow keys in % mode', async () => {
+    const onChange = vi.fn()
+    const onDragEnd = vi.fn()
+    const { rerender } = render(Splitter, {
+      value: 50,
+      min: 10,
+      max: 90,
+      unit: '%',
+      onChange,
+      onDragEnd,
+    })
+    const handle = getHandle()
+    await fireEvent.keyDown(handle, { key: 'ArrowRight' })
+    expect(onChange).toHaveBeenLastCalledWith(51)
+    await rerender({ value: 51, min: 10, max: 90, unit: '%', onChange, onDragEnd })
+    await fireEvent.keyDown(handle, { key: 'Home' })
+    expect(onChange).toHaveBeenLastCalledWith(10)
+  })
+
   it('jumps to min and max with Home and End keys', async () => {
     const { onChange } = setup()
     const handle = getHandle()

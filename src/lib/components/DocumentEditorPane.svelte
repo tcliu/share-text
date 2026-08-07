@@ -12,6 +12,7 @@
   import Chip from './Chip.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
+  import { usePreviewMode, SPLIT_MIN_PCT } from './use-preview-mode.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -70,13 +71,11 @@
 
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
-  let showPreview = $state(false)
   let tagsOpen = $state(false)
-  let editorWidth = $state(0)
-  let splitContainerRef = $state<HTMLDivElement | null>(null)
-  let splitContainerWidth = $state(0)
 
-  const SPLIT_MIN = 200
+  const currentType = $derived(getDocumentType(docType))
+  const hasPreview = () => Boolean(currentType.preview)
+  const previewState = usePreviewMode(hasPreview)
 
   function openFilePicker() {
     fileInputRef?.click()
@@ -94,28 +93,6 @@
     uploadConfirmOpen = false
     openFilePicker()
   }
-
-  function togglePreview() {
-    showPreview = !showPreview
-    if (showPreview && splitContainerWidth > 0) {
-      editorWidth = Math.floor(splitContainerWidth / 2)
-    }
-  }
-
-  $effect(() => {
-    const container = splitContainerRef
-    if (!container) return
-
-    const observer = new ResizeObserver(entries => {
-      const width = entries[0]?.contentRect.width ?? 0
-      splitContainerWidth = width
-      if (!showPreview && width > 0) {
-        editorWidth = Math.floor(width / 2)
-      }
-    })
-    observer.observe(container)
-    return () => observer.disconnect()
-  })
 
   async function handleFileChange() {
     const file = fileInputRef?.files?.[0]
@@ -186,7 +163,6 @@
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
   })
 
-  const currentType = $derived(getDocumentType(docType))
   const activeTypeLabel = $derived(currentType.label)
   const documentTags = $derived(document.tags ?? [])
 </script>
@@ -242,15 +218,17 @@
       {#if currentType.preview}
         <Button
           size="sm"
-          ariaLabel="Toggle preview"
-          tooltip={showPreview ? 'Hide preview' : 'Preview'}
-          variant={showPreview ? 'outline' : 'secondary'}
-          onClick={togglePreview}>
+          ariaLabel={previewState.modeLabel}
+          tooltip={previewState.modeLabel}
+          variant={previewState.showPreview ? 'outline' : 'secondary'}
+          onClick={previewState.cyclePreviewMode}>
           {#snippet icon()}
             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M2 10c3-4 6-6 8-6s5 2 8 6c-3 4-6 6-8 6s-5-2-8-6Z" />
               <circle cx="10" cy="10" r="3" />
-              {#if showPreview}
+              {#if previewState.previewMode === 'split'}
+                <line x1="10" y1="2" x2="10" y2="18" />
+              {:else if previewState.previewMode === 'preview'}
                 <line x1="3" y1="3" x2="17" y2="17" />
               {/if}
             </svg>
@@ -344,9 +322,12 @@
     </div>
   </div>
 
-  {#if showPreview && currentType.preview}
-    <div bind:this={splitContainerRef} class="mt-3 flex min-h-0 flex-1 overflow-hidden">
-      <div style="width: {editorWidth}px" class="min-w-0 overflow-hidden">
+  <div
+    class="mt-3 flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500">
+    {#if !previewState.previewOnly}
+      <div
+        style={previewState.previewMode === 'split' ? `flex-basis: ${previewState.editorWidthPct}%` : 'flex: 1'}
+        class="min-w-0 overflow-hidden">
         <LazyCodeEditor
           bind:this={editorRef}
           bind:content
@@ -354,32 +335,27 @@
           autoFocus={true}
           recreateKey={document.id}
           {maxContentLength}
-          containerClass="h-full overflow-hidden rounded-l-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500"
+          containerClass="h-full"
           editorClass="h-full" />
       </div>
+    {/if}
+    {#if previewState.previewMode === 'split' && previewState.showPreview}
       <Splitter
-        value={editorWidth}
-        min={SPLIT_MIN}
-        max={splitContainerWidth - SPLIT_MIN}
-        onChange={(value: number) => (editorWidth = value)}
+        value={previewState.editorWidthPct}
+        min={SPLIT_MIN_PCT}
+        max={100 - SPLIT_MIN_PCT}
+        unit="%"
+        onChange={(value: number) => (previewState.editorWidthPct = value)}
         ariaLabel="Resize editor and preview panes" />
+    {/if}
+    {#if previewState.showPreview && currentType.preview}
       <div class="min-w-0 flex-1 overflow-hidden">
         <PreviewPane
           preview={currentType.preview}
           {content} />
       </div>
-    </div>
-  {:else}
-    <LazyCodeEditor
-      bind:this={editorRef}
-      bind:content
-      {docType}
-      autoFocus={true}
-      recreateKey={document.id}
-      {maxContentLength}
-      containerClass="mt-3 min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500"
-      editorClass="h-full" />
-  {/if}
+    {/if}
+  </div>
 
   <input
     bind:this={fileInputRef}

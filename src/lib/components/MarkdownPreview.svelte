@@ -112,4 +112,4 @@
   title="Markdown preview"
   sandbox="allow-same-origin"
   srcdoc={srcdoc}
-  class="h-full w-full rounded-lg border border-slate-700 bg-slate-950"></iframe>
+  class="h-full w-full bg-slate-950"></iframe>
