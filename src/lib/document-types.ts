@@ -121,6 +121,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     },
     convertTo: { target: 'yaml', targetLabel: 'YAML', convert: convertJsonToYaml },
     actions: () => import('./components/TypeActions.svelte').then(m => m.default),
+    preview: () => import('./components/StructurePreview.svelte').then(m => m.default),
   },
   {
     value: 'markdown',
@@ -162,6 +163,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     },
     convertTo: { target: 'json', targetLabel: 'JSON', convert: convertYamlToJson },
     actions: () => import('./components/TypeActions.svelte').then(m => m.default),
+    preview: () => import('./components/StructurePreview.svelte').then(m => m.default),
   },
 ]
 

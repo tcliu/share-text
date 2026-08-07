@@ -124,6 +124,34 @@ export async function formatYaml(text: string, indent = 2): Promise<{ ok: boolea
   }
 }
 
+export interface StructuredParseResult {
+  ok: boolean
+  value?: unknown
+  error?: string
+}
+
+export async function parseStructured(text: string): Promise<StructuredParseResult> {
+  const trimmed = text.trim()
+  if (trimmed === '') {
+    return { ok: true, value: undefined }
+  }
+  try {
+    return { ok: true, value: JSON.parse(trimmed) }
+  } catch {
+    // not JSON; fall back to YAML
+  }
+  try {
+    const { parse } = await loadYaml()
+    const value = parse(trimmed)
+    return { ok: true, value }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Invalid content',
+    }
+  }
+}
+
 export async function convertJsonToYaml(
   text: string,
   indent = 2,
