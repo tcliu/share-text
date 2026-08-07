@@ -151,4 +151,5 @@
   onRename={handleRename}
   onTypeChange={(type: string) => (docType = type)}
   cloneDisabled
-  focusOnReset /> 
+  focusOnReset
+  focusOnMount /> 

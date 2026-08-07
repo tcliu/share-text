@@ -32,6 +32,7 @@
     onClone?: () => void
     cloneDisabled?: boolean
     focusOnReset?: boolean
+    focusOnMount?: boolean
     onTagsSave?: (tags: Tag[]) => void
   }
 
@@ -51,6 +52,7 @@
     onClone,
     cloneDisabled = false,
     focusOnReset = false,
+    focusOnMount = false,
     onTagsSave,
   }: Props = $props()
 
@@ -61,6 +63,12 @@
   )
 
   let editorRef = $state<{ focus: () => void } | null>(null)
+
+  $effect(() => {
+    if (focusOnMount) {
+      editorRef?.focus()
+    }
+  })
 
   function handleResetClick() {
     onReset()

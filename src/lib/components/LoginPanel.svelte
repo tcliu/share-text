@@ -16,6 +16,12 @@
 
   let { configured, message = null, onAuthenticated, onClose }: Props = $props()
 
+  let usernameInput = $state<HTMLInputElement | null>(null)
+
+  $effect(() => {
+    if (configured) usernameInput?.focus()
+  })
+
   let username = $state('')
   let password = $state('')
   let loginPending = $state(false)
@@ -53,6 +59,7 @@
       <FormField label="Username" htmlFor="admin-username">
         <input
           id="admin-username"
+          bind:this={usernameInput}
           bind:value={username}
           type="text"
           autocomplete="username"
