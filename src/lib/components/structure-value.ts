@@ -35,3 +35,8 @@ export function valueClass(value: unknown): string {
   if (typeof value === 'boolean') return 'text-sky-300'
   return 'text-slate-300'
 }
+
+export function copyValue(value: unknown): string {
+  if (typeof value === 'string') return value
+  return JSON.stringify(value, null, 2)
+}

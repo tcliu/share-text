@@ -30,7 +30,7 @@ describe('StructurePreview', () => {
     })
     const root = await screen.findByTestId('structure-preview')
     await vi.waitFor(() => expect(root.textContent).toContain('nested'))
-    const toggle = within(root).getByText('nested').closest('button') as HTMLButtonElement
+    const toggle = within(root).getByRole('button', { name: /expand nested/i }) as HTMLButtonElement
     await fireEvent.click(toggle)
     await vi.waitFor(() => expect(root.textContent).toContain('1'))
   })
@@ -45,5 +45,24 @@ describe('StructurePreview', () => {
     render(StructurePreview, { content: '' })
     const root = await screen.findByTestId('structure-preview')
     await vi.waitFor(() => expect(root.textContent).toContain('No content to preview'))
+  })
+
+  it('copies a sub-node value, not the parent node', async () => {
+    const writeText = vi.fn()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    render(StructurePreview, { content: '{"parent":{"child":{"grand":1}}}' })
+    const root = await screen.findByTestId('structure-preview')
+    await vi.waitFor(() => expect(root.textContent).toContain('parent'))
+
+    const parentToggle = within(root).getByRole('button', { name: /expand parent/i }) as HTMLButtonElement
+    await fireEvent.click(parentToggle)
+    await vi.waitFor(() => expect(root.textContent).toContain('child'))
+
+    const childCopy = within(root).getByRole('button', { name: 'Copy child' }) as HTMLButtonElement
+    await fireEvent.click(childCopy)
+
+    expect(writeText).toHaveBeenCalledWith('{\n  "grand": 1\n}')
+    expect(writeText).not.toHaveBeenCalledWith('{\n  "child": {\n    "grand": 1\n  }\n}')
   })
 })

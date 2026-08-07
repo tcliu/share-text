@@ -4,7 +4,7 @@
   import Button from './Button.svelte'
 
   interface Props {
-    text: string
+    text?: string
     copyText?: string
     className?: string
     copyAriaLabel?: string
@@ -28,7 +28,7 @@
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(copyText)
+      await navigator.clipboard.writeText(copyText ?? '')
       toast.success('Copied to clipboard')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to copy')
