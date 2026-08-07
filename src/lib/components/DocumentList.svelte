@@ -84,7 +84,9 @@
   }
 
   function handleRowClick(id: string) {
-    goto(`/${id}`)
+    const url = new URL(window.location.href)
+    url.pathname = `/${id}`
+    goto(url)
   }
 
   function handleRowKeydown(event: KeyboardEvent, id: string) {
