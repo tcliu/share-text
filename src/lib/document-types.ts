@@ -53,6 +53,7 @@ export interface DocumentTypeDefinition {
   label: string
   extension: string
   mimeType: string
+  chipColor: string
   editorLanguage: () => Promise<Extension | null>
   validate: (text: string) => Promise<ValidationResult>
   format?: FormatSpec
@@ -67,6 +68,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'Text',
     extension: 'txt',
     mimeType: 'text/plain',
+    chipColor: '#94A3B8',
     editorLanguage: async () => null,
     validate: async () => ({ valid: true }),
   },
@@ -75,6 +77,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'CSV',
     extension: 'csv',
     mimeType: 'text/csv',
+    chipColor: '#55A6FF',
     editorLanguage: async () => null,
     validate: async text => validateCsv(text),
   },
@@ -83,6 +86,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'HTML',
     extension: 'html',
     mimeType: 'text/html',
+    chipColor: '#FF8800',
     editorLanguage: () => import('@codemirror/lang-html').then(m => m.html()),
     validate: async () => ({ valid: true }),
     format: {
@@ -91,12 +95,14 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
       format: (text, indent) => Promise.resolve(formatHtml(text, indent)),
     },
     actions: () => import('./components/TypeActions.svelte').then(m => m.default),
+    preview: () => import('./components/HtmlPreview.svelte').then(m => m.default),
   },
   {
     value: 'javascript',
     label: 'JavaScript',
     extension: 'js',
     mimeType: 'text/javascript',
+    chipColor: '#FFE600',
     editorLanguage: () => import('@codemirror/lang-javascript').then(m => m.javascript()),
     validate: async () => ({ valid: true }),
   },
@@ -105,6 +111,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'JSON',
     extension: 'json',
     mimeType: 'application/json',
+    chipColor: '#00F0FF',
     editorLanguage: () => import('@codemirror/lang-json').then(m => m.json()),
     validate: async text => validateJson(text),
     format: {
@@ -120,6 +127,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'Markdown',
     extension: 'md',
     mimeType: 'text/plain',
+    chipColor: '#55FF55',
     editorLanguage: () => import('@codemirror/lang-markdown').then(m => m.markdown()),
     validate: async () => ({ valid: true }),
     preview: () => import('./components/MarkdownPreview.svelte').then(m => m.default),
@@ -129,6 +137,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'XML',
     extension: 'xml',
     mimeType: 'text/xml',
+    chipColor: '#D466FF',
     editorLanguage: () => import('@codemirror/lang-xml').then(m => m.xml()),
     validate: async text => validateXml(text),
     format: {
@@ -143,6 +152,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     label: 'YAML',
     extension: 'yml',
     mimeType: 'text/plain',
+    chipColor: '#FF33CC',
     editorLanguage: () => import('@codemirror/lang-yaml').then(m => m.yaml()),
     validate: async text => validateYaml(text),
     format: {

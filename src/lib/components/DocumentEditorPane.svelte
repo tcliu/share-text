@@ -222,15 +222,6 @@
       {/if}
     </div>
     <div class="flex flex-none items-center gap-1">
-      {#if currentType.actions}
-        {#await currentType.actions() then Actions}
-          <Actions
-            type={currentType}
-            content={content}
-            onContentChange={(value: string) => (content = value)}
-            onTypeChange={handleTypeSelect} />
-        {/await}
-      {/if}
       {#if currentType.preview}
         <Button
           size="sm"
@@ -239,17 +230,29 @@
           variant={previewState.showPreview ? 'outline' : 'secondary'}
           onClick={previewState.cyclePreviewMode}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2 10c3-4 6-6 8-6s5 2 8 6c-3 4-6 6-8 6s-5-2-8-6Z" />
-              <circle cx="10" cy="10" r="3" />
-              {#if previewState.previewMode === 'split'}
-                <line x1="10" y1="2" x2="10" y2="18" />
-              {:else if previewState.previewMode === 'preview'}
-                <line x1="3" y1="3" x2="17" y2="17" />
+            <svg viewBox="0 0 20 20" aria-hidden="true">
+              {#if previewState.previewMode === 'editor' || previewState.previewMode === 'split'}
+                <rect x="2.5" y="4" width="6.5" height="12" rx="1.2" fill="currentColor" />
+              {:else}
+                <rect x="2.5" y="4" width="6.5" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+              {/if}
+              {#if previewState.previewMode === 'split' || previewState.previewMode === 'preview'}
+                <rect x="11" y="4" width="6.5" height="12" rx="1.2" fill="currentColor" />
+              {:else}
+                <rect x="11" y="4" width="6.5" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6" />
               {/if}
             </svg>
           {/snippet}
         </Button>
+      {/if}
+      {#if currentType.actions}
+        {#await currentType.actions() then Actions}
+          <Actions
+            type={currentType}
+            content={content}
+            onContentChange={(value: string) => (content = value)}
+            onTypeChange={handleTypeSelect} />
+        {/await}
       {/if}
       <Button
         size="sm"
@@ -348,7 +351,7 @@
           bind:this={editorRef}
           bind:content
           {docType}
-          autoFocus={true}
+          autoFocus={focusOnMount}
           recreateKey={document.id}
           {maxContentLength}
           containerClass="h-full"

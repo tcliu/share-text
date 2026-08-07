@@ -205,7 +205,7 @@
                 <Chip
                   label={getDocumentType(document.documentType).label}
                   chipClass={tagChipClass()}
-                  style={tagChipStyle('#F8FAFC')} />
+                  style={tagChipStyle(getDocumentType(document.documentType).chipColor)} />
               {/if}
             </div>
             <span class="flex shrink-0">
