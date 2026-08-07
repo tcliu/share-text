@@ -13,6 +13,7 @@
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
   import { usePreviewMode, SPLIT_MIN_PCT } from './use-preview-mode.svelte'
+  import { usePreviewContent } from './use-preview-content.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -90,6 +91,8 @@
   const currentType = $derived(getDocumentType(docType))
   const hasPreview = () => Boolean(currentType.preview)
   const previewState = usePreviewMode(hasPreview)
+
+  const previewContent = usePreviewContent(() => content, () => document.id)
 
   const context = getShareTextContext()
 
@@ -371,7 +374,7 @@
       <div class="min-w-0 flex-1 overflow-hidden">
         <PreviewPane
           preview={currentType.preview}
-          {content} />
+          content={previewContent.value} />
       </div>
     {/if}
   </div>

@@ -9,11 +9,8 @@
 
   let { preview, content }: Props = $props()
 
-  const PREVIEW_DEBOUNCE_MS = 300
-
   let PreviewComponent = $state<Component<PreviewProps> | null>(null)
   let loadError = $state('')
-  let debouncedContent = $state('')
 
   $effect(() => {
     let cancelled = false
@@ -33,18 +30,10 @@
       cancelled = true
     }
   })
-
-  $effect(() => {
-    const nextContent = content
-    const timeout = setTimeout(() => {
-      debouncedContent = nextContent
-    }, PREVIEW_DEBOUNCE_MS)
-    return () => clearTimeout(timeout)
-  })
 </script>
 
 {#if PreviewComponent}
-  <PreviewComponent content={debouncedContent} />
+  <PreviewComponent {content} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
     {loadError || 'Loading preview...'}

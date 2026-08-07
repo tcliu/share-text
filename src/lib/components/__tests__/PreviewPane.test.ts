@@ -15,13 +15,12 @@ describe('PreviewPane', () => {
     await vi.waitFor(() => expect(contentText()).toBe('initial'))
   })
 
-  it('updates the preview after the debounce period when content changes', async () => {
+  it('renders updated content immediately when the content prop changes', async () => {
     const preview = vi.fn().mockResolvedValue(PreviewStub)
     const { rerender } = render(PreviewPane, { preview, content: 'first' })
     await vi.waitFor(() => expect(contentText()).toBe('first'))
 
     rerender({ preview, content: 'second' })
-    expect(contentText()).toBe('first')
     await vi.waitFor(() => expect(contentText()).toBe('second'), { timeout: 1000, interval: 50 })
   })
 })
