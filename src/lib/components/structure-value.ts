@@ -40,3 +40,65 @@ export function copyValue(value: unknown): string {
   if (typeof value === 'string') return value
   return JSON.stringify(value, null, 2)
 }
+
+export function inputText(value: unknown): string {
+  if (value === null) return 'null'
+  if (typeof value === 'string') return value
+  return String(value)
+}
+
+export function parseInputValue(input: string): unknown {
+  const trimmed = input.trim()
+  if (trimmed === 'null') return null
+  if (trimmed === 'true') return true
+  if (trimmed === 'false') return false
+  const num = Number(trimmed)
+  if (trimmed !== '' && Number.isFinite(num)) return num
+  return trimmed
+}
+
+export function setAtPath(root: unknown, path: string[], value: unknown): unknown {
+  if (path.length === 0) return value
+  const [key, ...rest] = path
+  if (Array.isArray(root)) {
+    const index = parseInt(key, 10)
+    const next = [...root]
+    next[index] = setAtPath(root[index], rest, value)
+    return next
+  }
+  return { ...(root as Record<string, unknown>), [key]: setAtPath((root as Record<string, unknown>)[key], rest, value) }
+}
+
+export function detectFormat(text: string): 'json' | 'yaml' {
+  try {
+    JSON.parse(text.trim() || 'null')
+    return 'json'
+  } catch {
+    return 'yaml'
+  }
+}
+
+export function renameKeyAtPath(root: unknown, path: string[], oldKey: string, newKey: string): unknown {
+  if (oldKey === newKey) return root
+  if (path.length === 0) {
+    const obj = root as Record<string, unknown>
+    if (!(oldKey in obj)) return root
+    const rebuilt: Record<string, unknown> = {}
+    for (const key of Object.keys(obj)) {
+      if (key === oldKey) {
+        rebuilt[newKey] = obj[key]
+      } else {
+        rebuilt[key] = obj[key]
+      }
+    }
+    return rebuilt
+  }
+  const [head, ...rest] = path
+  if (Array.isArray(root)) {
+    const index = parseInt(head, 10)
+    const next = [...root]
+    next[index] = renameKeyAtPath(root[index], rest, oldKey, newKey)
+    return next
+  }
+  return { ...(root as Record<string, unknown>), [head]: renameKeyAtPath((root as Record<string, unknown>)[head], rest, oldKey, newKey) }
+}

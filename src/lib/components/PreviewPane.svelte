@@ -5,9 +5,11 @@
   interface Props {
     preview: () => Promise<Component<PreviewProps>>
     content: string
+    docType?: string
+    onContentChange?: (content: string) => void
   }
 
-  let { preview, content }: Props = $props()
+  let { preview, content, docType, onContentChange }: Props = $props()
 
   let PreviewComponent = $state<Component<PreviewProps> | null>(null)
   let loadError = $state('')
@@ -33,7 +35,7 @@
 </script>
 
 {#if PreviewComponent}
-  <PreviewComponent {content} />
+  <PreviewComponent {content} {docType} {onContentChange} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
     {loadError || 'Loading preview...'}

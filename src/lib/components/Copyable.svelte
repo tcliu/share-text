@@ -36,7 +36,7 @@
   }
 </script>
 
-<div class="group flex min-w-0 flex-1 items-center">
+<div class="group flex min-w-0 flex-1 items-center gap-1">
   <span class={`${className} min-w-0 truncate`}>
     {#if children}
       {@render children()}
@@ -53,7 +53,7 @@
         tooltip={copyTooltip}
         onClick={(e) => { e.stopPropagation(); void handleCopy() }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-        className="bg-transparent p-0 text-slate-400 hover:text-cyan-300">
+        className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300">
         {#snippet icon()}
           <svg
             viewBox="0 0 20 20"

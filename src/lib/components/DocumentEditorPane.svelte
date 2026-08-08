@@ -382,7 +382,9 @@
       <div class="min-w-0 flex-1 overflow-hidden">
         <PreviewPane
           preview={currentType.preview}
-          content={previewContent.value} />
+          content={previewContent.value}
+          {docType}
+          onContentChange={(v: string) => (content = v)} />
       </div>
     {/if}
   </div>

@@ -3,6 +3,10 @@ import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import StructurePreview from '../StructurePreview.svelte'
 
+async function waitForNode(root: HTMLElement, name: string) {
+  await vi.waitFor(() => expect(root.textContent).toContain(name))
+}
+
 describe('StructurePreview', () => {
   it('renders a JSON node tree with first level expanded', async () => {
     render(StructurePreview, {
@@ -64,5 +68,97 @@ describe('StructurePreview', () => {
 
     expect(writeText).toHaveBeenCalledWith('{\n  "grand": 1\n}')
     expect(writeText).not.toHaveBeenCalledWith('{\n  "child": {\n    "grand": 1\n  }\n}')
+  })
+
+  it('edits a value via double-click and Enter, calling onContentChange', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'name')
+    await waitForNode(root, '"root"')
+
+    const editBtn = within(root).getByRole('button', { name: 'Edit name' })
+    const row = editBtn.closest('div.group') as HTMLElement
+    expect(row).not.toBeNull()
+    await fireEvent.dblClick(row)
+
+    const input = root.querySelector('input') as HTMLInputElement
+    expect(input).not.toBeNull()
+    await fireEvent.input(input, { target: { value: 'new-value' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const serialized = onChange.mock.calls[0][0]
+    const parsed = JSON.parse(serialized)
+    expect(parsed.name).toBe('new-value')
+  })
+
+  it('cancels value editing on Escape without calling onContentChange', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'name')
+
+    const editBtn = within(root).getByRole('button', { name: 'Edit name' })
+    const row = editBtn.closest('div.group') as HTMLElement
+    await fireEvent.dblClick(row)
+    expect(root.querySelector('input')).not.toBeNull()
+
+    await fireEvent.keyDown(root.querySelector('input')!, { key: 'Escape' })
+    expect(onChange).not.toHaveBeenCalled()
+    expect(root.querySelector('input')).toBeNull()
+  })
+
+  it('edits a value via edit button click', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'name')
+
+    const editBtn = within(root).getByRole('button', { name: 'Edit name' }) as HTMLButtonElement
+    await fireEvent.click(editBtn)
+
+    const input = root.querySelector('input') as HTMLInputElement
+    expect(input).not.toBeNull()
+    await fireEvent.input(input, { target: { value: 'changed' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(JSON.parse(onChange.mock.calls[0][0]).name).toBe('changed')
+  })
+
+  it('renames a key and calls onContentChange', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"oldKey":42}', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'oldKey')
+
+    const keySpan = within(root).getByText('oldKey')
+    await fireEvent.dblClick(keySpan)
+
+    const input = root.querySelector('input') as HTMLInputElement
+    expect(input).not.toBeNull()
+    await fireEvent.input(input, { target: { value: 'newKey' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const parsed = JSON.parse(onChange.mock.calls[0][0])
+    expect(parsed.newKey).toBe(42)
+    expect(Object.keys(parsed)).not.toContain('oldKey')
+  })
+
+  it('does not rename when key name is unchanged or empty', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'name')
+
+    const keySpan = within(root).getByText('name')
+    await fireEvent.dblClick(keySpan)
+
+    const input = root.querySelector('input') as HTMLInputElement
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onChange).not.toHaveBeenCalled()
   })
 })

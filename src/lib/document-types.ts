@@ -45,6 +45,8 @@ export interface TypeActionsProps {
 
 export interface PreviewProps {
   content: string
+  docType?: string
+  onContentChange?: (content: string) => void
 }
 
 export interface DocumentTypeDefinition {

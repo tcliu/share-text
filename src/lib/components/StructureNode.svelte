@@ -1,28 +1,182 @@
 <script lang="ts">
+  import { toast } from 'svelte-sonner'
   import Self from './StructureNode.svelte'
   import Copyable from './Copyable.svelte'
+  import Button from './Button.svelte'
   import {
     type StructureEntry,
     childEntries,
     containerSummary,
     copyValue,
+    inputText,
     isContainer,
+    parseInputValue,
     valueClass,
     valueText,
   } from './structure-value'
+
+  interface Props {
+    label: string
+    value: object | unknown[]
+    depth?: number
+    path?: string[]
+    onChange?: (path: string[], newValue: unknown) => void
+    onRenameKey?: (parentPath: string[], oldKey: string, newKey: string) => void
+  }
 
   let {
     label,
     value,
     depth = 0,
-  }: { label: string; value: object | unknown[]; depth?: number } = $props()
+    path = [],
+    onChange,
+    onRenameKey,
+  }: Props = $props()
 
   // svelte-ignore state_referenced_locally
   const startsOpen = depth === 0
   let open = $state(startsOpen)
 
   const entries = $derived(childEntries(value))
+
+  let editingValueKey = $state<string | null>(null)
+  let editValueText = $state('')
+  let editValueInput = $state<HTMLInputElement | null>(null)
+  let editValueMinWidth = $state(0)
+
+  let editingNameKey = $state<string | null>(null)
+  let editNameText = $state('')
+  let editNameInput = $state<HTMLInputElement | null>(null)
+  let editNameMinWidth = $state(0)
+
+  let measureEl = $state<HTMLSpanElement | null>(null)
+  let editBtnEl = $state<HTMLSpanElement | null>(null)
+  let editBtnWidth = $state(32)
+
+  $effect(() => {
+    if (editBtnEl) {
+      editBtnWidth = editBtnEl.getBoundingClientRect().width
+    }
+  })
+
+  function startEditValue(entry: StructureEntry) {
+    const text = inputText(entry.value)
+    editValueMinWidth = measureText(text) + editBtnWidth + 4
+    editingValueKey = entry.key
+    editValueText = text
+  }
+
+  function startEditName(entry: StructureEntry) {
+    editNameMinWidth = measureText(entry.key) + 8
+    editingNameKey = entry.key
+    editNameText = entry.key
+  }
+
+  function measureText(text: string): number {
+    if (!measureEl) return 0
+    measureEl.textContent = text
+    return measureEl.getBoundingClientRect().width
+  }
+
+  $effect(() => {
+    if (editingValueKey !== null) {
+      editValueInput?.focus()
+    }
+  })
+
+  $effect(() => {
+    if (editingNameKey !== null) {
+      editNameInput?.focus()
+    }
+  })
+
+  $effect(() => {
+    if (editingValueKey === null || !editValueInput) return
+    void editValueText
+    editValueInput.style.width = '0px'
+    const contentW = editValueInput.scrollWidth
+    editValueInput.style.width = `${Math.max(editValueMinWidth, contentW + 8)}px`
+  })
+
+  $effect(() => {
+    if (editingNameKey === null || !editNameInput) return
+    void editNameText
+    editNameInput.style.width = '0px'
+    const contentW = editNameInput.scrollWidth
+    editNameInput.style.width = `${Math.max(editNameMinWidth, contentW + 8)}px`
+  })
+
+  async function handleCopy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success('Copied to clipboard')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to copy')
+    }
+  }
+
+  function commitValue() {
+    if (editingValueKey === null || !onChange) {
+      editingValueKey = null
+      return
+    }
+    const entry = entries.find(e => e.key === editingValueKey)
+    if (!entry) {
+      editingValueKey = null
+      return
+    }
+    const next = parseInputValue(editValueText)
+    if (next === entry.value) {
+      editingValueKey = null
+      return
+    }
+    onChange([...path, editingValueKey], next)
+    editingValueKey = null
+  }
+
+  function commitName() {
+    if (editingNameKey === null || !onRenameKey) {
+      editingNameKey = null
+      return
+    }
+    const entry = entries.find(e => e.key === editingNameKey)
+    if (!entry) {
+      editingNameKey = null
+      return
+    }
+    const next = editNameText.trim()
+    if (!next || next === editingNameKey) {
+      editingNameKey = null
+      return
+    }
+    onRenameKey(path, editingNameKey, next)
+    editingNameKey = null
+  }
+
+  function handleValueKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commitValue()
+    } else if (event.key === 'Escape') {
+      editingValueKey = null
+    }
+  }
+
+  function handleNameKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      commitName()
+    } else if (event.key === 'Escape') {
+      editingNameKey = null
+    }
+  }
+
+  function entryPath(entry: StructureEntry): string[] {
+    return [...path, entry.key]
+  }
 </script>
+
+<span bind:this={measureEl} class="invisible absolute whitespace-pre text-sm font-mono leading-snug" aria-hidden="true"></span>
 
 <div class="font-mono text-sm leading-snug">
   <div class="flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40">
@@ -58,19 +212,122 @@
     <div class="ml-[0.3rem] border-l border-slate-800 pl-2">
       {#each entries as entry (entry.key)}
         {#if isContainer(entry.value)}
-          <Self label={entry.key} value={entry.value as object | unknown[]} depth={depth + 1} />
-        {:else}
-          <div class="flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40">
+          <Self
+            label={entry.key}
+            value={entry.value as object | unknown[]}
+            depth={depth + 1}
+            path={entryPath(entry)}
+            {onChange}
+            {onRenameKey}
+          />
+        {:else if editingValueKey === entry.key && onChange}
+          <div class="flex items-center gap-1 rounded px-1 py-px">
             <span class="w-3 shrink-0"></span>
-            <Copyable
-              copyText={copyValue(entry.value)}
-              copyAriaLabel={`Copy ${entry.key}`}
-              copyTooltip={`Copy ${entry.key}`}
-            >
-              <span class="text-slate-300">{entry.key}</span>
-              <span class="text-slate-600">:</span>
+            <span class="text-slate-300 shrink-0">{entry.key}</span>
+            <span class="text-slate-600 shrink-0">:</span>
+            <div class="flex-1">
+              <input
+                bind:this={editValueInput}
+                bind:value={editValueText}
+                class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 text-sm font-mono leading-snug outline outline-1 outline-cyan-500"
+                style={`width: ${editValueMinWidth || 40}px`}
+                onblur={commitValue}
+                onkeydown={handleValueKeydown}
+              />
+            </div>
+          </div>
+        {:else if editingNameKey === entry.key && onRenameKey}
+          <div class="flex items-center gap-1 rounded px-1 py-px">
+            <span class="w-3 shrink-0"></span>
+            <input
+              bind:this={editNameInput}
+              bind:value={editNameText}
+              class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 text-sm font-mono leading-snug text-slate-300 outline outline-1 outline-cyan-500"
+              style={`width: ${editNameMinWidth || 40}px`}
+              onblur={commitName}
+              onkeydown={handleNameKeydown}
+            />
+            <span class="text-slate-600 shrink-0">:</span>
+            <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
+          </div>
+        {:else}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div
+            class="group flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40"
+            ondblclick={onChange ? () => startEditValue(entry) : undefined}
+          >
+            <span class="w-3 shrink-0"></span>
+            {#if onRenameKey}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <span
+                class="text-slate-300 shrink-0 cursor-pointer hover:underline"
+                ondblclick={(e) => { e.stopPropagation(); startEditName(entry) }}
+                onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); startEditName(entry) } }}
+                title="Double-click to rename"
+                role="button"
+                tabindex="0"
+              >{entry.key}</span>
+            {:else}
+              <span class="text-slate-300 shrink-0">{entry.key}</span>
+            {/if}
+            <span class="text-slate-600 shrink-0">:</span>
+            <span class="min-w-0 truncate text-slate-400">
               <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
-            </Copyable>
+            </span>
+            {#if onChange}
+              <span bind:this={editBtnEl} class="shrink-0 opacity-0 transition group-hover:opacity-100">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  ariaLabel={`Edit ${entry.key}`}
+                  tooltip={`Edit ${entry.key}`}
+                  onClick={(e) => { e.stopPropagation(); startEditValue(entry) }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
+                  className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
+                >
+                  {#snippet icon()}
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                  {/snippet}
+                </Button>
+              </span>
+            {/if}
+            <span class="shrink-0 opacity-0 transition group-hover:opacity-100">
+              <Button
+                size="sm"
+                variant="ghost"
+                ariaLabel={`Copy ${entry.key}`}
+                tooltip={`Copy ${entry.key}`}
+                onClick={(e) => { e.stopPropagation(); void handleCopy(copyValue(entry.value)) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
+                className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
+              >
+                {#snippet icon()}
+                  <svg
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <rect x="7" y="7" width="9" height="9" rx="1.5" />
+                    <path d="M5.5 13H5A1.5 1.5 0 0 1 3.5 11.5V5A1.5 1.5 0 0 1 5 3.5h6.5A1.5 1.5 0 0 1 13 5v.5" />
+                  </svg>
+                {/snippet}
+              </Button>
+            </span>
           </div>
         {/if}
       {/each}
