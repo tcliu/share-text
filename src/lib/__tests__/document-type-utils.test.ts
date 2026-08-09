@@ -4,10 +4,10 @@ import {
   convertYamlToJson,
   formatJson,
   formatYaml,
-  validateCsv,
   validateJson,
   validateYaml,
 } from '$lib/document-type-utils'
+import { parseCsv, serializeCsv, validateCsv } from '$lib/csv-utils'
 
 describe('validateJson', () => {
   it('accepts valid JSON', () => {
@@ -49,13 +49,76 @@ describe('validateCsv', () => {
   it('rejects an unclosed quote', () => {
     const result = validateCsv('a,b\n"unclosed,2')
     expect(result.valid).toBe(false)
-    expect(result.error).toMatch(/unclosed quote/i)
+    expect(result.error).toMatch(/quoted field unterminated/i)
   })
 
   it('rejects inconsistent column counts', () => {
     const result = validateCsv('a,b,c\n1,2')
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/2 columns/)
+  })
+})
+
+describe('parseCsv', () => {
+  it('returns no rows for empty input', () => {
+    expect(parseCsv('')).toEqual([])
+  })
+
+  it('parses simple rows', () => {
+    expect(parseCsv('a,b,c\n1,2,3')).toEqual([
+      ['a', 'b', 'c'],
+      ['1', '2', '3'],
+    ])
+  })
+
+  it('keeps a single empty field as one empty row', () => {
+    expect(parseCsv('')).toEqual([])
+  })
+
+  it('parses quoted fields with embedded commas', () => {
+    expect(parseCsv('a,b\n"x,y",z')).toEqual([
+      ['a', 'b'],
+      ['x,y', 'z'],
+    ])
+  })
+
+  it('parses escaped quotes', () => {
+    expect(parseCsv('name,note\n"he said ""hi""",ok')).toEqual([
+      ['name', 'note'],
+      ['he said "hi"', 'ok'],
+    ])
+  })
+
+  it('parses multi-line quoted fields', () => {
+    expect(parseCsv('a,"line1\nline2",c')).toEqual([['a', 'line1\nline2', 'c']])
+  })
+
+  it('does not add a trailing empty row for a final newline', () => {
+    expect(parseCsv('a,b\n')).toEqual([['a', 'b']])
+  })
+})
+
+describe('serializeCsv', () => {
+  it('joins fields with commas and rows with newlines', () => {
+    expect(
+      serializeCsv([
+        ['a', 'b', 'c'],
+        ['1', '2', '3'],
+      ]),
+    ).toBe('a,b,c\n1,2,3')
+  })
+
+  it('quotes fields containing commas, quotes or newlines', () => {
+    expect(serializeCsv([['x,y', 'he said "hi"', 'a\nb']])).toBe('"x,y","he said ""hi""","a\nb"')
+  })
+
+  it('round-trips with parseCsv', () => {
+    const rows = [
+      ['name', 'note'],
+      ['x,y', 'he said "hi"'],
+      ['multi', 'line1\nline2'],
+    ]
+    expect(parseCsv(serializeCsv(rows))).toEqual(rows)
   })
 })
 

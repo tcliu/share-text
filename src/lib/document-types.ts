@@ -7,7 +7,6 @@ import {
   formatJson,
   formatXml,
   formatYaml,
-  validateCsv,
   validateJson,
   validateXml,
   validateYaml,
@@ -80,7 +79,11 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     mimeType: 'text/csv',
     chipColor: '#55A6FF',
     editorLanguage: async () => null,
-    validate: async text => validateCsv(text),
+    validate: async text => {
+      const { validateCsv } = await import('./csv-utils')
+      return validateCsv(text)
+    },
+    preview: () => import('./components/CsvPreview.svelte').then(m => m.default),
   },
   {
     value: 'html',
