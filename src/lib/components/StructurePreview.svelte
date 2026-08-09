@@ -2,15 +2,15 @@
   import { toast } from 'svelte-sonner'
   import { parseStructured } from '$lib/document-type-utils'
   import type { PreviewProps } from '$lib/document-types'
-  import StructureNode from './StructureNode.svelte'
-  import { detectFormat, isContainer, renameKeyAtPath, setAtPath, valueClass, valueText } from './structure-value'
+  import StructureTree from './StructureTree.svelte'
+  import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from './structure-value'
 
   let { content, onContentChange }: PreviewProps = $props()
 
   type State =
     | { status: 'loading' }
     | { status: 'error'; error: string }
-    | { status: 'ok'; value?: unknown; label?: string }
+    | { status: 'ok'; value?: unknown }
 
   let state = $state<State>({ status: 'loading' })
   let format: 'json' | 'yaml' | null = null
@@ -26,14 +26,7 @@
           state = { status: 'error', error: result.error ?? 'Invalid content' }
           return
         }
-        if (result.value === undefined) {
-          state = { status: 'ok', value: undefined }
-          return
-        }
-        const label = Array.isArray(result.value)
-          ? `array[${result.value.length}]`
-          : `object{${Object.keys(result.value as object).length}}`
-        state = { status: 'ok', value: result.value, label }
+        state = { status: 'ok', value: result.value }
       })
       .catch(error => {
         if (!cancelled) {
@@ -54,7 +47,7 @@
       toast.error('Failed to serialize changes')
       return
     }
-    state = { status: 'ok', value: updated, label: state.label }
+    state = { status: 'ok', value: updated }
     onContentChange?.(serialized)
   }
 
@@ -67,10 +60,7 @@
       toast.error('Failed to serialize changes')
       return
     }
-    const label = Array.isArray(updated)
-      ? `array[${updated.length}]`
-      : `object{${Object.keys(updated as object).length}}`
-    state = { status: 'ok', value: updated, label }
+    state = { status: 'ok', value: updated }
     onContentChange?.(serialized)
   }
 
@@ -79,14 +69,16 @@
     if (format === 'json') {
       try {
         return JSON.stringify(value, null, 2)
-      } catch {
+      } catch (err) {
+        console.warn('[StructurePreview] serialize json failed:', err)
         return null
       }
     }
     try {
       const { stringify } = await import('yaml')
       return stringify(value, { indent: 2, lineWidth: 0 })
-    } catch {
+    } catch (err) {
+      console.warn('[StructurePreview] serialize yaml failed:', err)
       return null
     }
   }
@@ -97,15 +89,9 @@
     <div class="text-sm text-slate-400">Loading preview…</div>
   {:else if state.status === 'error'}
     <div class="text-sm text-red-400">Unable to parse: {state.error}</div>
-  {:else if state.value === undefined}
-    <div class="text-sm italic text-slate-500">No content to preview</div>
-  {:else if !isContainer(state.value)}
-    <pre class={valueClass(state.value)}>{valueText(state.value)}</pre>
   {:else}
-    <StructureNode
-      label={state.label ?? ''}
+    <StructureTree
       value={state.value}
-      depth={0}
       onChange={onContentChange ? handleNodeChange : undefined}
       onRenameKey={onContentChange ? handleRenameKey : undefined}
     />
