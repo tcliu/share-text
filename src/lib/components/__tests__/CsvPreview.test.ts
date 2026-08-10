@@ -170,6 +170,48 @@ describe('CsvPreview (custom grid)', () => {
     expect(onChange).toHaveBeenCalled()
   })
 
+  it('keeps a row appended via ArrowDown when the serialized content is fed back as the new value', async () => {
+    let emitted = ''
+    const { rerender } = render(CsvPreview, {
+      content: 'name,age\nAlice,30',
+      onContentChange: (v: string) => {
+        emitted = v
+      },
+    })
+    const root = await screen.findByTestId('csv-preview')
+    const box = boxOf(root, 1, 1)
+    box.focus()
+    await fireEvent.keyDown(box, { key: 'ArrowDown' })
+    await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
+    expect(emitted).toBe('name,age\nAlice,30\n,')
+    await rerender({ content: emitted })
+    await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
+    expect(boxOf(root, 2, 1).className).toContain('ring-cyan-500/60')
+  })
+
+  it('keeps cells when a row is appended by typing then fed back as the serialized content', async () => {
+    let emitted = ''
+    const { rerender } = render(CsvPreview, {
+      content: 'name,age\nAlice,30',
+      onContentChange: (v: string) => {
+        emitted = v
+      },
+    })
+    const root = await screen.findByTestId('csv-preview')
+    const box = boxOf(root, 1, 1)
+    box.focus()
+    await fireEvent.keyDown(box, { key: 'ArrowDown' })
+    await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
+    const newCell = gridCell(root, 2, 0) as HTMLInputElement
+    newCell.focus()
+    await fireEvent.input(newCell, { target: { value: 'Charlie' } })
+    await fireEvent.blur(newCell)
+    await vi.waitFor(() => expect(emitted).toContain('Charlie'))
+    await rerender({ content: emitted })
+    await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
+    expect(hasCellValue(root, 'Charlie')).toBe(true)
+  })
+
   it('toggles Show headers without throwing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
     const root = await screen.findByTestId('csv-preview')

@@ -57,9 +57,23 @@ export function createGridModel(options: GridModelOptions) {
     return headers ? 0 : -1
   }
 
+  function stripTrailingEmptyRows(matrix: string[][]): string[][] {
+    let trimmed = matrix
+    while (trimmed.length > 0 && trimmed[trimmed.length - 1].every(v => isEmptyValue(v))) {
+      trimmed = trimmed.slice(0, trimmed.length - 1)
+    }
+    return trimmed
+  }
+
   $effect(() => {
     const input = options.getValue()
     if (pending || matrixEqual(input, lastValue)) return
+    // The preview pipeline feeds the grid's own serialized content back as
+    // the value prop, and parsing strips trailing all-empty rows that the
+    // CSV text format cannot represent. Treat that lossy round-trip as a
+    // self-echo so empty rows appended by the grid are not dropped on the
+    // next sync.
+    if (matrixEqual(input, stripTrailingEmptyRows(lastValue))) return
     rows = input.map(r => ({ id: ++rowId, cells: r.map(v => newCell(v)) }))
     normalize()
     lastValue = input
