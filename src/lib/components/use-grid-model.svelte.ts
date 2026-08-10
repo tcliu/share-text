@@ -3,6 +3,10 @@ import { isEmptyValue, matrixEqual } from './grid-utils'
 interface Cell {
   id: number
   value: string
+  // Whether the cell has been authored (typed, pasted, or structurally created).
+  // Empty rows/columns appended by pure navigation stay uncommitted so they are
+  // excluded from the serialized matrix until the user actually enters a value.
+  committed: boolean
 }
 interface Row {
   id: number
@@ -27,10 +31,10 @@ const MAX_HISTORY = 100
 export function createGridModel(options: GridModelOptions) {
   let cellId = 0
   let rowId = 0
-  const newCell = (value = ''): Cell => ({ id: ++cellId, value })
-  const newRow = (cols: number): Row => ({
+  const newCell = (value = '', committed = true): Cell => ({ id: ++cellId, value, committed })
+  const newRow = (cols: number, committed = true): Row => ({
     id: ++rowId,
-    cells: Array.from({ length: cols }, () => newCell('')),
+    cells: Array.from({ length: cols }, () => newCell('', committed)),
   })
 
   let rows = $state<Row[]>([])
@@ -43,7 +47,17 @@ export function createGridModel(options: GridModelOptions) {
   const historyListeners = new Set<HistoryListener>()
 
   function currentMatrix(): string[][] {
-    return rows.map(r => r.cells.map(c => c.value))
+    return committedMatrix()
+  }
+
+  // The serialized matrix bounds itself to the last row/column that has any
+  // authored (committed) cell, so rows/columns appended by pure navigation and
+  // never typed into stay out of the document until a value is entered.
+  function committedMatrix(): string[][] {
+    const cols = lastCommittedCol + 1
+    const rowsCount = lastCommittedRow + 1
+    if (rowsCount <= 0 || cols <= 0) return []
+    return rows.slice(0, rowsCount).map(r => r.cells.slice(0, cols).map(c => c.value))
   }
 
   function emitHistory() {
@@ -70,11 +84,28 @@ export function createGridModel(options: GridModelOptions) {
   const rowCount = $derived(rows.length)
   const headers = $derived(options.getHeaders())
 
+  const lastCommittedRow = $derived.by(() => {
+    for (let ri = rows.length - 1; ri >= 0; ri--) {
+      if (rows[ri].cells.some(c => c.committed)) return ri
+    }
+    return -1
+  })
+
+  const lastCommittedCol = $derived.by(() => {
+    for (let ci = columnCount - 1; ci >= 0; ci--) {
+      if (rows.some(r => r.cells[ci]?.committed)) return ci
+    }
+    return -1
+  })
+
   const needsTrim = $derived.by(() => {
     if (rowCount === 0) return false
+    // Uncommitted rows/columns appended by navigation are always trimmable.
+    if (lastCommittedRow + 1 < rowCount) return true
+    if (lastCommittedCol + 1 < columnCount) return true
     const isEmpty = isEmptyValue
     const lastRow = findLastRowWithData()
-    if (rowCount - 1 - lastRow > 0) return true
+    if (lastRow < lastCommittedRow) return true
     let lastCol = -1
     for (let ci = columnCount - 1; ci >= 0; ci--) {
       if (rows.some(r => !isEmpty(r.cells[ci]?.value ?? ''))) {
@@ -82,7 +113,7 @@ export function createGridModel(options: GridModelOptions) {
         break
       }
     }
-    return columnCount - 1 - lastCol > 0
+    return lastCol < lastCommittedCol
   })
 
   function findLastRowWithData(): number {
@@ -127,7 +158,7 @@ export function createGridModel(options: GridModelOptions) {
   let suppressHistory = false
 
   function commit() {
-    const matrix = rows.map(r => r.cells.map(c => c.value))
+    const matrix = committedMatrix()
     if (!suppressHistory && !matrixEqual(matrix, lastValue)) {
       pushUndo(lastValue)
     }
@@ -208,10 +239,12 @@ export function createGridModel(options: GridModelOptions) {
     const cell = rows[ri]?.cells[ci]
     if (!cell) return
     cell.value = value
+    cell.committed = true
     scheduleCommit()
   }
 
   function insertRow(index: number, after: boolean) {
+    pruneAllPending()
     let at = after ? index + 1 : index
     if (headers && at === 0 && !after) at = 1
     at = Math.min(Math.max(0, at), rows.length)
@@ -241,6 +274,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function insertColumnAt(col: number) {
+    pruneAllPending()
     if (rows.length === 0) rows.push(newRow(1))
     for (const row of rows) row.cells.splice(col, 0, newCell(''))
     normalize()
@@ -259,6 +293,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function appendRow(): number {
+    pruneAllPending()
     rows.push(newRow(columnCount || 1))
     normalize()
     commitImmediate()
@@ -266,11 +301,49 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function appendColumn(): number {
+    pruneAllPending()
     if (rows.length === 0) rows.push(newRow(1))
     for (const row of rows) row.cells.push(newCell(''))
     normalize()
     commitImmediate()
     return columnCount - 1
+  }
+
+  // Navigation-driven extension: the appended row/column is rendered but its
+  // cells stay uncommitted, so it contributes nothing to the serialized matrix
+  // until the user types a value into it.
+  function appendPendingRow(): number {
+    rows.push(newRow(columnCount || 1, false))
+    normalize()
+    return rows.length - 1
+  }
+
+  function appendPendingColumn(): number {
+    if (rows.length === 0) rows.push(newRow(1, false))
+    for (const row of rows) row.cells.push(newCell('', false))
+    normalize()
+    return columnCount - 1
+  }
+
+  function pruneTrailingPendingRows(after: number) {
+    let end = rows.length - 1
+    while (end > after && rows[end]?.cells.every(c => !c.committed)) {
+      rows.splice(end, 1)
+      end--
+    }
+  }
+
+  function pruneTrailingPendingColumns(after: number) {
+    let end = columnCount - 1
+    while (end > after && rows.every(r => r.cells[end] && !r.cells[end].committed)) {
+      for (const row of rows) row.cells.pop()
+      end--
+    }
+  }
+
+  function pruneAllPending() {
+    pruneTrailingPendingRows(-1)
+    pruneTrailingPendingColumns(-1)
   }
 
   function trimTrailingEmptyRows() {
@@ -320,6 +393,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function applyPastedText(ri: number, ci: number, text: string) {
+    pruneAllPending()
     const pasteLines = text.split(/\r?\n/)
     let neededRows = ri + pasteLines.length
     let neededCols = ci
@@ -330,7 +404,9 @@ export function createGridModel(options: GridModelOptions) {
     for (let i = 0; i < pasteLines.length; i++) {
       const values = pasteLines[i].split('\t')
       for (let j = 0; j < values.length; j++) {
-        rows[ri + i].cells[ci + j].value = values[j]
+        const cell = rows[ri + i].cells[ci + j]
+        cell.value = values[j]
+        cell.committed = true
       }
     }
     scheduleCommit()
@@ -360,6 +436,10 @@ export function createGridModel(options: GridModelOptions) {
     deleteColumns,
     appendRow,
     appendColumn,
+    appendPendingRow,
+    appendPendingColumn,
+    pruneTrailingPendingRows,
+    pruneTrailingPendingColumns,
     trimTrailingEmptyRows,
     trimTrailingEmptyColumns,
     clearValues,
@@ -377,7 +457,7 @@ export function createGridModel(options: GridModelOptions) {
       return canRedo
     },
     matrix(): string[][] {
-      return rows.map(r => r.cells.map(c => c.value))
+      return committedMatrix()
     },
   }
 }

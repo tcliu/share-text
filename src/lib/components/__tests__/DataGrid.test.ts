@@ -781,7 +781,7 @@ describe('DataGrid (reusable grid)', () => {
     expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('')
   })
 
-  it('keeps an empty appended row after Escape', async () => {
+  it('Escaping an uncommitted appended row discards it', async () => {
     render(DataGrid, { value: [['a'], ['1']] })
     const root = await screen.findByTestId('data-grid')
     boxOf(root, 1, 0).focus()
@@ -790,7 +790,22 @@ describe('DataGrid (reusable grid)', () => {
     const blank = gridCell(root, 2, 0) as HTMLInputElement
     blank.focus()
     await fireEvent.keyDown(blank, { key: 'Escape' })
-    expect(root.textContent).toContain('3 rows · 1 columns')
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 1 columns'))
+  })
+
+  it('navigating back up from an uncommitted appended row removes it without emitting', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, { value: [['a'], ['1']], onChange })
+    const root = await screen.findByTestId('data-grid')
+    boxOf(root, 1, 0).focus()
+    await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'ArrowDown' })
+    await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 1 columns'))
+    expect(onChange).not.toHaveBeenCalled()
+    const box = boxOf(root, 2, 0)
+    box.focus()
+    await fireEvent.keyDown(box, { key: 'ArrowUp' })
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 1 columns'))
+    expect(onChange).not.toHaveBeenCalled()
   })
 
   it('keeps an emptied header column when the header is blurred', async () => {

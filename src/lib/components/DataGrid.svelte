@@ -23,7 +23,12 @@
   })
 
   let gridContainer: HTMLElement | null = null
-  let editSnapshot: { ri: number; ci: number; value: string } = { ri: -1, ci: -1, value: '' }
+  let editSnapshot: { ri: number; ci: number; value: string; committed: boolean } = {
+    ri: -1,
+    ci: -1,
+    value: '',
+    committed: true,
+  }
 
   function cellInputEl(ri: number, ci: number): HTMLInputElement | null {
     return gridContainer?.querySelector<HTMLInputElement>(`input[data-row="${ri}"][data-col="${ci}"]`) ?? null
@@ -98,28 +103,28 @@
   }
 
   function handleInputFocus(ri: number, ci: number) {
-    const value = model.rows[ri]?.cells[ci]?.value ?? ''
-    editSnapshot = { ri, ci, value }
+    const cell = model.rows[ri]?.cells[ci]
+    editSnapshot = { ri, ci, value: cell?.value ?? '', committed: cell?.committed ?? true }
     sel.setActiveCell(ri, ci)
   }
 
   function handleInputKeydown(event: KeyboardEvent, ri: number, ci: number) {
     if (event.key === 'Tab' && !event.shiftKey) {
+      event.preventDefault()
       if (ci < model.columnCount - 1) {
         focus.cellInput(ri, ci + 1)
         return
       } else if (ri < model.rowCount - 1) {
-        event.preventDefault()
-        tick().then(() => focus.cellInput(ri + 1, 0))
+        focus.cellInput(ri + 1, 0)
         return
       }
     } else if (event.key === 'Tab' && event.shiftKey) {
+      event.preventDefault()
       if (ci > 0) {
         focus.cellInput(ri, ci - 1)
         return
       } else if (ri > 0) {
-        event.preventDefault()
-        tick().then(() => focus.cellInput(ri - 1, model.columnCount - 1))
+        focus.cellInput(ri - 1, model.columnCount - 1)
         return
       }
     } else if (event.key === 'Enter') {
@@ -133,10 +138,14 @@
       const cell = model.rows[ri]?.cells[ci]
       if (cell && editSnapshot.ri === ri && editSnapshot.ci === ci) {
         cell.value = editSnapshot.value
+        cell.committed = editSnapshot.committed
       }
       ;(event.target as HTMLInputElement).blur()
-      if (model.rows[ri]) {
-        tick().then(() => focus.cellBox(ri, ci))
+      model.pruneTrailingPendingRows(ri - 1)
+      model.pruneTrailingPendingColumns(ci - 1)
+      const target = model.rows[ri] ? ri : ri - 1
+      if (model.rows[target]) {
+        tick().then(() => focus.cellBox(target, ci))
       }
     }
   }
@@ -382,12 +391,19 @@
   </div>
 
   <div class="min-h-0 flex-1 overflow-auto rounded-md" bind:this={gridContainer}>
-    <table class="w-full border-separate border-spacing-0 border-t border-l border-slate-800 text-sm">
+    <table
+      role="grid"
+      aria-label="Spreadsheet"
+      aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
+      aria-colcount={model.columnCount}
+      class="w-full border-separate border-spacing-0 border-t border-l border-slate-800 text-sm">
       {#if model.rowCount > 0}
         <thead>
-          <tr class="sticky top-0 z-20 bg-slate-900">
+          <tr aria-rowindex="1" class="sticky top-0 z-20 bg-slate-900">
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <th
+              role="columnheader"
+              aria-label="Select all"
               class="sticky left-0 top-0 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
               data-select-all
               tabindex="-1"
@@ -396,6 +412,8 @@
             {#each Array.from({ length: model.columnCount }) as _, ci}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <th
+                role="columnheader"
+                aria-colindex={ci + 1}
                 class={sel.columnSelectorClass(ci)}
                 data-col-selector={ci}
                 tabindex="-1"
@@ -407,12 +425,16 @@
             {/each}
           </tr>
           {#if showHeaders && model.rowCount > 0}
-            <tr class="sticky top-6 z-20 bg-slate-900">
+            <tr aria-rowindex="2" class="sticky top-6 z-20 bg-slate-900">
               <th
+                role="columnheader"
                 class="sticky left-0 top-6 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
               ></th>
               {#each model.rows[0].cells as cell, ci (cell.id)}
                 <th
+                  role="columnheader"
+                  aria-colindex={ci + 1}
+                  aria-selected={sel.isCellSelected(0, ci)}
                   class={sel.cellClass(
                     'min-w-32 border-b border-r border-b-slate-600 border-r-slate-800 p-0 font-semibold outline-none',
                     0,
@@ -444,9 +466,12 @@
         <tbody>
           {#each showHeaders ? model.rows.slice(1) : model.rows as row, ri (row.id)}
             {@const actualRi = showHeaders ? ri + 1 : ri}
-            <tr class={sel.trClass(actualRi)}>
+            <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <td
+                role="rowheader"
+                aria-rowindex={showHeaders ? ri + 3 : ri + 2}
+                aria-selected={sel.selectedRows.has(actualRi)}
                 class={sel.rowSelectorClass(actualRi)}
                 data-row-selector={actualRi}
                 tabindex="-1"
@@ -458,6 +483,9 @@
               {#each row.cells as cell, ci (cell.id)}
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <td
+                  role="gridcell"
+                  aria-colindex={ci + 1}
+                  aria-selected={sel.isCellSelected(actualRi, ci)}
                   class={sel.cellClass(
                     'min-w-32 border-b border-r border-slate-800 p-0 outline-none',
                     actualRi,

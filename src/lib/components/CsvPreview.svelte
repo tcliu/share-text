@@ -5,9 +5,25 @@
 
   let { content, onContentChange }: PreviewProps = $props()
 
+  let parsedRows = $state(parseCsv(content))
+  let suppressSync = false
+
+  $effect(() => {
+    if (suppressSync) {
+      suppressSync = false
+      return
+    }
+    const roundTripped = serializeCsv(parsedRows)
+    if (content !== roundTripped) {
+      parsedRows = parseCsv(content)
+    }
+  })
+
   function handleChange(rows: string[][]) {
+    parsedRows = rows
+    suppressSync = true
     onContentChange?.(serializeCsv(rows))
   }
 </script>
 
-<DataGrid value={parseCsv(content)} onChange={handleChange} testId="csv-preview" />
+<DataGrid value={parsedRows} onChange={handleChange} testId="csv-preview" />

@@ -170,7 +170,7 @@ describe('CsvPreview (custom grid)', () => {
     expect(onChange).toHaveBeenCalled()
   })
 
-  it('keeps a row appended via ArrowDown when the serialized content is fed back as the new value', async () => {
+  it('does not emit while an appended row is still empty, only after typing into it', async () => {
     let emitted = ''
     const { rerender } = render(CsvPreview, {
       content: 'name,age\nAlice,30',
@@ -183,10 +183,15 @@ describe('CsvPreview (custom grid)', () => {
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
-    expect(emitted).toBe('name,age\nAlice,30\n,')
+    expect(emitted).toBe('')
+    const newCell = gridCell(root, 2, 0) as HTMLInputElement
+    newCell.focus()
+    await fireEvent.input(newCell, { target: { value: 'Charlie' } })
+    await fireEvent.blur(newCell)
+    await vi.waitFor(() => expect(emitted).toContain('Charlie'))
     await rerender({ content: emitted })
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
-    expect(boxOf(root, 2, 1).className).toContain('ring-cyan-500/60')
+    expect(hasCellValue(root, 'Charlie')).toBe(true)
   })
 
   it('keeps cells when a row is appended by typing then fed back as the serialized content', async () => {
@@ -210,6 +215,22 @@ describe('CsvPreview (custom grid)', () => {
     await rerender({ content: emitted })
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
     expect(hasCellValue(root, 'Charlie')).toBe(true)
+  })
+
+  it('ArrowRight appends a virtual column that is only serialized after typing into it', async () => {
+    let emitted = ''
+    render(CsvPreview, {
+      content: 'name,age\nAlice,30',
+      onContentChange: (v: string) => {
+        emitted = v
+      },
+    })
+    const root = await screen.findByTestId('csv-preview')
+    const box = boxOf(root, 0, 1)
+    box.focus()
+    await fireEvent.keyDown(box, { key: 'ArrowRight' })
+    await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
+    expect(emitted).toBe('')
   })
 
   it('toggles Show headers without throwing', async () => {
@@ -266,19 +287,18 @@ describe('CsvPreview (custom grid)', () => {
     expect(hasCellValue(root, 'Alice')).toBe(false)
   })
 
-  it.skip('navigates between cells with Tab / Shift+Tab', async () => {
+  it('navigates between cells with Tab / Shift+Tab', async () => {
     render(CsvPreview, { content: 'a,b,c\n1,2,3\n4,5,6' })
     const root = await screen.findByTestId('csv-preview')
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
-    c00.focus()
-    await fireEvent.keyDown(c00, { key: 'Tab' })
-    const c01 = gridCell(root, 0, 1) as HTMLInputElement
-    expect(document.activeElement).toBe(c01)
-    await fireEvent.keyDown(c01, { key: 'Tab' })
-    const c02 = gridCell(root, 0, 2) as HTMLInputElement
-    await fireEvent.keyDown(c02, { key: 'Tab' })
-    const c10 = gridCell(root, 1, 0) as HTMLInputElement
-    expect(document.activeElement).toBe(c10)
+    const cell = (r: number, c: number) => root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLInputElement
+
+    cell(0, 0).focus()
+    fireEvent.keyDown(cell(0, 0), { key: 'Tab' })
+    expect(document.activeElement).toBe(cell(0, 1))
+    fireEvent.keyDown(cell(0, 1), { key: 'Tab' })
+    expect(document.activeElement).toBe(cell(0, 2))
+    fireEvent.keyDown(cell(0, 2), { key: 'Tab' })
+    expect(document.activeElement).toBe(cell(1, 0))
   })
 
   it('Enter finishes editing, moves the selection to (r+1, c) as non-editing cell', async () => {

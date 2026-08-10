@@ -150,6 +150,8 @@ export function createGridSelection(opts: {
       s.selectedCell = { ri, ci }
       applyRange(anchor, { ri, ci })
       s.dragStart = null
+      model.pruneTrailingPendingRows(ri)
+      model.pruneTrailingPendingColumns(ci)
       tick().then(() => focus.cellBox(ri, ci))
       return
     }
@@ -168,6 +170,8 @@ export function createGridSelection(opts: {
     s.selectionAnchor = { ri, ci }
     s.selectedCell = { ri, ci }
     s.dragStart = { ri, ci }
+    model.pruneTrailingPendingRows(ri)
+    model.pruneTrailingPendingColumns(ci)
     tick().then(() => focus.cellBox(ri, ci))
   }
 
@@ -227,6 +231,7 @@ export function createGridSelection(opts: {
       return
     }
     s.selectedRows = new Set([ri])
+    model.pruneTrailingPendingRows(ri)
     s.rowAnchor = ri
     s.rowDragStart = ri
     s.ctrlRowDrag = null
@@ -245,6 +250,56 @@ export function createGridSelection(opts: {
     const next = new Set<number>()
     for (let r = r1; r <= r2; r++) next.add(r)
     s.selectedRows = next
+  }
+
+  function handleSelectorDirectionNav(
+    event: KeyboardEvent,
+    currentIndex: number,
+    dir: number,
+    isRow: boolean,
+    selectedSet: Set<number>,
+    setSelected: (s: Set<number>) => void,
+    anchor: number | null,
+    setAnchor: (a: number) => void,
+    minIndex: number,
+    count: number,
+    focusFn: (i: number) => void,
+    appendFn: () => void,
+    pruneFn: (i: number) => void,
+  ) {
+    event.preventDefault()
+    if (selectedSet.size === 0) return
+    s.selectedSet = new Set()
+    s.selectedCell = null
+    if (isRow) {
+      s.selectedCols = new Set()
+    } else {
+      s.selectedRows = new Set()
+    }
+    if (event.shiftKey) {
+      const a = anchor ?? Math.min(...selectedSet)
+      const currentMin = Math.min(...selectedSet)
+      const currentMax = Math.max(...selectedSet)
+      const edge = dir === 1 ? currentMax + 1 : currentMax > a ? currentMax - 1 : currentMin - 1
+      if (edge < minIndex || edge >= count) return
+      const min = Math.min(a, edge)
+      const max = Math.max(a, edge)
+      const next = new Set<number>()
+      for (let i = min; i <= max; i++) next.add(i)
+      setSelected(next)
+      focusFn(dir === 1 ? max : min)
+      return
+    }
+    const next = currentIndex + dir
+    if (next < minIndex) return
+    if (next >= count) {
+      if (dir === 1) appendFn()
+      return
+    }
+    setSelected(new Set([next]))
+    setAnchor(next)
+    pruneFn(next)
+    focusFn(next)
   }
 
   function handleRowSelectorKeydown(event: KeyboardEvent, ri: number) {
@@ -268,37 +323,23 @@ export function createGridSelection(opts: {
       if (after >= 0) tick().then(() => focus.rowSelector(after))
       return
     }
-    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
-    event.preventDefault()
-    if (s.selectedRows.size === 0) return
-    const minRow = model.headers ? 1 : 0
-    s.selectedSet = new Set()
-    s.selectedCell = null
-    s.selectedCols = new Set()
-    const dir = event.key === 'ArrowDown' ? 1 : -1
-    if (event.shiftKey) {
-      const anchor = s.rowAnchor ?? Math.min(...s.selectedRows)
-      const currentMin = Math.min(...s.selectedRows)
-      const currentMax = Math.max(...s.selectedRows)
-      const edge = dir === 1 ? currentMax + 1 : currentMax > anchor ? currentMax - 1 : currentMin - 1
-      if (edge < minRow || edge >= model.rowCount) return
-      const min = Math.min(anchor, edge)
-      const max = Math.max(anchor, edge)
-      const next = new Set<number>()
-      for (let r = min; r <= max; r++) next.add(r)
-      s.selectedRows = next
-      focus.rowSelector(dir === 1 ? max : min)
-      return
-    }
-    const next = ri + dir
-    if (next < minRow) return
-    if (next >= model.rowCount) {
-      if (dir === 1) appendRowAndSelect()
-      return
-    }
-    s.selectedRows = new Set([next])
-    s.rowAnchor = next
-    focus.rowSelector(next)
+    const dir = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0
+    if (dir === 0) return
+    handleSelectorDirectionNav(
+      event,
+      ri,
+      dir,
+      true,
+      s.selectedRows,
+      v => { s.selectedRows = v },
+      s.rowAnchor,
+      v => { s.rowAnchor = v },
+      model.headers ? 1 : 0,
+      model.rowCount,
+      focus.rowSelector,
+      appendPendingRowAndSelect,
+      model.pruneTrailingPendingRows,
+    )
   }
 
   function handleColumnSelectorMousedown(event: MouseEvent, ci: number) {
@@ -327,6 +368,7 @@ export function createGridSelection(opts: {
       return
     }
     s.selectedCols = new Set([ci])
+    model.pruneTrailingPendingColumns(ci)
     s.colAnchor = ci
     s.colDragStart = ci
     s.ctrlColDrag = null
@@ -368,36 +410,23 @@ export function createGridSelection(opts: {
       if (after >= 0) tick().then(() => focus.columnSelector(after))
       return
     }
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    event.preventDefault()
-    if (s.selectedCols.size === 0) return
-    s.selectedSet = new Set()
-    s.selectedCell = null
-    s.selectedRows = new Set()
-    const dir = event.key === 'ArrowRight' ? 1 : -1
-    if (event.shiftKey) {
-      const anchor = s.colAnchor ?? Math.min(...s.selectedCols)
-      const currentMin = Math.min(...s.selectedCols)
-      const currentMax = Math.max(...s.selectedCols)
-      const edge = dir === 1 ? currentMax + 1 : currentMax > anchor ? currentMax - 1 : currentMin - 1
-      if (edge < 0 || edge >= model.columnCount) return
-      const min = Math.min(anchor, edge)
-      const max = Math.max(anchor, edge)
-      const next = new Set<number>()
-      for (let c = min; c <= max; c++) next.add(c)
-      s.selectedCols = next
-      focus.columnSelector(dir === 1 ? max : min)
-      return
-    }
-    const next = ci + dir
-    if (next < 0) return
-    if (next >= model.columnCount) {
-      if (dir === 1) addColumnAndSelect()
-      return
-    }
-    s.selectedCols = new Set([next])
-    s.colAnchor = next
-    focus.columnSelector(next)
+    const dir = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
+    if (dir === 0) return
+    handleSelectorDirectionNav(
+      event,
+      ci,
+      dir,
+      false,
+      s.selectedCols,
+      v => { s.selectedCols = v },
+      s.colAnchor,
+      v => { s.colAnchor = v },
+      0,
+      model.columnCount,
+      focus.columnSelector,
+      addPendingColumnAndSelect,
+      model.pruneTrailingPendingColumns,
+    )
   }
 
   function handleSelectAllMousedown(event: MouseEvent) {
@@ -457,7 +486,7 @@ export function createGridSelection(opts: {
   }
 
   function appendArrowRow(ci: number) {
-    const ri = model.appendRow()
+    const ri = model.appendPendingRow()
     s.selectedSet = new Set()
     s.selectionAnchor = { ri, ci }
     s.selectedCell = { ri, ci }
@@ -480,7 +509,7 @@ export function createGridSelection(opts: {
         return
       }
       if (event.key === 'ArrowRight' && ci === model.columnCount - 1 && !event.shiftKey) {
-        const newCi = model.appendColumn()
+        const newCi = model.appendPendingColumn()
         s.selectedSet = new Set()
         s.selectionAnchor = { ri, ci: newCi }
         s.selectedCell = { ri, ci: newCi }
@@ -511,6 +540,8 @@ export function createGridSelection(opts: {
           s.selectionAnchor = next
           s.selectedCell = next
         }
+        model.pruneTrailingPendingRows(next.ri)
+        model.pruneTrailingPendingColumns(next.ci)
         focus.cellBox(next.ri, next.ci)
       }
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
@@ -596,8 +627,8 @@ export function createGridSelection(opts: {
     })
   }
 
-  function appendRowAndSelect() {
-    const newRi = model.appendRow()
+  function appendPendingRowAndSelect() {
+    const newRi = model.appendPendingRow()
     s.selectedSet = new Set()
     s.selectedCell = null
     s.selectedCols = new Set()
@@ -606,8 +637,8 @@ export function createGridSelection(opts: {
     tick().then(() => focus.rowSelector(newRi))
   }
 
-  function addColumnAndSelect() {
-    const newCi = model.appendColumn()
+  function addPendingColumnAndSelect() {
+    const newCi = model.appendPendingColumn()
     s.selectedSet = new Set()
     s.selectedCell = null
     s.selectedRows = new Set()

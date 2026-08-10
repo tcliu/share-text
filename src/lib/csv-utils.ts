@@ -29,7 +29,7 @@ export function parseCsv(text: string): string[][] {
   const rows = result.data
   while (rows.length > 0) {
     const last = rows[rows.length - 1]
-    if (last.length === 0 || last.every(v => v.trim() === '')) {
+    if (last.every(v => v.trim() === '')) {
       rows.pop()
     } else {
       break
