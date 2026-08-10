@@ -69,7 +69,8 @@ export function setAtPath(root: unknown, path: string[], value: unknown): unknow
   return { ...(root as Record<string, unknown>), [key]: setAtPath((root as Record<string, unknown>)[key], rest, value) }
 }
 
-export function detectFormat(text: string): 'json' | 'yaml' {
+export function detectFormat(text: string): 'json' | 'yaml' | 'xml' {
+  if (text.trim().startsWith('<')) return 'xml'
   try {
     JSON.parse(text.trim() || 'null')
     return 'json'

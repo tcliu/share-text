@@ -1,4 +1,8 @@
 import { page } from '$app/state'
+import {
+  loadEditorPreviewSplit,
+  saveEditorPreviewSplit,
+} from '$lib/editor-preview-split'
 
 export type PreviewMode = 'editor' | 'split' | 'preview'
 
@@ -8,8 +12,6 @@ const PREVIEW_MODE_LABELS: Record<PreviewMode, string> = {
   split: 'Split view',
   preview: 'Preview view',
 }
-
-export const SPLIT_MIN_PCT = 10
 
 function previewModeFromUrl(): PreviewMode {
   const params = page.url.searchParams
@@ -25,7 +27,7 @@ export function usePreviewMode(hasPreview: () => boolean) {
     previewMode = previewModeFromUrl()
   })
 
-  let editorWidthPct = $state(50)
+  let editorWidthPct = $state(loadEditorPreviewSplit())
 
   const showPreview = $derived(previewMode !== 'editor' && hasPreview())
   const previewOnly = $derived(previewMode === 'preview' && showPreview)
@@ -55,7 +57,10 @@ export function usePreviewMode(hasPreview: () => boolean) {
     get previewOnly() { return previewOnly },
     get modeLabel() { return modeLabel },
     get editorWidthPct() { return editorWidthPct },
-    set editorWidthPct(value: number) { editorWidthPct = value },
+    set editorWidthPct(value: number) {
+      editorWidthPct = value
+      saveEditorPreviewSplit(value)
+    },
     cyclePreviewMode,
   }
 }

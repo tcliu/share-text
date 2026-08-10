@@ -114,8 +114,10 @@ The page is split into two vertical panes.
 - Documents with a **Markdown** type show a **Preview** toggle button in the
   toolbar. When activated, the editor splits horizontally into two panes: the
   CodeMirror source on the left and a rendered markdown preview on the right.
-- The split ratio is adjustable via a draggable handle. Toggling preview off
-  restores the full-width editor.
+- Structured types (**JSON**, **XML**, **YAML**) preview as an editable
+  structure tree; CSV previews as a spreadsheet-style grid; **HTML** previews as
+  a rendered document. The split ratio is adjustable via a draggable handle.
+  Toggling preview off restores the full-width editor.
 
 ## Tags
 
@@ -149,6 +151,10 @@ The page is split into two vertical panes.
 - The list pane adjusts its min-width dynamically to match the measured header
   row content, clipped to the persisted max width, so the header controls
   always fit.
+- In split view, the boundary between the editor and the preview pane is also a
+  draggable splitter. The editor-pane percentage is persisted to
+  `localStorage` and restored on reload, for all document types; the default is
+  50%, with a minimum of 10% and a maximum of 90%.
 
 ## Upload
 

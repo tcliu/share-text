@@ -4,6 +4,8 @@ import {
   convertYamlToJson,
   formatJson,
   formatYaml,
+  parseXmlStructure,
+  serializeXmlStructure,
   validateJson,
   validateYaml,
 } from '$lib/document-type-utils'
@@ -197,5 +199,111 @@ describe('convertYamlToJson', () => {
     const result = await convertYamlToJson('')
     expect(result.ok).toBe(true)
     expect(result.value).toBe('')
+  })
+})
+
+describe('parseXmlStructure', () => {
+  it('parses a flat XML document into an element node', () => {
+    const result = parseXmlStructure('<root attr="1"><child>text</child></root>')
+    expect(result.ok).toBe(true)
+    expect(result.value).toEqual({
+      tag: 'root',
+      attributes: { attr: '1' },
+      children: [{ tag: 'child', attributes: {}, children: 'text' }],
+    })
+  })
+
+  it('collects repeated element children into an array', () => {
+    const result = parseXmlStructure('<root><item>a</item><item>b</item></root>')
+    expect(result.ok).toBe(true)
+    expect(result.value).toEqual({
+      tag: 'root',
+      attributes: {},
+      children: [
+        { tag: 'item', attributes: {}, children: 'a' },
+        { tag: 'item', attributes: {}, children: 'b' },
+      ],
+    })
+  })
+
+  it('skips formatting whitespace between element children', () => {
+    const result = parseXmlStructure('<root>\n  <child>v</child>\n</root>')
+    expect(result.ok).toBe(true)
+    expect(result.value).toEqual({
+      tag: 'root',
+      attributes: {},
+      children: [{ tag: 'child', attributes: {}, children: 'v' }],
+    })
+  })
+
+  it('stores a single text child as a string', () => {
+    const result = parseXmlStructure('<name>Alice</name>')
+    expect(result.ok).toBe(true)
+    expect(result.value).toEqual({ tag: 'name', attributes: {}, children: 'Alice' })
+  })
+
+  it('rejects malformed XML', () => {
+    const result = parseXmlStructure('<root><unclosed></root>')
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
+  })
+
+  it('rejects a document without a root element', () => {
+    const result = parseXmlStructure('<item/><item/>')
+    expect(result.ok).toBe(false)
+    expect(result.error).toBeTruthy()
+  })
+
+  it('drops whitespace-only text nodes, treating them as empty', () => {
+    const result = parseXmlStructure('<x> </x>')
+    expect(result.ok).toBe(true)
+    expect(result.value).toEqual({ tag: 'x', attributes: {}, children: '' })
+  })
+})
+
+describe('serializeXmlStructure', () => {
+  it('serializes a text-only element inline', () => {
+    expect(serializeXmlStructure({ tag: 'name', attributes: {}, children: 'Alice' })).toBe('<name>Alice</name>')
+  })
+
+  it('produces self-closing tags for empty elements', () => {
+    expect(serializeXmlStructure({ tag: 'br', attributes: {}, children: '' })).toBe('<br />')
+  })
+
+  it('pretty-prints element-only children with two-space indentation', () => {
+    expect(
+      serializeXmlStructure({
+        tag: 'catalog',
+        attributes: {},
+        children: [{ tag: 'book', attributes: { id: '1' }, children: '' }],
+      }),
+    ).toBe('<catalog>\n  <book id="1" />\n</catalog>')
+  })
+
+  it('escapes text content and attribute values', () => {
+    expect(
+      serializeXmlStructure({
+        tag: 'note',
+        attributes: { lang: 'en"xe' },
+        children: 'a & b < c > d',
+      }),
+    ).toBe('<note lang="en&quot;xe">a &amp; b &lt; c &gt; d</note>')
+  })
+
+  it('round-trips a complex document', () => {
+    const text = '<root a="1"><item>x &amp; y</item><item>2</item></root>'
+    const parsed = parseXmlStructure(text)
+    expect(parsed.ok).toBe(true)
+    expect(parseXmlStructure(serializeXmlStructure(parsed.value)!).ok).toBe(true)
+  })
+
+  it('returns null for non-element values', () => {
+    expect(serializeXmlStructure({ foo: 1 })).toBeNull()
+    expect(serializeXmlStructure(42)).toBeNull()
+  })
+
+  it('serializes non-string edited children as text', () => {
+    expect(serializeXmlStructure({ tag: 'count', attributes: {}, children: 8 })).toBe('<count>8</count>')
+    expect(serializeXmlStructure({ tag: 'flag', attributes: {}, children: true })).toBe('<flag>true</flag>')
   })
 })

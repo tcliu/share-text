@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
-  import { parseStructured } from '$lib/document-type-utils'
+  import { parseStructured, parseXmlStructure, serializeXmlStructure } from '$lib/document-type-utils'
   import type { PreviewProps } from '$lib/document-types'
   import StructureTree from './StructureTree.svelte'
   import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from './structure-value'
@@ -13,7 +13,7 @@
     | { status: 'ok'; value?: unknown }
 
   let state = $state<State>({ status: 'loading' })
-  let format: 'json' | 'yaml' | null = null
+  let format: 'json' | 'yaml' | 'xml' | null = null
 
   $effect(() => {
     let cancelled = false
@@ -47,7 +47,7 @@
       toast.error('Failed to serialize changes')
       return
     }
-    state = { status: 'ok', value: updated }
+    state = { status: 'ok', value: canonicalValue(updated, serialized) }
     onContentChange?.(serialized)
   }
 
@@ -60,8 +60,14 @@
       toast.error('Failed to serialize changes')
       return
     }
-    state = { status: 'ok', value: updated }
+    state = { status: 'ok', value: canonicalValue(updated, serialized) }
     onContentChange?.(serialized)
+  }
+
+  function canonicalValue(updated: unknown, serialized: string): unknown {
+    if (format !== 'xml') return updated
+    const reparsed = parseXmlStructure(serialized)
+    return reparsed.ok && reparsed.value !== undefined ? reparsed.value : updated
   }
 
   async function serialize(value: unknown): Promise<string | null> {
@@ -73,6 +79,9 @@
         console.warn('[StructurePreview] serialize json failed:', err)
         return null
       }
+    }
+    if (format === 'xml') {
+      return serializeXmlStructure(value)
     }
     try {
       const { stringify } = await import('yaml')

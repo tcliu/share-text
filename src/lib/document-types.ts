@@ -151,6 +151,7 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
       format: (text, indent) => Promise.resolve(formatXml(text, indent)),
     },
     actions: () => import('./components/TypeActions.svelte').then(m => m.default),
+    preview: () => import('./components/StructurePreview.svelte').then(m => m.default),
   },
   {
     value: 'yaml',

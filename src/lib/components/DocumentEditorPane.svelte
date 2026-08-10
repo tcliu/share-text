@@ -12,7 +12,8 @@
   import Chip from './Chip.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
-  import { usePreviewMode, SPLIT_MIN_PCT } from './use-preview-mode.svelte'
+  import { usePreviewMode } from './use-preview-mode.svelte'
+  import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '$lib/editor-preview-split'
   import { usePreviewContent } from './use-preview-content.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
 
@@ -372,8 +373,8 @@
     {#if previewState.previewMode === 'split' && previewState.showPreview}
       <Splitter
         value={previewState.editorWidthPct}
-        min={SPLIT_MIN_PCT}
-        max={100 - SPLIT_MIN_PCT}
+        min={EDITOR_PREVIEW_MIN_PCT}
+        max={EDITOR_PREVIEW_MAX_PCT}
         unit="%"
         onChange={(value: number) => (previewState.editorWidthPct = value)}
         ariaLabel="Resize editor and preview panes" />

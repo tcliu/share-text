@@ -87,6 +87,18 @@ describe('CsvPreview (custom grid)', () => {
     expect(headerCellVal.tagName).toBe('TH')
   })
 
+  it('does not loop when content does not round-trip (e.g. JSON shown in a CSV preview)', async () => {
+    const { rerender } = render(CsvPreview, { content: '{"name": "John", "age": 30}' })
+    let root = await screen.findByTestId('csv-preview')
+    expect(root).toBeTruthy()
+    await rerender({ content: 'a,b\n1,2' })
+    root = await screen.findByTestId('csv-preview')
+    expect(hasCellValue(root, '1')).toBe(true)
+    await rerender({ content: '{"nested": {"a": 1}, "list": [1, 2]}' })
+    root = await screen.findByTestId('csv-preview')
+    expect(root).toBeTruthy()
+  })
+
   it('keeps the header row sticky and uses single-edge borders (no overlap)', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
     const root = await screen.findByTestId('csv-preview')

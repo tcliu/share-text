@@ -161,4 +161,44 @@ describe('StructurePreview', () => {
 
     expect(onChange).not.toHaveBeenCalled()
   })
+
+  it('parses XML content into a node tree', async () => {
+    render(StructurePreview, { content: '<name id="7">Alice</name>' })
+    const root = await screen.findByTestId('structure-preview')
+    await vi.waitFor(() => expect(root.textContent).toContain('tag'))
+    expect(root.textContent).toContain('name')
+    expect(root.textContent).toContain('"Alice"')
+    // attributes stay collapsed by default
+    expect(root.textContent).not.toContain('id')
+  })
+
+  it('expands XML attributes when toggled', async () => {
+    render(StructurePreview, { content: '<name id="7">Alice</name>' })
+    const root = await screen.findByTestId('structure-preview')
+    await vi.waitFor(() => expect(root.textContent).toContain('"Alice"'))
+    const toggle = within(root).getByRole('button', { name: /expand attributes/i }) as HTMLButtonElement
+    await fireEvent.click(toggle)
+    await vi.waitFor(() => expect(root.textContent).toContain('id'))
+    expect(root.textContent).toContain('"7"')
+  })
+
+  it('edits XML text content and calls onContentChange with serialized XML', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '<name>Alice</name>', onContentChange: onChange })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'Alice')
+
+    const editBtn = within(root).getByRole('button', { name: 'Edit children' })
+    const row = editBtn.closest('div.group') as HTMLElement
+    expect(row).not.toBeNull()
+    await fireEvent.dblClick(row)
+
+    const input = root.querySelector('input') as HTMLInputElement
+    expect(input).not.toBeNull()
+    await fireEvent.input(input, { target: { value: 'Bob' } })
+    await fireEvent.keyDown(input, { key: 'Enter' })
+
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(onChange.mock.calls[0][0]).toBe('<name>Bob</name>')
+  })
 })
