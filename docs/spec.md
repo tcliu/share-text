@@ -11,13 +11,17 @@ synchronizes through a small fetch-based JSON API.
 ## Routing
 
 - `/` — empty-state page prompting the user to select or create a document.
+- `/new` — the new-document draft page. The load supplies `maxContentLength`;
+  the page manages its own draft (`share-text:draft:new`), validates on save,
+  creates the document, and navigates to `/{id}`.
 - `/{doc-id}` — the editor. `[id]/+page.server.ts` validates the id against the
   `^[0-9a-z]+$` key character set and throws a 404 when invalid or when
   the document does not exist; the page component renders server data, then
   re-fetches the document client-side on refresh.
-- `/api/documents` — `GET` returns summaries of the documents created by the
-  requesting client IP (`created_by`); `POST` creates a document (201) and
-  enforces the per-IP create limit.
+- `/api/documents` — `GET` returns paginated summaries (`limit`/`offset`,
+  `hasMore`) of the documents created by the requesting client IP
+  (`created_by`); `POST` creates a document (201) and enforces the per-IP create
+  limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, `documentType`, `tags`, or any combination thereof and returns
   the updated document; `DELETE` removes it (204). Validation failures return
@@ -30,7 +34,8 @@ synchronizes through a small fetch-based JSON API.
   their source; `PUT` accepts `{ settings: [{ key, value }] }` and updates or,
   when `value` is `null`, deletes the override (reverting to env/default).
 - `/api/admin/documents` — `GET` lists every document across all IPs with
-  search (`search`), creator filter (`by`), and pagination.
+  search (`search`, scoped to selected `search-keys`), creator filter (`by`),
+  pagination (`limit`/`offset`), and sorting (`sortBy`/`order`).
 - `/api/admin/documents/[id]` — `PUT` renames a document; `DELETE` removes it.
 
 - `/api/tags` — `GET` returns every distinct tag across all documents, with
@@ -44,12 +49,18 @@ synchronizes through a small fetch-based JSON API.
 - `src/lib/document-types.ts` is the type registry: each type entry provides a
   `label`, file `extension`, `mimeType`, `validate` function, optional
   `convertTo` specs, a lazy-loaded `actions` component for type-specific
-  toolbar buttons (Format / Convert), and an optional `preview` component
-  (markdown rendering via `marked`).
+  toolbar buttons (Format / Convert), and an optional lazily-loaded `preview`
+  component.
 - `src/lib/document-type-utils.ts` holds pure formatting, converting, and
-  validation functions (JSON/YAML parse/pretty-print, HTML/XML indent, CSV
-  dialect validation). Per-type language extensions are loaded lazily via
-  dynamic `import()` inside the definition to keep the initial bundle lean.
+  validation functions (JSON/YAML parse/pretty-print, HTML/XML indent and XML
+  DOM parse/serialize, CSV dialect validation via `csv-utils.ts`). Per-type
+  language extensions are loaded lazily via dynamic `import()` inside the
+  definition to keep the initial bundle lean.
+- Preview components are per-type lazy-loaded chunks rendered by
+  `PreviewPane.svelte`: `MarkdownPreview` (renders with `marked`),
+  `HtmlPreview` (renders the document in a sandboxed iframe),
+  `StructurePreview` (an editable tree for JSON/XML/YAML, see Editor), and
+  `CsvPreview` (a DataGrid spreadsheet).
 - Document create accepts an optional `documentType`; the PUT route validates
   the type. On save, the editor validates content against the type and rejects
   invalid content before sending the request.
@@ -70,6 +81,10 @@ synchronizes through a small fetch-based JSON API.
   `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,
   `created_at`/`updated_at`), the `idx_documents_updated_at` index, and the
   `app_config` key/value table that stores runtime property overrides.
+- Tags are normalized on write: trimmed, deduplicated case-insensitively,
+  sorted by name, with colors drawn from the fixed palette and same-family
+  colors avoided. The distinct tag list for `/api/tags` comes from a short-TTL
+  in-memory cache invalidated on document create/update/delete.
 - Document keys are `document_key_length` characters (default 6) from `0-9a-z`
   generated with rejection sampling over `crypto` random bytes; insert retries
   on unique-key collisions up to `MAX_KEY_ATTEMPTS` times. A document created
@@ -111,23 +126,43 @@ synchronizes through a small fetch-based JSON API.
   against SSR and storage/quota errors.
 - `share-text-context.ts` exposes a Svelte context through which the shell
   shares the document list, refresh/create/delete operations, a
-  selected-document refresh token, and editor dirty-state guard registration.
+  selected-document refresh token, editor dirty-state guard registration, and
+  editor-focus registration (the shell focuses the active editor on navigation).
 - `(browser)/+layout.svelte` is the shell: it owns the document list (loaded in
   pages), runs `beforeNavigate` through the dirty guard, and hosts the discard
   and delete confirm dialogs. Deleting the currently selected document navigates
   to `/`.
+- `(browser)/new/+page.svelte` drives the new-document draft page: it keeps
+  name/content/type in `$state`, persists a `share-text:draft:new` draft, and
+  creates the document through the API client on save.
+- `use-preview-mode.svelte.ts` holds the editor/split/preview mode tri-state,
+  reading and writing it to the URL query string (`?preview=true`,
+  `?editor=false`); `editor-preview-split.ts` mirrors and persists the editor
+  percentage to `localStorage`; `use-preview-content.svelte.ts` mirrors content
+  into a debounced value (immediate on document switch) so heavy previews do not
+  re-render on every keystroke.
 
 ## Editor
 
 - The editor is CodeMirror 6, lazy-loaded via `LazyCodeEditor` (dynamic
   `import()`) so the initial route bundle stays small. A transaction filter caps
   document length at `maxContentLength`.
-- Markdown documents support a split preview pane via `PreviewPane.svelte` which
-  renders the source with `marked`. The split ratio is controlled by a draggable
-  `Splitter`.
-- The `CodeEditor.svelte` wrapper manages the CodeMirror instance lifecycle
-  (create, reconfigure on type change, destroy on unmount) and wires per-type
-  language extensions from the type registry.
+- `DocumentEditorPane.svelte` orchestrates the toolbar, CodeMirror editor, and
+  preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
+  lifecycle (create, reconfigure on type change, destroy on unmount) and wires
+  per-type language extensions from the type registry.
+- Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
+  `usePreviewMode` cycles editor/split/preview modes through the URL,
+  `usePreviewContent` debounces the source, and a `Splitter` in percentage mode
+  divides the panes with the ratio persisted via `editor-preview-split.ts`.
+- CSV previews use a spreadsheet grid: `DataGrid.svelte` renders
+  `use-grid-model.svelte.ts` (per-cell committed flags, self-echo
+  reconciliation, bounded undo/redo history) with `use-grid-selection`,
+  `use-grid-clipboard`, and `use-grid-autoscroll` composables; `CsvPreview`
+  wires parsing/serialization via `csv-utils.ts` (papaparse).
+- Structured previews use `StructurePreview.svelte` (parse/serialize JSON, YAML,
+  or XML) rendering an editable `StructureTree`/`StructureNode`; edits are
+  patched immutably via `structure-value.ts` and serialized back to content.
 
 ## Concurrency
 

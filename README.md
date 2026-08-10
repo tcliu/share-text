@@ -69,9 +69,11 @@ Keys:
 ## Database Setup
 
 The committed schema lives in `sql/schema.sql` (portable across Postgres and
-SQLite, idempotent): the `documents` table plus its `updated_at` index. Each row
-has an internal auto-incrementing `id` (sequence) and a public six-character
-`key` (`0-9a-z`) that identifies the document in URLs.
+SQLite, idempotent): the `documents` table (with its `updated_at` index and a
+JSON `tags` column) plus the `app_config` key/value table that stores runtime
+property overrides. Each row has an internal auto-incrementing `id` (sequence)
+and a public `key` (`0-9a-z`, default six characters) that identifies the
+document in URLs.
 
 ```bash
 npm run schema:apply        # applies to the dev SQLite database

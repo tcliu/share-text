@@ -24,9 +24,10 @@ The page is split into two vertical panes.
     place with a case-insensitive name substring; with an empty query every
     loaded document is shown.
   - A scrollable list of documents, each row a link to `/{doc-id}`. The row
-    matching the current URL is highlighted. Rows show the document name, a
-    non-text type chip, tag chips, and a **Delete** icon button (with tooltip).
-  - Rows use a small font (`text-[13px]`).
+    matching the current URL is highlighted. Rows show the document name (with
+    a copy-on-hover button), a non-text type chip, and a **Delete** icon button
+    (with tooltip).
+  - Rows use a small font.
   - Single-click navigates to the document.
   - The list loads more documents via infinite scroll when scrolling near the
     bottom.
@@ -38,11 +39,11 @@ The page is split into two vertical panes.
   - When a document is selected (`/{doc-id}`), it shows:
     - a header row with the editable document name, a document type selector
       dropdown, and visible tag chips on the left, and a toolbar on the right
-      with icon buttons (all with tooltips): type-specific **Format**/convert
-      actions, **Preview** toggle (markdown), **Copy**, **Clone**, **Upload**,
+      with icon buttons (all with tooltips): a **Preview** mode toggle,
+      type-specific **Format**/convert actions, **Copy**, **Clone**, **Upload**,
       **Export**, **Reset**, **Tags**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
-      split with a markdown preview pane),
+      split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
       indicator, and character count (with limit).
 
@@ -77,16 +78,27 @@ The page is split into two vertical panes.
 - When a document is opened, the stored draft (if any) is restored as the
   editor content; the dirty state reflects the difference from the server
   snapshot, so unsaved edits still appear as unsaved after a reload.
+- A new, unsaved document drafted on `/new` uses the same mechanism under a
+  reserved key (`share-text:draft:new`).
 - Drafts of deleted documents are removed.
+
+## New Document
+
+- **New** in the left-pane header opens a dedicated `/new` page for drafting a
+  brand-new document. It starts with the name **Untitled** and an empty editor;
+  saving validates and creates the document, then navigates to it.
+- The draft is restored on reload; **Reset** discards it and clears the draft.
+- The toolbar disables **Clone** and hides **Tags** while drafting a new
+  document. Leaving the page with unsaved edits goes through the same discard
+  guard.
 
 ## Renaming
 
-- Renaming is available in both panes.
-- A pencil (edit) icon sits next to the displayed name in the editor header and
-  in each left-pane row; double-clicking the name also starts a rename. Either
-  way the name becomes a text box, pre-filled and auto-focused.
-- In the left pane, a single click still navigates; the navigation is deferred
-  briefly so a double click is not treated as navigation.
+- Renaming is available in the editor header and in the admin **Documents**
+  tab. It is not available from the left-pane rows.
+- In the editor header, a pencil (edit) icon appears next to the name on hover;
+  double-clicking the name also starts a rename. Either way the name becomes a
+  text box, pre-filled and auto-focused.
 - Enter or blur commits the new name immediately with a `PUT { name }`; Escape
   cancels. Empty or unchanged names cancel instead of saving.
 - The header and the left-pane row update in place. Renaming never affects
@@ -111,19 +123,39 @@ The page is split into two vertical panes.
 
 ### Preview
 
-- Documents with a **Markdown** type show a **Preview** toggle button in the
-  toolbar. When activated, the editor splits horizontally into two panes: the
-  CodeMirror source on the left and a rendered markdown preview on the right.
+- Types with a preview component (**Markdown**, **HTML**, **JSON**, **XML**,
+  **YAML**, **CSV**) show a **Preview** button in the toolbar that cycles
+  through three modes: **editor**, **split**, and **preview-only**. Split shows
+  the CodeMirror source and the rendered preview side by side; preview-only
+  hides the editor entirely.
+- The active mode is encoded in the URL query string (`?preview=true`,
+  `?editor=false`), so reloading or sharing the link keeps the mode.
+- **Markdown** renders with `marked` into a sandboxed iframe; **HTML** renders
+  the document directly in a sandboxed iframe.
 - Structured types (**JSON**, **XML**, **YAML**) preview as an editable
-  structure tree; CSV previews as a spreadsheet-style grid; **HTML** previews as
-  a rendered document. The split ratio is adjustable via a draggable handle.
-  Toggling preview off restores the full-width editor.
+  structure tree: double-clicking (or using the inline edit icon on) a value
+  opens an in-place input, and double-clicking a key renames it; `Enter`
+  commits, `Escape` cancels, and values can be copied.
+- **CSV** previews as an editable spreadsheet grid (see **CSV Grid** below).
+
+### CSV Grid
+
+- A **CSV** document previews as a spreadsheet-style grid. Arrow navigation past
+  the last row or column appends a new (empty) row/column that only appears in
+  the serialized document once a value is typed into it, so pure navigation
+  never writes trailing empty cells back to the CSV.
+- The grid toolbar offers insert/delete row and column controls, a header-row
+  toggle (the first row can act as a header), a trim action that drops empty
+  trailing rows/columns, and **Undo**/**Redo** (`Ctrl+Z`, `Ctrl+Shift+Z` /
+  `Ctrl+Y`).
+- `Tab` and `Enter` move between cells, `Escape` cancels the current edit, and a
+  multi-cell clipboard paste fills cells from the anchor. Edits feed back into
+  the document content and participate in the normal dirty/save flow.
 
 ## Tags
 
 - Tags are free-text labels associated with a document, displayed as colored
-  chips next to the document name in both the left-pane rows and the editor
-  header.
+  chips next to the document name in the editor header.
 - A **Tags** button in the editor toolbar opens the **Tags dialog**, where the
   user can add new tags (typing or selecting from existing tags across all
   documents), remove tags, or reorder them.
@@ -204,10 +236,11 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   `/api/admin/*` routes except `login` and `session` require a valid session.
 - The dialog has two tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
-    `max_content_length`). Each row shows its effective value and source
-    (`Saved`/`Environment`/`Default`), an inline editor, and a revert button
-    that deletes the database override. **Apply** persists changes, **Reload**
-    re-fetches, **Reset** restores the draft to the current values.
+    `max_content_length`, `document_key_length`). Each row shows its effective
+    value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
+    revert button that deletes the database override. **Apply** persists
+    changes, **Reload** re-fetches, **Reset** restores the draft to the current
+    values.
   - **Documents** — every document across all IPs with search, sortable columns,
     pagination, row-selection with bulk delete, inline rename, and single-row
     delete (behind a confirm dialog).
