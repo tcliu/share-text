@@ -53,6 +53,35 @@
   const clipboard = createGridClipboard()
   const selState = $state(createInitialSelectionState())
   const sel = createGridSelection({ model, focus, clipboard, state: selState })
+
+  let historyState = $state({ canUndo: false, canRedo: false })
+  $effect(() => {
+    return model.onHistory(state => {
+      historyState = state
+    })
+  })
+
+  function restoreFocusAfterHistoryChange() {
+    const cell = sel.selectedCell
+    tick().then(() => {
+      if (cell && model.rows[cell.ri]?.cells[cell.ci]) focus.cellBox(cell.ri, cell.ci)
+    })
+  }
+
+  function handleHistoryKeydown(event: KeyboardEvent) {
+    if (!(event.ctrlKey || event.metaKey)) return
+    const key = event.key.toLowerCase()
+    if (key === 'z') {
+      event.preventDefault()
+      if (event.shiftKey) model.redo()
+      else model.undo()
+      restoreFocusAfterHistoryChange()
+    } else if (key === 'y') {
+      event.preventDefault()
+      model.redo()
+      restoreFocusAfterHistoryChange()
+    }
+  }
   const autoScroll = createAutoScroll({
     getContainer: () => gridContainer,
     isDragging: sel.isDragging,
@@ -136,7 +165,7 @@
 <svelte:window onmouseup={handleWindowMouseUp} onmousemove={autoScroll.onWindowMouseMove} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div data-testid={testId} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
+<div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-1">
       <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
@@ -299,6 +328,52 @@
             <path d="M3 8h14M8 3v14" />
             <path d="M9 10h4" />
             <path d="M12 8l2 2-2 2" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel="Undo"
+        tooltip="Undo (Ctrl+Z)"
+        onClick={() => {
+          model.undo()
+          restoreFocusAfterHistoryChange()
+        }}
+        disabled={!historyState.canUndo}>
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel="Redo"
+        tooltip="Redo (Ctrl+Shift+Z)"
+        onClick={() => {
+          model.redo()
+          restoreFocusAfterHistoryChange()
+        }}
+        disabled={!historyState.canRedo}>
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
           </svg>
         {/snippet}
       </Button>

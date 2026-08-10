@@ -409,4 +409,87 @@ describe('CsvPreview (custom grid)', () => {
     await fireEvent.blur(input)
     expect(counter(root)).toBe('2 rows · 2 columns')
   })
+
+  it('undo and redo toolbar buttons are disabled without history', async () => {
+    render(CsvPreview, { content: 'name,age\nAlice,30' })
+    const root = await screen.findByTestId('csv-preview')
+    const undoButton = within(root).getByRole('button', { name: 'Undo' }) as HTMLButtonElement
+    const redoButton = within(root).getByRole('button', { name: 'Redo' }) as HTMLButtonElement
+    expect(undoButton.disabled).toBe(true)
+    expect(redoButton.disabled).toBe(true)
+  })
+
+  it('undo button reverts a cell edit and redo reapplies it', async () => {
+    const onChange = vi.fn()
+    render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
+    const root = await screen.findByTestId('csv-preview')
+    const input = cellInput(root, 'Alice')
+    input.focus()
+    await fireEvent.input(input, { target: { value: 'Alicia' } })
+    await fireEvent.blur(input)
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+
+    const undoButton = within(root).getByRole('button', { name: 'Undo' }) as HTMLButtonElement
+    expect(undoButton.disabled).toBe(false)
+    await fireEvent.click(undoButton)
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alice')).toBe(true))
+    expect(hasCellValue(root, 'Alicia')).toBe(false)
+
+    const redoButton = within(root).getByRole('button', { name: 'Redo' }) as HTMLButtonElement
+    expect(redoButton.disabled).toBe(false)
+    await fireEvent.click(redoButton)
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+    expect(hasCellValue(root, 'Alice')).toBe(false)
+  })
+
+  it('undoes row inserts through the undo button', async () => {
+    const onChange = vi.fn()
+    render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
+    const root = await screen.findByTestId('csv-preview')
+    await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
+    await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
+
+    await fireEvent.click(within(root).getByRole('button', { name: 'Undo' }))
+    await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 2 columns'))
+  })
+
+  it('supports Ctrl+Z undo and Ctrl+Shift+Z redo', async () => {
+    const onChange = vi.fn()
+    render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
+    const root = await screen.findByTestId('csv-preview')
+    const input = cellInput(root, 'Alice')
+    input.focus()
+    await fireEvent.input(input, { target: { value: 'Alicia' } })
+    await fireEvent.blur(input)
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+
+    await fireEvent.keyDown(root, { key: 'z', ctrlKey: true })
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alice')).toBe(true))
+
+    await fireEvent.keyDown(root, { key: 'Z', ctrlKey: true, shiftKey: true })
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+  })
+
+  it('redo via Ctrl+Shift+Z works after undo rebuilt the grid and dropped focus', async () => {
+    const onChange = vi.fn()
+    render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
+    const root = await screen.findByTestId('csv-preview')
+    const input = cellInput(root, 'Alice')
+    input.focus()
+    await fireEvent.input(input, { target: { value: 'Alicia' } })
+    await fireEvent.blur(input)
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+
+    // A real keydown lands on the focused input and bubbles to the grid.
+    const undoInput = cellInput(root, 'Alicia')
+    undoInput.focus()
+    await fireEvent.keyDown(undoInput, { key: 'z', ctrlKey: true })
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alice')).toBe(true))
+
+    // Undo rebuilt every row/cell (new ids), so focus must be restored onto the
+    // grid; the next keydown goes to the active element (the cell box).
+    expect((document.activeElement as HTMLElement | null)?.tagName).toBe('TD')
+    await fireEvent.keyDown(document.activeElement as HTMLElement, { key: 'Z', ctrlKey: true, shiftKey: true })
+    await vi.waitFor(() => expect(hasCellValue(root, 'Alicia')).toBe(true))
+  })
 })

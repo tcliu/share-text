@@ -9,11 +9,20 @@ interface Row {
   cells: Cell[]
 }
 
+export interface HistoryState {
+  canUndo: boolean
+  canRedo: boolean
+}
+
+export type HistoryListener = (state: HistoryState) => void
+
 export interface GridModelOptions {
   getValue: () => string[][]
   getHeaders: () => boolean
   onChange?: (rows: string[][]) => void
 }
+
+const MAX_HISTORY = 100
 
 export function createGridModel(options: GridModelOptions) {
   let cellId = 0
@@ -28,6 +37,34 @@ export function createGridModel(options: GridModelOptions) {
   let lastValue: string[][] = []
   let pending = false
   let commitTimer: ReturnType<typeof setTimeout> | null = null
+
+  let undoStack = $state<string[][][]>([])
+  let redoStack = $state<string[][][]>([])
+  const historyListeners = new Set<HistoryListener>()
+
+  function currentMatrix(): string[][] {
+    return rows.map(r => r.cells.map(c => c.value))
+  }
+
+  function emitHistory() {
+    const state: HistoryState = { canUndo: undoStack.length > 0, canRedo: redoStack.length > 0 }
+    for (const listener of [...historyListeners]) listener(state)
+  }
+
+  function onHistory(listener: HistoryListener): () => void {
+    historyListeners.add(listener)
+    listener({ canUndo: undoStack.length > 0, canRedo: redoStack.length > 0 })
+    return () => historyListeners.delete(listener)
+  }
+
+  function resetHistory() {
+    undoStack = []
+    redoStack = []
+    emitHistory()
+  }
+
+  const canUndo = $derived(undoStack.length > 0)
+  const canRedo = $derived(redoStack.length > 0)
 
   const columnCount = $derived(rows.length ? Math.max(...rows.map(r => r.cells.length)) : 0)
   const rowCount = $derived(rows.length)
@@ -77,6 +114,7 @@ export function createGridModel(options: GridModelOptions) {
     rows = input.map(r => ({ id: ++rowId, cells: r.map(v => newCell(v)) }))
     normalize()
     lastValue = input
+    resetHistory()
   })
 
   $effect(() => {
@@ -86,11 +124,54 @@ export function createGridModel(options: GridModelOptions) {
     }
   })
 
+  let suppressHistory = false
+
   function commit() {
     const matrix = rows.map(r => r.cells.map(c => c.value))
+    if (!suppressHistory && !matrixEqual(matrix, lastValue)) {
+      pushUndo(lastValue)
+    }
     lastValue = matrix
     pending = false
     options.onChange?.(matrix)
+  }
+
+  function pushUndo(snapshot: string[][]) {
+    const copy = snapshot.map(r => r.slice())
+    const top = undoStack[undoStack.length - 1]
+    if (top && matrixEqual(top, copy)) return
+    undoStack.push(copy)
+    if (undoStack.length > MAX_HISTORY) undoStack.shift()
+    redoStack = []
+    emitHistory()
+  }
+
+  function applySnapshot(snapshot: string[][]) {
+    suppressHistory = true
+    rows = snapshot.map(r => ({ id: ++rowId, cells: r.map(v => newCell(v)) }))
+    normalize()
+    commit()
+    suppressHistory = false
+  }
+
+  function undo(): boolean {
+    flushCommit()
+    const snapshot = undoStack.pop()
+    if (!snapshot) return false
+    redoStack.push(currentMatrix())
+    applySnapshot(snapshot)
+    emitHistory()
+    return true
+  }
+
+  function redo(): boolean {
+    flushCommit()
+    const snapshot = redoStack.pop()
+    if (!snapshot) return false
+    undoStack.push(currentMatrix())
+    applySnapshot(snapshot)
+    emitHistory()
+    return true
   }
 
   function scheduleCommit() {
@@ -286,6 +367,15 @@ export function createGridModel(options: GridModelOptions) {
     scheduleCommit,
     flushCommit,
     commitImmediate,
+    undo,
+    redo,
+    onHistory,
+    get canUndo() {
+      return canUndo
+    },
+    get canRedo() {
+      return canRedo
+    },
     matrix(): string[][] {
       return rows.map(r => r.cells.map(c => c.value))
     },
