@@ -5,7 +5,7 @@
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
+  import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
   import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
 
@@ -64,7 +64,7 @@
       draftTimer = null
     }
     if (currentId && dirty) {
-      saveDraft(currentId, content)
+      saveDraft(currentId, content, docType)
     }
   }
 
@@ -82,7 +82,7 @@
     draftTimer = setTimeout(() => {
       draftTimer = null
       if (currentId && dirty) {
-        saveDraft(currentId, content)
+        saveDraft(currentId, content, docType)
       }
     }, 400)
   })
@@ -129,7 +129,7 @@
     documentTags = document.tags ?? []
     savedContent = document.content
     content = loadDraft(document.id) ?? document.content
-    docType = document.documentType
+    docType = loadDraftDocType(document.id) ?? document.documentType
   })
 
   $effect(() => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
+import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
 
 describe('document-drafts localStorage helpers', () => {
   beforeEach(() => {
@@ -42,6 +42,23 @@ describe('document-drafts localStorage helpers', () => {
   it('stores an empty string draft', () => {
     saveDraft('a', '')
     expect(loadDraft('a')).toBe('')
+  })
+
+  it('saves and loads the document type with a draft', () => {
+    saveDraft('a', 'hello world', 'json')
+    expect(loadDraft('a')).toBe('hello world')
+    expect(loadDraftDocType('a')).toBe('json')
+  })
+
+  it('omits the document type when none was saved', () => {
+    saveDraft('a', 'hello world')
+    expect(loadDraftDocType('a')).toBeNull()
+  })
+
+  it('loads a legacy plain-string draft as content only', () => {
+    localStorage.setItem('share-text:draft:legacy', 'plain content')
+    expect(loadDraft('legacy')).toBe('plain content')
+    expect(loadDraftDocType('legacy')).toBeNull()
   })
 
   it('falls back to in-memory storage when localStorage.setItem throws', () => {

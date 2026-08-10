@@ -5,7 +5,7 @@
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, saveDraft } from '$lib/document-drafts'
+  import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
 
   let { data }: PageProps = $props()
@@ -42,7 +42,7 @@
       draftTimer = null
     }
     if (dirty) {
-      saveDraft(DRAFT_ID, content)
+      saveDraft(DRAFT_ID, content, docType)
     }
   }
 
@@ -59,7 +59,7 @@
     draftTimer = setTimeout(() => {
       draftTimer = null
       if (dirty) {
-        saveDraft(DRAFT_ID, content)
+        saveDraft(DRAFT_ID, content, docType)
       }
     }, 400)
   })
@@ -70,6 +70,10 @@
     const draft = loadDraft(DRAFT_ID)
     if (draft !== null && draft !== content) {
       content = draft
+    }
+    const draftType = loadDraftDocType(DRAFT_ID)
+    if (draftType !== null) {
+      docType = draftType
     }
   })
 

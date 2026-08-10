@@ -5,6 +5,7 @@
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
+  import { search, searchKeymap } from '@codemirror/search'
   import { githubDark } from '@uiw/codemirror-theme-github'
   import { getDocumentType } from '$lib/document-types'
 
@@ -49,6 +50,7 @@
       ...languageExtensions,
       EditorView.editable.of(editable),
       lineNumbers(),
+      search({ top: true }),
       history(),
       bracketMatching(),
       closeBrackets(),
@@ -121,6 +123,7 @@
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...historyKeymap,
+        ...searchKeymap,
       ]),
     ]
   }
