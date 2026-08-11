@@ -536,7 +536,7 @@
           ariaLabel="Insert column before"
           tooltip="Insert column before"
           onClick={() => sel.insertColumnAt(sel.actionCol, true)}
-          disabled={selState.selectedCols.size === 0}>
+          disabled={sel.colInsertDisabled}>
           {#snippet icon()}
             <svg
               viewBox="0 0 20 20"

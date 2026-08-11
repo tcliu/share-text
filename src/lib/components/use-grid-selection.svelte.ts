@@ -78,6 +78,10 @@ export function createGridSelection(opts: {
     s.selectedRows.size === 0 && (s.selectedCell === null || (model.headers && s.selectedCell.ri === 0)),
   )
 
+  const colInsertDisabled = $derived(
+    s.selectedCols.size === 0 && s.selectedCell === null,
+  )
+
   const highlightKeys = $derived.by(() => {
     const keys = new Set(s.selectedSet)
     if (s.selectedCell) keys.add(keyOf(s.selectedCell.ri, s.selectedCell.ci))
@@ -740,6 +744,7 @@ export function createGridSelection(opts: {
     get actionRow() { return actionRow },
     get actionCol() { return actionCol },
     get rowInsertDisabled() { return rowInsertDisabled },
+    get colInsertDisabled() { return colInsertDisabled },
     get highlightKeys() { return highlightKeys },
     get isDragging() { return isDragging },
     isCellSelected,
