@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
+import { clearDraft, loadDraft, loadDraftDocType, loadDraftName, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
 
 describe('document-drafts localStorage helpers', () => {
   beforeEach(() => {
@@ -53,6 +53,20 @@ describe('document-drafts localStorage helpers', () => {
   it('omits the document type when none was saved', () => {
     saveDraft('a', 'hello world')
     expect(loadDraftDocType('a')).toBeNull()
+  })
+
+  it('saves and loads the name with a draft', () => {
+    saveDraft('a', 'hello world', 'json', 'My Doc (copy)')
+    expect(loadDraftName('a')).toBe('My Doc (copy)')
+  })
+
+  it('omits the name when none was saved', () => {
+    saveDraft('a', 'hello world')
+    expect(loadDraftName('a')).toBeNull()
+  })
+
+  it('exposes the draft id used for the unsaved new document', () => {
+    expect(NEW_DOCUMENT_DRAFT_ID).toBe('new')
   })
 
   it('loads a legacy plain-string draft as content only', () => {

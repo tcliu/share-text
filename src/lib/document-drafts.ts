@@ -2,9 +2,12 @@ const STORAGE_KEY_PREFIX = 'share-text:draft:'
 const memoryDrafts = new Map<string, DraftData>()
 const MAX_MEMORY_DRAFTS = 50
 
+export const NEW_DOCUMENT_DRAFT_ID = 'new'
+
 interface DraftData {
   content: string
   docType?: string
+  name?: string
 }
 
 function pruneMemoryDrafts() {
@@ -26,12 +29,16 @@ function deserializeDraft(raw: string): DraftData | null {
   try {
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && typeof parsed.content === 'string') {
-      return { content: parsed.content, docType: typeof parsed.docType === 'string' ? parsed.docType : undefined }
+      return {
+        content: parsed.content,
+        docType: typeof parsed.docType === 'string' ? parsed.docType : undefined,
+        name: typeof parsed.name === 'string' ? parsed.name : undefined,
+      }
     }
   } catch {
     // not JSON; treat as legacy plain content
   }
-  return { content: raw, docType: undefined }
+  return { content: raw, docType: undefined, name: undefined }
 }
 
 function readDraft(id: string): DraftData | null {
@@ -58,8 +65,12 @@ export function loadDraftDocType(id: string): string | null {
   return readDraft(id)?.docType ?? null
 }
 
-export function saveDraft(id: string, content: string, docType?: string) {
-  const draft: DraftData = { content, docType }
+export function loadDraftName(id: string): string | null {
+  return readDraft(id)?.name ?? null
+}
+
+export function saveDraft(id: string, content: string, docType?: string, name?: string) {
+  const draft: DraftData = { content, docType, name }
   if (typeof localStorage === 'undefined') {
     memoryDrafts.set(id, draft)
     pruneMemoryDrafts()
