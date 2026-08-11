@@ -357,7 +357,7 @@
     class="mt-3 flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500">
     {#if !previewState.previewOnly}
       <div
-        style={previewState.previewMode === 'split' ? `flex-basis: ${previewState.editorWidthPct}%` : 'flex: 1'}
+        style={previewState.previewMode === 'split' && previewState.showPreview ? `flex-basis: ${previewState.editorWidthPct}%` : 'flex: 1'}
         class="min-w-0 overflow-hidden">
         <LazyCodeEditor
           bind:this={editorRef}
