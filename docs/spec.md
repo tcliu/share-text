@@ -19,9 +19,11 @@ synchronizes through a small fetch-based JSON API.
   the document does not exist; the page component renders server data, then
   re-fetches the document client-side on refresh.
 - `/api/documents` — `GET` returns paginated summaries (`limit`/`offset`,
-  `hasMore`) of the documents created by the requesting client IP
-  (`created_by`); `POST` creates a document (201) and enforces the per-IP create
-  limit.
+  `hasMore`) of every document across all client IPs, with an optional
+  server-side search (`search`, scoped to `search-keys`); each summary carries
+  an `owned` flag set when `created_by` matches the requesting client IP (used
+  by the UI to gate the row delete button). `POST` creates a document (201) and
+  enforces the per-IP create limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, `documentType`, `tags`, or any combination thereof and returns
   the updated document; `DELETE` removes it (204). Validation failures return

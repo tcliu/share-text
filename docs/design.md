@@ -17,20 +17,22 @@ The page is split into two vertical panes.
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
     document**, and **Refresh** icon buttons (all with tooltips).
-  - The pane lists the documents created by the current client IP, most recently
-    edited first. New documents are added to the list automatically. Documents
-    created by other IPs stay reachable by their `/{doc-id}` URL.
-  - A search box below the header (with a clear button) filters the list in
-    place with a case-insensitive name substring; with an empty query every
-    loaded document is shown.
+  - The pane lists all shared documents, most recently edited first. New
+    documents are added to the list automatically.
+  - A search box below the header (with a clear button) searches the whole
+    document store server-side with a short debounce (400 ms), matching document
+    name, tags, or id with a case-insensitive substring; with an empty query the
+    full list is shown.
   - A scrollable list of documents, each row a link to `/{doc-id}`. The row
     matching the current URL is highlighted. Rows show the document name (with
-    a copy-on-hover button), a non-text type chip, and a **Delete** icon button
-    (with tooltip).
+    a copy-on-hover button), a non-text type chip, and — only on rows created by
+    the current client IP — a **Delete** icon button (with tooltip). The delete
+    guard is a UI convenience only: the underlying API remains open to any
+    visitor, and the admin **Documents** tab can delete any document.
   - Rows use a small font.
   - Single-click navigates to the document.
   - The list loads more documents via infinite scroll when scrolling near the
-    bottom.
+    bottom, both for the full list and for active search results.
   - When collapsed, the pane shrinks to a thin rail with a **Show document
     list** icon button that restores it.
 - **Right pane: editor**
@@ -226,11 +228,10 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 ## Shared Editing Model
 
-- The left pane lists the documents created by the current client IP, most
-  recently edited first; documents created by other IPs are reached by URL.
-- **Refresh** re-fetches the current IP's document set and the selected document
-  so the search box and editor reflect changes made by other users. Documents
-  removed by others disappear from the list automatically.
+- The left pane lists all shared documents, most recently edited first.
+- **Refresh** re-fetches the full document set and the selected document so the
+  search box and editor reflect changes made by other users. Documents removed
+  by others disappear from the list automatically.
 
 ## Admin Dialog
 

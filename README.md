@@ -88,8 +88,16 @@ In `dev` the schema is also applied automatically when the server first starts.
 npm run dev
 ```
 
-Open `http://localhost:5173`. No `DATABASE_URL` is needed — documents are stored
-in a local SQLite file at `.data/share-text-dev.sqlite` (created on first run).
+Open `http://localhost:5173`. The left pane lists all shared documents, most
+recently edited first. The search box filters the whole document store
+server-side (by name, tag, or id) with a short debounce. Click a name to
+navigate to `/{doc-id}` and load that document's content into the editor. Click
+**New document** to create one; it is added to the list automatically.
+The row delete button appears only for documents created by your client IP (a
+UI convenience — the API itself is open to any visitor, and the admin
+**Documents** tab can delete any document).
+No `DATABASE_URL` is needed — documents are stored in a local SQLite file at
+`.data/share-text-dev.sqlite` (created on first run).
 
 ## Admin
 
