@@ -45,6 +45,7 @@
     "@types/node": "^24.10.1",
     "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.15.6",
+    "dotenv": "^17.4.2",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
