@@ -160,6 +160,49 @@ synchronizes through a small fetch-based JSON API.
   reconciliation, bounded undo/redo history) with `use-grid-selection`,
   `use-grid-clipboard`, and `use-grid-autoscroll` composables; `CsvPreview`
   wires parsing/serialization via `csv-utils.ts` (papaparse).
+
+### DataGrid Column Resize
+
+`DataGrid` supports per-column width control. Its immediate consumer is the
+Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
+
+- **Width model.** `columnWidths` is `$state`, one entry per data column,
+  `null` meaning auto-width (the `min-w-32` fallback). As soon as it becomes
+  non-empty, `managedWidths` switches the table to `table-layout: fixed`, emits
+  a sized `<colgroup>`, and pins the table `style.width` to `totalWidth`
+  (36px row-number column plus the data columns), so each sized column keeps
+  exactly its pixel width. Without explicit widths the table stays `w-full`
+  with auto layout.
+- **`initialColumnWidths` resolution.** Each entry is `'30%'` (resolved against
+  the container `clientWidth`), `'200'` (px/bare number, default 128), or
+  omitted. Non-last columns are clamped to a 60px minimum; the last column
+  absorbs the exact remainder, so on first layout the table's border box fills
+  the container. Because the table's outer left edge is a 1px `border-l`,
+  `resolveInitialWidths` computes `available` as `clientWidth − 36 − 1`
+  (`TABLE_LEFT_BORDER`). Percentage widths are re-resolved through a
+  `ResizeObserver` on container resize.
+- **Making an auto-width grid measured.** When a grid built with auto-width
+  columns first starts a resize, `startColumnResize` snapshots every column's
+  rendered `offsetWidth` and captures existing `columnWidths`, handed to the
+  model until the grid structure changes.
+- **Splitters.** Every column-selector header cell (first `thead` row) hosts an
+  absolutely-positioned `w-1.5` handle (mid-column handles offset `right:-3px`
+  to straddle the boundary, the trailing one at `right:0`). Each data column is
+  therefore bounded by two splitters:
+  - A **mid-column** splitter re-partitions its two adjacent columns within a
+    fixed combined total (both kept ≥ 60px and above their partner's minimum),
+    so all outer and non-adjacent columns stay put.
+  - The **trailing** splitter moves the table's right edge. Expanding right
+    grows the table beyond the container and introduces a horizontal scrollbar;
+    shrinking left clamps at the width that exactly fills the container (the
+    live `gridContainer.clientWidth` minus the row-number column, 1px border,
+    and other columns), so the table never leaves empty space while the grid
+    needs no scrolling. The drag (mousemove/mouseup) is handled on
+    `svelte:window`, so interaction continues outside the container.
+- **Structural changes.** An effect keeps `columnWidths` aligned with the
+  current column count in managed mode (columns are inserted/removed via the
+  toolbar), reusing the stored width or the rendered cell width (default 128)
+  for new columns.
 - Structured previews use `StructurePreview.svelte` (parse/serialize JSON, YAML,
   or XML) rendering an editable `StructureTree`/`StructureNode`; edits are
   patched immutably via `structure-value.ts` and serialized back to content.

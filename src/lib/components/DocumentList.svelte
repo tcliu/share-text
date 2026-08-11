@@ -128,7 +128,7 @@
   style={width !== undefined ? `width: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
-      <span class="p-1 text-md font-semibold text-slate-200">ShareDoc</span>
+      <span class="p-1 text-md font-semibold text-slate-200">ShareText</span>
     </div>
     <div class="flex items-center gap-1">
       <Button size="sm" ariaLabel="Collapse document list" tooltip="Collapse document list" onClick={onToggleCollapse}>

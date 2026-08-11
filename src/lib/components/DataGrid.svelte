@@ -21,6 +21,11 @@
     // Hides the "Toggle header" toolbar button (e.g. Properties grids never
     // treat the first row as a header, so the toggle is meaningless there).
     hideHeaderToggle?: boolean
+    // Initial column widths. Percentage strings (e.g. ['30%', '70%']) are
+    // resolved against the available container width and recalculated on
+    // resize. px values (e.g. ['200', '400']) or bare numbers are used as-is.
+    // When omitted, columns use auto-width with min-w-32.
+    initialColumnWidths?: string[]
   }
 
   let {
@@ -31,6 +36,7 @@
     maxColumns,
     columnLabels,
     hideHeaderToggle = false,
+    initialColumnWidths,
   }: Props = $props()
 
   const model = createGridModel({
@@ -42,7 +48,58 @@
     maxColumns,
   })
 
+  const ROW_NUMBER_WIDTH = 36
+  const MIN_COLUMN_WIDTH = 60
+
+  // Column widths in pixels. null means auto-width (min-w-32 fallback).
+  let columnWidths = $state<(number | null)[]>([])
+
   let gridContainer: HTMLElement | null = null
+
+  let initializedWidths = false
+
+  // Resolve initialColumnWidths to per-column pixels. Every column (including
+  // the last) gets an explicit width; the last column absorbs the exact
+  // remainder of the available width so the table never overflows the
+  // container on initial render.
+  // The table carries a 1px border-l (the grid's outer left edge), so the
+  // columns sum to one pixel less than the container to keep the border box
+  // inside the scroll area.
+  const TABLE_LEFT_BORDER = 1
+  function resolveInitialWidths(): (number | null)[] {
+    const available = Math.max(
+      0,
+      (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
+    )
+    const widths: (number | null)[] = []
+    let sum = 0
+    for (let i = 0; i < model.columnCount; i++) {
+      const spec = initialColumnWidths?.[i]
+      let w: number
+      if (spec?.endsWith('%')) {
+        w = Math.round((parseFloat(spec) / 100) * available)
+      } else if (spec) {
+        w = parseFloat(spec) || 128
+      } else {
+        w = 128
+      }
+      if (i < model.columnCount - 1) {
+        const clamped = Math.max(MIN_COLUMN_WIDTH, w)
+        widths.push(clamped)
+        sum += clamped
+      } else {
+        widths.push(Math.max(MIN_COLUMN_WIDTH, available - sum))
+      }
+    }
+    return widths
+  }
+
+  $effect(() => {
+    if (!gridContainer || initializedWidths) return
+    initializedWidths = true
+    columnWidths = initialColumnWidths?.length ? resolveInitialWidths() : []
+  })
+
   let editSnapshot: { ri: number; ci: number; value: string; committed: boolean } = {
     ri: -1,
     ci: -1,
@@ -63,6 +120,15 @@
         if (input) {
           input.focus()
           input.setSelectionRange(input.value.length, input.value.length)
+        }
+      })
+    },
+    cellInputSelectAll(ri: number, ci: number) {
+      tick().then(() => {
+        const input = cellInputEl(ri, ci)
+        if (input) {
+          input.focus()
+          input.setSelectionRange(0, input.value.length)
         }
       })
     },
@@ -117,9 +183,139 @@
 
   $effect(() => () => autoScroll.stop())
 
+  // --- Column resize ---
+  //
+  // Each data column is bounded by two splitters. Dragging the splitter between
+  // columns ci and ci+1 re-partitions those two adjacent columns, keeping the
+  // outer splitters (and therefore all other columns) fixed. The splitter after
+  // the last column moves the table's right edge instead.
+
+  let resizingCol = $state<number | null>(null)
+  let resizeStartX = $state(0)
+  let resizeStartWidth = $state(0)
+  // Fixed combined width of the two adjacent columns being re-partitioned, or
+  // null when resizing the last column's right edge (table edge).
+  let resizeSiblingTotal = $state<number | null>(null)
+
+  function getColumnCellWidth(ci: number): number {
+    const cell = gridContainer?.querySelector<HTMLElement>(`[data-col-selector="${ci}"]`)
+    return cell?.offsetWidth ?? 128
+  }
+
+  function captureAllWidths(): (number | null)[] {
+    const widths: (number | null)[] = []
+    for (let i = 0; i < model.columnCount; i++) {
+      widths.push(columnWidths[i] ?? getColumnCellWidth(i))
+    }
+    return widths
+  }
+
+  function startColumnResize(event: MouseEvent, ci: number) {
+    event.preventDefault()
+    event.stopPropagation()
+    resizingCol = ci
+    resizeStartX = event.clientX
+    const widths = captureAllWidths()
+    resizeStartWidth = widths[ci] ?? 128
+    resizeSiblingTotal =
+      ci < model.columnCount - 1 ? (widths[ci] ?? 128) + (widths[ci + 1] ?? 128) : null
+    columnWidths = widths
+  }
+
+  function handleResizeMouseMove(event: MouseEvent) {
+    if (resizingCol === null) return
+    const diff = event.clientX - resizeStartX
+    if (resizeSiblingTotal != null) {
+      // Keep both adjacent columns above the minimum within their fixed total.
+      const newWidth = Math.max(
+        MIN_COLUMN_WIDTH,
+        Math.min(resizeSiblingTotal - MIN_COLUMN_WIDTH, resizeStartWidth + diff),
+      )
+      columnWidths[resizingCol] = newWidth
+      columnWidths[resizingCol + 1] = resizeSiblingTotal - newWidth
+    } else {
+      // The trailing splitter moves the table's right edge. Expanding freely
+      // grows the table beyond the container (introducing a horizontal
+      // scrollbar); shrinking stops once the table fits the container again,
+      // so the grid never leaves empty space when no scrolling is needed.
+      let newWidth = Math.max(MIN_COLUMN_WIDTH, resizeStartWidth + diff)
+      if (newWidth < resizeStartWidth && gridContainer) {
+        let others = 0
+        for (let i = 0; i < model.columnCount; i++) {
+          if (i !== resizingCol) others += columnWidths[i] ?? 128
+        }
+        const fillWidth = Math.max(
+          MIN_COLUMN_WIDTH,
+          gridContainer.clientWidth - TABLE_LEFT_BORDER - ROW_NUMBER_WIDTH - others,
+        )
+        newWidth = Math.max(newWidth, Math.min(fillWidth, resizeStartWidth))
+      }
+      columnWidths[resizingCol] = newWidth
+    }
+  }
+
+  function handleResizeMouseUp() {
+    resizingCol = null
+  }
+
+  // Recalculate %-based widths when container resizes.
+  $effect(() => {
+    const container = gridContainer
+    if (!container || !initialColumnWidths?.length) return
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      columnWidths = resolveInitialWidths()
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
+  })
+
+  // --- Column width style helpers ---
+
+  // True when any column has an explicit pixel width, switching the table to
+  // fixed layout so each sized column keeps its exact width.
+  const managedWidths = $derived(columnWidths.length > 0)
+
+  // Total table width: row-number column plus all data columns.
+  const totalWidth = $derived.by(() => {
+    let sum = ROW_NUMBER_WIDTH
+    for (let i = 0; i < model.columnCount; i++) {
+      sum += columnWidths[i] ?? 128
+    }
+    return sum
+  })
+
+  // Keep columnWidths aligned with the current column count whenever the grid
+  // structure changes in managed mode (e.g. columns inserted/removed).
+  $effect(() => {
+    const count = model.columnCount
+    if (columnWidths.length === 0 || columnWidths.length === count) return
+    const next: (number | null)[] = []
+    for (let i = 0; i < count; i++) {
+      next.push(columnWidths[i] ?? getColumnCellWidth(i) ?? 128)
+    }
+    columnWidths = next
+  })
+
+  function columnWidthStyle(ci: number): string {
+    const w = columnWidths[ci]
+    if (w == null) return ''
+    return `width:${w}px;min-width:${w}px;`
+  }
+
+  function cellStyles(ci: number, highlightStyle: string): string {
+    const ws = columnWidthStyle(ci)
+    if (!ws && !highlightStyle) return ''
+    const parts: string[] = []
+    if (ws) parts.push(ws)
+    if (highlightStyle) parts.push(highlightStyle)
+    return parts.join(';')
+  }
+
   function handleWindowMouseUp() {
     sel.endDrag()
     autoScroll.stop()
+    handleResizeMouseUp()
   }
 
   function handleInputFocus(ri: number, ci: number) {
@@ -189,9 +385,47 @@
   function handleTrim() {
     sel.trimSelected()
   }
+
+  // --- Sorting ---
+  //
+  // The column label row (topmost header row) sorts the data rows by the
+  // clicked column. Clicking the same column again toggles asc/desc; clicking
+  // a different column restarts at ascending. When a cell in the sort column is
+  // edited afterwards, the order is invalidated and the active sort indicator
+  // is hidden so the user can resort.
+
+  let sortColumn = $state<number | null>(null)
+  let sortDirection = $state<'asc' | 'desc'>('asc')
+  // Snapshot of the sort column's values captured when the sort was applied.
+  // Any change in that column clears the active sort indicator.
+  let sortSnapshot = $state<string[] | null>(null)
+
+  function columnValues(ci: number): string[] {
+    return model.rows.map(r => r.cells[ci]?.value ?? '')
+  }
+
+  $effect(() => {
+    const ci = sortColumn
+    const snapshot = sortSnapshot
+    if (ci == null || snapshot == null) return
+    const current = columnValues(ci)
+    const same = current.length === snapshot.length && current.every((v, i) => v === snapshot[i])
+    if (!same) {
+      sortColumn = null
+      sortDirection = 'asc'
+      sortSnapshot = null
+    }
+  })
+
+  function handleSortClick(ci: number, direction: 'asc' | 'desc' = 'asc') {
+    sortColumn = ci
+    sortDirection = direction
+    model.sortRows(ci, direction)
+    sortSnapshot = columnValues(ci)
+  }
 </script>
 
-<svelte:window onmouseup={handleWindowMouseUp} onmousemove={autoScroll.onWindowMouseMove} />
+<svelte:window onmouseup={handleWindowMouseUp} onmousemove={event => { autoScroll.onWindowMouseMove(event); handleResizeMouseMove(event) }} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
@@ -422,7 +656,20 @@
       aria-label="Spreadsheet"
       aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
       aria-colcount={model.columnCount}
-      class="w-full border-separate border-spacing-0 border-t border-l border-slate-800 text-sm">
+      class="border-separate border-spacing-0 border-t border-l border-slate-800 text-sm {managedWidths ? '' : 'w-full'}"
+      style={managedWidths ? `table-layout:fixed;width:${totalWidth}px;` : ''}>
+      {#if managedWidths}
+        <colgroup>
+          <col style="width:2.25rem;">
+          {#each Array.from({ length: model.columnCount }) as _, ci}
+            {#if columnWidths[ci] != null}
+              <col style="width:{columnWidths[ci]}px;">
+            {:else}
+              <col style="width:8rem;">
+            {/if}
+          {/each}
+        </colgroup>
+      {/if}
       {#if model.rowCount > 0}
         <thead>
           <tr aria-rowindex="1" class="sticky top-0 z-20 bg-slate-900">
@@ -431,22 +678,63 @@
               role="columnheader"
               aria-label="Select all"
               class="sticky left-0 top-0 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
+              style="min-width:2.25rem;max-width:2.25rem;"
               data-select-all
               tabindex="-1"
               onmousedown={sel.handleSelectAllMousedown}
               onkeydown={sel.handleSelectAllKeydown}></th>
             {#each Array.from({ length: model.columnCount }) as _, ci}
+              {@const isSortActive = sortColumn === ci}
+              {@const isSortAsc = isSortActive && sortDirection === 'asc'}
+              {@const isSortDesc = isSortActive && sortDirection === 'desc'}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <th
                 role="columnheader"
                 aria-colindex={ci + 1}
-                class={sel.columnSelectorClass(ci)}
+                aria-sort={isSortActive ? (isSortAsc ? 'ascending' : 'descending') : undefined}
+                class="{sel.columnSelectorClass(ci, ci === model.columnCount - 1)} group"
+                style="position:relative;{columnWidthStyle(ci)}"
                 data-col-selector={ci}
                 tabindex="-1"
                 onmousedown={event => sel.handleColumnSelectorMousedown(event, ci)}
                 onmouseenter={() => sel.handleColumnSelectorMouseOver(ci)}
                 onkeydown={event => sel.handleColumnSelectorKeydown(event, ci)}>
-                {columnLabels?.[ci] ?? columnLetter(ci)}
+                <span class="flex w-full items-center justify-center gap-1.5 text-center">
+                  <span>{columnLabels?.[ci] ?? columnLetter(ci)}</span>
+                  <span
+                    class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100">
+                    <button
+                      type="button"
+                      class="leading-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} ascending`}
+                      onmousedown={event => event.stopPropagation()}
+                      onclick={() => handleSortClick(ci, 'asc')}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
+                        <path d="M10 4l6 8H4l6-8Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="-mt-1 leading-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} descending`}
+                      onmousedown={event => event.stopPropagation()}
+                      onclick={() => handleSortClick(ci, 'desc')}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
+                        <path d="M10 16 4 8h12l-6 8Z" />
+                      </svg>
+                    </button>
+                  </span>
+                </span>
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <div
+                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-cyan-500/40"
+                  style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize column {ci + 1}"
+                  tabindex="-1"
+                  onmousedown={event => startColumnResize(event, ci)}
+                ></div>
               </th>
             {/each}
           </tr>
@@ -455,6 +743,7 @@
               <th
                 role="columnheader"
                 class="sticky left-0 top-6 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
+                style="min-width:2.25rem;max-width:2.25rem;"
               ></th>
               {#each model.rows[0].cells as cell, ci (cell.id)}
                 <th
@@ -466,9 +755,10 @@
                     0,
                     ci,
                   )}
-                  style={sel.rangeHighlightStyle(0, ci)}
+                  style={cellStyles(ci, sel.rangeHighlightStyle(0, ci))}
                   tabindex="-1"
                   onmousedown={event => sel.handleCellMousedown(event, 0, ci)}
+                  ondblclick={event => sel.handleCellDoubleClick(event, 0, ci)}
                   onmouseenter={() => sel.handleCellMouseOver(0, ci)}
                   onkeydown={event => sel.handleBoxKeydown(event, 0, ci)}
                   onpaste={event => handleBoxPaste(event, 0, ci)}>
@@ -517,9 +807,10 @@
                     actualRi,
                     ci,
                   )}
-                  style={sel.rangeHighlightStyle(actualRi, ci)}
+                  style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci))}
                   tabindex="-1"
                   onmousedown={event => sel.handleCellMousedown(event, actualRi, ci)}
+                  ondblclick={event => sel.handleCellDoubleClick(event, actualRi, ci)}
                   onmouseenter={() => sel.handleCellMouseOver(actualRi, ci)}
                   onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
                   onpaste={event => handleBoxPaste(event, actualRi, ci)}>

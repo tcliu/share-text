@@ -10,6 +10,7 @@ export interface SelectionFocusHooks {
   cellBox: (ri: number, ci: number) => void
   cellInput: (ri: number, ci: number) => void
   cellInputAtEnd: (ri: number, ci: number) => void
+  cellInputSelectAll: (ri: number, ci: number) => void
   startEdit: (ri: number, ci: number, value: string) => void
   rowSelector: (ri: number) => void
   columnSelector: (ci: number) => void
@@ -158,11 +159,15 @@ export function createGridSelection(opts: {
     const same = s.selectedCell?.ri === ri && s.selectedCell?.ci === ci
     if (same) {
       if (focus.isCellInputFocused(ri, ci)) {
-        event.preventDefault()
-        s.dragStart = { ri, ci }
-      } else {
-        focus.cellInput(ri, ci)
+        // Already editing: let the input behave like a normal text field so a
+        // click places the caret / drag selects text inside the cell.
+        return
       }
+      // A single click never enters edit mode; it keeps the box selection and
+      // enables drag-to-extend from the active cell. Editing starts on
+      // double-click via handleCellDoubleClick.
+      event.preventDefault()
+      s.dragStart = { ri, ci }
       return
     }
     event.preventDefault()
@@ -173,6 +178,23 @@ export function createGridSelection(opts: {
     model.pruneTrailingPendingRows(ri)
     model.pruneTrailingPendingColumns(ci)
     tick().then(() => focus.cellBox(ri, ci))
+  }
+
+  // Double-click enters edit mode like a spreadsheet: the first double-click
+  // places the cursor after the last character; a double-click while already
+  // editing selects the entire cell text.
+  function handleCellDoubleClick(event: MouseEvent, ri: number, ci: number) {
+    event.preventDefault()
+    s.selectedSet = new Set()
+    s.selectedRows = new Set()
+    s.selectedCols = new Set()
+    s.selectionAnchor = { ri, ci }
+    s.selectedCell = { ri, ci }
+    if (focus.isCellInputFocused(ri, ci)) {
+      focus.cellInputSelectAll(ri, ci)
+    } else {
+      focus.cellInputAtEnd(ri, ci)
+    }
   }
 
   function handleCellMouseOver(ri: number, ci: number) {
@@ -699,9 +721,10 @@ export function createGridSelection(opts: {
     return `sticky left-0 z-10 w-9 cursor-pointer border-b border-r border-b-slate-800 border-r-slate-500 p-0 text-right outline-none ${selected ? 'bg-slate-800' : bg}`
   }
 
-  function columnSelectorClass(ci: number): string {
+  function columnSelectorClass(ci: number, isLastColumn = false): string {
     const selected = s.selectedCols.has(ci)
-    return `min-w-32 h-6 cursor-pointer border-b border-r border-b-slate-600 border-r-slate-500 p-0 text-center text-xs font-normal outline-none ${selected ? 'bg-slate-800' : ''}`
+    const rightBorder = isLastColumn ? 'border-r-slate-800' : 'border-r-slate-500'
+    return `min-w-32 h-6 cursor-pointer border-b border-r border-b-slate-600 ${rightBorder} p-0 text-center text-xs font-normal outline-none ${selected ? 'bg-slate-800' : ''}`
   }
 
   function trClass(index: number): string {
@@ -728,6 +751,7 @@ export function createGridSelection(opts: {
     trClass,
     columnLetter,
     handleCellMousedown,
+    handleCellDoubleClick,
     handleCellMouseOver,
     handleRowSelectorMousedown,
     handleRowSelectorMouseOver,

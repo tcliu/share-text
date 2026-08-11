@@ -1,4 +1,4 @@
-import { isEmptyValue, matrixEqual } from './grid-utils'
+import { isEmptyValue, matrixEqual, compareGridValues } from './grid-utils'
 
 interface Cell {
   id: number
@@ -430,6 +430,28 @@ export function createGridModel(options: GridModelOptions) {
     scheduleCommit()
   }
 
+  // Reorders the data rows by a column's values. When headers are on, the first
+  // row is a header and stays pinned in place; only the rows below it move. The
+  // reorder is committed through the normal commit path, so it participates in
+  // undo/redo and the serialized matrix reflects the new order.
+  function sortRows(columnIndex: number, direction: 'asc' | 'desc') {
+    if (columnIndex < 0 || columnIndex >= columnCount) return
+    flushCommit()
+    pruneAllPending()
+    const start = headers ? 1 : 0
+    if (rows.length <= start + 1) return
+    const dataRows = rows.slice(start)
+    const sorted = [...dataRows].sort((a, b) => {
+      const va = a.cells[columnIndex]?.value ?? ''
+      const vb = b.cells[columnIndex]?.value ?? ''
+      const cmp = compareGridValues(va, vb)
+      return direction === 'asc' ? cmp : -cmp
+    })
+    if (sorted.every((r, i) => r.id === dataRows[i].id)) return
+    rows = [...rows.slice(0, start), ...sorted]
+    commitImmediate()
+  }
+
   return {
     get rows() {
       return rows
@@ -462,6 +484,7 @@ export function createGridModel(options: GridModelOptions) {
     trimTrailingEmptyColumns,
     clearValues,
     applyPastedText,
+    sortRows,
     scheduleCommit,
     flushCommit,
     commitImmediate,

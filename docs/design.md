@@ -137,6 +137,8 @@ The page is split into two vertical panes.
   opens an in-place input, and double-clicking a key renames it; `Enter`
   commits, `Escape` cancels, and values can be copied.
 - **CSV** previews as an editable spreadsheet grid (see **CSV Grid** below).
+- The **Properties** type previews as an editable two-column **Key**/**Value**
+  grid (see **CSV Grid**), with no header row.
 
 ### CSV Grid
 
@@ -151,6 +153,10 @@ The page is split into two vertical panes.
 - `Tab` and `Enter` move between cells, `Escape` cancels the current edit, and a
   multi-cell clipboard paste fills cells from the anchor. Edits feed back into
   the document content and participate in the normal dirty/save flow.
+- Column widths are adjustable by dragging the dividers between column headers.
+  Dragging the divider after the last column grows the grid beyond the visible
+  area (a horizontal scrollbar appears); shrinking it stops once the grid again
+  fills the pane without scrolling.
 
 ## Tags
 

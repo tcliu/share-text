@@ -369,9 +369,9 @@ describe('DataGrid (reusable grid)', () => {
     })
     const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(boxOf(root, 0, 1))
-    await fireEvent.mouseDown(boxOf(root, 0, 1))
-    const input = gridCell(root, 0, 1) as HTMLInputElement
-    expect(document.activeElement).toBe(input)
+    await fireEvent.dblClick(boxOf(root, 0, 1))
+    const input = gridCell(root, 0, 1)
+    await vi.waitFor(() => expect(document.activeElement).toBe(input))
     await fireEvent.keyDown(input, { key: 'ArrowRight', shiftKey: true })
     expect(boxOf(root, 0, 1).className).toContain('bg-slate-800')
     expect(boxOf(root, 0, 2).className).not.toContain('bg-slate-800')
@@ -707,7 +707,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(boxOf(root, 1, 1).className).toContain('ring-cyan-500/60')
   })
 
-  it('supports drag range selection while a cell is in edit mode', async () => {
+  it('a click on an edited cell keeps normal input behavior without extending the grid selection', async () => {
     render(DataGrid, {
       value: [
         ['a', 'b'],
@@ -720,7 +720,9 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     await fireEvent.mouseEnter(boxOf(root, 1, 1))
     await fireEvent.mouseUp(window)
-    expectRangeHighlight(root, 1, 0, 1, 1)
+    expect(document.activeElement).toBe(input)
+    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 1).className).not.toContain('bg-slate-800')
   })
 
   it('supports shift+click range selection', async () => {
@@ -911,7 +913,7 @@ describe('DataGrid (reusable grid)', () => {
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 2, 1)))
   })
 
-  it('clicking an already selected cell focuses its input for editing', async () => {
+  it('a single click on an already selected cell keeps it selected and double-clicking it enters edit mode with the cursor at the end', async () => {
     render(DataGrid, {
       value: [
         ['a', 'b'],
@@ -922,8 +924,33 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
     await fireEvent.mouseDown(boxOf(root, 1, 0))
+    expect(document.activeElement).toBe(boxOf(root, 1, 0))
+    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    await fireEvent.dblClick(boxOf(root, 1, 0))
     const input = gridCell(root, 1, 0) as HTMLInputElement
     await vi.waitFor(() => expect(document.activeElement).toBe(input))
+    expect(input.selectionStart).toBe(input.value.length)
+    expect(input.selectionEnd).toBe(input.value.length)
+  })
+
+  it('double-clicking a cell that is already in edit mode selects all of its text', async () => {
+    render(DataGrid, {
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
+    })
+    const root = await screen.findByTestId('data-grid')
+    const box = boxOf(root, 1, 0)
+    await fireEvent.mouseDown(box)
+    await fireEvent.dblClick(box)
+    const input = gridCell(root, 1, 0) as HTMLInputElement
+    await vi.waitFor(() => expect(document.activeElement).toBe(input))
+    expect(input.selectionStart).toBe(input.value.length)
+    await fireEvent.mouseDown(box)
+    await fireEvent.dblClick(box)
+    await vi.waitFor(() => expect(input.selectionStart).toBe(0))
+    expect(input.selectionEnd).toBe(input.value.length)
   })
 
   it('arrowing away from a row with content does not remove it', async () => {
@@ -1188,7 +1215,7 @@ describe('DataGrid (reusable grid)', () => {
     expect((root.querySelector('button[aria-label="Insert row above"]') as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('clicking a header cell selects it in non-edit mode; clicking it again focuses the input with the cursor at the end', async () => {
+  it('clicking a header cell selects it in non-edit mode; double-clicking it focuses the input with the cursor at the end', async () => {
     render(DataGrid, {
       value: [
         ['name', 'age'],
@@ -1200,8 +1227,10 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(boxOf(root, 0, 0))
     expect(boxOf(root, 0, 0).className).toContain('bg-slate-800')
     await fireEvent.mouseDown(boxOf(root, 0, 0))
+    expect(document.activeElement).toBe(boxOf(root, 0, 0))
+    await fireEvent.dblClick(boxOf(root, 0, 0))
     const input = gridCell(root, 0, 0) as HTMLInputElement
-    expect(document.activeElement).toBe(input)
+    await vi.waitFor(() => expect(document.activeElement).toBe(input))
     expect(input.selectionStart).toBe(input.value.length)
     expect(input.selectionEnd).toBe(input.value.length)
     expect(input.selectionStart).not.toBe(0)
@@ -1692,5 +1721,88 @@ describe('DataGrid (fixed columns)', () => {
     expect(rows[1]).toEqual(['x', 'y'])
     expect(rows[2]).toEqual(['p', 'q'])
     expect(rows.every(row => row.length <= 2)).toBe(true)
+  })
+
+  it('sorts data rows ascending by the clicked column, skipping the header row', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, {
+      value: [
+        ['h1', 'h2'],
+        ['b', '2'],
+        ['a', '1'],
+        ['c', '3'],
+      ],
+      onChange,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const sortButton = colSelector(root, 0).querySelector('button') as HTMLButtonElement
+    await fireEvent.click(sortButton)
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const rows = onChange.mock.calls.at(-1)?.[0] as string[][]
+    expect(rows[0]).toEqual(['h1', 'h2'])
+    expect(rows[1]).toEqual(['a', '1'])
+    expect(rows[2]).toEqual(['b', '2'])
+    expect(rows[3]).toEqual(['c', '3'])
+  })
+
+  it('sorts numbers numerically via the up/down arrow buttons', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, {
+      value: [
+        ['b', '20'],
+        ['a', '3'],
+        ['c', '100'],
+      ],
+      showHeaders: false,
+      onChange,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const ascButton = colSelector(root, 1).querySelector('button[aria-label="Sort B ascending"]') as HTMLButtonElement
+    const descButton = colSelector(root, 1).querySelector('button[aria-label="Sort B descending"]') as HTMLButtonElement
+    await fireEvent.click(ascButton)
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(onChange.mock.calls.at(-1)?.[0]).toEqual([
+      ['a', '3'],
+      ['b', '20'],
+      ['c', '100'],
+    ])
+    await fireEvent.click(descButton)
+    await vi.waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toEqual([
+      ['c', '100'],
+      ['b', '20'],
+      ['a', '3'],
+    ]))
+  })
+
+  it('sorts a single-column numeric list ascending numerically', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, {
+      value: [['22'], ['7'], ['2323'], ['12']],
+      showHeaders: false,
+      onChange,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const ascButton = colSelector(root, 0).querySelector('button[aria-label="Sort A ascending"]') as HTMLButtonElement
+    await fireEvent.click(ascButton)
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(onChange.mock.calls.at(-1)?.[0]).toEqual([['7'], ['12'], ['22'], ['2323']])
+  })
+
+  it('hides the sort indicator when a cell in the sort column is edited', async () => {
+    render(DataGrid, {
+      value: [
+        ['h1', 'h2'],
+        ['b', '2'],
+        ['a', '1'],
+      ],
+    })
+    const root = await screen.findByTestId('data-grid')
+    const sortButton = colSelector(root, 0).querySelector('button') as HTMLButtonElement
+    await fireEvent.click(sortButton)
+    await vi.waitFor(() => expect(root.querySelector('th[aria-sort="ascending"]')).not.toBeNull())
+    await fireEvent.input(gridCell(root, 1, 0), { target: { value: 'z' } })
+    await fireEvent.blur(gridCell(root, 1, 0))
+    await vi.waitFor(() =>
+      expect(root.querySelector('th[aria-sort="ascending"]')).toBeNull())
   })
 })

@@ -58,3 +58,15 @@ export function columnLetter(ci: number): string {
   }
   return label
 }
+
+// Natural grid sort comparison: pure-numeric cells compare numerically, every
+// thing else falls back to a locale-aware, case-insensitive, numeric-aware
+// string compare. Used when sorting data rows by a column.
+export function compareGridValues(a: string, b: string): number {
+  const na = Number(a)
+  const nb = Number(b)
+  const aNum = a.trim() !== '' && !Number.isNaN(na)
+  const bNum = b.trim() !== '' && !Number.isNaN(nb)
+  if (aNum && bNum) return na - nb
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+}

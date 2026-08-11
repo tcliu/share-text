@@ -71,5 +71,6 @@
     columnLabels={['Key', 'Value']}
     showHeaders={false}
     hideHeaderToggle
+    initialColumnWidths={['35%', '65%']}
     testId="properties-preview" />
 {/if}

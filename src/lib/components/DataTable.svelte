@@ -99,14 +99,13 @@
     }
   })
 
-  function handleSortClick(column: DataTableColumn<T>) {
+  function handleSortClick(column: DataTableColumn<T>, direction: SortDirection) {
     if (!column.sortable) {
       return
     }
-    const nextDirection: SortDirection = sortKey === column.key && sortDirection === 'asc' ? 'desc' : 'asc'
     sortKey = column.key
-    sortDirection = nextDirection
-    onSort?.(column.key, nextDirection)
+    sortDirection = direction
+    onSort?.(column.key, direction)
   }
 </script>
 
@@ -139,33 +138,33 @@
             {@const isAsc = isActive && sortDirection === 'asc'}
             {@const isDesc = isActive && sortDirection === 'desc'}
             <th
-              class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.widthClass}"
+              class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.widthClass} {column.sortable ? 'group' : ''}"
               aria-sort={isActive ? (isAsc ? 'ascending' : 'descending') : undefined}>
               {#if column.sortable}
-                <button
-                  type="button"
-                  class="group flex w-full items-center gap-2 text-left"
-                  aria-label={sortAriaLabel?.(column) ?? `Sort by ${column.header}`}
-                  onclick={() => handleSortClick(column)}>
+                <span class="flex w-full items-center gap-2 text-left">
                   <span>{column.header}</span>
                   <span
                     class="flex flex-col text-slate-400 transition-opacity {isActive ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100">
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      class="h-2.5 w-2.5 transition-colors {isAsc ? 'text-cyan-400' : ''}"
-                      aria-hidden="true">
-                      <path d="M10 4l6 8H4l6-8Z" />
-                    </svg>
-                    <svg
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      class="-mt-1 h-2.5 w-2.5 transition-colors {isDesc ? 'text-cyan-400' : ''}"
-                      aria-hidden="true">
-                      <path d="M10 16 4 8h12l-6 8Z" />
-                    </svg>
+                    <button
+                      type="button"
+                      class="leading-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} ascending`}
+                      onclick={() => handleSortClick(column, 'asc')}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
+                        <path d="M10 4l6 8H4l6-8Z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="-mt-1 leading-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} descending`}
+                      onclick={() => handleSortClick(column, 'desc')}>
+                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
+                        <path d="M10 16 4 8h12l-6 8Z" />
+                      </svg>
+                    </button>
                   </span>
-                </button>
+                </span>
               {:else}
                 {column.header}
               {/if}
