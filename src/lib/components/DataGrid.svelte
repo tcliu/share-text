@@ -470,7 +470,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
-    <div class="flex items-center gap-1">
+    <div class="flex flex-wrap items-center gap-1">
       {#if !hideHeaderToggle}
         <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
           {#snippet icon()}
