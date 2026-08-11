@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   convertJsonToYaml,
+  convertPropertiesToJson,
   convertYamlToJson,
   formatJson,
+  formatProperties,
   formatYaml,
+  parseProperties,
   parseXmlStructure,
+  serializeProperties,
   serializeXmlStructure,
   validateJson,
+  validateProperties,
   validateYaml,
 } from '$lib/document-type-utils'
 import { parseCsv, serializeCsv, validateCsv } from '$lib/csv-utils'
@@ -199,6 +204,134 @@ describe('convertYamlToJson', () => {
     const result = await convertYamlToJson('')
     expect(result.ok).toBe(true)
     expect(result.value).toBe('')
+  })
+})
+
+describe('parseProperties', () => {
+  it('parses key=value lines', () => {
+    expect(parseProperties('a=1\nb=two')).toEqual({ ok: true, value: { a: '1', b: 'two' } })
+  })
+
+  it('parses colon and whitespace separators', () => {
+    expect(parseProperties('a: 1\nb : 2\nc 3')).toEqual({ ok: true, value: { a: '1', b: '2', c: '3' } })
+  })
+
+  it('skips blank lines and # / ! comments', () => {
+    const text = '# top\n! also a comment\n\n  # indented\nb=2\n!ignored=1\n'
+    expect(parseProperties(text)).toEqual({ ok: true, value: { b: '2' } })
+  })
+
+  it('trims whitespace around the separator but keeps value spaces', () => {
+    expect(parseProperties('a = value with spaces')).toEqual({ ok: true, value: { a: 'value with spaces' } })
+  })
+
+  it('treats a bare key as an empty value', () => {
+    expect(parseProperties('empty=\nplain')).toEqual({ ok: true, value: { empty: '', plain: '' } })
+  })
+
+  it('joins continuation lines, stripping leading whitespace', () => {
+    expect(parseProperties('msg=line1\\\n  continued\nend=1')).toEqual({
+      ok: true,
+      value: { msg: 'line1continued', end: '1' },
+    })
+  })
+
+  it('unescapes separators and special characters', () => {
+    expect(parseProperties('k=v\\=x\\:y\\#z\\!w')).toEqual({ ok: true, value: { k: 'v=x:y#z!w' } })
+  })
+
+  it('unescapes \\n \\t \\r \\f and \\uXXXX', () => {
+    expect(parseProperties('line=a\\nb\nn=tab\\there\nu=caf\\u00e9')).toEqual({
+      ok: true,
+      value: { line: 'a\nb', n: 'tab\there', u: 'café' },
+    })
+  })
+
+  it('lets the last value win for duplicate keys', () => {
+    expect(parseProperties('a=1\na=2')).toEqual({ ok: true, value: { a: '2' } })
+  })
+
+  it('returns ok for empty content', () => {
+    expect(parseProperties('')).toEqual({ ok: true, value: {} })
+  })
+
+  it('rejects malformed \\uxxxx escapes', () => {
+    const result = parseProperties('u=\\uZZZZ')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/uxxxx/i)
+  })
+})
+
+describe('serializeProperties', () => {
+  it('joins entries as key=value lines', () => {
+    expect(serializeProperties({ a: '1', b: 'two' })).toBe('a=1\nb=two')
+  })
+
+  it('escapes keys with spaces', () => {
+    expect(serializeProperties({ 'key with space': 'v' })).toBe('key\\ with\\ space=v')
+  })
+
+  it('escapes leading whitespace in values', () => {
+    expect(serializeProperties({ lead: '  x', plain: 'y' })).toBe('lead=\\ \\ x\nplain=y')
+  })
+
+  it('escapes separators and special characters in values', () => {
+    expect(serializeProperties({ k: 'v=x:y#z!w' })).toBe('k=v\\=x\\:y\\#z\\!w')
+  })
+
+  it('round-trips with parseProperties', () => {
+    const record = { a: 'x=y', 'multi line': 'multi\nline', esc: 'b\\c' }
+    expect(parseProperties(serializeProperties(record))).toEqual({ ok: true, value: record })
+  })
+})
+
+describe('validateProperties', () => {
+  it('accepts valid properties', () => {
+    expect(validateProperties('a=1\nb: two')).toEqual({ valid: true })
+  })
+
+  it('accepts empty content', () => {
+    expect(validateProperties('')).toEqual({ valid: true })
+  })
+
+  it('rejects malformed \\uxxxx escapes', () => {
+    const result = validateProperties('a=\\uZZZZ')
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/uxxxx/i)
+  })
+})
+
+describe('formatProperties', () => {
+  it('sorts keys and normalizes separators', () => {
+    expect(formatProperties('z = 1\na: 2\nm=3')).toEqual({ ok: true, value: 'a=2\nm=3\nz=1' })
+  })
+
+  it('keeps empty content', () => {
+    expect(formatProperties('   ')).toEqual({ ok: true, value: '' })
+  })
+
+  it('rejects malformed escapes', () => {
+    expect(formatProperties('a=\\uZZZZ').ok).toBe(false)
+  })
+})
+
+describe('convertPropertiesToJson', () => {
+  it('converts properties to JSON with the requested indent', async () => {
+    const result = await convertPropertiesToJson('name=test\ncount=3')
+    expect(result.ok).toBe(true)
+    expect(result.value).toBe('{\n  "name": "test",\n  "count": "3"\n}')
+  })
+
+  it('handles empty properties', async () => {
+    const result = await convertPropertiesToJson('')
+    expect(result.ok).toBe(true)
+    expect(result.value).toBe('')
+  })
+
+  it('rejects malformed escapes', async () => {
+    const result = await convertPropertiesToJson('a=\\uZZZZ')
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/uxxxx/i)
   })
 })
 

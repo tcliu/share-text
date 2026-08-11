@@ -2,12 +2,15 @@ import type { Component } from 'svelte'
 import type { Extension } from '@codemirror/state'
 import {
   convertJsonToYaml,
+  convertPropertiesToJson,
   convertYamlToJson,
   formatHtml,
   formatJson,
+  formatProperties,
   formatXml,
   formatYaml,
   validateJson,
+  validateProperties,
   validateXml,
   validateYaml,
 } from './document-type-utils'
@@ -136,6 +139,23 @@ export const DOCUMENT_TYPES: DocumentTypeDefinition[] = [
     editorLanguage: () => import('@codemirror/lang-markdown').then(m => m.markdown()),
     validate: async () => ({ valid: true }),
     preview: () => import('./components/MarkdownPreview.svelte').then(m => m.default),
+  },
+  {
+    value: 'properties',
+    label: 'Properties',
+    extension: 'properties',
+    mimeType: 'text/x-java-properties',
+    chipColor: '#FFAA66',
+    editorLanguage: async () => null,
+    validate: async text => validateProperties(text),
+    format: {
+      title: 'Format Properties',
+      hasIndent: false,
+      format: text => Promise.resolve(formatProperties(text)),
+    },
+    convertTo: { target: 'json', targetLabel: 'JSON', convert: convertPropertiesToJson },
+    actions: () => import('./components/TypeActions.svelte').then(m => m.default),
+    preview: () => import('./components/PropertiesPreview.svelte').then(m => m.default),
   },
   {
     value: 'xml',

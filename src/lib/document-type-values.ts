@@ -1,4 +1,14 @@
-export const DOCUMENT_TYPE_VALUES = ['text', 'csv', 'html', 'javascript', 'json', 'markdown', 'xml', 'yaml'] as const
+export const DOCUMENT_TYPE_VALUES = [
+  'text',
+  'csv',
+  'html',
+  'javascript',
+  'json',
+  'markdown',
+  'properties',
+  'xml',
+  'yaml',
+] as const
 
 export type DocumentTypeValue = (typeof DOCUMENT_TYPE_VALUES)[number]
 

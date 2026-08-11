@@ -24,6 +24,10 @@ export interface GridModelOptions {
   getValue: () => string[][]
   getHeaders: () => boolean
   onChange?: (rows: string[][]) => void
+  // Locks the grid to a fixed column count: column insert/delete/append/nav
+  // growth and column trimming are disabled, cells keep exactly this many
+  // columns, and pastes are clamped to it.
+  maxColumns?: number
 }
 
 const MAX_HISTORY = 100
@@ -41,6 +45,7 @@ export function createGridModel(options: GridModelOptions) {
   let lastValue: string[][] = []
   let pending = false
   let commitTimer: ReturnType<typeof setTimeout> | null = null
+  const colCap = options.maxColumns
 
   let undoStack = $state<string[][][]>([])
   let redoStack = $state<string[][][]>([])
@@ -102,10 +107,11 @@ export function createGridModel(options: GridModelOptions) {
     if (rowCount === 0) return false
     // Uncommitted rows/columns appended by navigation are always trimmable.
     if (lastCommittedRow + 1 < rowCount) return true
-    if (lastCommittedCol + 1 < columnCount) return true
+    if (colCap == null && lastCommittedCol + 1 < columnCount) return true
     const isEmpty = isEmptyValue
     const lastRow = findLastRowWithData()
     if (lastRow < lastCommittedRow) return true
+    if (colCap != null) return false
     let lastCol = -1
     for (let ci = columnCount - 1; ci >= 0; ci--) {
       if (rows.some(r => !isEmpty(r.cells[ci]?.value ?? ''))) {
@@ -231,8 +237,11 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function normalize() {
-    const cols = rows.length ? Math.max(...rows.map(r => r.cells.length)) : 0
-    for (const row of rows) while (row.cells.length < cols) row.cells.push(newCell(''))
+    const cols = colCap ?? (rows.length ? Math.max(...rows.map(r => r.cells.length)) : 0)
+    for (const row of rows) {
+      while (row.cells.length < cols) row.cells.push(newCell(''))
+      if (colCap != null && row.cells.length > colCap) row.cells = row.cells.slice(0, colCap)
+    }
   }
 
   function setValue(ri: number, ci: number, value: string) {
@@ -275,13 +284,15 @@ export function createGridModel(options: GridModelOptions) {
 
   function insertColumnAt(col: number) {
     pruneAllPending()
-    if (rows.length === 0) rows.push(newRow(1))
+    if (colCap != null && columnCount >= colCap) return
+    if (rows.length === 0) rows.push(newRow(colCap ?? 1))
     for (const row of rows) row.cells.splice(col, 0, newCell(''))
     normalize()
     commitImmediate()
   }
 
   function deleteColumns(indices: Iterable<number>): boolean {
+    if (colCap != null) return false
     const cols = [...indices].sort((a, b) => b - a)
     if (!cols.length) return false
     for (const col of cols) {
@@ -301,8 +312,9 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function appendColumn(): number {
+    if (colCap != null && columnCount >= colCap) return columnCount - 1
     pruneAllPending()
-    if (rows.length === 0) rows.push(newRow(1))
+    if (rows.length === 0) rows.push(newRow(colCap ?? 1))
     for (const row of rows) row.cells.push(newCell(''))
     normalize()
     commitImmediate()
@@ -319,6 +331,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function appendPendingColumn(): number {
+    if (colCap != null) return columnCount - 1
     if (rows.length === 0) rows.push(newRow(1, false))
     for (const row of rows) row.cells.push(newCell('', false))
     normalize()
@@ -334,6 +347,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function pruneTrailingPendingColumns(after: number) {
+    if (colCap != null) return
     let end = columnCount - 1
     while (end > after && rows.every(r => r.cells[end] && !r.cells[end].committed)) {
       for (const row of rows) row.cells.pop()
@@ -356,6 +370,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function trimTrailingEmptyColumns() {
+    if (colCap != null) return
     const isEmpty = isEmptyValue
     let keepCount = columnCount
     for (let ci = columnCount - 1; ci > 0; ci--) {
@@ -383,8 +398,9 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function expandMatrix(neededRows: number, neededCols: number) {
+    if (colCap != null) neededCols = Math.min(neededCols, colCap)
     while (rows.length < neededRows) {
-      rows.push(newRow(Math.max(columnCount, neededCols) || 1))
+      rows.push(newRow(Math.max(columnCount, neededCols) || (colCap ?? 1)))
     }
     for (const row of rows) {
       while (row.cells.length < neededCols) row.cells.push(newCell(''))
@@ -400,10 +416,12 @@ export function createGridModel(options: GridModelOptions) {
     for (const line of pasteLines) {
       neededCols = Math.max(neededCols, ci + line.split('\t').length)
     }
+    if (colCap != null) neededCols = Math.min(neededCols, colCap)
     expandMatrix(neededRows, neededCols)
     for (let i = 0; i < pasteLines.length; i++) {
       const values = pasteLines[i].split('\t')
       for (let j = 0; j < values.length; j++) {
+        if (colCap != null && ci + j >= colCap) break
         const cell = rows[ri + i].cells[ci + j]
         cell.value = values[j]
         cell.committed = true

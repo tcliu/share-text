@@ -1627,3 +1627,70 @@ describe('DataGrid (reusable grid)', () => {
     expect(boxOf(root, 2, 0).className).toContain('ring-cyan-500/60')
   })
 })
+
+describe('DataGrid (fixed columns)', () => {
+  it('renders column labels instead of letters and hides column toolbar buttons', async () => {
+    render(DataGrid, {
+      value: [
+        ['Key', 'Value'],
+        ['a', '1'],
+      ],
+      maxColumns: 2,
+      columnLabels: ['Key', 'Value'],
+    })
+    const root = await screen.findByTestId('data-grid')
+    const selectorRow = root.querySelector('thead tr') as HTMLElement
+    const headers = Array.from(selectorRow.querySelectorAll('th')) as HTMLElement[]
+    expect(headers[1].textContent?.trim()).toBe('Key')
+    expect(headers[2].textContent?.trim()).toBe('Value')
+    for (const label of ['Insert column before', 'Insert column after', 'Delete columns']) {
+      expect(within(root).queryByRole('button', { name: label })).toBeNull()
+    }
+  })
+
+  it('prevents column insert/delete via keyboard and keeps the column count fixed', async () => {
+    let emitted: string[][] = []
+    render(DataGrid, {
+      value: [
+        ['Key', 'Value'],
+        ['a', '1'],
+      ],
+      maxColumns: 2,
+      showHeaders: false,
+      onChange: rows => (emitted = rows),
+    })
+    const root = await screen.findByTestId('data-grid')
+    const boxLast = boxOf(root, 0, 1)
+    boxLast.focus()
+    await fireEvent.keyDown(boxLast, { key: 'ArrowRight' })
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 2 columns'))
+    const sel = colSelector(root, 1)
+    sel.focus()
+    await fireEvent.keyDown(sel, { key: 'Delete' })
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 2 columns'))
+    expect(emitted.every(row => row.length <= 2)).toBe(true)
+  })
+
+  it('clamps a wide paste to the fixed column count', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, {
+      value: [
+        ['Key', 'Value'],
+        ['a', '1'],
+      ],
+      maxColumns: 2,
+      onChange,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const box = boxOf(root, 1, 0)
+    await fireEvent.mouseDown(box)
+    const readText = vi.fn().mockResolvedValue('x\ty\tz\np\tq\tr')
+    Object.defineProperty(navigator, 'clipboard', { value: { readText }, configurable: true })
+    await fireEvent.keyDown(box, { key: 'v', ctrlKey: true })
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    const rows = onChange.mock.calls.at(-1)?.[0] as string[][]
+    expect(rows[1]).toEqual(['x', 'y'])
+    expect(rows[2]).toEqual(['p', 'q'])
+    expect(rows.every(row => row.length <= 2)).toBe(true)
+  })
+})

@@ -12,14 +12,34 @@
     onChange?: (rows: string[][]) => void
     showHeaders?: boolean
     testId?: string
+    // Locks the grid to a fixed number of columns (e.g. key/value pairs): column
+    // insert/delete is disabled and navigation/paste cannot grow past it.
+    maxColumns?: number
+    // Optional display labels for the column-selector header cells, replacing
+    // the column letters (e.g. ['Key', 'Value']).
+    columnLabels?: string[]
+    // Hides the "Toggle header" toolbar button (e.g. Properties grids never
+    // treat the first row as a header, so the toggle is meaningless there).
+    hideHeaderToggle?: boolean
   }
 
-  let { value = [], onChange, showHeaders = $bindable(true), testId = 'data-grid' }: Props = $props()
+  let {
+    value = [],
+    onChange,
+    showHeaders = $bindable(true),
+    testId = 'data-grid',
+    maxColumns,
+    columnLabels,
+    hideHeaderToggle = false,
+  }: Props = $props()
 
   const model = createGridModel({
     getValue: () => value,
     getHeaders: () => showHeaders,
     onChange: (m) => onChange?.(m),
+    // Column cap is fixed config captured at grid creation.
+    // svelte-ignore state_referenced_locally
+    maxColumns,
   })
 
   let gridContainer: HTMLElement | null = null
@@ -177,22 +197,24 @@
 <div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex items-center gap-1">
-      <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M3 8h14" />
-            <path d="M8 8v9" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if !hideHeaderToggle}
+        <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" rx="1" />
+              <path d="M3 8h14" />
+              <path d="M8 8v9" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Insert row above"
@@ -234,47 +256,49 @@
           </svg>
         {/snippet}
       </Button>
-      <Button
-        size="sm"
-        ariaLabel="Insert column before"
-        tooltip="Insert column before"
-        onClick={() => sel.insertColumnAt(sel.actionCol, true)}
-        disabled={selState.selectedCols.size === 0}>
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M7 3v14" />
-            <path d="M3 10h4" />
-          </svg>
-        {/snippet}
-      </Button>
-      <Button
-        size="sm"
-        ariaLabel="Insert column after"
-        tooltip="Insert column after"
-        onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}>
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M13 3v14" />
-            <path d="M13 10h4" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if maxColumns == null}
+        <Button
+          size="sm"
+          ariaLabel="Insert column before"
+          tooltip="Insert column before"
+          onClick={() => sel.insertColumnAt(sel.actionCol, true)}
+          disabled={selState.selectedCols.size === 0}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" rx="1" />
+              <path d="M7 3v14" />
+              <path d="M3 10h4" />
+            </svg>
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Insert column after"
+          tooltip="Insert column after"
+          onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" rx="1" />
+              <path d="M13 3v14" />
+              <path d="M13 10h4" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Delete rows"
@@ -297,27 +321,29 @@
           </svg>
         {/snippet}
       </Button>
-      <Button
-        size="sm"
-        ariaLabel="Delete columns"
-        tooltip="Delete columns"
-        onClick={() => sel.deleteSelectedColumns()}
-        disabled={selState.selectedCols.size === 0}>
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M5 3h2l1-1l2-1h2l2 1 1 1h2" />
-            <path d="M6 5l1 12h6l1-12" />
-            <path d="M9 8v6M11 8v6" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if maxColumns == null}
+        <Button
+          size="sm"
+          ariaLabel="Delete columns"
+          tooltip="Delete columns"
+          onClick={() => sel.deleteSelectedColumns()}
+          disabled={selState.selectedCols.size === 0}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true">
+              <path d="M5 3h2l1-1l2-1h2l2 1 1 1h2" />
+              <path d="M6 5l1 12h6l1-12" />
+              <path d="M9 8v6M11 8v6" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel="Remove empty trailing rows/columns"
@@ -420,7 +446,7 @@
                 onmousedown={event => sel.handleColumnSelectorMousedown(event, ci)}
                 onmouseenter={() => sel.handleColumnSelectorMouseOver(ci)}
                 onkeydown={event => sel.handleColumnSelectorKeydown(event, ci)}>
-                {columnLetter(ci)}
+                {columnLabels?.[ci] ?? columnLetter(ci)}
               </th>
             {/each}
           </tr>
