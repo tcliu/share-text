@@ -26,11 +26,17 @@
   const menuId = `kebab-menu-${id}`
 
   let open = $state(false)
+  let activeIndex = $state(0)
   let containerRef = $state<HTMLDivElement | null>(null)
+  let triggerRef = $state<HTMLButtonElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
+  let itemRefs: HTMLButtonElement[] = []
 
-  function close() {
+  function close(returnFocus = true) {
     open = false
+    if (returnFocus) {
+      triggerRef?.focus()
+    }
   }
 
   function toggle() {
@@ -42,6 +48,58 @@
     close()
     item.onClick()
   }
+
+  function firstEnabledIndex(): number {
+    return items.findIndex(item => !item.disabled)
+  }
+
+  function moveFocus(delta: number) {
+    const count = items.length
+    if (count === 0) return
+    let index = activeIndex
+    for (let step = 0; step < count; step++) {
+      index = (index + delta + count) % count
+      if (!items[index].disabled) {
+        activeIndex = index
+        itemRefs[index]?.focus()
+        return
+      }
+    }
+  }
+
+  function handlePanelKeydown(event: KeyboardEvent) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      moveFocus(1)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      moveFocus(-1)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      const index = firstEnabledIndex()
+      if (index !== -1) {
+        activeIndex = index
+        itemRefs[index]?.focus()
+      }
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      for (let i = items.length - 1; i >= 0; i--) {
+        if (!items[i].disabled) {
+          activeIndex = i
+          itemRefs[i]?.focus()
+          return
+        }
+      }
+    }
+  }
+
+  $effect(() => {
+    if (open) {
+      const index = firstEnabledIndex()
+      activeIndex = index === -1 ? 0 : index
+      itemRefs[activeIndex]?.focus()
+    }
+  })
 
   $effect(() => {
     if (!open) return
@@ -55,14 +113,17 @@
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node
       if (containerRef && !containerRef.contains(target) && panelRef && !panelRef.contains(target)) {
-        close()
+        close(false)
       }
     }
+    const handleScroll = () => close(false)
     window.addEventListener('keydown', handleKeydownCapture, true)
     document.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
     return () => {
       window.removeEventListener('keydown', handleKeydownCapture, true)
       document.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('scroll', handleScroll, { capture: true })
     }
   })
 </script>
@@ -70,6 +131,7 @@
 <div class="relative inline-flex" bind:this={containerRef} data-escape-capture={open ? '' : null}>
   <button
     type="button"
+    bind:this={triggerRef}
     aria-label={ariaLabel}
     aria-haspopup="menu"
     aria-expanded={open}
@@ -85,13 +147,17 @@
       bind:this={panelRef}
       id={menuId}
       role="menu"
+      tabindex="-1"
       aria-label={ariaLabel}
+      onkeydown={handlePanelKeydown}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
       class="fixed left-0 top-0 z-50 will-change-transform w-44 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur">
-      {#each items as item (item.id)}
+      {#each items as item, index (item.id)}
         <button
           type="button"
           role="menuitem"
+          bind:this={itemRefs[index]}
+          tabindex={index === activeIndex ? 0 : -1}
           onclick={() => run(item)}
           disabled={item.disabled}
           class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
