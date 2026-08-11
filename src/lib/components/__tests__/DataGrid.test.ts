@@ -1913,4 +1913,38 @@ describe('DataGrid (column resize)', () => {
     await fireEvent.click(within(root).getByText('Add row'))
     await vi.waitFor(() => expect(root.querySelector('colgroup')).not.toBeNull())
   })
+
+  it('after a manual resize, enlarging the container makes the last column absorb the extra space', async () => {
+    const captured: { callback: ResizeObserverCallback | null } = { callback: null }
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        captured.callback = callback
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver)
+    try {
+      render(DataGrid, {
+        value: [['a', 'b'], ['1', '2']],
+        showHeaders: false,
+      })
+      const root = await screen.findByTestId('data-grid')
+      const container = root.querySelector('.overflow-auto') as HTMLElement
+      Object.defineProperty(container, 'clientWidth', { value: 400, configurable: true })
+      Object.defineProperty(colSelector(root, 0), 'offsetWidth', { value: 120, configurable: true })
+      Object.defineProperty(colSelector(root, 1), 'offsetWidth', { value: 120, configurable: true })
+
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, { key: 'ArrowRight' })
+      const header1 = colSelector(root, 1)
+      expect(header1.style.width).toBe('110px')
+
+      Object.defineProperty(container, 'clientWidth', { value: 600, configurable: true })
+      captured.callback!([], {} as ResizeObserver)
+      await vi.waitFor(() => expect(header1.style.width).toBe('433px'))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

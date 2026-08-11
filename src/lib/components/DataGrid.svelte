@@ -274,16 +274,17 @@
     resizingCol = null
   }
 
-  // Recalculate column widths when the container resizes. For %-based
-  // initialColumnWidths, re-resolve all columns. When the user has manually
-  // adjusted widths via drag/keyboard, keep non-last columns fixed and let
-  // the last column absorb the remaining space so the grid always fills
-  // the container.
+  // Recalculate column widths when the container resizes so the grid always
+  // fills the container. For %-based initialColumnWidths, re-resolve all
+  // columns. When the user has manually adjusted widths via drag/keyboard,
+  // keep non-last columns fixed and let the last column absorb the remaining
+  // space. Auto-width grids (no explicit widths) are left alone.
   $effect(() => {
     const container = gridContainer
-    if (!container || !initialColumnWidths?.length) return
+    if (!container) return
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
+      if (columnWidths.length === 0) return
       const available = Math.max(
         0,
         (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
