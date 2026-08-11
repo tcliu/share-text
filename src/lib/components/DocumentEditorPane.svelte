@@ -311,10 +311,7 @@
         onClick={onClone}
         disabled={cloneDisabled || content.length === 0}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <rect x="3" y="3" width="10" height="10" rx="1.5" />
-            <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
-          </svg>
+          {@render cloneIcon()}
         {/snippet}
       </Button>
     {/if}
@@ -402,9 +399,7 @@
       </div>
       {#if documentTags.length > 0}
         <div class="flex flex-wrap items-center gap-1.5" data-testid="editor-tags">
-          {#each documentTags as tag (tag.name)}
-            <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
-          {/each}
+          {@render tagChips()}
         </div>
       {/if}
       <div class="flex flex-wrap items-center gap-1" data-testid="editor-actions">
