@@ -5,14 +5,14 @@
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
+  import { clearDraft, loadDraft, loadDraftDocType, loadDraftName, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
 
   let { data }: PageProps = $props()
 
   const context = getShareTextContext()
 
-  const DRAFT_ID = 'new'
+  const DRAFT_ID = NEW_DOCUMENT_DRAFT_ID
 
   let documentName = $state('Untitled')
   let savedName = $state('Untitled')
@@ -42,11 +42,26 @@
       draftTimer = null
     }
     if (dirty) {
-      saveDraft(DRAFT_ID, content, docType)
+      saveDraft(DRAFT_ID, content, docType, documentName)
     }
   }
 
   $effect(() => {
+    if (!draftLoaded) {
+      draftLoaded = true
+      const draft = loadDraft(DRAFT_ID)
+      if (draft !== null && draft !== content) {
+        content = draft
+      }
+      const draftType = loadDraftDocType(DRAFT_ID)
+      if (draftType !== null) {
+        docType = draftType
+      }
+      const draftName = loadDraftName(DRAFT_ID)
+      if (draftName !== null) {
+        documentName = draftName
+      }
+    }
     if (!dirty) {
       if (draftTimer) {
         clearTimeout(draftTimer)
@@ -59,22 +74,9 @@
     draftTimer = setTimeout(() => {
       draftTimer = null
       if (dirty) {
-        saveDraft(DRAFT_ID, content, docType)
+        saveDraft(DRAFT_ID, content, docType, documentName)
       }
     }, 400)
-  })
-
-  $effect(() => {
-    if (draftLoaded) return
-    draftLoaded = true
-    const draft = loadDraft(DRAFT_ID)
-    if (draft !== null && draft !== content) {
-      content = draft
-    }
-    const draftType = loadDraftDocType(DRAFT_ID)
-    if (draftType !== null) {
-      docType = draftType
-    }
   })
 
   $effect(() => {

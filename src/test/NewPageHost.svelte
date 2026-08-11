@@ -1,0 +1,23 @@
+<script lang="ts">
+  import { setShareTextContext } from '$lib/share-text-context'
+  import NewPage from '../routes/(browser)/new/+page.svelte'
+
+  setShareTextContext({
+    documents: [],
+    loadingDocuments: false,
+    documentsError: null,
+    createDocument: () => {},
+    deleteDocument: () => {},
+    refreshList: async () => {},
+    selectedDocumentRefreshToken: 0,
+    requestSelectedDocumentRefresh: () => {},
+    registerEditorGuard: () => {},
+    unregisterEditorGuard: () => {},
+    canLeaveCurrentDocument: () => true,
+    registerEditorFocus: () => {},
+    unregisterEditorFocus: () => {},
+    isMobile: false,
+  })
+</script>
+
+<NewPage data={{ maxContentLength: 100000 }} params={{}} form={null} />

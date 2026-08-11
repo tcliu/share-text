@@ -1,11 +1,11 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import type { PageProps } from './$types'
-  import { fetchDocument, updateDocument, createDocument, type Document } from '$lib/documents'
+  import { fetchDocument, updateDocument, type Document } from '$lib/documents'
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, loadDraftDocType, saveDraft } from '$lib/document-drafts'
+  import { clearDraft, loadDraft, loadDraftDocType, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
   import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
 
@@ -213,13 +213,13 @@
   async function handleClone() {
     if (!currentId || cloning) return
     cloning = true
-    const cloneName = documentName ? `${documentName} (copy)` : undefined
+    const cloneName = documentName ? `${documentName} (copy)` : 'Untitled'
     try {
-      const created = await createDocument({ name: cloneName, content, documentType: docType })
-      clearDraft(created.id)
-      toast.success('Document cloned')
-      await context.refreshList()
-      await goto(`/${created.id}`)
+      saveDraft(NEW_DOCUMENT_DRAFT_ID, content, docType, cloneName)
+      if (context.canLeaveCurrentDocument()) {
+        toast.success('Cloned to new document')
+      }
+      await goto(`/${NEW_DOCUMENT_DRAFT_ID}`)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to clone document')
     } finally {
