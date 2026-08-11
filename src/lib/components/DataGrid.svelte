@@ -51,10 +51,11 @@
   const ROW_NUMBER_WIDTH = 36
   const MIN_COLUMN_WIDTH = 60
 
-  // Column widths in pixels. null means auto-width (min-w-32 fallback).
-  let columnWidths = $state<(number | null)[]>([])
+  // Column widths in pixels. Empty array means auto-width (min-w-32 fallback).
+  let columnWidths = $state<number[]>([])
 
   let gridContainer: HTMLElement | null = null
+  let userResized = false
 
   let initializedWidths = false
 
@@ -66,12 +67,12 @@
   // columns sum to one pixel less than the container to keep the border box
   // inside the scroll area.
   const TABLE_LEFT_BORDER = 1
-  function resolveInitialWidths(): (number | null)[] {
+  function resolveInitialWidths(): number[] {
     const available = Math.max(
       0,
       (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
     )
-    const widths: (number | null)[] = []
+    const widths: number[] = []
     let sum = 0
     for (let i = 0; i < model.columnCount; i++) {
       const spec = initialColumnWidths?.[i]
@@ -202,8 +203,8 @@
     return cell?.offsetWidth ?? 128
   }
 
-  function captureAllWidths(): (number | null)[] {
-    const widths: (number | null)[] = []
+  function captureAllWidths(): number[] {
+    const widths: number[] = []
     for (let i = 0; i < model.columnCount; i++) {
       widths.push(columnWidths[i] ?? getColumnCellWidth(i))
     }
@@ -216,17 +217,16 @@
     resizingCol = ci
     resizeStartX = event.clientX
     const widths = captureAllWidths()
-    resizeStartWidth = widths[ci] ?? 128
+    resizeStartWidth = widths[ci]
     resizeSiblingTotal =
-      ci < model.columnCount - 1 ? (widths[ci] ?? 128) + (widths[ci + 1] ?? 128) : null
+      ci < model.columnCount - 1 ? widths[ci] + widths[ci + 1] : null
     columnWidths = widths
+    userResized = true
   }
 
-  function handleResizeMouseMove(event: MouseEvent) {
+  function applyResizeDiff(diff: number) {
     if (resizingCol === null) return
-    const diff = event.clientX - resizeStartX
     if (resizeSiblingTotal != null) {
-      // Keep both adjacent columns above the minimum within their fixed total.
       const newWidth = Math.max(
         MIN_COLUMN_WIDTH,
         Math.min(resizeSiblingTotal - MIN_COLUMN_WIDTH, resizeStartWidth + diff),
@@ -234,15 +234,11 @@
       columnWidths[resizingCol] = newWidth
       columnWidths[resizingCol + 1] = resizeSiblingTotal - newWidth
     } else {
-      // The trailing splitter moves the table's right edge. Expanding freely
-      // grows the table beyond the container (introducing a horizontal
-      // scrollbar); shrinking stops once the table fits the container again,
-      // so the grid never leaves empty space when no scrolling is needed.
       let newWidth = Math.max(MIN_COLUMN_WIDTH, resizeStartWidth + diff)
       if (newWidth < resizeStartWidth && gridContainer) {
         let others = 0
         for (let i = 0; i < model.columnCount; i++) {
-          if (i !== resizingCol) others += columnWidths[i] ?? 128
+          if (i !== resizingCol) others += columnWidths[i]
         }
         const fillWidth = Math.max(
           MIN_COLUMN_WIDTH,
@@ -254,16 +250,38 @@
     }
   }
 
+  function handleResizeMouseMove(event: MouseEvent) {
+    if (resizingCol === null) return
+    applyResizeDiff(event.clientX - resizeStartX)
+  }
+
+  function handleResizeKeydown(event: KeyboardEvent, ci: number) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    event.stopPropagation()
+    const widths = captureAllWidths()
+    columnWidths = widths
+    resizingCol = ci
+    resizeStartWidth = widths[ci]
+    resizeSiblingTotal =
+      ci < model.columnCount - 1 ? widths[ci] + widths[ci + 1] : null
+    userResized = true
+    applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
+    resizingCol = null
+  }
+
   function handleResizeMouseUp() {
     resizingCol = null
   }
 
-  // Recalculate %-based widths when container resizes.
+  // Recalculate %-based widths when container resizes, unless the user has
+  // manually overridden column widths via drag.
   $effect(() => {
     const container = gridContainer
     if (!container || !initialColumnWidths?.length) return
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
+      if (userResized) return
       columnWidths = resolveInitialWidths()
     })
     observer.observe(container)
@@ -280,7 +298,7 @@
   const totalWidth = $derived.by(() => {
     let sum = ROW_NUMBER_WIDTH
     for (let i = 0; i < model.columnCount; i++) {
-      sum += columnWidths[i] ?? 128
+      sum += columnWidths[i]
     }
     return sum
   })
@@ -289,8 +307,14 @@
   // structure changes in managed mode (e.g. columns inserted/removed).
   $effect(() => {
     const count = model.columnCount
-    if (columnWidths.length === 0 || columnWidths.length === count) return
-    const next: (number | null)[] = []
+    if (columnWidths.length === count) return
+    if (count === 0) return
+    if (columnWidths.length === 0 && initialColumnWidths?.length) {
+      columnWidths = resolveInitialWidths()
+      return
+    }
+    if (columnWidths.length === 0) return
+    const next: number[] = []
     for (let i = 0; i < count; i++) {
       next.push(columnWidths[i] ?? getColumnCellWidth(i) ?? 128)
     }
@@ -662,11 +686,7 @@
         <colgroup>
           <col style="width:2.25rem;">
           {#each Array.from({ length: model.columnCount }) as _, ci}
-            {#if columnWidths[ci] != null}
-              <col style="width:{columnWidths[ci]}px;">
-            {:else}
-              <col style="width:8rem;">
-            {/if}
+            <col style="width:{columnWidths[ci]}px;">
           {/each}
         </colgroup>
       {/if}
@@ -725,16 +745,14 @@
                     </button>
                   </span>
                 </span>
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                <div
-                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize bg-transparent hover:bg-cyan-500/40"
+                <button
+                  type="button"
+                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40"
                   style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
-                  role="separator"
-                  aria-orientation="vertical"
                   aria-label="Resize column {ci + 1}"
-                  tabindex="-1"
                   onmousedown={event => startColumnResize(event, ci)}
-                ></div>
+                  onkeydown={event => handleResizeKeydown(event, ci)}
+                ></button>
               </th>
             {/each}
           </tr>

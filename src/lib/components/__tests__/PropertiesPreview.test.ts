@@ -210,4 +210,12 @@ describe('PropertiesPreview', () => {
     await rerender({ content: emitted })
     await vi.waitFor(() => expect(hasCellValue(root, 'Bob')).toBe(true))
   })
+
+  it('switches to fixed-width 35/65 layout after adding a row to an empty properties doc', async () => {
+    render(PropertiesPreview, { content: '', onContentChange: vi.fn() })
+    const root = await screen.findByTestId('properties-preview')
+    expect(root.querySelector('colgroup')).toBeNull()
+    await fireEvent.click(within(root).getByText('Add row'))
+    await vi.waitFor(() => expect(root.querySelector('colgroup')).not.toBeNull())
+  })
 })

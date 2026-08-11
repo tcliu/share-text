@@ -1806,3 +1806,111 @@ describe('DataGrid (fixed columns)', () => {
       expect(root.querySelector('th[aria-sort="ascending"]')).toBeNull())
   })
 })
+
+describe('DataGrid (column resize)', () => {
+  it('switches to fixed table layout with a colgroup when initialColumnWidths is provided', async () => {
+    render(DataGrid, {
+      value: [['a', 'b'], ['1', '2']],
+      initialColumnWidths: ['100', '200'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const table = root.querySelector('table') as HTMLElement
+    expect(table.style.tableLayout).toBe('fixed')
+    expect(root.querySelector('colgroup')).not.toBeNull()
+  })
+
+  it('uses auto-width layout when initialColumnWidths is omitted', async () => {
+    render(DataGrid, {
+      value: [['a', 'b'], ['1', '2']],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const table = root.querySelector('table') as HTMLElement
+    expect(root.querySelector('colgroup')).toBeNull()
+    expect(table.className).toContain('w-full')
+  })
+
+  it('renders resize splitter buttons with aria-labels in the column selector row', async () => {
+    render(DataGrid, {
+      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    expect(root.querySelector('[aria-label="Resize column 1"]')).not.toBeNull()
+    expect(root.querySelector('[aria-label="Resize column 2"]')).not.toBeNull()
+    expect(root.querySelector('[aria-label="Resize column 3"]')).not.toBeNull()
+    expect(root.querySelector('[aria-label="Resize column 1"]')!.tagName).toBe('BUTTON')
+  })
+
+  it('ArrowRight on a mid-column splitter grows the left column and shrinks the right', async () => {
+    render(DataGrid, {
+      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      initialColumnWidths: ['100', '200', '150'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const splitter = root.querySelector('[aria-label="Resize column 1"]') as HTMLElement
+    const header0 = colSelector(root, 0)
+    const w0Before = header0.style.width
+    const header1 = colSelector(root, 1)
+    const w1Before = header1.style.width
+    await fireEvent.keyDown(splitter, { key: 'ArrowRight' })
+    expect(header0.style.width).not.toBe(w0Before)
+    expect(header1.style.width).not.toBe(w1Before)
+  })
+
+  it('ArrowLeft on a mid-column splitter shrinks the left column and grows the right', async () => {
+    render(DataGrid, {
+      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      initialColumnWidths: ['100', '200', '150'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const splitter = root.querySelector('[aria-label="Resize column 1"]') as HTMLElement
+    const header0 = colSelector(root, 0)
+    const w0Before = header0.style.width
+    await fireEvent.keyDown(splitter, { key: 'ArrowLeft' })
+    expect(header0.style.width).not.toBe(w0Before)
+  })
+
+  it('trailing splitter ArrowRight grows the last column beyond the initial width', async () => {
+    render(DataGrid, {
+      value: [['a', 'b'], ['1', '2']],
+      initialColumnWidths: ['120', '120'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const splitter = root.querySelector('[aria-label="Resize column 2"]') as HTMLElement
+    const header1 = colSelector(root, 1)
+    const wBefore = header1.style.width
+    await fireEvent.keyDown(splitter, { key: 'ArrowRight' })
+    expect(header1.style.width).not.toBe(wBefore)
+  })
+
+  it('non-arrow keypresses on the splitter are ignored', async () => {
+    render(DataGrid, {
+      value: [['a', 'b'], ['1', '2']],
+      initialColumnWidths: ['120', '120'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const splitter = root.querySelector('[aria-label="Resize column 1"]') as HTMLElement
+    const header0 = colSelector(root, 0)
+    const wBefore = header0.style.width
+    await fireEvent.keyDown(splitter, { key: 'Enter' })
+    expect(header0.style.width).toBe(wBefore)
+  })
+
+  it('applies initialColumnWidths after adding a row to an initially empty grid', async () => {
+    render(DataGrid, {
+      value: [],
+      initialColumnWidths: ['100', '200'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    expect(root.querySelector('colgroup')).toBeNull()
+    await fireEvent.click(within(root).getByText('Add row'))
+    await vi.waitFor(() => expect(root.querySelector('colgroup')).not.toBeNull())
+  })
+})
