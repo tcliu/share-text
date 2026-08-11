@@ -37,7 +37,6 @@ describe('GET /api/documents', () => {
   it('rejects invalid pagination parameters', async () => {
     const response = await GET({
       url: new URL('http://localhost/api/documents?limit=20abc&offset=-1'),
-      getClientAddress: () => '127.0.0.1',
     } as never)
 
     expect(response.status).toBe(400)
@@ -45,7 +44,7 @@ describe('GET /api/documents', () => {
     expect(documentsMocks.fetchDocumentSummaries).not.toHaveBeenCalled()
   })
 
-  it('passes the client IP and validated pagination to the data layer', async () => {
+  it('lists documents across all creators with validated pagination', async () => {
     documentsMocks.fetchDocumentSummaries.mockResolvedValue({
       documents: [{ id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' }],
       hasMore: true,
@@ -58,7 +57,9 @@ describe('GET /api/documents', () => {
 
     expect(response.status).toBe(200)
     expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith({
-      by: '203.0.113.9',
+      search: undefined,
+      searchKeys: [],
+      viewerBy: '203.0.113.9',
       limit: 20,
       offset: 40,
     })
@@ -66,6 +67,35 @@ describe('GET /api/documents', () => {
       documents: [{ id: 'a1b2c3', name: 'Doc', updatedAt: '2026-08-03T00:00:00.000Z', updatedBy: '203.0.113.7' }],
       hasMore: true,
     })
+  })
+
+  it('forwards search and search-keys', async () => {
+    documentsMocks.fetchDocumentSummaries.mockResolvedValue({ documents: [], hasMore: false })
+
+    const response = await GET({
+      url: new URL('http://localhost/api/documents?search=alpha&search-keys=name,id,updatedBy'),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith({
+      search: 'alpha',
+      searchKeys: ['name', 'id', 'updatedBy'],
+      viewerBy: '203.0.113.9',
+      limit: undefined,
+      offset: 0,
+    })
+  })
+
+  it('rejects unknown search-keys', async () => {
+    const response = await GET({
+      url: new URL('http://localhost/api/documents?search=alpha&search-keys=name,createdBy'),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid search-keys' })
+    expect(documentsMocks.fetchDocumentSummaries).not.toHaveBeenCalled()
   })
 })
 

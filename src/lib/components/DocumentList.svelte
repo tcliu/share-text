@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import type { DocumentSummary } from '$lib/documents'
+  import type { OwnedDocumentSummary } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
@@ -10,11 +10,15 @@
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
 
   interface Props {
-    documents: DocumentSummary[]
+    documents: OwnedDocumentSummary[]
     loading: boolean
     error: string | null
     selectedId: string | null
     hasMore: boolean
+    searchInput?: string
+    searchActive?: boolean
+    onSearchInput?: (event: Event) => void
+    onSearchKeydown?: (event: KeyboardEvent) => void
     onNew: () => void
     onRefresh: () => void
     onDelete: (id: string) => void
@@ -32,6 +36,10 @@
     error,
     selectedId,
     hasMore,
+    searchInput = $bindable(''),
+    searchActive = false,
+    onSearchInput,
+    onSearchKeydown,
     onNew,
     onRefresh,
     onDelete,
@@ -42,13 +50,6 @@
     width,
     onMinWidthChange,
   }: Props = $props()
-
-  let searchQuery = $state('')
-
-  const normalizedQuery = $derived(searchQuery.trim().toLowerCase())
-  const visibleDocuments = $derived(
-    normalizedQuery ? documents.filter(document => document.name.toLowerCase().includes(normalizedQuery)) : documents,
-  )
 
   let loadMoreSentinel = $state<HTMLElement | null>(null)
   let headerRef = $state<HTMLElement | null>(null)
@@ -77,12 +78,6 @@
     return () => observer.disconnect()
   })
 
-  function handleSearchKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
-      searchQuery = ''
-    }
-  }
-
   function handleRowClick(id: string) {
     const url = new URL(window.location.href)
     url.pathname = `/${id}`
@@ -109,7 +104,7 @@
 
   $effect(() => {
     const sentinel = loadMoreSentinel
-    if (!sentinel || loading || !hasMore || normalizedQuery) return
+    if (!sentinel || loading || !hasMore) return
 
     const observer = new IntersectionObserver(
       entries => {
@@ -176,8 +171,9 @@
   </div>
 
   <SearchInput
-    bind:value={searchQuery}
-    onkeydown={handleSearchKeydown}
+    bind:value={searchInput}
+    oninput={onSearchInput}
+    onkeydown={onSearchKeydown}
     ariaLabel="Search documents"
     placeholder="Search documents..."
     wrapperClass="px-2" />
@@ -185,13 +181,13 @@
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
     {#if loading && documents.length === 0}
       <p class="p-2 text-sm text-slate-500">Loading documents...</p>
-    {:else if visibleDocuments.length === 0}
+    {:else if documents.length === 0}
       <p class="p-2 text-sm text-slate-500">
-        {documents.length === 0 ? 'No documents yet. Use New to create one.' : 'No documents match your filter.'}
+        {searchActive ? 'No documents match your search.' : 'No documents yet. Use New to create one.'}
       </p>
     {:else}
       <div class="flex flex-col">
-        {#each visibleDocuments as document (document.id)}
+        {#each documents as document (document.id)}
           <div
             class={`group flex cursor-pointer items-start gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}
             role="button"
@@ -210,28 +206,30 @@
                   style={tagChipStyle(getDocumentType(document.documentType).chipColor)} />
               {/if}
             </div>
-            <span class="flex shrink-0">
-              <Button
-                size="sm"
-                ariaLabel="Delete document"
-                tooltip="Delete"
-                tooltipAlign="right"
-                onClick={event => handleDeleteClick(event, document.id)}
-                onKeyDown={handleDeleteKeydown}
-                className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
-                {#snippet icon()}
-                  <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path
-                      fill-rule="evenodd"
-                      d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
-                      clip-rule="evenodd" />
-                  </svg>
-                {/snippet}
-              </Button>
-            </span>
+            {#if document.owned}
+              <span class="flex shrink-0">
+                <Button
+                  size="sm"
+                  ariaLabel="Delete document"
+                  tooltip="Delete"
+                  tooltipAlign="right"
+                  onClick={event => handleDeleteClick(event, document.id)}
+                  onKeyDown={handleDeleteKeydown}
+                  className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
+                  {#snippet icon()}
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path
+                        fill-rule="evenodd"
+                        d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  {/snippet}
+                </Button>
+              </span>
+            {/if}
           </div>
         {/each}
-        {#if hasMore && !normalizedQuery}
+        {#if hasMore}
           <div
             bind:this={loadMoreSentinel}
             class="flex min-h-10 items-center justify-center py-2 text-sm text-slate-500">

@@ -42,6 +42,7 @@ interface DocumentRow {
   content: string
   document_type: string
   tags: string | null
+  created_by?: string
   updated_by: string
   updated_at: Date | string
 }
@@ -212,26 +213,57 @@ function runQuery<T>(sql: string, params: unknown[] = []) {
   return getDb().then(db => db.query<T>(sql, params))
 }
 
+/**
+ * Appends a case-insensitive substring search condition across the requested
+ * searchable columns. Uses leading-wildcard LIKE patterns which defeat B-tree
+ * index scans. Acceptable for SQLite (no trigram index available) and
+ * small-to-medium Postgres datasets. For large Postgres deployments, add a
+ * pg_trgm GIN index on the searchable columns.
+ */
+function appendSearchConditions(options: {
+  search: string
+  searchKeys: string[]
+  columns: Record<string, string>
+  conditions: string[]
+  params: unknown[]
+}) {
+  const { search, searchKeys, columns, conditions, params } = options
+  const searchColumns = (searchKeys.length > 0 ? searchKeys : ['name'])
+    .map(key => columns[key])
+    .filter((column): column is string => Boolean(column))
+  if (searchColumns.length === 0) {
+    conditions.push('1 = 0')
+    return
+  }
+  const likeClauses: string[] = []
+  for (const column of searchColumns) {
+    params.push(`%${search.toLowerCase()}%`)
+    likeClauses.push(`lower(${column}) like $${params.length}`)
+  }
+  conditions.push(`(${likeClauses.join(' or ')})`)
+}
+
 export interface FetchDocumentSummariesOptions {
-  by?: string
+  search?: string
+  searchKeys?: string[]
+  viewerBy?: string
   limit?: number
   offset?: number
 }
 
 export interface FetchDocumentSummariesResult {
-  documents: DocumentSummary[]
+  documents: Array<DocumentSummary & { owned: boolean }>
   hasMore: boolean
 }
 
 export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
-  const { by, limit, offset = 0 } = options
-  const sql = 'select key, name, document_type, tags, updated_by, updated_at from documents'
+  const { search, searchKeys, viewerBy, limit, offset = 0 } = options
+  const sql = 'select key, name, document_type, tags, created_by, updated_by, updated_at from documents'
   const params: unknown[] = []
   const conditions: string[] = []
 
-  if (by !== undefined) {
-    conditions.push('created_by = $1')
-    params.push(by)
+  if (search) {
+    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: DOCUMENT_SEARCH_COLUMNS, conditions, params })
   }
 
   let query = sql
@@ -252,7 +284,10 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
   const result = await runQuery<DocumentRow>(query, params)
   const rows = limit !== undefined ? result.rows.slice(0, limit) : result.rows
   return {
-    documents: rows.map(toDocumentSummary),
+    documents: rows.map(row => ({
+      ...toDocumentSummary(row),
+      owned: viewerBy !== undefined && row.created_by === viewerBy,
+    })),
     hasMore: limit !== undefined ? result.rows.length > limit : false,
   }
 }
@@ -338,13 +373,20 @@ const ADMIN_SORT_COLUMNS: Record<string, string> = {
   updatedAt: 'updated_at',
 }
 
-const ADMIN_SEARCH_COLUMNS: Record<string, string> = {
+const DOCUMENT_SEARCH_COLUMNS: Record<string, string> = {
   id: 'key',
   name: 'name',
   documentType: 'document_type',
   tags: 'tags',
   updatedBy: 'updated_by',
 }
+
+const ADMIN_SEARCH_COLUMNS: Record<string, string> = {
+  ...DOCUMENT_SEARCH_COLUMNS,
+  createdBy: 'created_by',
+}
+
+export const DOCUMENT_SEARCH_KEYS = Object.keys(DOCUMENT_SEARCH_COLUMNS)
 
 export interface ListDocumentsForAdminOptions {
   search?: string
@@ -362,31 +404,13 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   const sortDir = order === 'asc' ? 'asc' : 'desc'
   const conditions: string[] = []
   const params: unknown[] = []
-  let index = 1
 
   if (search) {
-    // Case-insensitive substring search. Uses leading-wildcard LIKE patterns
-    // which defeat B-tree index scans. Acceptable for SQLite (no trigram index
-    // available) and small-to-medium Postgres datasets. For large Postgres
-    // deployments, add a pg_trgm GIN index on the searchable columns.
-    const searchColumns = (searchKeys && searchKeys.length > 0 ? searchKeys : ['name'])
-      .map(key => ADMIN_SEARCH_COLUMNS[key])
-      .filter((column): column is string => Boolean(column))
-    if (searchColumns.length > 0) {
-      const likeClauses = searchColumns.map(column => `lower(${column}) like $${index}`)
-      for (const _column of searchColumns) {
-        params.push(`%${search.toLowerCase()}%`)
-        index += 1
-      }
-      conditions.push(`(${likeClauses.join(' or ')})`)
-    } else {
-      conditions.push('1 = 0')
-    }
+    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_SEARCH_COLUMNS, conditions, params })
   }
   if (by) {
-    conditions.push(`created_by = $${index}`)
+    conditions.push(`created_by = $${params.length + 1}`)
     params.push(by)
-    index += 1
   }
 
   const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
@@ -401,10 +425,9 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
     from documents${whereClause} order by ${sortColumn} ${sortDir}`
   const listParams = [...params]
   if (limit !== undefined) {
-    sql += ` limit $${index}`
+    sql += ` limit $${listParams.length + 1}`
     listParams.push(limit)
-    index += 1
-    sql += ` offset $${index}`
+    sql += ` offset $${listParams.length + 1}`
     listParams.push(offset)
   }
 

@@ -70,14 +70,47 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(summaries.hasMore).toBe(false)
   })
 
-  it('scopes summaries to documents created by the given IP', async () => {
+  it('lists documents across all creators regardless of IP', async () => {
+    const mine = await insertDocument({ name: 'mine', content: '', by: '10.0.0.7' })
+    const theirs = await insertDocument({ name: 'theirs', content: '', by: '10.0.0.8' })
+
+    const summaries = await fetchDocumentSummaries()
+    expect(summaries.documents.map((summary: { id: string }) => summary.id).sort()).toEqual([mine.id, theirs.id].sort())
+  })
+
+  it('marks each summary owned by the viewer IP', async () => {
     const mine = await insertDocument({ name: 'mine', content: '', by: '10.0.0.7' })
     await insertDocument({ name: 'theirs', content: '', by: '10.0.0.8' })
-    const editedByMe = await insertDocument({ name: 'shared', content: '', by: '10.0.0.8' })
-    await updateDocument(editedByMe.id, { content: 'edited', by: '10.0.0.7' })
 
-    const summaries = await fetchDocumentSummaries({ by: '10.0.0.7' })
-    expect(summaries.documents.map((summary: { id: string }) => summary.id)).toEqual([mine.id])
+    const summaries = await fetchDocumentSummaries({ viewerBy: '10.0.0.7' })
+    const mineSummary = summaries.documents.find(summary => summary.id === mine.id)
+    const theirsSummary = summaries.documents.find(summary => summary.id !== mine.id)
+
+    expect(mineSummary?.owned).toBe(true)
+    expect(theirsSummary?.owned).toBe(false)
+  })
+
+  it('searches summaries across all documents', async () => {
+    await insertDocument({ name: 'Alpha notes', content: '', by: '10.0.0.7' })
+    await insertDocument({ name: 'Beta doc', content: '', by: '10.0.0.8' })
+
+    const searched = await fetchDocumentSummaries({ search: 'alpha' })
+    expect(searched.documents.map((summary: { name: string }) => summary.name)).toEqual(['Alpha notes'])
+  })
+
+  it('searches summaries across configured columns via searchKeys', async () => {
+    const alpha = await insertDocument({ name: 'Alpha notes', content: '', by: '10.0.0.7' })
+    await insertDocument({ name: 'Beta doc', content: '', by: '10.0.0.8' })
+    await updateDocument(alpha.id, { tags: [{ name: 'urgent', color: '#FF6680' }], by: '10.0.0.7' })
+
+    const byId = await fetchDocumentSummaries({ search: alpha.id, searchKeys: ['id'] })
+    expect(byId.documents.map((summary: { id: string }) => summary.id)).toEqual([alpha.id])
+
+    const byTags = await fetchDocumentSummaries({ search: 'urgent', searchKeys: ['tags'] })
+    expect(byTags.documents.map((summary: { id: string }) => summary.id)).toEqual([alpha.id])
+
+    const noMatch = await fetchDocumentSummaries({ search: 'urgent', searchKeys: ['name'] })
+    expect(noMatch.documents).toHaveLength(0)
   })
 
   it('reports hasMore when more rows exist past the requested limit', async () => {

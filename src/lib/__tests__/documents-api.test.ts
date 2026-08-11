@@ -47,6 +47,13 @@ describe('fetchDocumentSummaries', () => {
     await fetchDocumentSummaries({ limit: 20, offset: 40 })
     expect(fetchMock).toHaveBeenCalledWith('/api/documents?limit=20&offset=40')
   })
+
+  it('passes search and searchKeys parameters', async () => {
+    const fetchMock = mockFetch({ ok: true, status: 200, body: { documents: [], hasMore: false } })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchDocumentSummaries({ search: 'alpha', searchKeys: ['name', 'tags'] })
+    expect(fetchMock).toHaveBeenCalledWith('/api/documents?search=alpha&search-keys=name%2Ctags')
+  })
 })
 
 describe('fetchDocument', () => {

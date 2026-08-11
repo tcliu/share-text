@@ -1,10 +1,12 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
-import type { DocumentSummary } from '$lib/documents'
+import type { OwnedDocumentSummary } from '$lib/documents'
 import { deleteDocument, fetchDocumentSummaries } from '$lib/documents'
 import { clearDraft } from '$lib/document-drafts'
 
 export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
+
+const DOCUMENT_SEARCH_KEYS = ['name', 'tags', 'id']
 
 export interface UseDocumentsOptions {
   onDocumentDeleted?: (id: string) => void
@@ -14,41 +16,88 @@ export interface UseDocumentsOptions {
 export function useDocuments(options: UseDocumentsOptions = {}) {
   const pageSize = options.pageSize ?? DEFAULT_DOCUMENTS_PAGE_SIZE
 
-  let documents = $state<DocumentSummary[]>([])
+  let documents = $state<OwnedDocumentSummary[]>([])
   let loadingDocuments = $state(false)
   let documentsError = $state<string | null>(null)
   let hasMore = $state(false)
 
   let creating = $state(false)
 
-  async function refreshList() {
-    loadingDocuments = true
-    documentsError = null
-    try {
-      const response = await fetchDocumentSummaries({ limit: pageSize, offset: 0 })
-      documents = response.documents
-      hasMore = response.hasMore
-    } catch (error) {
-      documentsError = error instanceof Error ? error.message : 'Failed to load documents'
-    } finally {
-      loadingDocuments = false
+  let searchInput = $state('')
+  let searchQuery = $state('')
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let listRequestId = 0
+
+  function handleSearchInput() {
+    if (searchTimer) {
+      clearTimeout(searchTimer)
+    }
+    searchTimer = setTimeout(() => {
+      searchTimer = null
+      searchQuery = searchInput.trim()
+      void refreshList()
+    }, 400)
+  }
+
+  function handleSearchKeydown(event: KeyboardEvent) {
+    if (event.key === 'Enter') {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
+      searchQuery = searchInput.trim()
+      void refreshList()
+    } else if (event.key === 'Escape') {
+      searchInput = ''
+      searchQuery = ''
+      void refreshList()
     }
   }
 
-  async function loadMore() {
-    if (!hasMore || loadingDocuments) return
+  $effect(() => {
+    return () => {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
+    }
+  })
 
+  async function requestDocuments(offset: number, append: boolean) {
+    const requestId = ++listRequestId
     loadingDocuments = true
     documentsError = null
     try {
-      const response = await fetchDocumentSummaries({ limit: pageSize, offset: documents.length })
-      documents = [...documents, ...response.documents]
+      const response = await fetchDocumentSummaries({
+        limit: pageSize,
+        offset,
+        search: searchQuery || undefined,
+        searchKeys: DOCUMENT_SEARCH_KEYS,
+      })
+      if (requestId !== listRequestId) {
+        return
+      }
+      documents = append ? [...documents, ...response.documents] : response.documents
       hasMore = response.hasMore
     } catch (error) {
+      if (requestId !== listRequestId) {
+        return
+      }
       documentsError = error instanceof Error ? error.message : 'Failed to load documents'
     } finally {
-      loadingDocuments = false
+      if (requestId === listRequestId) {
+        loadingDocuments = false
+      }
     }
+  }
+
+  function refreshList() {
+    return requestDocuments(0, false)
+  }
+
+  function loadMore() {
+    if (!hasMore || loadingDocuments) return
+    return requestDocuments(documents.length, true)
   }
 
   async function performCreate() {
@@ -91,9 +140,20 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     get creating() {
       return creating
     },
+    get searchInput() {
+      return searchInput
+    },
+    set searchInput(value: string) {
+      searchInput = value
+    },
+    get searchQuery() {
+      return searchQuery
+    },
     refreshList,
     loadMore,
     performCreate,
     performDelete,
+    handleSearchInput,
+    handleSearchKeydown,
   }
 }

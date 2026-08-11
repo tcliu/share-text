@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
   contentByteSize,
+  DOCUMENT_SEARCH_KEYS,
   DocumentLimitError,
   fetchDocumentSummaries,
   insertDocument,
@@ -10,13 +11,14 @@ import {
   normalizeName,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
-import { parseNonNegativeInt, parsePositiveInt } from '$lib/server/parse-query'
+import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { isBodyRecord } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
 
 export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   const limitParam = url.searchParams.get('limit')
   const offsetParam = url.searchParams.get('offset')
+  const { search, searchKeys } = parseSearchParams(url)
 
   const limit = limitParam === null ? undefined : parsePositiveInt(limitParam)
   const offset = parseNonNegativeInt(offsetParam)
@@ -25,8 +27,15 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     return json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
+  const invalidSearchKeys = searchKeys.filter(key => !(DOCUMENT_SEARCH_KEYS as readonly string[]).includes(key))
+  if (invalidSearchKeys.length > 0) {
+    return json({ error: 'Invalid search-keys' }, { status: 400 })
+  }
+
   const { documents, hasMore } = await fetchDocumentSummaries({
-    by: getClientAddress(),
+    search,
+    searchKeys,
+    viewerBy: getClientAddress(),
     limit: limit !== null ? limit : undefined,
     offset,
   })

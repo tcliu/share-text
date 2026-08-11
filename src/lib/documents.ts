@@ -9,20 +9,32 @@ export interface DocumentSummary {
   updatedBy: string
 }
 
+export interface OwnedDocumentSummary extends DocumentSummary {
+  owned: boolean
+}
+
 export interface Document extends DocumentSummary {
   content: string
 }
 
 export interface DocumentListResponse {
-  documents: DocumentSummary[]
+  documents: OwnedDocumentSummary[]
   hasMore: boolean
 }
 
 const BASE_PATH = '/api/documents'
 
-export async function fetchDocumentSummaries(options: { limit?: number; offset?: number } = {}): Promise<DocumentListResponse> {
-  const { limit, offset = 0 } = options
+export async function fetchDocumentSummaries(
+  options: { search?: string; searchKeys?: string[]; limit?: number; offset?: number } = {},
+): Promise<DocumentListResponse> {
+  const { search, searchKeys, limit, offset = 0 } = options
   const params = new URLSearchParams()
+  if (search) {
+    params.set('search', search)
+  }
+  if (searchKeys && searchKeys.length > 0) {
+    params.set('search-keys', searchKeys.join(','))
+  }
   if (limit !== undefined) {
     params.set('limit', limit.toString())
   }

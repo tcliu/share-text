@@ -207,6 +207,10 @@
       error={documentsState.documentsError}
       {selectedId}
       hasMore={documentsState.hasMore}
+      bind:searchInput={documentsState.searchInput}
+      searchActive={documentsState.searchQuery !== ''}
+      onSearchInput={documentsState.handleSearchInput}
+      onSearchKeydown={documentsState.handleSearchKeydown}
       width={leftPaneWidth}
       onNew={handleNew}
       onRefresh={handleRefresh}
