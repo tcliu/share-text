@@ -36,11 +36,7 @@
   const selectedId = $derived($page.params.id ?? null)
   const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
 
-  let isMobile = $state(
-    typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(max-width: 767px)').matches,
-  )
+  let isMobile = $state(false)
 
   $effect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
