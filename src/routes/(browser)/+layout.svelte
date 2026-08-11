@@ -34,6 +34,22 @@
   })
 
   const selectedId = $derived($page.params.id ?? null)
+  const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
+
+  let isMobile = $state(
+    typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 767px)').matches,
+  )
+
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(max-width: 767px)')
+    const update = () => (isMobile = media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  })
 
   function requestSelectedDocumentRefresh() {
     selectedDocumentRefreshToken += 1
@@ -141,6 +157,9 @@
     unregisterEditorFocus: () => {
       editorFocus = null
     },
+    get isMobile() {
+      return isMobile
+    },
   })
 
   $effect(() => {
@@ -149,7 +168,7 @@
 </script>
 
 <div class="flex h-screen overflow-hidden">
-  {#if leftPaneCollapsed}
+  {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
         {#snippet icon()}
@@ -188,7 +207,7 @@
         {/snippet}
       </Button>
     </div>
-  {:else}
+  {:else if !isMobile || !showingEditor}
     <DocumentList
       documents={documentsState.documents}
       loading={documentsState.loadingDocuments}
@@ -199,7 +218,7 @@
       searchActive={documentsState.searchInput.trim() !== '' || documentsState.searchQuery !== ''}
       onSearchInput={documentsState.handleSearchInput}
       onSearchKeydown={documentsState.handleSearchKeydown}
-      width={leftPaneWidth}
+      width={isMobile ? undefined : leftPaneWidth}
       onNew={handleNew}
       onRefresh={handleRefresh}
       onDelete={handleDelete}
@@ -207,14 +226,18 @@
       onToggleCollapse={toggleLeftPane}
       onMinWidthChange={handleMinWidthChange}
       deletePending={deleteTarget !== null} />
-    <Splitter
-      value={leftPaneWidth}
-      min={leftPaneMinWidth}
-      max={SPLIT_PANE_MAX_WIDTH}
-      onChange={handleSplitPaneChange}
-      onDragEnd={handleSplitPaneDragEnd} />
+    {#if !isMobile}
+      <Splitter
+        value={leftPaneWidth}
+        min={leftPaneMinWidth}
+        max={SPLIT_PANE_MAX_WIDTH}
+        onChange={handleSplitPaneChange}
+        onDragEnd={handleSplitPaneDragEnd} />
+    {/if}
   {/if}
-  <main class="flex min-w-0 flex-1">{@render children()}</main>
+  <main class={`min-w-0 flex-1 ${isMobile && !showingEditor ? 'hidden' : 'flex flex-col'}`}>
+    {@render children()}
+  </main>
 </div>
 
 {#if editorGuardState.discardDialogOpen}

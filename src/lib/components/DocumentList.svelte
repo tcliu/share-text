@@ -117,14 +117,19 @@
 </script>
 
 <aside
-  class="flex h-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50"
+  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50"
   style={width !== undefined ? `width: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
       <span class="p-1 text-md font-semibold text-slate-200">ShareText</span>
     </div>
     <div class="flex items-center gap-1">
-      <Button size="sm" ariaLabel="Collapse document list" tooltip="Collapse document list" onClick={onToggleCollapse}>
+      <Button
+        size="sm"
+        ariaLabel="Collapse document list"
+        tooltip="Collapse document list"
+        className="hidden md:inline-flex"
+        onClick={onToggleCollapse}>
         {#snippet icon()}
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path

@@ -50,6 +50,7 @@ export default defineConfig(async ({ command, mode }) => {
           alias: {
             $lib: path.resolve('./src/lib'),
             '$app/stores': path.resolve('./src/test/mocks/app-stores.ts'),
+            '$app/state': path.resolve('./src/test/mocks/app-state.ts'),
             '$app/navigation': path.resolve('./src/test/mocks/app-navigation.ts'),
           },
           conditions: ['browser', 'default'],
