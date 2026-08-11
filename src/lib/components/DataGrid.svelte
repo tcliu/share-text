@@ -728,7 +728,7 @@
                 role="columnheader"
                 aria-colindex={ci + 1}
                 aria-sort={isSortActive ? (isSortAsc ? 'ascending' : 'descending') : undefined}
-                class="{sel.columnSelectorClass(ci, ci === model.columnCount - 1)} group"
+                class="select-none {sel.columnSelectorClass(ci, ci === model.columnCount - 1)} group"
                 style="position:relative;{columnWidthStyle(ci)}"
                 data-col-selector={ci}
                 tabindex="-1"
@@ -822,7 +822,7 @@
                 role="rowheader"
                 aria-rowindex={showHeaders ? ri + 3 : ri + 2}
                 aria-selected={sel.selectedRows.has(actualRi)}
-                class={sel.rowSelectorClass(actualRi)}
+                class="select-none {sel.rowSelectorClass(actualRi)}"
                 data-row-selector={actualRi}
                 tabindex="-1"
                 onmousedown={event => sel.handleRowSelectorMousedown(event, actualRi)}
