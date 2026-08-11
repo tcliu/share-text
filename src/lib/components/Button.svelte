@@ -11,6 +11,7 @@
     pending?: boolean
     type?: 'button' | 'submit' | 'reset'
     className?: string
+    ariaPressed?: boolean
     onClick?: (event: MouseEvent) => void
     onKeyDown?: (event: KeyboardEvent) => void
     ariaLabel?: string
@@ -35,6 +36,7 @@
     tooltipAlign = 'center',
     icon,
     children,
+    ariaPressed = false,
   }: Props = $props()
 
   const primaryClasses: Record<string, string> = {
@@ -97,13 +99,13 @@
 
 {#if tooltip}
   <span class="group relative inline-flex">
-    <button {type} aria-label={ariaLabel} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
+    <button {type} aria-label={ariaLabel} aria-pressed={ariaPressed} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
       {@render buttonInner()}
     </button>
     <Tooltip align={tooltipAlign}>{tooltip}</Tooltip>
   </span>
 {:else}
-  <button {type} aria-label={ariaLabel} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
+  <button {type} aria-label={ariaLabel} aria-pressed={ariaPressed} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
     {@render buttonInner()}
   </button>
 {/if}

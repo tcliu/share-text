@@ -238,22 +238,33 @@
       {#if currentType.preview}
         <Button
           size="sm"
-          ariaLabel={previewState.modeLabel}
-          tooltip={previewState.modeLabel}
-          variant={previewState.showPreview ? 'outline' : 'secondary'}
-          onClick={previewState.cyclePreviewMode}>
+          ariaLabel="Editor view"
+          tooltip="Editor view"
+          variant={previewState.editorActive ? 'outline' : 'secondary'}
+          ariaPressed={previewState.editorActive}
+          disabled={previewState.editorDisabled}
+          onClick={() => previewState.setEditor(!previewState.editorActive)}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              {#if previewState.previewMode === 'editor' || previewState.previewMode === 'split'}
-                <rect x="2.5" y="4" width="6.5" height="12" rx="1.2" fill="currentColor" />
-              {:else}
-                <rect x="2.5" y="4" width="6.5" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6" />
-              {/if}
-              {#if previewState.previewMode === 'split' || previewState.previewMode === 'preview'}
-                <rect x="11" y="4" width="6.5" height="12" rx="1.2" fill="currentColor" />
-              {:else}
-                <rect x="11" y="4" width="6.5" height="12" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6" />
-              {/if}
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
+            </svg>
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Preview view"
+          tooltip="Preview view"
+          variant={previewState.previewActive ? 'outline' : 'secondary'}
+          ariaPressed={previewState.previewActive}
+          disabled={previewState.previewDisabled}
+          onClick={() => previewState.setPreview(!previewState.previewActive)}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+              <path
+                fill-rule="evenodd"
+                d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                clip-rule="evenodd" />
             </svg>
           {/snippet}
         </Button>
