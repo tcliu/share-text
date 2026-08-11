@@ -274,14 +274,29 @@
     resizingCol = null
   }
 
-  // Recalculate %-based widths when container resizes, unless the user has
-  // manually overridden column widths via drag.
+  // Recalculate column widths when the container resizes. For %-based
+  // initialColumnWidths, re-resolve all columns. When the user has manually
+  // adjusted widths via drag/keyboard, keep non-last columns fixed and let
+  // the last column absorb the remaining space so the grid always fills
+  // the container.
   $effect(() => {
     const container = gridContainer
     if (!container || !initialColumnWidths?.length) return
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
-      if (userResized) return
+      const available = Math.max(
+        0,
+        (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
+      )
+      if (userResized) {
+        let used = 0
+        for (let i = 0; i < model.columnCount - 1; i++) {
+          used += columnWidths[i]
+        }
+        const lastWidth = Math.max(MIN_COLUMN_WIDTH, available - used)
+        columnWidths[model.columnCount - 1] = lastWidth
+        return
+      }
       columnWidths = resolveInitialWidths()
     })
     observer.observe(container)
