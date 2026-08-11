@@ -28,6 +28,10 @@ export function useAdminDocumentsSearch(params: { onParamsChange: () => void }) 
       searchQuery = searchInput.trim()
       onParamsChange()
     } else if (event.key === 'Escape') {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
       searchInput = ''
       searchQuery = ''
       onParamsChange()

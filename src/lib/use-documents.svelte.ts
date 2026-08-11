@@ -48,6 +48,10 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
       searchQuery = searchInput.trim()
       void refreshList()
     } else if (event.key === 'Escape') {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
       searchInput = ''
       searchQuery = ''
       void refreshList()
