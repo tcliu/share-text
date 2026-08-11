@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     return json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
-  const invalidSearchKeys = searchKeys.filter(key => !(DOCUMENT_SEARCH_KEYS as readonly string[]).includes(key))
+  const invalidSearchKeys = searchKeys.filter(key => !DOCUMENT_SEARCH_KEYS.includes(key))
   if (invalidSearchKeys.length > 0) {
     return json({ error: 'Invalid search-keys' }, { status: 400 })
   }
