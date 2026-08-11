@@ -17,6 +17,7 @@
   import { usePreviewMode } from './use-preview-mode.svelte'
   import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '$lib/editor-preview-split'
   import { usePreviewContent } from './use-preview-content.svelte'
+  import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -90,24 +91,18 @@
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
   let tagsOpen = $state(false)
-  let formatDialogOpen = $state(false)
-
-  async function handleFormatConfirm(indent: number) {
-    const format = currentType.format
-    if (!format) return
-    const result = await format.format(content, indent)
-    if (result.ok) {
-      content = result.value ?? ''
-    } else {
-      toast.error('Cannot format: ' + (result.error ?? `Invalid ${currentType.label}`))
-    }
-    formatDialogOpen = false
-  }
 
   const currentType = $derived(getDocumentType(docType))
   const hasPreview = () => Boolean(currentType.preview)
   const context = getShareTextContext()
   const previewState = usePreviewMode(hasPreview, () => context.isMobile)
+
+  const formatState = useFormat({
+    format: () => currentType.format,
+    content: () => content,
+    setContent: value => (content = value),
+    label: () => currentType.label,
+  })
 
   const previewContent = usePreviewContent(() => content, () => document.id)
 
@@ -443,7 +438,7 @@
                     {
                       id: 'format',
                       label: currentType.format.title,
-                      onClick: () => (formatDialogOpen = true),
+                      onClick: formatState.openDialog,
                       icon: formatIcon,
                     },
                   ]
@@ -551,9 +546,9 @@
 
 {#if currentType.format}
   <FormatDialog
-    show={formatDialogOpen}
+    show={formatState.open}
     title={currentType.format.title}
     hasIndent={currentType.format.hasIndent ?? true}
-    onConfirm={indent => void handleFormatConfirm(indent)}
-    onCancel={() => (formatDialogOpen = false)} />
+    onConfirm={indent => void formatState.confirm(indent)}
+    onCancel={formatState.cancel} />
 {/if}

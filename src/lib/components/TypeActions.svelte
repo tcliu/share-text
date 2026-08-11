@@ -1,24 +1,17 @@
 <script lang="ts">
-  import { toast } from 'svelte-sonner'
   import type { TypeActionsProps } from '$lib/document-types'
   import Button from './Button.svelte'
   import FormatDialog from './FormatDialog.svelte'
+  import { useFormat } from './use-format.svelte'
 
   let { type, content, onContentChange }: TypeActionsProps = $props()
 
-  let formatDialogOpen = $state(false)
-
-  async function handleFormatConfirm(indent: number) {
-    const format = type.format
-    if (!format) return
-    const result = await format.format(content, indent)
-    if (result.ok) {
-      onContentChange(result.value ?? '')
-    } else {
-      toast.error('Cannot format: ' + (result.error ?? `Invalid ${type.label}`))
-    }
-    formatDialogOpen = false
-  }
+  const formatState = useFormat({
+    format: () => type.format,
+    content: () => content,
+    setContent: value => onContentChange(value),
+    label: () => type.label,
+  })
 </script>
 
 {#if type.format}
@@ -26,7 +19,7 @@
     size="sm"
     ariaLabel={type.format.title}
     tooltip={type.format.title}
-    onClick={() => (formatDialogOpen = true)}>
+    onClick={formatState.openDialog}>
     {#snippet icon()}
       <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
         <path
@@ -39,8 +32,8 @@
 {/if}
 
 <FormatDialog
-  show={formatDialogOpen}
+  show={formatState.open}
   title={type.format?.title ?? ''}
   hasIndent={type.format?.hasIndent ?? true}
-  onConfirm={indent => void handleFormatConfirm(indent)}
-  onCancel={() => (formatDialogOpen = false)} />
+  onConfirm={indent => void formatState.confirm(indent)}
+  onCancel={formatState.cancel} />
