@@ -38,7 +38,8 @@ synchronizes through a small fetch-based JSON API.
 - `/api/admin/documents` — `GET` lists every document across all IPs with
   search (`search`, scoped to selected `search-keys`), creator filter (`by`),
   pagination (`limit`/`offset`), and sorting (`sortBy`/`order`).
-- `/api/admin/documents/[id]` — `PUT` renames a document; `DELETE` removes it.
+- `/api/admin/documents/[id]` — `PUT` updates a document (`name`,
+  `updatedBy`, `createdBy`, and/or `key`); `DELETE` removes it.
 
 - `/api/tags` — `GET` returns every distinct tag across all documents, with
   deduplication on case-insensitive name so each unique tag name appears once.
@@ -103,12 +104,25 @@ synchronizes through a small fetch-based JSON API.
 - `src/lib/server/settings.ts` defines the runtime-adjustable properties and
   resolves them with precedence database override > environment > default,
   cached in memory for a short TTL and invalidated on write.
-- `src/lib/admin.ts` is the fetch-based admin API client; `AdminDialog.svelte`
-  (opened from the gear icon in the left-pane header) provides sign-in plus the
-  Properties and Documents tabs.
+- `src/lib/admin.ts` is the fetch-based admin API client; the `/admin` route
+  (`src/routes/admin/+page.svelte`, backed by `AdminPage.svelte`) shows the
+  login panel when unauthenticated and the Properties and Documents tabs after
+  sign-in. The old gear-icon dialog (`AdminDialog.svelte`) has been removed.
+  The login form has a "Remember me" checkbox that persists the username in
+  `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
+  the next visit) and issues a 30-day session cookie instead of the default
+  24-hour one; the password is never stored client-side.
+- In the Documents tab, the ID, Name, Created by, and Updated by cells are
+  copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
+  `name`, `updatedBy`, `createdBy`, and `key`. Attribution fields are bounded
+  by `MAX_ATTRIBUTION_LENGTH` (defaulting `updated_by` to the requester IP
+  otherwise); changing `key` renames the document id and must match the
+  configured `document_key_length` charset, returning 409 on collision.
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
   `admin_logout`, `admin_setting_update`, `admin_setting_reset`,
-  `admin_document_rename`, `admin_document_delete`).
+  `admin_document_rename`, `admin_document_update_updated_by`,
+  `admin_document_update_created_by`, `admin_document_update_key`,
+  `admin_document_delete`).
 
 ## Limits
 

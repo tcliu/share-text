@@ -5,7 +5,11 @@ import {
   deleteDocument,
   fetchDocument,
   fetchDocumentForAdmin,
+  isUniqueKeyViolation,
+  normalizeCreatedBy,
+  normalizeDocumentKey,
   normalizeName,
+  normalizeUpdatedBy,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
@@ -18,15 +22,46 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
 
   const body = await request.json().catch(() => ({}))
-  if (!isBodyRecord(body) || typeof body.name !== 'string') {
-    return json({ error: 'Request body must include a name' }, { status: 400 })
+  if (!isBodyRecord(body)) {
+    return json({ error: 'Request body must be a JSON object' }, { status: 400 })
   }
 
-  let name: string
-  try {
-    name = normalizeName(body.name)
-  } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Invalid name' }, { status: 400 })
+  const changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string } = {}
+  if (typeof body.name === 'string') {
+    try {
+      changes.name = normalizeName(body.name)
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Invalid name' }, { status: 400 })
+    }
+  }
+  if (typeof body.updatedBy === 'string') {
+    try {
+      changes.updatedBy = normalizeUpdatedBy(body.updatedBy)
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Invalid updatedBy' }, { status: 400 })
+    }
+  }
+  if (typeof body.createdBy === 'string') {
+    try {
+      changes.createdBy = normalizeCreatedBy(body.createdBy)
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Invalid createdBy' }, { status: 400 })
+    }
+  }
+  if (typeof body.key === 'string') {
+    try {
+      changes.key = await normalizeDocumentKey(body.key)
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Invalid document key' }, { status: 400 })
+    }
+  }
+  if (
+    changes.name === undefined &&
+    changes.updatedBy === undefined &&
+    changes.createdBy === undefined &&
+    changes.key === undefined
+  ) {
+    return json({ error: 'Request body must include a name, updatedBy, createdBy, or key' }, { status: 400 })
   }
 
   const existing = await fetchDocumentForAdmin(id)
@@ -36,15 +71,51 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
 
   const ip = getClientAddress()
   const startedAt = Date.now()
-  const updated = await updateDocument(id, { name, by: ip })
+  let updated
+  try {
+    updated = await updateDocument(id, { ...changes, by: ip })
+  } catch (error) {
+    if (isUniqueKeyViolation(error)) {
+      return json({ error: 'Document key already exists' }, { status: 409 })
+    }
+    throw error
+  }
   if (!updated) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
+  const details: Record<string, string | number> = {
+    id,
+    content_size: contentByteSize(updated.content),
+    elapsed_ms: Date.now() - startedAt,
+  }
+  if (changes.name !== undefined) {
+    details.old_name = existing.name
+    details.new_name = changes.name
+  }
+  if (changes.updatedBy !== undefined) {
+    details.old_updated_by = existing.updatedBy
+    details.new_updated_by = changes.updatedBy
+  }
+  if (changes.createdBy !== undefined) {
+    details.old_created_by = existing.createdBy
+    details.new_created_by = changes.createdBy
+  }
+  if (changes.key !== undefined) {
+    details.old_key = existing.id
+    details.new_key = changes.key
+  }
+  const action = changes.key !== undefined
+    ? 'admin_document_update_key'
+    : changes.updatedBy !== undefined
+      ? 'admin_document_update_updated_by'
+      : changes.createdBy !== undefined
+        ? 'admin_document_update_created_by'
+        : 'admin_document_rename'
   logEvent({
     ip,
-    action: 'admin_document_rename',
-    details: { id, old_name: existing.name, new_name: name, content_size: contentByteSize(updated.content), elapsed_ms: Date.now() - startedAt },
+    action,
+    details,
   })
 
   const document = {
@@ -52,7 +123,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     name: updated.name,
     tags: updated.tags,
     documentType: updated.documentType,
-    createdBy: existing.createdBy,
+    createdBy: changes.createdBy ?? existing.createdBy,
     updatedBy: updated.updatedBy,
     createdAt: existing.createdAt,
     updatedAt: updated.updatedAt,

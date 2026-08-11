@@ -5,6 +5,8 @@ import { resolveProfile } from './profile'
 export const ADMIN_SESSION_COOKIE = 'share-text-admin-session'
 export const ADMIN_SESSION_TTL_MS = 24 * 60 * 60 * 1000
 export const ADMIN_SESSION_MAX_AGE = 60 * 60 * 24
+export const ADMIN_SESSION_REMEMBER_TTL_MS = 30 * 24 * 60 * 60 * 1000
+export const ADMIN_SESSION_REMEMBER_MAX_AGE = 60 * 60 * 24 * 30
 const LOGIN_MAX_ATTEMPTS = 5
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 
@@ -67,8 +69,8 @@ function sessionSecret() {
   return 'dev-session-secret'
 }
 
-export function createSessionToken() {
-  const payload = JSON.stringify({ exp: Date.now() + ADMIN_SESSION_TTL_MS })
+export function createSessionToken(ttlMs = ADMIN_SESSION_TTL_MS) {
+  const payload = JSON.stringify({ exp: Date.now() + ttlMs })
   const body = Buffer.from(payload, 'utf8').toString('base64url')
   const signature = createHmac('sha256', sessionSecret()).update(body).digest('base64url')
   return `${body}.${signature}`

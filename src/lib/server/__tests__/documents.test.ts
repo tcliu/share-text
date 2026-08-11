@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   KEY_LENGTH,
+  MAX_ATTRIBUTION_LENGTH,
   MAX_CONTENT_BYTES,
   MAX_NAME_LENGTH,
   assertContentWithinLimit,
@@ -9,7 +10,9 @@ import {
   isDocumentKeyChars,
   isDocumentKey,
   isUniqueKeyViolation,
+  normalizeCreatedBy,
   normalizeName,
+  normalizeUpdatedBy,
   toDocument,
   toDocumentSummary,
 } from '$lib/server/documents'
@@ -114,6 +117,36 @@ describe('normalizeName', () => {
 
   it('accepts names at the length limit', () => {
     expect(normalizeName('x'.repeat(MAX_NAME_LENGTH))).toHaveLength(MAX_NAME_LENGTH)
+  })
+})
+
+describe('normalizeUpdatedBy', () => {
+  it('trims surrounding whitespace', () => {
+    expect(normalizeUpdatedBy(' 203.0.113.7 ')).toBe('203.0.113.7')
+  })
+
+  it('rejects empty values', () => {
+    expect(() => normalizeUpdatedBy('')).toThrow('updated by is required')
+    expect(() => normalizeUpdatedBy('   ')).toThrow('updated by is required')
+  })
+
+  it('rejects values over the length limit', () => {
+    expect(() => normalizeUpdatedBy('x'.repeat(MAX_ATTRIBUTION_LENGTH + 1))).toThrow('limit')
+  })
+})
+
+describe('normalizeCreatedBy', () => {
+  it('trims surrounding whitespace', () => {
+    expect(normalizeCreatedBy(' 10.0.0.1 ')).toBe('10.0.0.1')
+  })
+
+  it('rejects empty values', () => {
+    expect(() => normalizeCreatedBy('')).toThrow('created by is required')
+    expect(() => normalizeCreatedBy('   ')).toThrow('created by is required')
+  })
+
+  it('rejects values over the length limit', () => {
+    expect(() => normalizeCreatedBy('x'.repeat(MAX_ATTRIBUTION_LENGTH + 1))).toThrow('limit')
   })
 })
 

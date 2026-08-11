@@ -59,11 +59,11 @@ async function parseResponse<T>(response: Response, fallback: string): Promise<T
   return body as T
 }
 
-export async function login(username: string, password: string): Promise<void> {
+export async function login(username: string, password: string, rememberMe = false): Promise<void> {
   const response = await fetch(`${BASE_PATH}/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, rememberMe }),
   })
   await parseResponse<{ ok: boolean }>(response, 'Failed to sign in')
 }
@@ -139,13 +139,16 @@ export async function fetchAdminDocuments(
   return body
 }
 
-export async function renameAdminDocument(id: string, name: string): Promise<AdminDocument> {
+export async function updateAdminDocument(
+  id: string,
+  changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string },
+): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to rename document')
+  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to update document')
   return body.document
 }
 

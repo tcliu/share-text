@@ -9,6 +9,21 @@ describe('EditableText', () => {
     expect(screen.getByText('Hello World')).toBeTruthy()
   })
 
+  it('does not render a copy button by default', () => {
+    render(EditableText, { text: 'Hello', onChange: vi.fn() })
+    expect(screen.queryByLabelText('Copy Hello')).toBeNull()
+  })
+
+  it('renders a copy button when copyable is true', async () => {
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+    render(EditableText, { text: 'Hello', onChange: vi.fn(), copyable: true })
+    const copyButton = screen.getByLabelText('Copy Hello')
+    expect(copyButton).toBeTruthy()
+    await fireEvent.click(copyButton)
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Hello')
+    vi.unstubAllGlobals()
+  })
+
   it('enters edit mode on double-click', async () => {
     render(EditableText, { text: 'Test', onChange: vi.fn() })
     await fireEvent.dblClick(screen.getByText('Test'))

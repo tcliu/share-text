@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import Button from './Button.svelte'
+  import CopyButton from './CopyButton.svelte'
   import { SPLIT_PANE_MAX_WIDTH } from '$lib/split-pane'
 
   interface Props {
@@ -12,6 +13,9 @@
     // maximum width (in px) the editable input may expand to; actual max
     // will be clamped to the remaining horizontal space when editing.
     maxWidth?: number
+    // When true, the display mode is wrapped in a Copyable so the text can
+    // also be copied to the clipboard on hover.
+    copyable?: boolean
   }
 
   let {
@@ -21,6 +25,7 @@
     className = 'text-slate-200',
     onActivate,
     maxWidth = SPLIT_PANE_MAX_WIDTH,
+    copyable = false,
   }: Props = $props()
 
   let editing = $state(false)
@@ -162,10 +167,7 @@
       class={`text-${size} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500`} />
   </div>
 {:else}
-  <!-- Don't grow to fill the available space in display mode so sibling elements
-       (e.g. tag chips) sit immediately after the filename instead of being
-       pushed to the right. Keep min-w-0 so truncation still works. -->
-  <div class="group flex min-w-0 items-center gap-1">
+  {#snippet displayContent()}
     <button
       bind:this={displayBtn}
       type="button"
@@ -200,5 +202,15 @@
         {/snippet}
       </Button>
     </span>
+  {/snippet}
+
+  <!-- Don't grow to fill the available space in display mode so sibling elements
+       (e.g. tag chips) sit immediately after the filename instead of being
+       pushed to the right. Keep min-w-0 so truncation still works. -->
+  <div class="group flex min-w-0 items-center gap-1">
+    {@render displayContent()}
+    {#if copyable && text.trim() !== ''}
+      <CopyButton text={text} copyAriaLabel={`Copy ${text}`} />
+    {/if}
   </div>
 {/if}

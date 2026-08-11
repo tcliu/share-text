@@ -25,7 +25,6 @@
   let selectedDocumentRefreshToken = $state(0)
   let deleteTarget = $state<string | null>(null)
   let leftPaneCollapsed = $state(false)
-  let adminDialogOpen = $state(false)
   let leftPaneWidth = $state(SPLIT_PANE_DEFAULT_WIDTH)
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
   let editorFocus = $state<(() => void) | null>(null)
@@ -101,17 +100,6 @@
     if (leftPaneWidth < effectiveMin) {
       leftPaneWidth = effectiveMin
     }
-  }
-
-  function handleAdminDelete(id: string) {
-    void documentsState.refreshList()
-    if (editorGuardState.editorGuard?.getCurrentDocumentId() === id) {
-      void goto('/')
-    }
-  }
-
-  function handleAdminChange() {
-    void documentsState.refreshList()
   }
 
   function handleConfirmDiscard() {
@@ -208,7 +196,7 @@
       {selectedId}
       hasMore={documentsState.hasMore}
       bind:searchInput={documentsState.searchInput}
-      searchActive={documentsState.searchQuery !== ''}
+      searchActive={documentsState.searchInput.trim() !== '' || documentsState.searchQuery !== ''}
       onSearchInput={documentsState.handleSearchInput}
       onSearchKeydown={documentsState.handleSearchKeydown}
       width={leftPaneWidth}
@@ -217,7 +205,6 @@
       onDelete={handleDelete}
       onLoadMore={documentsState.loadMore}
       onToggleCollapse={toggleLeftPane}
-      onOpenAdmin={() => (adminDialogOpen = true)}
       onMinWidthChange={handleMinWidthChange}
       deletePending={deleteTarget !== null} />
     <Splitter
@@ -248,14 +235,4 @@
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />
-{/if}
-
-{#if adminDialogOpen}
-  {#await import('$lib/components/AdminDialog.svelte') then module}
-    {@const AdminDialog = module.default}
-    <AdminDialog
-      onClose={() => (adminDialogOpen = false)}
-      onAdminDelete={handleAdminDelete}
-      onAdminChange={handleAdminChange} />
-  {/await}
 {/if}

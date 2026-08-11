@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  ADMIN_SESSION_REMEMBER_MAX_AGE,
+  ADMIN_SESSION_REMEMBER_TTL_MS,
+  ADMIN_SESSION_TTL_MS,
+  ADMIN_SESSION_MAX_AGE,
+} from '$lib/server/admin-auth'
 
 const authMocks = vi.hoisted(() => ({
   isLoginRateLimited: vi.fn(),
@@ -73,9 +79,29 @@ describe('POST /api/admin/login', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({ ok: true })
     expect(authMocks.resetLoginAttempts).toHaveBeenCalledWith('127.0.0.1')
+    expect(authMocks.createSessionToken).toHaveBeenCalledWith(ADMIN_SESSION_TTL_MS)
     const cookie = store.get('share-text-admin-session')
     expect(cookie?.value).toBe('signed-token')
-    expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: 'strict', path: '/' })
+    expect(cookie?.options).toMatchObject({
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: ADMIN_SESSION_MAX_AGE,
+    })
+  })
+
+  it('issues a longer-lived session when rememberMe is true', async () => {
+    authMocks.verifyAdminCredentials.mockReturnValue(true)
+    const { event, store } = postEvent({
+      body: { username: 'admin', password: 'pass', rememberMe: true },
+    })
+
+    const response = await POST(event)
+
+    expect(response.status).toBe(200)
+    expect(authMocks.createSessionToken).toHaveBeenCalledWith(ADMIN_SESSION_REMEMBER_TTL_MS)
+    const cookie = store.get('share-text-admin-session')
+    expect(cookie?.options).toMatchObject({ maxAge: ADMIN_SESSION_REMEMBER_MAX_AGE })
   })
 
   it('returns 401 and records the attempt on bad credentials', async () => {

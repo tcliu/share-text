@@ -233,15 +233,21 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   search box and editor reflect changes made by other users. Documents removed
   by others disappear from the list automatically.
 
-## Admin Dialog
+## Admin
 
-- A gear icon in the left-pane header opens the **Admin** dialog.
-- Unauthenticated visitors see a sign-in form. If no admin password source is
-  configured, the dialog reports that admin is disabled instead.
+The admin console is a dedicated page at `/admin`, reached by direct
+navigation. Unauthenticated visitors see a sign-in form; if no admin password
+source is configured, the page reports that admin is disabled instead. A
+**Remember me** checkbox persists the username to `localStorage` (pre-filling
+it on the next visit) and issues a 30-day session cookie; the password is
+never stored client-side. The page header offers **Go to Documents** and
+**Sign out** once signed in.
+
 - Successful sign-in sets an HTTP-only, `SameSite=strict` signed session cookie
-  (24h TTL). Failed sign-ins are rate-limited per IP (5 per 15 minutes). All
-  `/api/admin/*` routes except `login` and `session` require a valid session.
-- The dialog has two tabs:
+  (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per
+  IP (5 per 15 minutes). All `/api/admin/*` routes except `login` and `session`
+  require a valid session.
+- The page has two tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
     `max_content_length`, `document_key_length`). Each row shows its effective
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
@@ -249,10 +255,9 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
     changes, **Reload** re-fetches, **Reset** restores the draft to the current
     values.
   - **Documents** — every document across all IPs with search, sortable columns,
-    pagination, row-selection with bulk delete, inline rename, and single-row
-    delete (behind a confirm dialog).
-- Editing a property or deleting/renaming a document triggers a refresh of the
-  normal left-pane list; deleting the currently open document navigates to `/`.
+    pagination, row-selection with bulk delete, inline editing of the ID, name,
+    created-by, and updated-by cells (copyable editable text), and single-row
+    delete (behind a confirm dialog). Editing the ID renames the document key.
 
 ### Runtime properties
 

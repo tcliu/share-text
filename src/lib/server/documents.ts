@@ -174,6 +174,36 @@ export function normalizeName(value: string) {
   return name
 }
 
+export const MAX_ATTRIBUTION_LENGTH = 100
+
+function normalizeAttribution(value: string, field: string) {
+  const result = value.trim()
+  if (!result) {
+    throw new Error(`${field} is required`)
+  }
+  if (result.length > MAX_ATTRIBUTION_LENGTH) {
+    throw new Error(`${field} exceeds the ${MAX_ATTRIBUTION_LENGTH}-character limit`)
+  }
+  return result
+}
+
+export function normalizeUpdatedBy(value: string) {
+  return normalizeAttribution(value, 'updated by')
+}
+
+export function normalizeCreatedBy(value: string) {
+  return normalizeAttribution(value, 'created by')
+}
+
+export async function normalizeDocumentKey(value: string) {
+  const key = value.trim().toLowerCase()
+  const length = await getDocumentKeyLength()
+  if (!isDocumentKey(key, length)) {
+    throw new Error(`document key must be ${length} lowercase alphanumeric characters`)
+  }
+  return key
+}
+
 export function contentByteSize(content: string) {
   return Buffer.byteLength(content, 'utf8')
 }
@@ -369,6 +399,7 @@ const ADMIN_SORT_COLUMNS: Record<string, string> = {
   name: 'name',
   documentType: 'document_type',
   length: 'content_size',
+  createdBy: 'created_by',
   updatedBy: 'updated_by',
   updatedAt: 'updated_at',
 }
@@ -478,7 +509,19 @@ export async function insertDocument(options: { name?: string; content: string; 
 
 export async function updateDocument(
   id: string,
-  options: { name?: string; content?: string; documentType?: DocumentType; tags?: Tag[]; by: string },
+  options: {
+    name?: string
+    content?: string
+    documentType?: DocumentType
+    tags?: Tag[]
+    by: string
+    // Optional document key override (used by admin edits to change the ID).
+    key?: string
+    // Optional overrides for the attribution fields (used by admin edits);
+    // updated_by defaults to the requester `by` value.
+    createdBy?: string
+    updatedBy?: string
+  },
 ) {
   const updates: string[] = []
   const values: unknown[] = []
@@ -506,14 +549,31 @@ export async function updateDocument(
     values.push(serializeTags(options.tags))
     index += 1
   }
+  if (options.key !== undefined) {
+    updates.push(`key = $${index}`)
+    values.push(options.key)
+    index += 1
+  }
+  if (options.createdBy !== undefined) {
+    updates.push(`created_by = $${index}`)
+    values.push(options.createdBy)
+    index += 1
+  }
+  if (options.updatedBy !== undefined) {
+    updates.push(`updated_by = $${index}`)
+    values.push(options.updatedBy)
+    index += 1
+  }
 
   if (updates.length === 0) {
     return null
   }
 
-  updates.push('updated_by = $' + index)
-  values.push(options.by)
-  index += 1
+  if (options.updatedBy === undefined) {
+    updates.push('updated_by = $' + index)
+    values.push(options.by)
+    index += 1
+  }
   updates.push('updated_at = current_timestamp')
   values.push(id)
 

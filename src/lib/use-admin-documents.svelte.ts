@@ -3,17 +3,17 @@ import {
   AdminAuthError,
   deleteAdminDocument,
   fetchAdminDocuments,
-  renameAdminDocument,
+  updateAdminDocument,
   type AdminDocumentSummary,
 } from '$lib/admin'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
 
 export function useAdminDocuments(params: {
   onSignedOut: () => void
-  onAdminDelete: (id: string) => void
-  onAdminChange: () => void
+  onAdminDelete?: (id: string) => void
+  onAdminChange?: () => void
 }) {
-  const { onSignedOut, onAdminDelete, onAdminChange } = params
+  const { onSignedOut, onAdminDelete = () => {}, onAdminChange = () => {} } = params
 
   let documents = $state<AdminDocumentSummary[]>([])
   let loaded = $state(false)
@@ -32,6 +32,10 @@ export function useAdminDocuments(params: {
       page = 1
       load().catch(() => {})
     },
+  })
+
+  $effect(() => {
+    return () => searchState.destroy()
   })
 
   const selectedCount = $derived(selectedIds.size)
@@ -147,13 +151,64 @@ export function useAdminDocuments(params: {
       return
     }
     try {
-      await renameAdminDocument(id, value)
+      await updateAdminDocument(id, { name: value })
       toast.success('Document renamed')
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+      }
+    }
+  }
+
+  async function updateUpdatedBy(id: string, updatedBy: string) {
+    const value = updatedBy.trim()
+    if (!value) {
+      return
+    }
+    try {
+      await updateAdminDocument(id, { updatedBy: value })
+      toast.success('Updated by saved')
+      void load()
+      onAdminChange()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+      }
+    }
+  }
+
+  async function updateCreatedBy(id: string, createdBy: string) {
+    const value = createdBy.trim()
+    if (!value) {
+      return
+    }
+    try {
+      await updateAdminDocument(id, { createdBy: value })
+      toast.success('Created by saved')
+      void load()
+      onAdminChange()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+      }
+    }
+  }
+
+  async function updateKey(id: string, key: string) {
+    const value = key.trim().toLowerCase()
+    if (!value) {
+      return
+    }
+    try {
+      await updateAdminDocument(id, { key: value })
+      toast.success('Document ID updated')
+      void load()
+      onAdminChange()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to update document')
       }
     }
   }
@@ -262,6 +317,9 @@ export function useAdminDocuments(params: {
     toggleSelection,
     confirmBulkDelete,
     rename,
+    updateUpdatedBy,
+    updateCreatedBy,
+    updateKey,
     confirmDelete,
   }
 }

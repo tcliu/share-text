@@ -3,6 +3,9 @@ import type { RequestHandler } from './$types'
 import {
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_MAX_AGE,
+  ADMIN_SESSION_REMEMBER_MAX_AGE,
+  ADMIN_SESSION_REMEMBER_TTL_MS,
+  ADMIN_SESSION_TTL_MS,
   createSessionToken,
   isLoginRateLimited,
   recordLoginAttempt,
@@ -28,6 +31,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
 
   const username = typeof body.username === 'string' ? body.username : ''
   const password = typeof body.password === 'string' ? body.password : ''
+  const rememberMe = body.rememberMe === true
 
   if (!verifyAdminCredentials(username, password)) {
     recordLoginAttempt(ip)
@@ -36,13 +40,14 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
   }
 
   resetLoginAttempts(ip)
-  cookies.set(ADMIN_SESSION_COOKIE, createSessionToken(), {
+  const ttlMs = rememberMe ? ADMIN_SESSION_REMEMBER_TTL_MS : ADMIN_SESSION_TTL_MS
+  cookies.set(ADMIN_SESSION_COOKIE, createSessionToken(ttlMs), {
     httpOnly: true,
     sameSite: 'strict',
     secure: resolveProfile() === 'prod',
     path: '/',
-    maxAge: ADMIN_SESSION_MAX_AGE,
+    maxAge: rememberMe ? ADMIN_SESSION_REMEMBER_MAX_AGE : ADMIN_SESSION_MAX_AGE,
   })
-  logEvent({ ip, action: 'admin_login', details: { username } })
+  logEvent({ ip, action: 'admin_login', details: { username, remember_me: rememberMe } })
   return json({ ok: true })
 }

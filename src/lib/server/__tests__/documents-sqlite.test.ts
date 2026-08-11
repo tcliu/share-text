@@ -12,6 +12,7 @@ import {
   fetchDocumentSummaries,
   insertDocument,
   listDocumentsForAdmin,
+  normalizeDocumentKey,
   updateDocument,
 } from '$lib/server/documents'
 import { getMaxDocumentsPerUser, setSettingValue } from '$lib/server/settings'
@@ -171,7 +172,62 @@ describe('documents against the SQLite backend (dev profile)', () => {
   })
 
   it('returns null when updating an unknown id', async () => {
-    expect(await updateDocument('zzzzzz', { name: 'x', by: '127.0.0.1' })).toBeNull()  })
+    expect(await updateDocument('zzzzzz', { name: 'x', by: '127.0.0.1' })).toBeNull()
+  })
+
+  it('overrides the updated_by attribution when updatedBy is provided', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
+    const db = await getDb()
+
+    await updateDocument(created.id, { name: 'Renamed', by: '203.0.113.7', updatedBy: 'admin@example.com' })
+    const afterUpdate = await db.query<{ updated_by: string }>(
+      'select updated_by from documents where key = $1',
+      [created.id],
+    )
+    expect(afterUpdate.rows[0]).toMatchObject({ updated_by: 'admin@example.com' })
+  })
+
+  it('allows an updated_by-only update', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
+    const db = await getDb()
+
+    const updated = await updateDocument(created.id, { by: '203.0.113.7', updatedBy: 'admin@example.com' })
+    expect(updated).not.toBeNull()
+    const afterUpdate = await db.query<{ updated_by: string }>(
+      'select updated_by from documents where key = $1',
+      [created.id],
+    )
+    expect(afterUpdate.rows[0]).toMatchObject({ updated_by: 'admin@example.com' })
+  })
+
+  it('overrides the created_by attribution when createdBy is provided', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
+    const db = await getDb()
+
+    await updateDocument(created.id, { by: '203.0.113.7', createdBy: 'admin@example.com' })
+    const afterUpdate = await db.query<{ created_by: string }>(
+      'select created_by from documents where key = $1',
+      [created.id],
+    )
+    expect(afterUpdate.rows[0]).toMatchObject({ created_by: 'admin@example.com' })
+  })
+
+  it('allows a key-only update that changes the document id', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })
+    const db = await getDb()
+
+    const updated = await updateDocument(created.id, { by: '203.0.113.7', key: 'zzz999' })
+    expect(updated).not.toBeNull()
+    expect(updated?.id).toBe('zzz999')
+    const afterUpdate = await db.query<{ key: string }>('select key from documents where key = $1', ['zzz999'])
+    expect(afterUpdate.rows[0]).toMatchObject({ key: 'zzz999' })
+  })
+
+  it('normalizes document keys to lowercase trimmed values of the configured length', async () => {
+    await expect(normalizeDocumentKey(' A1B2C3 ')).resolves.toBe('a1b2c3')
+    await expect(normalizeDocumentKey('a1b2c3d4')).rejects.toThrow('document key must be 6')
+    await expect(normalizeDocumentKey('a1b2c!')).rejects.toThrow('document key must be 6')
+  })
 
   it('records the creating and last-updating IP along with created_at', async () => {
     const created = await insertDocument({ name: 'Notes', content: 'body', by: '10.0.0.1' })

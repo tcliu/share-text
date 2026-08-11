@@ -101,14 +101,15 @@ No `DATABASE_URL` is needed — documents are stored in a local SQLite file at
 
 ## Admin
 
-The gear icon in the left-pane header opens an admin dialog. Sign in with the
-configured `ADMIN_USERNAME`/`ADMIN_PASSWORD` (or `ADMIN_PASSWORD_HASH` in
-production). Two tabs are available after sign-in: **Properties** (runtime-
-adjustable application properties) and **Documents** (browse all documents
-across all client IPs).
+The admin console is a dedicated page at `/admin`, reached by navigating
+there directly. Sign in with the configured `ADMIN_USERNAME`/`ADMIN_PASSWORD`
+(or `ADMIN_PASSWORD_HASH` in production). Two tabs are available after
+sign-in: **Properties** (runtime-adjustable application properties) and
+**Documents** (browse all documents across all client IPs).
 
 Admin API endpoints live under `/api/admin/*` and are protected by a signed,
-HTTP-only admin session cookie; the session expires after 24 hours.
+HTTP-only admin session cookie; the session expires after 24 hours (30 days
+when signing in with "Remember me").
 
 ## Quality Checks
 

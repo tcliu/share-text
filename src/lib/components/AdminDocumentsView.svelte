@@ -34,7 +34,8 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'id',
       header: 'ID',
-      widthClass: 'w-[12%]',
+      widthClass: 'w-[10%]',
+      cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
       cell: idCell,
@@ -42,7 +43,7 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'name',
       header: 'Name',
-      widthClass: 'w-[22%]',
+      widthClass: 'w-[18%]',
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -51,7 +52,7 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'documentType',
       header: 'Type',
-      widthClass: 'w-[10%]',
+      widthClass: 'w-[9%]',
       sortable: true,
       searchable: true,
       cell: documentTypeCell,
@@ -59,7 +60,7 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'tags',
       header: 'Tags',
-      widthClass: 'w-[16%]',
+      widthClass: 'w-[14%]',
       cellClass: 'max-w-0',
       searchable: true,
       cell: tagsCell,
@@ -67,15 +68,25 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'length',
       header: 'Length',
-      widthClass: 'w-[10%]',
+      widthClass: 'w-[9%]',
       cellClass: 'text-slate-400',
       sortable: true,
       cell: lengthCell,
     },
     {
+      key: 'createdBy',
+      header: 'Created by',
+      widthClass: 'w-[13%]',
+      cellClass: 'max-w-0',
+      sortable: true,
+      searchable: true,
+      cell: createdByCell,
+    },
+    {
       key: 'updatedBy',
       header: 'Updated by',
-      widthClass: 'w-[14%]',
+      widthClass: 'w-[13%]',
+      cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
       cell: updatedByCell,
@@ -83,7 +94,7 @@ function formatTags(tags: Tag[] | undefined) {
     {
       key: 'updatedAt',
       header: 'Updated time',
-      widthClass: 'w-[16%]',
+      widthClass: 'w-[14%]',
       cellClass: 'text-slate-500',
       sortable: true,
       cell: updatedAtCell,
@@ -121,15 +132,34 @@ function formatTags(tags: Tag[] | undefined) {
   onSort={(key, direction) => documentsState.handleSort(key, direction)} />
 
 {#snippet idCell(document: AdminDocumentSummary)}
-  <Copyable text={document.id} copyAriaLabel={`Copy document ID ${document.id}`}>
+  <div class="group flex min-w-0 items-center gap-1">
+    <EditableText
+      text={document.id}
+      size="sm"
+      className="font-mono text-slate-500"
+      copyable
+      onChange={key => void documentsState.updateKey(document.id, key)} />
     <a
       href={`/${document.id}`}
       target="_blank"
       rel="noopener noreferrer"
-      class="block font-mono text-sm text-slate-500 hover:text-cyan-300 hover:underline underline-offset-2">
-      {document.id}
+      aria-label={`Open document ${document.id}`}
+      class="shrink-0 text-slate-400 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-cyan-300"
+      onclick={(e) => e.stopPropagation()}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true">
+        <path d="M15 3h6v6" />
+        <path d="M10 14 21 3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      </svg>
     </a>
-  </Copyable>
+  </div>
 {/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
@@ -137,6 +167,7 @@ function formatTags(tags: Tag[] | undefined) {
     text={document.name}
     size="sm"
     className="text-slate-200"
+    copyable
     onChange={name => void documentsState.rename(document.id, name)} />
 {/snippet}
 
@@ -166,11 +197,22 @@ function formatTags(tags: Tag[] | undefined) {
   {formatSize(document.contentSize)}
 {/snippet}
 
-{#snippet updatedByCell(document: AdminDocumentSummary)}
-  <Copyable
-    text={document.updatedBy}
+{#snippet createdByCell(document: AdminDocumentSummary)}
+  <EditableText
+    text={document.createdBy}
+    size="sm"
     className="text-slate-400"
-    copyAriaLabel={`Copy ${document.updatedBy}`} />
+    copyable
+    onChange={createdBy => void documentsState.updateCreatedBy(document.id, createdBy)} />
+{/snippet}
+
+{#snippet updatedByCell(document: AdminDocumentSummary)}
+  <EditableText
+    text={document.updatedBy}
+    size="sm"
+    className="text-slate-400"
+    copyable
+    onChange={updatedBy => void documentsState.updateUpdatedBy(document.id, updatedBy)} />
 {/snippet}
 
 {#snippet updatedAtCell(document: AdminDocumentSummary)}

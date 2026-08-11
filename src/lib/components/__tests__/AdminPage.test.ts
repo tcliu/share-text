@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AdminDialog from '../AdminDialog.svelte'
+import AdminPage from '../AdminPage.svelte'
 
 const settings = [
   {
@@ -33,23 +33,15 @@ function mockFetch() {
   })
 }
 
-function renderDialog() {
-  return render(AdminDialog, {
-    onClose: vi.fn(),
-    onAdminDelete: vi.fn(),
-    onAdminChange: vi.fn(),
-  })
-}
-
-describe('AdminDialog', () => {
+describe('AdminPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
   })
 
-  it('shows the login form when unauthenticated', async () => {
+  it('shows the login panel when unauthenticated', async () => {
     vi.stubGlobal('fetch', mockFetch())
-    const { getByLabelText } = renderDialog()
+    const { getByLabelText } = render(AdminPage)
 
     await waitFor(() => {
       expect(getByLabelText('Username')).toBeTruthy()
@@ -60,7 +52,7 @@ describe('AdminDialog', () => {
 
   it('signs in and reveals the properties tab', async () => {
     vi.stubGlobal('fetch', mockFetch())
-    const { getByLabelText, getByText } = renderDialog()
+    const { getByLabelText, getByText } = render(AdminPage)
 
     const username = await waitFor(() => getByLabelText('Username'))
     const password = getByLabelText('Password')
@@ -75,22 +67,6 @@ describe('AdminDialog', () => {
     })
   })
 
-  it('closes the login panel with the Escape key', async () => {
-    vi.stubGlobal('fetch', mockFetch())
-    const onClose = vi.fn()
-    render(AdminDialog, {
-      onClose,
-      onAdminDelete: vi.fn(),
-      onAdminChange: vi.fn(),
-    })
-
-    await waitFor(() => {
-      expect(screen.getByLabelText('Username')).toBeTruthy()
-    })
-    await fireEvent.keyDown(window, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalled()
-  })
-
   it('reports a clear message when admin is not configured', async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (String(url).endsWith('/api/admin/session')) {
@@ -103,7 +79,7 @@ describe('AdminDialog', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const { getByText } = renderDialog()
+    const { getByText } = render(AdminPage)
 
     await waitFor(() => {
       expect(getByText(/Admin authentication is not configured/)).toBeTruthy()
@@ -163,7 +139,7 @@ describe('AdminDialog', () => {
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) })
     })
     vi.stubGlobal('fetch', fetchMock)
-    const { getByText, getByLabelText } = renderDialog()
+    const { getByText, getByLabelText } = render(AdminPage)
 
     const username = await waitFor(() => getByLabelText('Username'))
     await fireEvent.input(username, { target: { value: 'admin' } })

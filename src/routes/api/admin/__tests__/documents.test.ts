@@ -6,6 +6,7 @@ const documentsMocks = vi.hoisted(() => ({
   fetchDocument: vi.fn(),
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
+  normalizeDocumentKey: vi.fn(),
 }))
 
 vi.mock('$lib/server/documents', async () => {
@@ -17,6 +18,7 @@ vi.mock('$lib/server/documents', async () => {
     fetchDocument: documentsMocks.fetchDocument,
     deleteDocument: documentsMocks.deleteDocument,
     updateDocument: documentsMocks.updateDocument,
+    normalizeDocumentKey: documentsMocks.normalizeDocumentKey,
   }
 })
 
@@ -98,6 +100,7 @@ describe('PUT /api/admin/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
+    documentsMocks.normalizeDocumentKey.mockImplementation(async (value: string) => value.toLowerCase())
     documentsMocks.updateDocument.mockResolvedValue({
       id: 'a1b2c3',
       name: 'Renamed',
@@ -139,13 +142,122 @@ describe('PUT /api/admin/documents/[id]', () => {
     })
   })
 
-  it('returns 400 when the name is missing', async () => {
+  it('updates the updatedBy attribution', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    documentsMocks.updateDocument.mockResolvedValueOnce({
+      id: 'a1b2c3',
+      name: 'Notes',
+      content: 'hello world',
+      documentType: 'text',
+      tags: [{ name: 'alpha', color: '#00F0FF' }],
+      updatedAt: '2026-08-03T00:00:00.000Z',
+      updatedBy: '203.0.113.10',
+    })
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ updatedBy: '203.0.113.10' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
+      updatedBy: '203.0.113.10',
+      by: '203.0.113.9',
+    })
+  })
+
+  it('returns 400 when the body has neither a name nor updatedBy', async () => {
     const response = await PUT({
       params: { id: 'a1b2c3' },
       request: new Request('http://localhost/api/admin/documents/a1b2c3', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({}),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+    expect(response.status).toBe(400)
+  })
+
+  it('returns 400 when updatedBy is blank', async () => {
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ updatedBy: '   ' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+    expect(response.status).toBe(400)
+  })
+
+  it('updates the createdBy attribution', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ createdBy: 'admin@example.com' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
+      createdBy: 'admin@example.com',
+      by: '203.0.113.9',
+    })
+    const body = (await response.json()) as { document: { createdBy: string } }
+    expect(body.document.createdBy).toBe('admin@example.com')
+  })
+
+  it('updates the document key', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: 'zzz999' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { key: 'zzz999', by: '203.0.113.9' })
+  })
+
+  it('returns 409 when the new key collides with an existing document', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    documentsMocks.updateDocument.mockRejectedValueOnce(new Error('UNIQUE constraint failed: documents.key'))
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: 'zzz999' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+    expect(response.status).toBe(409)
+  })
+
+  it('returns 400 when the new key has an invalid format', async () => {
+    documentsMocks.normalizeDocumentKey.mockRejectedValueOnce(
+      new Error('document key must be 6 lowercase alphanumeric characters'),
+    )
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: 'not-a-key' }),
       }),
       getClientAddress: () => '203.0.113.9',
     } as never)
