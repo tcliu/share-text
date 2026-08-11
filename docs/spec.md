@@ -27,7 +27,12 @@ synchronizes through a small fetch-based JSON API.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, `documentType`, `tags`, or any combination thereof and returns
   the updated document; `DELETE` removes it (204). Validation failures return
-  400, unknown ids 404.
+  400, unknown ids 404. A `PUT` that changes `content` or `documentType`
+  records a content-version snapshot.
+- `/api/documents/[id]/versions` — `GET` returns the saved content versions
+  for a document, newest first (metadata only: id, type, author, size,
+  timestamp). `/api/documents/[id]/versions/[versionId]` — `GET` returns one
+  version including its content.
 - `/api/admin/login` — `POST` verifies admin credentials, sets an HTTP-only
   signed session cookie, and is rate-limited per IP. `/api/admin/logout`
   clears the cookie. `/api/admin/session` reports whether admin is configured
@@ -82,8 +87,19 @@ synchronizes through a small fetch-based JSON API.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
   public `key`, `name`, `content`, `document_type` (text default),
   `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,
-  `created_at`/`updated_at`), the `idx_documents_updated_at` index, and the
-  `app_config` key/value table that stores runtime property overrides.
+  `created_at`/`updated_at`), the `idx_documents_updated_at` index,
+  the `document_versions` table (one content snapshot per save,
+  `idx_document_versions_document_id_created_at` index), and the `app_config`
+  key/value table that stores runtime property overrides.
+- Content versions: creating a document records its initial state as the
+  first snapshot, and a save that changes `content` or `document_type` inserts
+  another row into `document_versions` (content, type, `created_by`, time);
+  each insert then prunes every row beyond the newest `max_document_versions`
+  (`MAX_DOCUMENT_VERSIONS`, default 20) for that document. The latest version
+  therefore always mirrors the last saved body. `deleteDocument` removes a
+  document's versions explicitly, and a key change (admin rename of the id)
+  migrates the rows to the new key. The production `db.ts` bootstrap creates
+  the table if it does not exist, matching the tags-column migration.
 - Tags are normalized on write: trimmed, deduplicated case-insensitively,
   sorted by name, with colors drawn from the fixed palette and same-family
   colors avoided. The distinct tag list for `/api/tags` comes from a short-TTL
@@ -132,6 +148,8 @@ synchronizes through a small fetch-based JSON API.
   resolved at request time from `app_config` overrides or env.
 - Content is capped at a hard 1 MiB byte limit plus `MAX_CONTENT_LENGTH` (default
   1048576) characters; both are enforced on create and update.
+- Each document keeps at most `MAX_DOCUMENT_VERSIONS` (default 20) content
+  versions; the oldest snapshots are pruned on every versioned save.
 - Default names are the document's own generated key. Names are
   trimmed, required, and limited to 200 characters.
 
@@ -222,6 +240,30 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
 - Structured previews use `StructurePreview.svelte` (parse/serialize JSON, YAML,
   or XML) rendering an editable `StructureTree`/`StructureNode`; edits are
   patched immutably via `structure-value.ts` and serialized back to content.
+
+### Version History
+
+A document always has one version for its creation state, and a content/type
+save appends another. Once a document has two or more versions it shows a
+History (clock) button in the editor toolbar. Clicking it opens `HistoryDialog`:
+
+- The dialog loads the version list (`GET /api/documents/[id]/versions`,
+  newest first), auto-selects the newest version, and fetches the selected
+  version's content on demand (`GET .../versions/[versionId]`). The content is
+  shown read-only in a monospace view alongside the version's type, author,
+  size, and timestamp. Two tooltip icon buttons sit in the pane header:
+  Compare with current splits the content area into the selected version (left)
+  and the current editor content (right); each split pane shows its own
+  document type tag between its label and the content, since a version may
+  have a different type than the current state. Restore copies the selected
+  version's content and type back into the editor. When the selected version
+  already matches the current editor content and type, both buttons are hidden
+  since there is nothing to compare or restore.
+- Restore copies the selected version's content and type back into the editor
+  as unsaved changes (the user reviews and saves, which appends a new version);
+  when the editor already has unsaved changes the restore is confirmed first.
+- The editor page tracks the version count and refreshes it after each save so
+  the History button appears as soon as a document has multiple versions.
 
 ## Concurrency
 
