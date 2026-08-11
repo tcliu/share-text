@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
 import { logEvent } from './logging'
-import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentsPerUser } from './settings'
+import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './settings'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
 import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
 
@@ -493,7 +493,22 @@ export async function insertDocument(options: { name?: string; content: string; 
          returning id, key, name, content, document_type, tags, updated_by, updated_at`,
         [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by],
       )
-      return toDocument(result.rows[0])
+      const document = toDocument(result.rows[0])
+      const versionStartedAt = Date.now()
+      try {
+        await insertDocumentVersion(document, options.by)
+      } catch (error) {
+        logEvent({
+          ip: options.by,
+          action: 'document_version_create_error',
+          details: {
+            id: document.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            elapsed_ms: Date.now() - versionStartedAt,
+          },
+        })
+      }
+      return document
     } catch (error) {
       if (!isUniqueKeyViolation(error) || attempt >= MAX_KEY_ATTEMPTS) {
         throw error
@@ -569,6 +584,20 @@ export async function updateDocument(
     return null
   }
 
+  // A version snapshot is recorded when the document body (content or type)
+  // changes, so fetch the pre-update values to detect that.
+  let previous: { content: string; document_type: string } | null = null
+  if (options.content !== undefined || options.documentType !== undefined) {
+    const before = await runQuery<{ content: string; document_type: string }>(
+      'select content, document_type from documents where key = $1',
+      [id],
+    )
+    previous = before.rows[0] ?? null
+    if (!previous) {
+      return null
+    }
+  }
+
   if (options.updatedBy === undefined) {
     updates.push('updated_by = $' + index)
     values.push(options.by)
@@ -582,11 +611,23 @@ export async function updateDocument(
     values,
   )
   const row = result.rows[0]
-  return row ? toDocument(row) : null
+  const document = row ? toDocument(row) : null
+  if (document) {
+    const contentChanged = options.content !== undefined && previous !== null && options.content !== previous.content
+    const typeChanged =
+      options.documentType !== undefined && previous !== null && options.documentType !== previous.document_type
+    if (contentChanged || typeChanged) {
+      await insertDocumentVersion(document, options.by)
+    }
+    if (options.key !== undefined && options.key !== id) {
+      await runQuery('update document_versions set document_id = $1 where document_id = $2', [options.key, id])
+    }
+  }
+  return document
 }
 
-
 export async function deleteDocument(id: string) {
+  await runQuery('delete from document_versions where document_id = $1', [id])
   const result = await runQuery('delete from documents where key = $1', [id])
   return (result.rowCount ?? 0) > 0
 }
@@ -626,4 +667,80 @@ export async function listDistinctTags() {
   tags.sort((a, b) => a.name.localeCompare(b.name))
   tagsCache = { tags, ts: Date.now() }
   return tags
+}
+
+export interface DocumentVersionSummary {
+  id: string
+  documentId: string
+  documentType: DocumentType
+  updatedBy: string
+  createdAt: string
+  contentSize: number
+}
+
+export interface DocumentVersion extends DocumentVersionSummary {
+  content: string
+}
+
+interface DocumentVersionRow {
+  id: string | number
+  content?: string
+  document_type: string
+  created_by: string
+  created_at: Date | string
+  content_size?: number | string
+}
+
+function toDocumentVersionSummary(row: DocumentVersionRow): DocumentVersionSummary {
+  return {
+    id: String(row.id),
+    documentId: '',
+    documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
+    updatedBy: row.created_by,
+    createdAt: toIsoString(row.created_at),
+    contentSize: Number(row.content_size ?? (row.content ?? '').length),
+  }
+}
+
+async function insertDocumentVersion(document: Document, by: string) {
+  const maxVersions = await getMaxDocumentVersions()
+  await runQuery(
+    `insert into document_versions (document_id, content, document_type, created_by, created_at)
+     values ($1, $2, $3, $4, current_timestamp)`,
+    [document.id, document.content, document.documentType, by],
+  )
+  // Keep only the newest maxVersions snapshots for this document.
+  await runQuery(
+    `delete from document_versions where document_id = $1 and id not in (
+      select id from document_versions where document_id = $2
+      order by created_at desc, id desc limit $3
+    )`,
+    [document.id, document.id, maxVersions],
+  )
+}
+
+export async function fetchDocumentVersions(documentId: string): Promise<DocumentVersionSummary[]> {
+  const result = await runQuery<DocumentVersionRow>(
+    `select id, document_type, created_by, created_at, length(content) as content_size
+     from document_versions where document_id = $1 order by created_at desc, id desc`,
+    [documentId],
+  )
+  return result.rows.map(row => ({ ...toDocumentVersionSummary(row), documentId }))
+}
+
+export async function fetchDocumentVersion(documentId: string, versionId: number): Promise<DocumentVersion | null> {
+  const result = await runQuery<DocumentVersionRow>(
+    `select id, content, document_type, created_by, created_at, length(content) as content_size
+     from document_versions where document_id = $1 and id = $2`,
+    [documentId, versionId],
+  )
+  const row = result.rows[0]
+  if (!row) {
+    return null
+  }
+  return {
+    ...toDocumentVersionSummary(row),
+    documentId,
+    content: row.content ?? '',
+  }
 }

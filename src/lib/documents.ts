@@ -17,6 +17,19 @@ export interface Document extends DocumentSummary {
   content: string
 }
 
+export interface DocumentVersionSummary {
+  id: string
+  documentId: string
+  documentType: string
+  updatedBy: string
+  createdAt: string
+  contentSize: number
+}
+
+export interface DocumentVersion extends DocumentVersionSummary {
+  content: string
+}
+
 export interface DocumentListResponse {
   documents: OwnedDocumentSummary[]
   hasMore: boolean
@@ -102,4 +115,25 @@ export async function deleteDocument(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete document')
   }
+}
+
+export async function fetchDocumentVersions(id: string): Promise<DocumentVersionSummary[]> {
+  const response = await fetch(`${BASE_PATH}/${id}/versions`)
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.error ?? 'Failed to load version history')
+  }
+  return Array.isArray(body.versions) ? body.versions : []
+}
+
+export async function fetchDocumentVersion(id: string, versionId: string): Promise<DocumentVersion | null> {
+  const response = await fetch(`${BASE_PATH}/${id}/versions/${versionId}`)
+  const body = await response.json().catch(() => ({}))
+  if (response.status === 404) {
+    return null
+  }
+  if (!response.ok) {
+    throw new Error('Failed to load version')
+  }
+  return body.version ?? null
 }

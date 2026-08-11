@@ -40,6 +40,16 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     min: 4,
     max: 32,
   },
+  {
+    key: 'max_document_versions',
+    label: 'Max document versions',
+    description:
+      'Maximum number of content versions kept per document. Older versions beyond this count are pruned on save.',
+    defaultValue: 20,
+    envKey: 'MAX_DOCUMENT_VERSIONS',
+    min: 1,
+    max: 100,
+  },
 ]
 
 export type SettingSource = 'database' | 'environment' | 'default'
@@ -115,6 +125,10 @@ export async function getMaxContentLength() {
 
 export async function getDocumentKeyLength() {
   return getSettingValue('document_key_length')
+}
+
+export async function getMaxDocumentVersions() {
+  return getSettingValue('max_document_versions')
 }
 
 const SETTINGS_CACHE_TTL_MS = 5000

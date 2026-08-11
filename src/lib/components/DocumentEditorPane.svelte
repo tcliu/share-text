@@ -6,6 +6,7 @@
   import Button from './Button.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import TagsDialog from './TagsDialog.svelte'
+  import HistoryDialog from './HistoryDialog.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import Splitter from './Splitter.svelte'
   import PreviewPane from './PreviewPane.svelte'
@@ -16,6 +17,7 @@
   import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '$lib/editor-preview-split'
   import { usePreviewContent } from './use-preview-content.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
+  import { formatTimestamp } from '$lib/date-format'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -27,6 +29,7 @@
     refreshing?: boolean
     maxContentLength?: number
     availableTags?: Tag[]
+    versionCount?: number
     savedName?: string
     onSave: () => void
     onReset: () => void
@@ -47,6 +50,7 @@
     refreshing = false,
     maxContentLength = 0,
     availableTags = [],
+    versionCount = 0,
     savedName,
     onSave,
     onReset,
@@ -88,6 +92,7 @@
   let fileInputRef = $state<HTMLInputElement | null>(null)
   let uploadConfirmOpen = $state(false)
   let tagsOpen = $state(false)
+  let historyOpen = $state(false)
 
   const currentType = $derived(getDocumentType(docType))
   const hasPreview = () => Boolean(currentType.preview)
@@ -182,15 +187,7 @@
     onTypeChange(value)
   }
 
-  function pad(value: number) {
-    return String(value).padStart(2, '0')
-  }
-
-  const formattedTimestamp = $derived.by(() => {
-    const date = new Date(document.updatedAt)
-    if (Number.isNaN(date.getTime())) return document.updatedAt
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-  })
+  const formattedTimestamp = $derived(formatTimestamp(document.updatedAt))
 
   const activeTypeLabel = $derived(currentType.label)
   const documentTags = $derived(document.tags ?? [])
@@ -290,6 +287,20 @@
           </svg>
         {/snippet}
       </Button>
+      {#if versionCount >= 2}
+        <Button
+          size="sm"
+          ariaLabel="Version history"
+          tooltip="History"
+          onClick={() => (historyOpen = true)}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <circle cx="10" cy="10" r="7" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 6v4.2l2.8 1.8" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       {#if onClone || cloneDisabled}
         <Button
           size="sm"
@@ -446,4 +457,22 @@
     {availableTags}
     onClose={() => (tagsOpen = false)}
     onSave={onTagsSave} />
+{/if}
+
+{#if versionCount >= 2}
+  <HistoryDialog
+    open={historyOpen}
+    documentId={document.id}
+    currentContent={content}
+    currentType={docType}
+    hasUnsavedChanges={dirty}
+    onClose={() => (historyOpen = false)}
+    onRestore={version => {
+      content = version.content
+      docType = version.documentType
+      historyOpen = false
+      if (content !== document.content || docType !== document.documentType) {
+        toast.success('Version restored — review and save')
+      }
+    }} />
 {/if}
