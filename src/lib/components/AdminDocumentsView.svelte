@@ -7,6 +7,7 @@
   import type { AdminDocumentSummary } from '$lib/admin'
   import Chip from './Chip.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
+  import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
 
   interface Props {
@@ -15,20 +16,13 @@
 
   let { documentsState }: Props = $props()
 
-  function formatTime(value: string) {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  function formatSize(value: number) {
+    return value.toLocaleString()
   }
 
-function formatSize(value: number) {
-  return value.toLocaleString()
-}
-
-function formatTags(tags: Tag[] | undefined) {
-  return tags?.map(tag => tag.name).join(', ') ?? ''
-}
+  function formatTags(tags: Tag[] | undefined) {
+    return tags?.map(tag => tag.name).join(', ') ?? ''
+  }
 
   const columns: DataTableColumn<AdminDocumentSummary>[] = [
     {
@@ -216,7 +210,7 @@ function formatTags(tags: Tag[] | undefined) {
 {/snippet}
 
 {#snippet updatedAtCell(document: AdminDocumentSummary)}
-  {formatTime(document.updatedAt)}
+  {formatTimestamp(document.updatedAt)}
 {/snippet}
 
 {#if documentsState.deleteTarget}

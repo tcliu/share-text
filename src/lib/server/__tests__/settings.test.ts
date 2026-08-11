@@ -9,6 +9,7 @@ import {
   deleteSettingValue,
   getDocumentKeyLength,
   getMaxContentLength,
+  getMaxDocumentVersions,
   getMaxDocumentsPerUser,
   getSettingValue,
   listSettings,
@@ -23,6 +24,7 @@ beforeEach(async () => {
   delete process.env.MAX_DOCUMENTS_PER_IP
   delete process.env.MAX_CONTENT_LENGTH
   delete process.env.DOCUMENT_KEY_LENGTH
+  delete process.env.MAX_DOCUMENT_VERSIONS
 })
 
 describe('setting resolution', () => {
@@ -30,6 +32,7 @@ describe('setting resolution', () => {
     expect(await getSettingValue('max_documents_per_ip')).toBe(10)
     expect(await getMaxContentLength()).toBe(1024 * 1024)
     expect(await getDocumentKeyLength()).toBe(6)
+    expect(await getMaxDocumentVersions()).toBe(20)
     const settings = await listSettings()
     expect(settings.every(setting => setting.source === 'default')).toBe(true)
   })
@@ -40,6 +43,16 @@ describe('setting resolution', () => {
     const settings = await listSettings()
     expect(settings.find(setting => setting.key === 'max_documents_per_ip')).toMatchObject({
       value: 25,
+      source: 'environment',
+    })
+  })
+
+  it('resolves the max_document_versions setting from the environment', async () => {
+    process.env.MAX_DOCUMENT_VERSIONS = '5'
+    expect(await getMaxDocumentVersions()).toBe(5)
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'max_document_versions')).toMatchObject({
+      value: 5,
       source: 'environment',
     })
   })
@@ -121,5 +134,7 @@ describe('setting validation', () => {
     expect(() => validateSettingValue('max_content_length', 1024 * 1024 + 1)).toThrow('must be between')
     expect(() => validateSettingValue('document_key_length', 3)).toThrow('must be between')
     expect(() => validateSettingValue('document_key_length', 33)).toThrow('must be between')
+    expect(() => validateSettingValue('max_document_versions', 0)).toThrow('must be between')
+    expect(() => validateSettingValue('max_document_versions', 101)).toThrow('must be between')
   })
 })

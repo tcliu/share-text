@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import type { PageProps } from './$types'
-  import { fetchDocument, updateDocument, type Document } from '$lib/documents'
+  import { fetchDocument, updateDocument, fetchDocumentVersions, type Document } from '$lib/documents'
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
@@ -28,6 +28,7 @@
   let cloning = $state(false)
   let savingTags = $state(false)
   let refreshing = $state(false)
+  let versionCount = $state(0)
   let draftTimer: ReturnType<typeof setTimeout> | null = null
 
   const dirty = $derived(content !== savedContent || docType !== savedDocumentType)
@@ -108,6 +109,18 @@
     }
   }
 
+  async function refreshVersions() {
+    if (!currentId) return
+    const requestedId = currentId
+    try {
+      const versions = await fetchDocumentVersions(requestedId)
+      if (requestedId !== currentId) return
+      versionCount = versions.length
+    } catch {
+      // Version history is non-critical; keep the last known count.
+    }
+  }
+
   // Keep the header name in sync when the document is renamed from the left
   // pane (or elsewhere) through the shared documents list.
   $effect(() => {
@@ -130,6 +143,7 @@
     savedContent = document.content
     content = loadDraft(document.id) ?? document.content
     docType = loadDraftDocType(document.id) ?? document.documentType
+    refreshVersions()
   })
 
   $effect(() => {
@@ -174,6 +188,7 @@
       docType = updated.documentType
       toast.success('Document saved')
       await context.refreshList()
+      await refreshVersions()
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to save document')
     } finally {
@@ -270,6 +285,7 @@
     refreshing={refreshing || context.loadingDocuments}
     maxContentLength={data.maxContentLength}
     {availableTags}
+    {versionCount}
     onSave={handleSave}
     onReset={handleReset}
     onRename={handleRename}
