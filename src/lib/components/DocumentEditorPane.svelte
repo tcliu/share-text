@@ -295,21 +295,7 @@
         </svg>
       {/snippet}
     </Button>
-    {#if versionCount >= 2}
-      <Button
-        size="sm"
-        ariaLabel="Version history"
-        tooltip="History"
-        onClick={() => (historyOpen = true)}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <circle cx="10" cy="10" r="7" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 6v4.2l2.8 1.8" />
-          </svg>
-        {/snippet}
-      </Button>
-    {/if}
-    {#if (onClone || cloneDisabled) && !context.isMobile}
+    {#if onClone || cloneDisabled}
       <Button
         size="sm"
         ariaLabel="Clone document"
@@ -321,37 +307,49 @@
         {/snippet}
       </Button>
     {/if}
-    <Button
-      size="sm"
-      ariaLabel="Upload"
-      tooltip="Upload"
-      onClick={handleUploadClick}>
-      {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 16V7m0 0 3.5 3.5M10 7 6.5 10.5M4 4h12" />
-        </svg>
-      {/snippet}
-    </Button>
-    <Button
-      size="sm"
-      ariaLabel="Export"
-      tooltip="Export"
-      onClick={handleExport}
-      disabled={content.length === 0}>
-      {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 16h12" />
-        </svg>
-      {/snippet}
-    </Button>
-    <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!dirty || saving}>
-      {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
-        </svg>
-      {/snippet}
-    </Button>
+    {#if versionCount >= 2 && !context.isMobile}
+      <Button
+        size="sm"
+        ariaLabel="Version history"
+        tooltip="History"
+        onClick={() => (historyOpen = true)}>
+        {#snippet icon()}
+          {@render historyIcon()}
+        {/snippet}
+      </Button>
+    {/if}
+    {#if !context.isMobile}
+      <Button
+        size="sm"
+        ariaLabel="Upload"
+        tooltip="Upload"
+        onClick={handleUploadClick}>
+        {#snippet icon()}
+          {@render uploadIcon()}
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel="Export"
+        tooltip="Export"
+        onClick={handleExport}
+        disabled={content.length === 0}>
+        {#snippet icon()}
+          {@render exportIcon()}
+        {/snippet}
+      </Button>
+      {#if currentType.format}
+        <Button
+          size="sm"
+          ariaLabel={currentType.format.title}
+          tooltip="Format"
+          onClick={formatState.openDialog}>
+          {#snippet icon()}
+            {@render formatIcon()}
+          {/snippet}
+        </Button>
+      {/if}
+    {/if}
     {#if onTagsSave}
       <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
         {#snippet icon()}
@@ -362,6 +360,14 @@
         {/snippet}
       </Button>
     {/if}
+    <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!dirty || saving}>
+      {#snippet icon()}
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
+        </svg>
+      {/snippet}
+    </Button>
     <Button
       size="sm"
       ariaLabel="Save"
@@ -383,6 +389,25 @@
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
       <rect x="3" y="3" width="10" height="10" rx="1.5" />
       <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
+    </svg>
+  {/snippet}
+
+  {#snippet historyIcon()}
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <circle cx="10" cy="10" r="7" />
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 6v4.2l2.8 1.8" />
+    </svg>
+  {/snippet}
+
+  {#snippet uploadIcon()}
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 16V7m0 0 3.5 3.5M10 7 6.5 10.5M4 4h12" />
+    </svg>
+  {/snippet}
+
+  {#snippet exportIcon()}
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 16h12" />
     </svg>
   {/snippet}
 
@@ -409,6 +434,43 @@
         </div>
       {/if}
       <div class="flex flex-wrap items-center gap-1" data-testid="editor-actions">
+        <KebabMenu
+          ariaLabel="More actions"
+          items={[
+            {
+              id: 'upload',
+              label: 'Upload',
+              onClick: handleUploadClick,
+              icon: uploadIcon,
+            },
+            {
+              id: 'export',
+              label: 'Export',
+              onClick: handleExport,
+              disabled: content.length === 0,
+              icon: exportIcon,
+            },
+            ...(versionCount >= 2
+              ? [
+                  {
+                    id: 'history',
+                    label: 'History',
+                    onClick: () => (historyOpen = true),
+                    icon: historyIcon,
+                  },
+                ]
+              : []),
+            ...(currentType.format
+              ? [
+                  {
+                    id: 'format',
+                    label: currentType.format.title,
+                    onClick: formatState.openDialog,
+                    icon: formatIcon,
+                  },
+                ]
+              : []),
+          ]} />
         {#if currentType.preview}
           <Button
             size="sm"
@@ -429,33 +491,6 @@
           </Button>
         {/if}
         {@render actionButtons()}
-        {#if currentType.format || onClone || cloneDisabled}
-          <KebabMenu
-            ariaLabel="More actions"
-            items={[
-              ...(onClone || cloneDisabled
-                ? [
-                    {
-                      id: 'clone',
-                      label: 'Clone',
-                      onClick: () => onClone?.(),
-                      disabled: cloneDisabled || content.length === 0,
-                      icon: cloneIcon,
-                    },
-                  ]
-                : []),
-              ...(currentType.format
-                ? [
-                    {
-                      id: 'format',
-                      label: currentType.format.title,
-                      onClick: formatState.openDialog,
-                      icon: formatIcon,
-                    },
-                  ]
-                : []),
-            ]} />
-        {/if}
       </div>
     </div>
   {:else}
@@ -571,6 +606,7 @@
     currentContent={content}
     currentType={docType}
     hasUnsavedChanges={dirty}
+    isMobile={context.isMobile}
     onClose={() => (historyOpen = false)}
     onRestore={version => {
       content = version.content

@@ -18,6 +18,7 @@
     currentContent: string
     currentType: string
     hasUnsavedChanges: boolean
+    isMobile?: boolean
     onClose: () => void
     onRestore: (version: DocumentVersion) => void
   }
@@ -28,6 +29,7 @@
     currentContent,
     currentType,
     hasUnsavedChanges,
+    isMobile = false,
     onClose,
     onRestore,
   }: Props = $props()
@@ -119,7 +121,12 @@
 </script>
 
 {#if open}
-  <BaseDialog title="Version History" maxWidth="3xl" onCancel={onClose} dismissKeydownCapture={!restorePromptOpen}>
+  <BaseDialog
+    title="Version History"
+    maxWidth="3xl"
+    fullscreen={isMobile}
+    onCancel={onClose}
+    dismissKeydownCapture={!restorePromptOpen}>
     <div class="flex flex-col gap-3">
       <p class="text-xs text-slate-500">
         Saved versions of this document, newest first. Restoring copies the selected version back into the editor for

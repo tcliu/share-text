@@ -45,33 +45,67 @@ describe('DocumentEditorPane mobile header', () => {
     )
   })
 
-  it('shows clone and format in the kebab menu instead of toolbar buttons on mobile', async () => {
+  it('shows clone as a toolbar button after copy and keeps format in the kebab menu on mobile', async () => {
     const onClone = vi.fn()
-    const { getByLabelText, getByRole, queryByLabelText, queryByText } = render(MobileEditorHost, {
+    const { getByRole, queryByLabelText, queryByText } = render(MobileEditorHost, {
       docType: 'json',
       withClone: true,
       onClone,
     })
 
-    expect(queryByLabelText('Clone document')).toBeNull()
+    const cloneButton = getByRole('button', { name: 'Clone document' })
     expect(queryByLabelText('Format JSON')).toBeNull()
+
+    const copyButton = getByRole('button', { name: 'Copy' })
+    const panel = cloneButton.closest('[data-testid="editor-actions"]')!
+    const buttons: HTMLElement[] = Array.from(panel.querySelectorAll('button'))
+    expect(buttons.indexOf(cloneButton)).toBeGreaterThan(buttons.indexOf(copyButton))
+
+    await fireEvent.click(cloneButton)
+    expect(onClone).toHaveBeenCalledTimes(1)
+
+    const trigger = getByRole('button', { name: 'More actions' })
+    await fireEvent.click(trigger)
+    expect(queryByText('Format JSON')).toBeTruthy()
+    expect(queryByText('Clone')).toBeNull()
+  })
+
+  it('surfaces upload, export, and history through the kebab menu instead of toolbar buttons on mobile', async () => {
+    const { getByRole, queryByLabelText, queryByText } = render(MobileEditorHost, {
+      docType: 'markdown',
+      withClone: false,
+      versionCount: 3,
+    })
+
+    expect(queryByLabelText('Upload')).toBeNull()
+    expect(queryByLabelText('Export')).toBeNull()
+    expect(queryByLabelText('Version history')).toBeNull()
+
+    const trigger = getByRole('button', { name: 'More actions' })
+    expect(trigger.closest('[data-testid="editor-actions"]')!.querySelector('button')).toBe(trigger)
+    await fireEvent.click(trigger)
+
+    expect(queryByText('Upload')).toBeTruthy()
+    expect(queryByText('Export')).toBeTruthy()
+    expect(queryByText('History')).toBeTruthy()
+
+    const items = Array.from(document.querySelectorAll('[role="menuitem"]')).map(node => node.textContent?.trim())
+    expect(items.indexOf('Upload')).toBeLessThan(items.indexOf('Export'))
+    expect(items.indexOf('Export')).toBeLessThan(items.indexOf('History'))
+  })
+
+  it('keeps upload and export in the kebab menu when history is unavailable', async () => {
+    const { getByRole, queryByText } = render(MobileEditorHost, {
+      docType: 'markdown',
+      withClone: false,
+      versionCount: 1,
+    })
 
     const trigger = getByRole('button', { name: 'More actions' })
     await fireEvent.click(trigger)
 
-    expect(trigger.getAttribute('aria-expanded')).toBe('true')
-    expect(queryByText('Clone')).toBeTruthy()
-    expect(queryByText('Format JSON')).toBeTruthy()
-
-    await fireEvent.click(queryByText('Clone')!)
-
-    expect(onClone).toHaveBeenCalledTimes(1)
-    await vi.waitFor(() => expect(getByRole('button', { name: 'More actions' }).getAttribute('aria-expanded')).toBe('false'))
-  })
-
-  it('omits the kebab menu when there are no applicable actions', async () => {
-    const { queryByLabelText } = render(MobileEditorHost, { docType: 'markdown', withClone: false })
-
-    expect(queryByLabelText('More actions')).toBeNull()
+    expect(queryByText('Upload')).toBeTruthy()
+    expect(queryByText('Export')).toBeTruthy()
+    expect(queryByText('History')).toBeNull()
   })
 })

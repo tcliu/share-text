@@ -7,10 +7,11 @@
     docType?: string
     withClone?: boolean
     withTags?: boolean
+    versionCount?: number
     onClone?: () => void
   }
 
-  let { docType = 'markdown', withClone = false, withTags = true, onClone }: Props = $props()
+  let { docType = 'markdown', withClone = false, withTags = true, versionCount = 0, onClone }: Props = $props()
 
   let content = $state('hello')
 
@@ -56,5 +57,6 @@
   onReset={() => {}}
   onRename={() => {}}
   onTypeChange={() => {}}
+  {versionCount}
   onClone={withClone ? onClone ?? (() => {}) : undefined}
   onTagsSave={() => {}} />

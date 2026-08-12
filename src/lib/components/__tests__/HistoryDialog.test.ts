@@ -133,6 +133,23 @@ describe('HistoryDialog', () => {
     expect(getByText('text')).toBeTruthy()
   })
 
+  it('fills the entire screen on mobile', () => {
+    const { getByTestId } = renderDialog({ isMobile: true })
+
+    const overlay = getByTestId('dialog-overlay')
+    expect(overlay.className).toContain('bg-slate-950')
+    expect(overlay.className).not.toContain('/80')
+    expect(overlay.className).not.toContain('px-4')
+  })
+
+  it('keeps the centered modal layout on desktop', () => {
+    const { getByTestId } = renderDialog()
+
+    const overlay = getByTestId('dialog-overlay')
+    expect(overlay.className).toContain('bg-slate-950/80')
+    expect(overlay.className).toContain('px-4')
+  })
+
   it('hides compare and restore when the selected version already matches current', async () => {
     const { findByText, getByText, getByLabelText, queryByLabelText } = renderDialog({
       currentContent: '# v2',

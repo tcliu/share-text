@@ -13,6 +13,7 @@
     pending?: boolean
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
+    fullscreen?: boolean
     onCancel: () => void
     header?: import('svelte').Snippet
     children?: import('svelte').Snippet
@@ -26,6 +27,7 @@
     pending = false,
     allowPendingCancel = false,
     dismissKeydownCapture = true,
+    fullscreen = false,
     onCancel,
     header,
     children,
@@ -107,12 +109,19 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div data-testid="dialog-overlay" class="fixed inset-0 z-50 bg-slate-950/80 px-4 py-6" onclick={handleCancelRequest}>
+<div
+  data-testid="dialog-overlay"
+  class="fixed inset-0 z-50 {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80 px-4 py-6'}"
+  onclick={handleCancelRequest}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="flex min-h-full items-center justify-center" onclick={e => e.stopPropagation()}>
+  <div
+    class={fullscreen ? 'h-full' : 'flex min-h-full items-center justify-center'}
+    onclick={e => e.stopPropagation()}>
     <section
-        class="relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur {sizeClass} {className}">
+        class="relative flex flex-col overflow-y-auto {fullscreen
+          ? 'h-full w-full bg-slate-900 p-5.5'
+          : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
       <button
         type="button"
         aria-label="Close dialog"
