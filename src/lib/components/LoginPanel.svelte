@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { goto } from '$app/navigation'
   import { toast } from 'svelte-sonner'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
@@ -108,6 +109,15 @@
           </FormField>
           <Checkbox bind:checked={rememberMe} name="rememberMe" label="Remember me" />
           <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">Sign in</Button>
+          <a
+            href="/"
+            class="text-center text-sm text-slate-400 transition hover:text-cyan-400"
+            onclick={e => {
+              e.preventDefault()
+              void goto('/')
+            }}>
+            Go to Documents
+          </a>
         </form>
       {:else}
         <p class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
