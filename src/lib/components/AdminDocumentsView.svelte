@@ -27,8 +27,9 @@
   const columns: DataTableColumn<AdminDocumentSummary>[] = [
     {
       key: 'id',
-      header: 'ID',
-      widthClass: 'w-[10%]',
+      header: 'Key',
+      width: '10%',
+      minWidth: 160,
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -37,7 +38,8 @@
     {
       key: 'name',
       header: 'Name',
-      widthClass: 'w-[18%]',
+      width: '18%',
+      minWidth: 160,
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -46,7 +48,7 @@
     {
       key: 'documentType',
       header: 'Type',
-      widthClass: 'w-[9%]',
+      width: '9%',
       sortable: true,
       searchable: true,
       cell: documentTypeCell,
@@ -54,7 +56,7 @@
     {
       key: 'tags',
       header: 'Tags',
-      widthClass: 'w-[14%]',
+      width: '14%',
       cellClass: 'max-w-0',
       searchable: true,
       cell: tagsCell,
@@ -62,7 +64,7 @@
     {
       key: 'length',
       header: 'Length',
-      widthClass: 'w-[9%]',
+      width: '9%',
       cellClass: 'text-slate-400',
       sortable: true,
       cell: lengthCell,
@@ -70,7 +72,8 @@
     {
       key: 'createdBy',
       header: 'Created by',
-      widthClass: 'w-[13%]',
+      width: '13%',
+      minWidth: 144,
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -79,7 +82,8 @@
     {
       key: 'updatedBy',
       header: 'Updated by',
-      widthClass: 'w-[13%]',
+      width: '13%',
+      minWidth: 144,
       cellClass: 'max-w-0',
       sortable: true,
       searchable: true,
@@ -88,7 +92,8 @@
     {
       key: 'updatedAt',
       header: 'Updated time',
-      widthClass: 'w-[14%]',
+      width: '14%',
+      minWidth: 144,
       cellClass: 'text-slate-500',
       sortable: true,
       cell: updatedAtCell,

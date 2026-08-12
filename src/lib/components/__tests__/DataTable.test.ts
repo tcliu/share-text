@@ -1,0 +1,113 @@
+// @vitest-environment jsdom
+import { render } from '@testing-library/svelte'
+import { describe, expect, it, vi } from 'vitest'
+import DataTable, { type DataTableColumn } from '../DataTable.svelte'
+
+interface Row {
+  key: string
+  name: string
+}
+
+const columns: DataTableColumn<Row>[] = [
+  { key: 'key', header: 'Key', width: '10%', minWidth: 160 },
+  { key: 'name', header: 'Name', width: '20%', minWidth: 200 },
+]
+
+const rows: Row[] = [{ key: 'a1b2c3', name: 'Design notes' }]
+
+function baseProps() {
+  return {
+    rows,
+    rowId: (row: Row) => row.key,
+    columns,
+    searchAriaLabel: 'Search rows',
+    total: 1,
+    pageSize: 10,
+    currentPage: 1,
+    onPageChange: vi.fn(),
+    onPageSizeChange: vi.fn(),
+  } as any
+}
+
+describe('DataTable column width derivation', () => {
+  it('applies derived percentage widths rebased to sum to 100', () => {
+    const { getByText } = render(DataTable<Row>, { props: baseProps() })
+
+    const keyTh = getByText('Key').closest('th')!
+    const nameTh = getByText('Name').closest('th')!
+
+    expect(keyTh.style.width).toBe('33.33%')
+    expect(nameTh.style.width).toBe('66.67%')
+  })
+
+  it('applies the derived min width to both header and body cells', () => {
+    const { getByText } = render(DataTable<Row>, { props: baseProps() })
+
+    const keyTh = getByText('Key').closest('th')!
+    const nameTh = getByText('Name').closest('th')!
+    expect(keyTh.style.minWidth).toBe('160px')
+    expect(nameTh.style.minWidth).toBe('200px')
+
+    const rowCells = Array.from(document.querySelectorAll<HTMLTableCellElement>('tbody tr td'))
+    expect(rowCells[0].style.minWidth).toBe('160px')
+    expect(rowCells[1].style.minWidth).toBe('200px')
+  })
+
+  it('prefers an explicit widthClass over the width prop', () => {
+    const { getByText } = render(DataTable<Row>, {
+      props: {
+        ...baseProps(),
+        columns: [{ key: 'name', header: 'Name', widthClass: 'w-[40%]', width: '20%', minWidth: 200 }],
+      },
+    })
+
+    const nameTh = getByText('Name').closest('th')!
+    expect(nameTh.className).toContain('w-[40%]')
+    expect(nameTh.style.width).toBe('')
+    expect(nameTh.style.minWidth).toBe('200px')
+  })
+
+  it('passes through a valid CSS length width', () => {
+    const { getByText } = render(DataTable<Row>, {
+      props: {
+        ...baseProps(),
+        columns: [{ key: 'name', header: 'Name', width: '20rem', minWidth: 100 }],
+      },
+    })
+
+    const nameTh = getByText('Name').closest('th')!
+    expect(nameTh.style.width).toBe('20rem')
+    expect(nameTh.style.minWidth).toBe('100px')
+  })
+
+  it('ignores malformed width and min-width strings and reports them', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { getByText } = render(DataTable<Row>, {
+      props: {
+        ...baseProps(),
+        columns: [{ key: 'name', header: 'Name', width: '12pxfoo', minWidth: 'bogus' }],
+      },
+    })
+
+    const nameTh = getByText('Name').closest('th')!
+    expect(nameTh.style.width).toBe('')
+    expect(nameTh.style.minWidth).toBe('')
+    expect(errorSpy).toHaveBeenCalledTimes(2)
+    errorSpy.mockRestore()
+  })
+
+  it('does not crash on a malformed percentage width', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { getByText } = render(DataTable<Row>, {
+      props: {
+        ...baseProps(),
+        columns: [{ key: 'name', header: 'Name', width: '%', minWidth: 100 }],
+      },
+    })
+
+    const nameTh = getByText('Name').closest('th')!
+    expect(nameTh.style.width).toBe('')
+    expect(nameTh.style.minWidth).toBe('100px')
+    errorSpy.mockRestore()
+  })
+})
