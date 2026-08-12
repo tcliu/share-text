@@ -9,9 +9,17 @@
     withTags?: boolean
     versionCount?: number
     onClone?: () => void
+    onOpenDrawer?: () => void
   }
 
-  let { docType = 'markdown', withClone = false, withTags = true, versionCount = 0, onClone }: Props = $props()
+  let {
+    docType = 'markdown',
+    withClone = false,
+    withTags = true,
+    versionCount = 0,
+    onClone,
+    onOpenDrawer,
+  }: Props = $props()
 
   let content = $state('hello')
 
@@ -29,6 +37,8 @@
     canLeaveCurrentDocument: () => true,
     registerEditorFocus: () => {},
     unregisterEditorFocus: () => {},
+    // svelte-ignore state_referenced_locally
+    openMobileDrawer: onOpenDrawer ?? (() => {}),
     isMobile: true,
   })
 

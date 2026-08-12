@@ -1,7 +1,7 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import { page } from '$app/stores'
-  import { goto } from '$app/navigation'
+  import { goto, afterNavigate } from '$app/navigation'
   import { setShareTextContext } from '$lib/share-text-context'
   import DocumentList from '$lib/components/DocumentList.svelte'
   import Splitter from '$lib/components/Splitter.svelte'
@@ -9,6 +9,7 @@
   import PersonIcon from '$lib/components/PersonIcon.svelte'
   import RefreshIcon from '$lib/components/RefreshIcon.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
+  import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import {
@@ -30,6 +31,7 @@
   let leftPaneWidth = $state(SPLIT_PANE_DEFAULT_WIDTH)
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
   let editorFocus = $state<(() => void) | null>(null)
+  let mobileDrawerOpen = $state(false)
 
   $effect(() => {
     leftPaneWidth = loadSplitPaneWidth()
@@ -100,6 +102,11 @@
     leftPaneCollapsed = !leftPaneCollapsed
   }
 
+  const handleListCollapse = $derived.by(() => {
+    if (!isMobile) return toggleLeftPane
+    return mobileDrawerOpen ? closeMobileDrawer : undefined
+  })
+
   function handleSplitPaneChange(value: number) {
     leftPaneWidth = value
   }
@@ -115,6 +122,24 @@
       leftPaneWidth = effectiveMin
     }
   }
+
+  function openMobileDrawer() {
+    mobileDrawerOpen = true
+  }
+
+  function closeMobileDrawer() {
+    mobileDrawerOpen = false
+  }
+
+  afterNavigate(() => {
+    closeMobileDrawer()
+  })
+
+  $effect(() => {
+    if (editorGuardState.discardDialogOpen) {
+      closeMobileDrawer()
+    }
+  })
 
   function handleConfirmDiscard() {
     const action = editorGuardState.handleConfirmDiscard()
@@ -155,6 +180,7 @@
     unregisterEditorFocus: () => {
       editorFocus = null
     },
+    openMobileDrawer,
     get isMobile() {
       return isMobile
     },
@@ -165,16 +191,35 @@
   })
 </script>
 
+{#snippet documentList()}
+  <DocumentList
+    documents={documentsState.documents}
+    loading={documentsState.loadingDocuments}
+    error={documentsState.documentsError}
+    {selectedId}
+    hasMore={documentsState.hasMore}
+    bind:searchInput={documentsState.searchInput}
+    searchActive={documentsState.searchInput.trim() !== '' || documentsState.searchQuery !== ''}
+    onSearchInput={documentsState.handleSearchInput}
+    onSearchKeydown={documentsState.handleSearchKeydown}
+    width={isMobile ? undefined : leftPaneWidth}
+    onNew={handleNew}
+    onRefresh={handleRefresh}
+    onLogin={() => goto('/login')}
+    onDelete={handleDelete}
+    onLoadMore={documentsState.loadMore}
+    onToggleCollapse={handleListCollapse}
+    onMinWidthChange={handleMinWidthChange}
+    deletePending={deleteTarget !== null} />
+{/snippet}
+
 <div class="flex h-screen overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path
-              fill-rule="evenodd"
-              d="M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z"
-              clip-rule="evenodd" />
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.5 5.5 4 4.5-4 4.5M4.5 5.5l4 4.5-4 4.5" />
           </svg>
         {/snippet}
       </Button>
@@ -205,25 +250,7 @@
       </Button>
     </div>
   {:else if !isMobile || !showingEditor}
-    <DocumentList
-      documents={documentsState.documents}
-      loading={documentsState.loadingDocuments}
-      error={documentsState.documentsError}
-      {selectedId}
-      hasMore={documentsState.hasMore}
-      bind:searchInput={documentsState.searchInput}
-      searchActive={documentsState.searchInput.trim() !== '' || documentsState.searchQuery !== ''}
-      onSearchInput={documentsState.handleSearchInput}
-      onSearchKeydown={documentsState.handleSearchKeydown}
-      width={isMobile ? undefined : leftPaneWidth}
-      onNew={handleNew}
-      onRefresh={handleRefresh}
-      onLogin={() => goto('/login')}
-      onDelete={handleDelete}
-      onLoadMore={documentsState.loadMore}
-      onToggleCollapse={toggleLeftPane}
-      onMinWidthChange={handleMinWidthChange}
-      deletePending={deleteTarget !== null} />
+    {@render documentList()}
     {#if !isMobile}
       <Splitter
         value={leftPaneWidth}
@@ -237,6 +264,12 @@
     {@render children()}
   </main>
 </div>
+
+{#if isMobile && showingEditor}
+  <MobileDrawer open={mobileDrawerOpen} onClose={closeMobileDrawer}>
+    {@render documentList()}
+  </MobileDrawer>
+{/if}
 
 {#if editorGuardState.discardDialogOpen}
   <ConfirmDialog

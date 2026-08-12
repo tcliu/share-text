@@ -29,7 +29,7 @@ function applyPreviewMode(mode: PreviewMode) {
   history.replaceState(history.state, '', url)
 }
 
-export function usePreviewMode(hasPreview: () => boolean, isMobile: () => boolean) {
+export function usePreviewMode(hasPreview: () => boolean) {
   let previewMode = $state<PreviewMode>(previewModeFromUrl())
 
   $effect(() => {
@@ -38,12 +38,9 @@ export function usePreviewMode(hasPreview: () => boolean, isMobile: () => boolea
 
   let editorWidthPct = $state(loadEditorPreviewSplit())
 
-  // On mobile there is no split view: any non-editor mode renders preview-only.
-  const effectiveMode = $derived(isMobile() && previewMode !== 'editor' ? 'preview' : previewMode)
-
-  const showPreview = $derived(effectiveMode !== 'editor' && hasPreview())
-  const previewOnly = $derived(effectiveMode === 'preview' && showPreview)
-  const editorActive = $derived(effectiveMode !== 'preview')
+  const showPreview = $derived(previewMode !== 'editor' && hasPreview())
+  const previewOnly = $derived(previewMode === 'preview' && showPreview)
+  const editorActive = $derived(previewMode !== 'preview')
   const previewActive = $derived(showPreview)
   const editorDisabled = $derived(editorActive && !previewActive)
   const previewDisabled = $derived(previewActive && !editorActive)
@@ -60,14 +57,8 @@ export function usePreviewMode(hasPreview: () => boolean, isMobile: () => boolea
     applyPreviewMode(mode)
   }
 
-  function togglePreview() {
-    const mode: PreviewMode = effectiveMode === 'editor' ? 'preview' : 'editor'
-    previewMode = mode
-    applyPreviewMode(mode)
-  }
-
   return {
-    get previewMode() { return effectiveMode },
+    get previewMode() { return previewMode },
     get showPreview() { return showPreview },
     get previewOnly() { return previewOnly },
     get editorActive() { return editorActive },
@@ -81,6 +72,5 @@ export function usePreviewMode(hasPreview: () => boolean, isMobile: () => boolea
     },
     setEditor,
     setPreview,
-    togglePreview,
   }
 }

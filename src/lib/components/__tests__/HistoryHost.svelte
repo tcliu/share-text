@@ -26,6 +26,7 @@
     canLeaveCurrentDocument: () => true,
     registerEditorFocus: () => {},
     unregisterEditorFocus: () => {},
+    openMobileDrawer: () => {},
     isMobile: false,
   })
 
