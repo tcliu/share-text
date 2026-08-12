@@ -236,8 +236,9 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 ## Admin
 
 The admin console is a dedicated area under `/admin`, reached by direct
-navigation. Unauthenticated visitors see a sign-in form; if no admin password
-source is configured, the page reports that admin is disabled instead. A
+navigation. A server-side layout guard redirects unauthenticated visitors to
+the `/login` page, which shows the sign-in form; if no admin password source is
+configured, the login page reports that admin is disabled instead. A
 **Remember me** checkbox persists the username to `localStorage` (pre-filling
 it on the next visit) and issues a 30-day session cookie; the password is
 never stored client-side. The page header offers **Go to Documents** and
