@@ -44,6 +44,18 @@ export function useAdminDocumentsSearch(params: { onParamsChange: () => void }) 
     onParamsChange()
   }
 
+  function reset() {
+    if (searchTimer) {
+      clearTimeout(searchTimer)
+      searchTimer = null
+    }
+    searchQuery = ''
+    searchInput = ''
+    searchKeys = []
+    sortBy = 'updatedAt'
+    sortDir = 'desc'
+  }
+
   return {
     get searchQuery() {
       return searchQuery
@@ -69,6 +81,7 @@ export function useAdminDocumentsSearch(params: { onParamsChange: () => void }) 
     handleSearchInput,
     handleSearchKeydown,
     handleSort,
+    reset,
     destroy() {
       if (searchTimer) {
         clearTimeout(searchTimer)

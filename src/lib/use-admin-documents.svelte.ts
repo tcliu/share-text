@@ -44,6 +44,19 @@ export function useAdminDocuments(params: {
   )
   const currentPageSomeSelected = $derived(documents.some(document => selectedIds.has(document.id)))
 
+  function reset() {
+    documents = []
+    loaded = false
+    total = 0
+    page = 1
+    loading = false
+    deleteTarget = null
+    bulkDeletePending = false
+    bulkDeleteOpen = false
+    selectedIds = new Set()
+    searchState.reset()
+  }
+
   function handleAuthError(error: unknown) {
     if (error instanceof AdminAuthError) {
       onSignedOut()
@@ -313,6 +326,7 @@ export function useAdminDocuments(params: {
     handlePageChange,
     handlePageSizeChange,
     handleSort: searchState.handleSort,
+    reset,
     toggleAllOnCurrentPage,
     toggleSelection,
     confirmBulkDelete,

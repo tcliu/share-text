@@ -111,3 +111,28 @@ describe('DataTable column width derivation', () => {
     errorSpy.mockRestore()
   })
 })
+
+describe('DataTable fillHeight', () => {
+  it('caps the table at the available space without forcing it to stretch', () => {
+    const { container } = render(DataTable<Row>, { props: { ...baseProps(), fillHeight: true } })
+
+    const root = container.querySelector('div')!
+    expect(root.className).toContain('flex-1')
+    expect(root.className).toContain('min-h-0')
+
+    const scroll = container.querySelector('.overflow-auto')!
+    expect(scroll.className).toContain('min-h-0')
+    expect(scroll.className).not.toContain('flex-1')
+    expect(scroll.className).not.toContain('max-h-')
+  })
+
+  it('keeps the fixed max height when fillHeight is off', () => {
+    const { container } = render(DataTable<Row>, { props: baseProps() })
+
+    const root = container.querySelector('div')!
+    expect(root.className).not.toContain('flex-1')
+
+    const scroll = container.querySelector('.overflow-auto')!
+    expect(scroll.className).toContain('max-h-')
+  })
+})

@@ -235,13 +235,19 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 ## Admin
 
-The admin console is a dedicated page at `/admin`, reached by direct
+The admin console is a dedicated area under `/admin`, reached by direct
 navigation. Unauthenticated visitors see a sign-in form; if no admin password
 source is configured, the page reports that admin is disabled instead. A
 **Remember me** checkbox persists the username to `localStorage` (pre-filling
 it on the next visit) and issues a 30-day session cookie; the password is
 never stored client-side. The page header offers **Go to Documents** and
-**Sign out** once signed in.
+**Sign out** once signed in. The two tabs live at the real routes
+`/admin/properties` and `/admin/documents` (`/admin` redirects to the
+Properties route), so each view has a stable, shareable URL and survives
+refresh and back/forward; the generic `Tabs` component renders the tab bar and
+the active tab's toolbar and content from a per-tab `Tab` entry (label, path,
+toolbar snippet, content snippet) defined in the shared admin layout, which
+keeps the settings draft and documents data alive across tab switches.
 
 - Successful sign-in sets an HTTP-only, `SameSite=strict` signed session cookie
   (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per

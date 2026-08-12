@@ -1,5 +1,3 @@
-<script lang="ts">
-  import AdminPage from '$lib/components/AdminPage.svelte'
-</script>
-
-<AdminPage />
+<svelte:head>
+  <title>Admin</title>
+</svelte:head>

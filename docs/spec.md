@@ -123,10 +123,17 @@ synchronizes through a small fetch-based JSON API.
 - `src/lib/server/settings.ts` defines the runtime-adjustable properties and
   resolves them with precedence database override > environment > default,
   cached in memory for a short TTL and invalidated on write.
-- `src/lib/admin.ts` is the fetch-based admin API client; the `/admin` route
-  (`src/routes/admin/+page.svelte`, backed by `AdminPage.svelte`) shows the
-  login panel when unauthenticated and the Properties and Documents tabs after
-  sign-in. The old gear-icon dialog (`AdminDialog.svelte`) has been removed.
+- `src/lib/admin.ts` is the fetch-based admin API client. The admin console
+  (`src/routes/admin/`) has a `+layout.svelte` that hosts the auth shell and
+  renders the Properties/Documents tab chrome via the generic `Tabs` component
+  (`src/lib/components/Tabs.svelte`), with `/admin` redirecting to
+  `/admin/properties`; the two tabs are real routes (`/admin/properties`,
+  `/admin/documents`) backed by empty `+page.svelte` shells. The layout shows the
+  login panel when unauthenticated and the tab chrome after sign-in, defines the
+  two `Tab` entries (label, path, toolbar snippet, content snippet) that render
+  the shared `AdminPropertiesView`/`AdminDocumentsView`, and keeps the
+  settings/documents state alive across tab switches. The old gear-icon dialog
+  (`AdminDialog.svelte`) has been removed.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default

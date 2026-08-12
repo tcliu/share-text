@@ -128,7 +128,8 @@
   onPageSizeChange={size => documentsState.handlePageSizeChange(size)}
   sortKey={documentsState.sortBy}
   sortDirection={documentsState.sortDir}
-  onSort={(key, direction) => documentsState.handleSort(key, direction)} />
+  onSort={(key, direction) => documentsState.handleSort(key, direction)}
+  fillHeight />
 
 {#snippet idCell(document: AdminDocumentSummary)}
   <div class="group flex min-w-0 items-center gap-1">

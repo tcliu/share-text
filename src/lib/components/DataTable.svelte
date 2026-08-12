@@ -51,6 +51,7 @@
     onPageSizeChange: (size: number) => void
     containerClass?: string
     tableClass?: string
+    fillHeight?: boolean
     sortKey?: string | null
     sortDirection?: SortDirection
     onSort?: (key: string, direction: SortDirection) => void
@@ -84,6 +85,7 @@
     onPageSizeChange,
     containerClass = 'max-h-[min(50vh,32rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout',
     tableClass = 'min-w-[60rem]',
+    fillHeight = false,
     sortKey = $bindable(null as string | null),
     sortDirection = $bindable('asc' as SortDirection),
     onSort,
@@ -91,6 +93,9 @@
   }: Props<T> = $props()
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
+
+  const FILL_CONTAINER_CLASS =
+    'min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
 
   const cssLengthRe = /^\d+(\.\d+)?(px|rem|em|ch|vw|vh|fr)$/
 
@@ -174,15 +179,16 @@
   }
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
   <SearchInput
     bind:value={searchValue}
     oninput={onSearchInput}
     onkeydown={onSearchKeydown}
     ariaLabel={searchAriaLabel}
-    placeholder={searchPlaceholder} />
+    placeholder={searchPlaceholder}
+    wrapperClass={fillHeight ? 'shrink-0' : ''} />
 
-  <div class={containerClass}>
+  <div class={fillHeight ? FILL_CONTAINER_CLASS : containerClass}>
     <table
       class="w-full border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {tableClass}">
       <thead>

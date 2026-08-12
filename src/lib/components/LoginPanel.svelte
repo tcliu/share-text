@@ -81,7 +81,7 @@
 
 <div class="flex min-h-full items-center justify-center px-4 py-10">
   <div class="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60">
-    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">Admin</h2>
+    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">Login</h2>
     <div class="mt-4">
       {#if configured}
         {#if message}

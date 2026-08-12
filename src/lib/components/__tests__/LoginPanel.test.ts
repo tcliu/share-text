@@ -85,6 +85,18 @@ describe('LoginPanel remember me', () => {
     })
   })
 
+  it('toggles the checkbox when the visual box is clicked', async () => {
+    const { container } = renderPanel()
+    const box = container.querySelector('label span[aria-hidden="true"]') as HTMLElement
+    const input = container.querySelector('input[aria-label="Remember me"]') as HTMLInputElement
+    expect(input.checked).toBe(false)
+    await fireEvent.click(box)
+    await waitFor(() => {
+      expect(input.checked).toBe(true)
+    })
+    expect(box.className).toContain('bg-cyan-300')
+  })
+
   it('does not store the password in localStorage', async () => {
     const { getByText, getByLabelText } = renderPanel()
 
