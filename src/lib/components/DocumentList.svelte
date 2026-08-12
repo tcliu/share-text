@@ -21,6 +21,7 @@
     onSearchKeydown?: (event: KeyboardEvent) => void
     onNew: () => void
     onRefresh: () => void
+    onLogin: () => void
     onDelete: (id: string) => void
     onLoadMore: () => void
     onToggleCollapse: () => void
@@ -41,6 +42,7 @@
     onSearchKeydown,
     onNew,
     onRefresh,
+    onLogin,
     onDelete,
     onLoadMore,
     onToggleCollapse,
@@ -157,6 +159,16 @@
               stroke-linejoin="round"
               d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
+          </svg>
+        {/snippet}
+      </Button>
+      <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={onLogin}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M10 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM3.5 15.75a6.5 6.5 0 0 1 13 0 .75.75 0 0 1-.75.75h-11.5a.75.75 0 0 1-.75-.75Z"
+              clip-rule="evenodd" />
           </svg>
         {/snippet}
       </Button>

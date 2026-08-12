@@ -202,6 +202,16 @@
           </svg>
         {/snippet}
       </Button>
+      <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={() => goto('/login')}>
+        {#snippet icon()}
+          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path
+              fill-rule="evenodd"
+              d="M10 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM3.5 15.75a6.5 6.5 0 0 1 13 0 .75.75 0 0 1-.75.75h-11.5a.75.75 0 0 1-.75-.75Z"
+              clip-rule="evenodd" />
+          </svg>
+        {/snippet}
+      </Button>
     </div>
   {:else if !isMobile || !showingEditor}
     <DocumentList
@@ -217,6 +227,7 @@
       width={isMobile ? undefined : leftPaneWidth}
       onNew={handleNew}
       onRefresh={handleRefresh}
+      onLogin={() => goto('/login')}
       onDelete={handleDelete}
       onLoadMore={documentsState.loadMore}
       onToggleCollapse={toggleLeftPane}
