@@ -8,6 +8,7 @@
     ariaLabel?: string
     className?: string
     unit?: 'px' | '%'
+    orientation?: 'vertical' | 'horizontal'
   }
 
   let {
@@ -19,37 +20,40 @@
     ariaLabel = 'Resize split panes',
     className = '',
     unit = 'px',
+    orientation = 'vertical',
   }: Props = $props()
 
   let handleRef = $state<HTMLElement | null>(null)
   let dragging = $state(false)
-  let startX = 0
+  let startPos = 0
   let startValue = 0
-  let containerWidth = 0
+  let containerSize = 0
 
-  function clampWidth(next: number) {
+  function clamp(next: number) {
     return Math.min(max, Math.max(min, next))
   }
 
-  function deltaToUnits(deltaX: number) {
+  function deltaToUnits(deltaPos: number) {
     if (unit === '%') {
-      return containerWidth > 0 ? (deltaX / containerWidth) * 100 : 0
+      return containerSize > 0 ? (deltaPos / containerSize) * 100 : 0
     }
-    return deltaX
+    return deltaPos
   }
 
   function handlePointerDown(event: PointerEvent) {
     dragging = true
-    startX = event.clientX
+    startPos = orientation === 'vertical' ? event.clientX : event.clientY
     startValue = value
-    containerWidth = handleRef?.parentElement?.clientWidth ?? 0
+    const parent = handleRef?.parentElement
+    containerSize = orientation === 'vertical' ? (parent?.clientWidth ?? 0) : (parent?.clientHeight ?? 0)
     handleRef?.setPointerCapture(event.pointerId)
     event.preventDefault()
   }
 
   function handlePointerMove(event: PointerEvent) {
     if (!dragging) return
-    onChange(clampWidth(startValue + deltaToUnits(event.clientX - startX)))
+    const pos = orientation === 'vertical' ? event.clientX : event.clientY
+    onChange(clamp(startValue + deltaToUnits(pos - startPos)))
   }
 
   function handlePointerUp(event: PointerEvent) {
@@ -69,9 +73,11 @@
 
   function handleKeydown(event: KeyboardEvent) {
     let delta = 0
-    if (event.key === 'ArrowLeft') {
+    const positiveKey = orientation === 'vertical' ? 'ArrowRight' : 'ArrowDown'
+    const negativeKey = orientation === 'vertical' ? 'ArrowLeft' : 'ArrowUp'
+    if (event.key === negativeKey) {
       delta = unit === '%' ? -1 : -16
-    } else if (event.key === 'ArrowRight') {
+    } else if (event.key === positiveKey) {
       delta = unit === '%' ? 1 : 16
     } else if (event.key === 'Home') {
       onChange(min)
@@ -85,7 +91,7 @@
       return
     }
     event.preventDefault()
-    onChange(clampWidth(value + delta))
+    onChange(clamp(value + delta))
     onDragEnd?.()
   }
 </script>
@@ -95,17 +101,21 @@
 <div
   bind:this={handleRef}
   role="separator"
-  aria-orientation="vertical"
+  aria-orientation={orientation}
   aria-label={ariaLabel}
   aria-valuenow={value}
   aria-valuemin={min}
   aria-valuemax={max}
   tabindex="0"
-  class={`relative -mx-1.5 w-3 shrink-0 touch-none select-none outline-none ${dragging ? 'cursor-col-resize' : 'cursor-default'} ${className}`}
+  class={`relative shrink-0 touch-none select-none outline-none ${orientation === 'vertical' ? '-mx-1.5 w-3' : '-my-1.5 h-3'} ${dragging ? (orientation === 'vertical' ? 'cursor-col-resize' : 'cursor-row-resize') : 'cursor-default'} ${className}`}
   onpointerdown={handlePointerDown}
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
   onpointercancel={handlePointerCancel}
   onkeydown={handleKeydown}>
-  <span class="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize"></span>
+  {#if orientation === 'vertical'}
+    <span class="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize"></span>
+  {:else}
+    <span class="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 cursor-row-resize"></span>
+  {/if}
 </div>
