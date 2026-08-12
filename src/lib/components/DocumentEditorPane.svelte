@@ -4,6 +4,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
+  import RefreshIcon from './RefreshIcon.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import TagsDialog from './TagsDialog.svelte'
   import KebabMenu from './KebabMenu.svelte'
@@ -362,10 +363,7 @@
     {/if}
     <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!dirty || saving}>
       {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
-        </svg>
+        <RefreshIcon />
       {/snippet}
     </Button>
     <Button
