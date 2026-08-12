@@ -12,16 +12,17 @@
     tabs: Tab<TState>[]
     state: TState
     pathname: string
+    ariaLabel?: string
   }
 
-  let { tabs, state, pathname }: Props<TState> = $props()
+  let { tabs, state, pathname, ariaLabel = 'Tabs' }: Props<TState> = $props()
 
   const activeTab = $derived(tabs.find(tab => tab.path === pathname) ?? tabs[0])
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col gap-3">
   <div class="flex items-center justify-between">
-    <div class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
+    <nav aria-label={ariaLabel} class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
       {#each tabs as tab}
         <a
           href={tab.path}
@@ -30,7 +31,7 @@
           {tab.label}
         </a>
       {/each}
-    </div>
+    </nav>
     {#if activeTab}
       <div class="flex items-center gap-2">
         {@render activeTab.toolbar(state)}
