@@ -139,7 +139,7 @@
           {title}
         </h2>
       {/if}
-      <div class="mt-4 flex flex-col">
+      <div class="mt-4 flex min-h-0 flex-col">
         {@render children?.()}
       </div>
     </section>

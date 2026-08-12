@@ -39,6 +39,7 @@
   let loadError = $state('')
   let selected = $state<DocumentVersion | null>(null)
   let selectedLoading = $state(false)
+  let selectSeq = 0
   let compare = $state(false)
   let restorePromptOpen = $state(false)
   let pendingRestore = $state<DocumentVersion | null>(null)
@@ -46,6 +47,14 @@
   const selectedMatchesCurrent = $derived(
     selected !== null && selected.content === currentContent && selected.documentType === currentType,
   )
+
+  // The action panel stays visible to keep the dialog height fixed across
+  // versions and states. Buttons are disabled whenever there is nothing to act
+  // on — no version selected yet, a version still loading, or the selected
+  // version already matches the current state — so Restore can never act on a
+  // stale version while a newer selection is loading, and the panel never
+  // resizes when switching versions.
+  const actionsDisabled = $derived(selected === null || selectedLoading || selectedMatchesCurrent)
 
   $effect(() => {
     if (!open) return
@@ -79,25 +88,33 @@
 
   async function selectVersion(summary: DocumentVersionSummary) {
     if (selected?.id === summary.id) return
+    // Stale responses are dropped: a fast A->B click must not let A's slower
+    // fetch overwrite the newer B selection.
+    const seq = ++selectSeq
     selectedLoading = true
     try {
       const version = await fetchDocumentVersion(documentId, summary.id)
+      if (seq !== selectSeq) return
       if (version) {
         selected = version
       }
     } catch (error) {
+      if (seq !== selectSeq) return
       toast.error(error instanceof Error ? error.message : 'Failed to load version')
     } finally {
-      selectedLoading = false
+      if (seq === selectSeq) {
+        selectedLoading = false
+      }
     }
   }
 
   function toggleCompare() {
+    if (actionsDisabled) return
     compare = !compare
   }
 
   function requestRestore() {
-    if (!selected) return
+    if (!selected || actionsDisabled) return
     if (hasUnsavedChanges) {
       pendingRestore = selected
       restorePromptOpen = true
@@ -127,55 +144,55 @@
     fullscreen={isMobile}
     onCancel={onClose}
     dismissKeydownCapture={!restorePromptOpen}>
-    <div class="flex flex-col gap-3">
+    <div class="flex min-h-0 flex-col gap-3">
       <p class="text-xs text-slate-500">
         Saved versions of this document, newest first. Restoring copies the selected version back into the editor for
         review.
       </p>
 
-      {#if selected && !selectedLoading && !selectedMatchesCurrent}
-        <div class="flex items-center gap-1">
-          <Button
-            size="sm"
-            ariaLabel="Compare with current"
-            tooltip="Compare with current"
-            tooltipAlign="right"
-            variant={compare ? 'outline' : 'secondary'}
-            ariaPressed={compare}
-            onClick={toggleCompare}>
-            {#snippet icon()}
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <rect x="3" y="4" width="6.5" height="12" rx="1.5" />
-                <rect x="10.5" y="4" width="6.5" height="12" rx="1.5" />
-              </svg>
-            {/snippet}
-          </Button>
-          <Button
-            size="sm"
-            ariaLabel="Restore version"
-            tooltip="Restore"
-            tooltipAlign="right"
-            variant="primary"
-            accent="cyan"
-            onClick={requestRestore}>
-            {#snippet icon()}
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3.75 9.75 9 4.5" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.75H13.5a3.75 3.75 0 0 1 0 7.5H12" />
-              </svg>
-            {/snippet}
-          </Button>
-        </div>
-      {/if}
+      <div class="flex items-center gap-1">
+        <Button
+          size="sm"
+          ariaLabel="Compare with current"
+          tooltip={actionsDisabled ? undefined : 'Compare with current'}
+          tooltipAlign="right"
+          variant={compare ? 'outline' : 'secondary'}
+          ariaPressed={compare}
+          disabled={actionsDisabled}
+          onClick={toggleCompare}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <rect x="3" y="4" width="6.5" height="12" rx="1.5" />
+              <rect x="10.5" y="4" width="6.5" height="12" rx="1.5" />
+            </svg>
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Restore version"
+          tooltip={actionsDisabled ? undefined : 'Restore'}
+          tooltipAlign="right"
+          variant="primary"
+          accent="cyan"
+          disabled={actionsDisabled}
+          onClick={requestRestore}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3.75 9.75 9 4.5" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.75H13.5a3.75 3.75 0 0 1 0 7.5H12" />
+            </svg>
+          {/snippet}
+        </Button>
+      </div>
 
       {#if loading}
-        <div class="flex h-40 items-center justify-center">
+        <div class="flex h-[60vh] min-h-0 items-center justify-center">
           <Spinner className="h-6 w-6" />
         </div>
       {:else if loadError}
         <div class="text-sm text-rose-400">{loadError}</div>
       {:else}
-        <div class="flex flex-col gap-3 md:flex-row">
+        <div class="flex min-h-0 flex-col gap-3 md:h-[60vh] md:flex-row">
           <div class="flex max-h-[70vh] flex-col gap-1 overflow-y-auto pr-1 md:w-56 md:shrink-0">
             {#each versions as version (version.id)}
               <button
@@ -192,7 +209,9 @@
               </button>
             {/each}
           </div>
-          <div class="flex min-h-[55vh] min-w-0 flex-1 flex-col gap-2">
+          <div
+            data-testid="history-content-pane"
+            class="flex h-[60vh] min-h-0 min-w-0 flex-1 flex-col gap-2 md:h-full">
             {#if selectedLoading}
               <div class="flex flex-1 items-center justify-center">
                 <Spinner className="h-6 w-6" />
@@ -211,7 +230,8 @@
                     <div class="truncate text-xs font-medium text-slate-500">
                       Selected · {formatTimestamp(selected.createdAt)}
                     </div>
-                    <span class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
+                    <span
+                      class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
                       {selected.documentType}
                     </span>
                     <pre
@@ -220,7 +240,8 @@
                   </div>
                   <div class="flex min-h-40 flex-col gap-1.5">
                     <div class="truncate text-xs font-medium text-slate-500">Current</div>
-                    <span class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
+                    <span
+                      class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
                       {currentType}
                     </span>
                     <pre
