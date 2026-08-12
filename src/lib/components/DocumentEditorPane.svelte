@@ -535,6 +535,7 @@
         max={EDITOR_PREVIEW_MAX_PCT}
         unit="%"
         orientation={context.isMobile ? 'horizontal' : 'vertical'}
+        lineClass={context.isMobile ? 'border-t border-slate-700' : 'border-l border-slate-700'}
         onChange={(value: number) => (previewState.editorWidthPct = value)}
         ariaLabel="Resize editor and preview panes" />
     {/if}

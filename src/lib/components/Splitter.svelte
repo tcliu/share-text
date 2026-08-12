@@ -7,6 +7,7 @@
     onDragEnd?: () => void
     ariaLabel?: string
     className?: string
+    lineClass?: string
     unit?: 'px' | '%'
     orientation?: 'vertical' | 'horizontal'
   }
@@ -19,6 +20,7 @@
     onDragEnd,
     ariaLabel = 'Resize split panes',
     className = '',
+    lineClass = '',
     unit = 'px',
     orientation = 'vertical',
   }: Props = $props()
@@ -114,8 +116,8 @@
   onpointercancel={handlePointerCancel}
   onkeydown={handleKeydown}>
   {#if orientation === 'vertical'}
-    <span class="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize"></span>
+    <span class={`absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize ${lineClass}`}></span>
   {:else}
-    <span class="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 cursor-row-resize"></span>
+    <span class={`absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 cursor-row-resize ${lineClass}`}></span>
   {/if}
 </div>
