@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-import { render, waitFor } from '@testing-library/svelte'
+import { render, waitFor, fireEvent } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snippet } from 'svelte'
 import Layout from '../+layout.svelte'
+import LayoutDrawerHost from './LayoutDrawerHost.svelte'
 import { setPage } from '../../../test/mocks/app-stores'
 
 const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
@@ -39,7 +40,7 @@ describe('Mobile layout', () => {
   })
 
   it('shows the document list full screen on the list route', async () => {
-    const { queryByText, queryByPlaceholderText } = render(Layout, {
+    const { queryByText, queryByPlaceholderText, queryByLabelText } = render(Layout, {
       children: (() => '') as unknown as Snippet,
     })
 
@@ -47,6 +48,7 @@ describe('Mobile layout', () => {
       expect(queryByText('Existing')).toBeTruthy()
     })
     expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
+    expect(queryByLabelText('Collapse document list')).toBeNull()
     expect(queryByText('Back to document list')).toBeNull()
   })
 
@@ -63,6 +65,57 @@ describe('Mobile layout', () => {
 
     await waitFor(() => {
       expect(queryByPlaceholderText('Search documents...')).toBeNull()
+    })
+  })
+
+  it('opens the document list in a drawer on the editor page and closes it', async () => {
+    const { getByTestId, getByRole, queryByTestId, queryByPlaceholderText, queryByText } = render(
+      LayoutDrawerHost,
+    )
+
+    await waitFor(() => {
+      expect(queryByText('Existing')).toBeTruthy()
+    })
+
+    setPage({ params: { id: 'aaaaaa' }, url: new URL('http://localhost/aaaaaa'), route: { id: '/[id]' } })
+
+    await waitFor(() => {
+      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
+    })
+    expect(queryByPlaceholderText('Search documents...')).toBeNull()
+
+    await fireEvent.click(getByTestId('open-drawer'))
+
+    await waitFor(() => {
+      expect(queryByTestId('mobile-drawer-overlay')).toBeTruthy()
+    })
+    expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
+    expect(queryByText('Existing')).toBeTruthy()
+
+    await fireEvent.click(getByRole('button', { name: 'Collapse document list' }))
+
+    await waitFor(() => {
+      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
+    })
+  })
+
+  it('closes the drawer when the backdrop is clicked', async () => {
+    const { getByTestId, queryByTestId } = render(LayoutDrawerHost)
+
+    await waitFor(() => {
+      expect(getByTestId('open-drawer')).toBeTruthy()
+    })
+
+    setPage({ params: { id: 'aaaaaa' }, url: new URL('http://localhost/aaaaaa'), route: { id: '/[id]' } })
+
+    await fireEvent.click(getByTestId('open-drawer'))
+    await waitFor(() => {
+      expect(queryByTestId('mobile-drawer-overlay')).toBeTruthy()
+    })
+
+    await fireEvent.click(getByTestId('mobile-drawer-overlay'))
+    await waitFor(() => {
+      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
     })
   })
 })

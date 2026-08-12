@@ -21,6 +21,7 @@ export interface ShareTextContext {
   canLeaveCurrentDocument: () => boolean
   registerEditorFocus: (focus: () => void) => void
   unregisterEditorFocus: () => void
+  openMobileDrawer: () => void
   isMobile: boolean
 }
 

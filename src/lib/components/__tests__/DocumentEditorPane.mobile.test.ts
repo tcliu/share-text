@@ -27,22 +27,40 @@ describe('DocumentEditorPane mobile header', () => {
     expect(getByLabelText('Save')).toBeTruthy()
   })
 
-  it('toggles between editor and preview with a single preview button instead of a split view', async () => {
-    const { getByRole, queryByLabelText } = render(MobileEditorHost, { docType: 'markdown' })
+  it('offers an open-drawer button before the filename that opens the document list', async () => {
+    const onOpenDrawer = vi.fn()
+    const { getByLabelText } = render(MobileEditorHost, { onOpenDrawer })
 
-    expect(queryByLabelText('Editor view')).toBeNull()
-    const preview = getByRole('button', { name: 'Preview' })
-    expect(preview.getAttribute('aria-pressed')).toBe('false')
+    const drawerButton = getByLabelText('Open document list')
+    await fireEvent.click(drawerButton)
+    expect(onOpenDrawer).toHaveBeenCalledTimes(1)
+  })
 
-    await fireEvent.click(preview)
+  it('shows both editor and preview toggles on mobile and turns on the stacked split when both are on', async () => {
+    const { getByRole, getByLabelText, queryByLabelText } = render(MobileEditorHost, { docType: 'markdown' })
+
+    const editorView = getByRole('button', { name: 'Editor view' })
+    const previewView = getByRole('button', { name: 'Preview view' })
+    expect(editorView.getAttribute('aria-pressed')).toBe('true')
+    expect(previewView.getAttribute('aria-pressed')).toBe('false')
+    expect(editorView.hasAttribute('disabled')).toBe(true)
+    expect(queryByLabelText('Resize editor and preview panes')).toBeNull()
+
+    await fireEvent.click(previewView)
     await vi.waitFor(() =>
-      expect(getByRole('button', { name: 'Preview' }).getAttribute('aria-pressed')).toBe('true'),
+      expect(getByRole('button', { name: 'Preview view' }).getAttribute('aria-pressed')).toBe('true'),
     )
+    expect(getByRole('button', { name: 'Editor view' }).getAttribute('aria-pressed')).toBe('true')
+    expect(getByRole('button', { name: 'Editor view' }).hasAttribute('disabled')).toBe(false)
 
-    await fireEvent.click(getByRole('button', { name: 'Preview' }))
+    const splitter = getByLabelText('Resize editor and preview panes')
+    expect(splitter.getAttribute('aria-orientation')).toBe('horizontal')
+
+    await fireEvent.click(getByRole('button', { name: 'Preview view' }))
     await vi.waitFor(() =>
-      expect(getByRole('button', { name: 'Preview' }).getAttribute('aria-pressed')).toBe('false'),
+      expect(getByRole('button', { name: 'Preview view' }).getAttribute('aria-pressed')).toBe('false'),
     )
+    expect(queryByLabelText('Resize editor and preview panes')).toBeNull()
   })
 
   it('shows clone as a toolbar button after copy and keeps format in the kebab menu on mobile', async () => {

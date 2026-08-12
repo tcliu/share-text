@@ -24,7 +24,7 @@
     onLogin: () => void
     onDelete: (id: string) => void
     onLoadMore: () => void
-    onToggleCollapse: () => void
+    onToggleCollapse?: () => void
     deletePending: boolean
     width?: number
     onMinWidthChange?: (minWidth: number) => void
@@ -126,21 +126,19 @@
       <span class="p-1 text-md font-semibold text-slate-200">ShareText</span>
     </div>
     <div class="flex items-center gap-1">
-      <Button
-        size="sm"
-        ariaLabel="Collapse document list"
-        tooltip="Collapse document list"
-        className="hidden md:inline-flex"
-        onClick={onToggleCollapse}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path
-              fill-rule="evenodd"
-              d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z"
-              clip-rule="evenodd" />
-          </svg>
-        {/snippet}
-      </Button>
+      {#if onToggleCollapse}
+        <Button
+          size="sm"
+          ariaLabel="Collapse document list"
+          tooltip="Collapse document list"
+          onClick={onToggleCollapse}>
+          {#snippet icon()}
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m11.5 5.5-4 4.5 4 4.5M15.5 5.5l-4 4.5 4 4.5" />
+            </svg>
+          {/snippet}
+        </Button>
+      {/if}
       <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={onNew}>
         {#snippet icon()}
           <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

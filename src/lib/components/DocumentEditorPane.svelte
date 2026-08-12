@@ -100,7 +100,7 @@
   const currentType = $derived(getDocumentType(docType))
   const hasPreview = () => Boolean(currentType.preview)
   const context = getShareTextContext()
-  const previewState = usePreviewMode(hasPreview, () => context.isMobile)
+  const previewState = usePreviewMode(hasPreview)
 
   const formatState = useFormat({
     format: () => currentType.format,
@@ -239,40 +239,44 @@
     {/if}
   {/snippet}
 
+  {#snippet previewToggles()}
+    <Button
+      size="sm"
+      ariaLabel="Editor view"
+      tooltip="Editor view"
+      variant={previewState.editorActive ? 'outline' : 'secondary'}
+      ariaPressed={previewState.editorActive}
+      disabled={previewState.editorDisabled}
+      onClick={() => previewState.setEditor(!previewState.editorActive)}>
+      {#snippet icon()}
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
+        </svg>
+      {/snippet}
+    </Button>
+    <Button
+      size="sm"
+      ariaLabel="Preview view"
+      tooltip="Preview view"
+      variant={previewState.previewActive ? 'outline' : 'secondary'}
+      ariaPressed={previewState.previewActive}
+      disabled={previewState.previewDisabled}
+      onClick={() => previewState.setPreview(!previewState.previewActive)}>
+      {#snippet icon()}
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+          <path
+            fill-rule="evenodd"
+            d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+            clip-rule="evenodd" />
+        </svg>
+      {/snippet}
+    </Button>
+  {/snippet}
+
   {#snippet actionButtons()}
     {#if currentType.preview && !context.isMobile}
-      <Button
-        size="sm"
-        ariaLabel="Editor view"
-        tooltip="Editor view"
-        variant={previewState.editorActive ? 'outline' : 'secondary'}
-        ariaPressed={previewState.editorActive}
-        disabled={previewState.editorDisabled}
-        onClick={() => previewState.setEditor(!previewState.editorActive)}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
-          </svg>
-        {/snippet}
-      </Button>
-      <Button
-        size="sm"
-        ariaLabel="Preview view"
-        tooltip="Preview view"
-        variant={previewState.previewActive ? 'outline' : 'secondary'}
-        ariaPressed={previewState.previewActive}
-        disabled={previewState.previewDisabled}
-        onClick={() => previewState.setPreview(!previewState.previewActive)}>
-        {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-            <path
-              fill-rule="evenodd"
-              d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
-              clip-rule="evenodd" />
-          </svg>
-        {/snippet}
-      </Button>
+      {@render previewToggles()}
     {/if}
     {#if currentType.actions && !context.isMobile}
       {#await currentType.actions() then Actions}
@@ -420,10 +424,29 @@
     </svg>
   {/snippet}
 
+  {#snippet menuIcon()}
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path
+        fill-rule="evenodd"
+        d="M3 5.25A.75.75 0 0 1 3.75 4.5h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 5.25Zm0 4.75a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Zm0 4.75a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z"
+        clip-rule="evenodd" />
+    </svg>
+  {/snippet}
+
   {#if context.isMobile}
     <div class="flex flex-col gap-2">
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex min-w-[min(12rem,60%)] flex-1 items-center gap-2">
+          <Button
+            size="sm"
+            ariaLabel="Open document list"
+            tooltip="Document list"
+            className="shrink-0"
+            onClick={context.openMobileDrawer}>
+            {#snippet icon()}
+              {@render menuIcon()}
+            {/snippet}
+          </Button>
           {@render nameField()}
         </div>
         {@render typeSelector()}
@@ -472,23 +495,7 @@
               : []),
           ]} />
         {#if currentType.preview}
-          <Button
-            size="sm"
-            ariaLabel="Preview"
-            tooltip="Preview"
-            variant={previewState.previewActive ? 'outline' : 'secondary'}
-            ariaPressed={previewState.previewActive}
-            onClick={previewState.togglePreview}>
-            {#snippet icon()}
-              <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-                <path
-                  fill-rule="evenodd"
-                  d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
-                  clip-rule="evenodd" />
-              </svg>
-            {/snippet}
-          </Button>
+          {@render previewToggles()}
         {/if}
         {@render actionButtons()}
       </div>
@@ -507,11 +514,11 @@
   {/if}
 
   <div
-    class="mt-3 flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500">
+    class={`mt-3 flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500 ${previewState.previewMode === 'split' && previewState.showPreview && context.isMobile ? 'flex-col' : ''}`}>
     {#if !previewState.previewOnly}
       <div
         style={previewState.previewMode === 'split' && previewState.showPreview ? `flex-basis: ${previewState.editorWidthPct}%` : 'flex: 1'}
-        class="min-w-0 overflow-hidden">
+        class="min-h-0 min-w-0 overflow-hidden">
         <LazyCodeEditor
           bind:this={editorRef}
           bind:content
@@ -529,11 +536,12 @@
         min={EDITOR_PREVIEW_MIN_PCT}
         max={EDITOR_PREVIEW_MAX_PCT}
         unit="%"
+        orientation={context.isMobile ? 'horizontal' : 'vertical'}
         onChange={(value: number) => (previewState.editorWidthPct = value)}
         ariaLabel="Resize editor and preview panes" />
     {/if}
     {#if previewState.showPreview && currentType.preview}
-      <div class="min-w-0 flex-1 overflow-hidden">
+      <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
         <PreviewPane
           preview={currentType.preview}
           content={previewContent.value}
