@@ -81,6 +81,12 @@ export function useAdminSettings(onSignedOut: () => void) {
     draftValues = Object.fromEntries(settings.map(setting => [setting.key, String(setting.value)]))
   }
 
+  function reset() {
+    settings = []
+    draftValues = {}
+    pending = false
+  }
+
   async function resetSetting(setting: AdminSetting) {
     pending = true
     try {
@@ -114,6 +120,7 @@ export function useAdminSettings(onSignedOut: () => void) {
     apply,
     reload,
     resetDraft,
+    reset,
     resetSetting,
     updateDraftValue(key: string, value: string) {
       draftValues[key] = value

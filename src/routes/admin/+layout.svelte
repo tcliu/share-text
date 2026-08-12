@@ -1,19 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { toast } from 'svelte-sonner'
   import { page } from '$app/state'
   import { beforeNavigate, goto } from '$app/navigation'
   import Button from '$lib/components/Button.svelte'
+  import RefreshIcon from '$lib/components/RefreshIcon.svelte'
   import Spinner from '$lib/components/Spinner.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import Tabs, { type Tab } from '$lib/components/Tabs.svelte'
   import AdminPropertiesView from '$lib/components/AdminPropertiesView.svelte'
   import AdminDocumentsView from '$lib/components/AdminDocumentsView.svelte'
-  import { AdminAuthError, fetchAdminSession, logout } from '$lib/admin'
+  import { useAdminAuth } from '$lib/use-admin-auth.svelte'
   import { useAdminSettings } from '$lib/use-admin-settings.svelte'
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
 
-  type AuthState = 'checking' | 'unauthenticated' | 'authenticated'
   const PROPERTIES_PATH = '/admin/properties'
   const DOCUMENTS_PATH = '/admin/documents'
   type AdminState = {
@@ -21,63 +20,30 @@
     documentsState: ReturnType<typeof useAdminDocuments>
   }
 
-  let authState = $state<AuthState>('checking')
   let discardPromptOpen = $state(false)
   let pendingNavigateUrl = $state<string | null>(null)
 
-  const settingsState = useAdminSettings(() => handleSignedOut())
-  const documentsState = useAdminDocuments({ onSignedOut: () => handleSignedOut() })
+  const settingsState = useAdminSettings(() => authState.handleSignedOut())
+  const documentsState = useAdminDocuments({ onSignedOut: () => authState.handleSignedOut() })
+  const authState = useAdminAuth({
+    onSignedOut() {
+      settingsState.reset()
+      documentsState.reset()
+    },
+  })
 
   $effect(() => {
-    if (authState === 'authenticated') {
+    if (authState.state === 'authenticated') {
       void settingsState.reload()
     }
   })
 
   $effect(() => {
-    if (authState !== 'authenticated') return
+    if (authState.state !== 'authenticated') return
     if (page.url.pathname === DOCUMENTS_PATH && !documentsState.loaded) {
       void documentsState.load()
     }
   })
-
-  function redirectToLogin() {
-    if (page.url.pathname !== '/login') {
-      void goto('/login')
-    }
-  }
-
-  function handleSignedOut() {
-    settingsState.resetDraft()
-    documentsState.reset()
-    authState = 'unauthenticated'
-    redirectToLogin()
-  }
-
-  async function handleLogout() {
-    try {
-      await logout()
-    } catch {
-      toast.error('Failed to sign out')
-    }
-    handleSignedOut()
-  }
-
-  async function checkSession() {
-    try {
-      const session = await fetchAdminSession()
-      if (session.authenticated) {
-        authState = 'authenticated'
-        return
-      }
-    } catch (error) {
-      if (!(error instanceof AdminAuthError)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to check admin session')
-      }
-    }
-    authState = 'unauthenticated'
-    redirectToLogin()
-  }
 
   function handleDiscardAndNavigate() {
     const url = pendingNavigateUrl
@@ -99,7 +65,7 @@
     if (!url) return
     // Tab switches within /admin share this layout's state, so the settings
     // draft survives and must not prompt to discard changes.
-    if (url.pathname === '/admin' || url.pathname.startsWith('/admin/') || url.pathname === '/login') {
+    if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
       return
     }
     navigation.cancel()
@@ -108,12 +74,16 @@
   })
 
   onMount(() => {
-    void checkSession()
+    void authState.checkSession()
   })
 </script>
 
+<svelte:head>
+  <title>Admin</title>
+</svelte:head>
+
 <div class="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
-  {#if authState === 'authenticated'}
+  {#if authState.state === 'authenticated'}
   <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
     <h1 class="text-md font-semibold text-slate-200">Admin</h1>
     <div class="flex items-center gap-2">
@@ -132,7 +102,7 @@
           </svg>
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void handleLogout()}>
+      <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void authState.handleLogout()}>
           {#snippet icon()}
             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path
@@ -144,11 +114,25 @@
   </header>
   {/if}
   <main class="min-h-0 flex-1">
-    {#if authState === 'checking'}
+    {#if authState.state === 'checking'}
       <div class="flex h-full items-center justify-center">
         <Spinner className="h-6 w-6" />
       </div>
-    {:else if authState === 'authenticated'}
+    {:else if authState.state === 'error'}
+      <div class="flex h-full flex-col items-center justify-center gap-3 px-4">
+        <p class="text-sm text-rose-400">{authState.sessionError}</p>
+        <Button
+          ariaLabel="Retry"
+          tooltip="Retry"
+          onClick={() => {
+            authState.retry()
+          }}>
+          {#snippet icon()}
+            <RefreshIcon />
+          {/snippet}
+        </Button>
+      </div>
+    {:else if authState.state === 'authenticated'}
       {#snippet propertiesToolbar(state: AdminState)}
         <Button
           size="sm"
@@ -157,10 +141,7 @@
           disabled={state.settingsState.pending}
           onClick={() => void state.settingsState.reload()}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
-            </svg>
+            <RefreshIcon />
           {/snippet}
         </Button>
       {/snippet}
@@ -192,10 +173,7 @@
           disabled={state.documentsState.loading}
           onClick={() => void state.documentsState.load()}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M4 10a6 6 0 0 1 10.7-3.7M16 10a6 6 0 0 1-10.7 3.7" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 2v4h-4M5 18v-4h4" />
-            </svg>
+            <RefreshIcon />
           {/snippet}
         </Button>
       {/snippet}
@@ -217,7 +195,7 @@
         },
       ] satisfies Tab<AdminState>[]}
       <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
-        <Tabs tabs={adminTabs} state={{ settingsState, documentsState }} pathname={page.url.pathname} />
+        <Tabs tabs={adminTabs} state={{ settingsState, documentsState }} pathname={page.url.pathname} ariaLabel="Admin sections" />
       </div>
     {/if}
   </main>

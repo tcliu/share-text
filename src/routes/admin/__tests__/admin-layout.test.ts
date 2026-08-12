@@ -141,4 +141,16 @@ describe('admin layout route tabs', () => {
       expect(goto).toHaveBeenCalledWith('/login')
     })
   })
+
+  it('shows a retryable error state instead of redirecting on a transient session check failure', async () => {
+    page.url = new URL('http://localhost/admin/properties') as typeof page.url
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
+    const { getByText, getByLabelText } = render(Layout)
+
+    await waitFor(() => {
+      expect(getByText('network down')).toBeTruthy()
+      expect(getByLabelText('Retry')).toBeTruthy()
+    })
+    expect(goto).not.toHaveBeenCalled()
+  })
 })

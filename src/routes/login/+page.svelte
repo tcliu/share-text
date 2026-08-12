@@ -9,6 +9,10 @@
   }
 </script>
 
+<svelte:head>
+  <title>Login</title>
+</svelte:head>
+
 <div class="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
   <main class="min-h-0 flex-1">
     <LoginPanel
