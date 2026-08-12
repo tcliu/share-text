@@ -493,10 +493,11 @@ export async function insertDocument(options: { name?: string; content: string; 
          returning id, key, name, content, document_type, tags, updated_by, updated_at`,
         [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by],
       )
-      const document = toDocument(result.rows[0])
+      const row = result.rows[0]
+      const document = toDocument(row)
       const versionStartedAt = Date.now()
       try {
-        await insertDocumentVersion(document, options.by)
+        await insertDocumentVersion(document, row.id, options.by)
       } catch (error) {
         logEvent({
           ip: options.by,
@@ -617,17 +618,30 @@ export async function updateDocument(
     const typeChanged =
       options.documentType !== undefined && previous !== null && options.documentType !== previous.document_type
     if (contentChanged || typeChanged) {
-      await insertDocumentVersion(document, options.by)
-    }
-    if (options.key !== undefined && options.key !== id) {
-      await runQuery('update document_versions set document_id = $1 where document_id = $2', [options.key, id])
+      const versionStartedAt = Date.now()
+      try {
+        await insertDocumentVersion(document, row.id, options.by)
+      } catch (error) {
+        logEvent({
+          ip: options.by,
+          action: 'document_version_create_error',
+          details: {
+            id: document.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            elapsed_ms: Date.now() - versionStartedAt,
+          },
+        })
+      }
     }
   }
   return document
 }
 
 export async function deleteDocument(id: string) {
-  await runQuery('delete from document_versions where document_id = $1', [id])
+  await runQuery(
+    'delete from document_versions where document_id = (select id from documents where key = $1)',
+    [id],
+  )
   const result = await runQuery('delete from documents where key = $1', [id])
   return (result.rowCount ?? 0) > 0
 }
@@ -702,12 +716,12 @@ function toDocumentVersionSummary(row: DocumentVersionRow): DocumentVersionSumma
   }
 }
 
-async function insertDocumentVersion(document: Document, by: string) {
+async function insertDocumentVersion(document: Document, dbId: string | number, by: string) {
   const maxVersions = await getMaxDocumentVersions()
   await runQuery(
     `insert into document_versions (document_id, content, document_type, created_by, created_at)
      values ($1, $2, $3, $4, current_timestamp)`,
-    [document.id, document.content, document.documentType, by],
+    [dbId, document.content, document.documentType, by],
   )
   // Keep only the newest maxVersions snapshots for this document.
   await runQuery(
@@ -715,14 +729,16 @@ async function insertDocumentVersion(document: Document, by: string) {
       select id from document_versions where document_id = $2
       order by created_at desc, id desc limit $3
     )`,
-    [document.id, document.id, maxVersions],
+    [dbId, dbId, maxVersions],
   )
 }
 
 export async function fetchDocumentVersions(documentId: string): Promise<DocumentVersionSummary[]> {
   const result = await runQuery<DocumentVersionRow>(
     `select id, document_type, created_by, created_at, length(content) as content_size
-     from document_versions where document_id = $1 order by created_at desc, id desc`,
+     from document_versions
+     where document_id = (select id from documents where key = $1)
+     order by created_at desc, id desc`,
     [documentId],
   )
   return result.rows.map(row => ({ ...toDocumentVersionSummary(row), documentId }))
@@ -731,7 +747,8 @@ export async function fetchDocumentVersions(documentId: string): Promise<Documen
 export async function fetchDocumentVersion(documentId: string, versionId: number): Promise<DocumentVersion | null> {
   const result = await runQuery<DocumentVersionRow>(
     `select id, content, document_type, created_by, created_at, length(content) as content_size
-     from document_versions where document_id = $1 and id = $2`,
+     from document_versions
+     where document_id = (select id from documents where key = $1) and id = $2`,
     [documentId, versionId],
   )
   const row = result.rows[0]

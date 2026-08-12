@@ -138,7 +138,7 @@ describe('document version history against the SQLite backend (dev profile)', ()
     expect(await fetchDocumentVersions(created.id)).toHaveLength(0)
   })
 
-  it('migrates versions when the document key changes', async () => {
+  it('keeps versions attached to the document when the key changes', async () => {
     const created = await insertDocument({ name: 'Notes', content: 'v1', by: '10.0.0.1' })
     await updateDocument(created.id, { content: 'v2', by: '10.0.0.1' })
     await updateDocument(created.id, { key: 'zzz999', by: '203.0.113.7' })

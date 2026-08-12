@@ -11,13 +11,13 @@ create table if not exists documents (
   updated_at timestamptz not null default current_timestamp
 );
 
--- SQLite does not enforce foreign keys by default, so the on delete/update
--- cascade below only fires on Postgres; version rows are removed or migrated
--- in application code (deleteDocument / the admin key change) for the dev
--- adapter.
+-- SQLite does not enforce foreign keys by default, so the on delete cascade
+-- below only fires on Postgres; version rows are removed in application code
+-- (deleteDocument) for the dev adapter. The numeric documents.id is immutable,
+-- so key changes never require migrating version rows.
 create table if not exists document_versions (
   id bigserial primary key,
-  document_id text not null references documents(key) on update cascade on delete cascade,
+  document_id bigint not null references documents(id) on delete cascade,
   content text not null,
   document_type text not null default 'text',
   created_by text not null,

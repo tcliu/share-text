@@ -88,7 +88,8 @@ synchronizes through a small fetch-based JSON API.
   public `key`, `name`, `content`, `document_type` (text default),
   `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,
   `created_at`/`updated_at`), the `idx_documents_updated_at` index,
-  the `document_versions` table (one content snapshot per save,
+  the `document_versions` table (one content snapshot per save, keyed by the
+  numeric `documents.id`, with the
   `idx_document_versions_document_id_created_at` index), and the `app_config`
   key/value table that stores runtime property overrides.
 - Content versions: creating a document records its initial state as the
@@ -97,8 +98,10 @@ synchronizes through a small fetch-based JSON API.
   each insert then prunes every row beyond the newest `max_document_versions`
   (`MAX_DOCUMENT_VERSIONS`, default 20) for that document. The latest version
   therefore always mirrors the last saved body. `deleteDocument` removes a
-  document's versions explicitly, and a key change (admin rename of the id)
-  migrates the rows to the new key. The production `db.ts` bootstrap creates
+  document's versions explicitly (also handled by the `on delete cascade` FK
+  on Postgres), and because versions reference the immutable numeric
+  `documents.id`, an admin rename of the key never requires migrating version
+  rows. The production `db.ts` bootstrap creates
   the table if it does not exist, matching the tags-column migration.
 - Tags are normalized on write: trimmed, deduplicated case-insensitively,
   sorted by name, with colors drawn from the fixed palette and same-family

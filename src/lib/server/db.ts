@@ -22,7 +22,7 @@ export async function getDb(): Promise<Db> {
       await initialized.query(
         `create table if not exists document_versions (
           id bigserial primary key,
-          document_id text not null references documents(key) on update cascade on delete cascade,
+          document_id bigint not null references documents(id) on delete cascade,
           content text not null,
           document_type text not null default 'text',
           created_by text not null,
