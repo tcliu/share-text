@@ -83,7 +83,9 @@ synchronizes through a small fetch-based JSON API.
     rewrites `$n` → `?`, `bigserial` → `integer`, and `current_timestamp` → a
     UTC ISO `strftime` expression. The dev database file is auto-created and the
     schema applied on first start.
-  - `db-pg.ts` uses a `pg` connection `Pool` configured from `DATABASE_URL`.
+  - `db-neon.ts` uses the `@neondatabase/serverless` WebSocket `Pool`
+    (node-postgres compatible) configured from `DATABASE_URL`, which avoids the
+    cold TCP/SSL handshake of a plain `pg` pool in serverless runtimes.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
   public `key`, `name`, `content`, `document_type` (text default),
   `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,

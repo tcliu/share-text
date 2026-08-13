@@ -1,4 +1,4 @@
-import { Pool } from 'pg'
+import { Pool, type PoolClient } from '@neondatabase/serverless'
 import type { Db, DbResult } from './db-types'
 
 let pool: Pool | null = null
@@ -19,7 +19,7 @@ function getPool() {
   })
 
   if (schemaName) {
-    pool.on('connect', (client) => {
+    pool.on('connect', (client: PoolClient) => {
       client.query(`set search_path to "${schemaName}"`)
     })
   }
@@ -27,7 +27,7 @@ function getPool() {
   return pool
 }
 
-export function createPgDb(): Db {
+export function createNeonDb(): Db {
   return {
     async query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
       const result = await getPool().query(sql, params)
