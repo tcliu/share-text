@@ -11,6 +11,7 @@ describe('Tooltip', () => {
       disconnect() {}
     }
     vi.stubGlobal('ResizeObserver', ResizeObserverStub)
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
   })
 
   afterEach(() => {
@@ -46,5 +47,16 @@ describe('Tooltip', () => {
 
     window.dispatchEvent(new PointerEvent('pointermove', { bubbles: true }))
     await vi.waitFor(() => expect(queryByRole('tooltip')).toBeNull())
+  })
+
+  it('does not show tooltips on touch-only devices (no hover support)', () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+    const { getByRole, queryByRole } = render(Button, { ariaLabel: 'Save', tooltip: 'Save' })
+    const button = getByRole('button', { name: 'Save' })
+    const trigger = button.parentElement!
+
+    fireEvent.mouseEnter(trigger)
+    expect(queryByRole('tooltip')).toBeNull()
+    expect(button.getAttribute('aria-label')).toBe('Save')
   })
 })

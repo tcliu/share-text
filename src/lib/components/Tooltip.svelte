@@ -37,9 +37,15 @@
     visible = false
   }
 
+  const supportsHover = $derived(
+    typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(hover: hover)').matches,
+  )
+
   $effect(() => {
     const trigger = anchor?.parentElement
-    if (!trigger) {
+    if (!trigger || !supportsHover) {
       return
     }
     const enter = () => show()

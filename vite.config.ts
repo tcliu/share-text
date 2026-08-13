@@ -60,6 +60,7 @@ export default defineConfig(async ({ command, mode }) => {
       include: ['src/**/*.{test,spec}.{ts,js}'],
       environment: 'jsdom',
       globals: true,
+      setupFiles: ['./src/test/vitest-setup.ts'],
     },
   }
 })
