@@ -35,6 +35,7 @@
 
   function hide() {
     visible = false
+    clearDismissTimer()
   }
 
   const supportsHover = $derived(
@@ -83,7 +84,7 @@
 
   $effect(() => {
     const trigger = anchor?.parentElement
-    if (!trigger || supportsHover) {
+    if (!trigger) {
       return
     }
     const startPress = (event: PointerEvent) => {
@@ -91,7 +92,14 @@
         return
       }
       clearPressTimer()
-      clearDismissTimer()
+      if (visible) {
+        clearDismissTimer()
+        dismissTimer = setTimeout(() => {
+          dismissTimer = null
+          hide()
+        }, TOOLTIP_LINGER_MS)
+        return
+      }
       pressTimer = setTimeout(() => {
         pressTimer = null
         show()

@@ -15,6 +15,7 @@ describe('Tooltip', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -74,8 +75,6 @@ describe('Tooltip', () => {
 
     await vi.advanceTimersByTimeAsync(2000)
     expect(queryByRole('tooltip')).toBeNull()
-
-    vi.useRealTimers()
   })
 
   it('does not show a tooltip for a quick tap on touch-only devices', async () => {
@@ -88,7 +87,21 @@ describe('Tooltip', () => {
     trigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }))
     await vi.advanceTimersByTimeAsync(500)
     expect(queryByRole('tooltip')).toBeNull()
+  })
 
-    vi.useRealTimers()
+  it('re-tapping a visible long-press tooltip restarts its dismiss timer', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+    const { getByRole, queryByRole } = render(Button, { ariaLabel: 'Save', tooltip: 'Save' })
+    const trigger = getByRole('button', { name: 'Save' }).parentElement!
+
+    trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    await vi.advanceTimersByTimeAsync(500)
+    expect(queryByRole('tooltip')).toBeTruthy()
+
+    trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    trigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }))
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(queryByRole('tooltip')).toBeNull()
   })
 })
