@@ -37,6 +37,8 @@ export interface DocumentListResponse {
 
 const BASE_PATH = '/api/documents'
 
+export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
+
 export async function fetchDocumentSummaries(
   options: { search?: string; searchKeys?: string[]; limit?: number; offset?: number } = {},
 ): Promise<DocumentListResponse> {

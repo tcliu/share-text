@@ -1,25 +1,25 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import type { OwnedDocumentSummary } from '$lib/documents'
-import { deleteDocument, fetchDocumentSummaries } from '$lib/documents'
+import { DEFAULT_DOCUMENTS_PAGE_SIZE, deleteDocument, fetchDocumentSummaries } from '$lib/documents'
 import { clearDraft } from '$lib/document-drafts'
-
-export const DEFAULT_DOCUMENTS_PAGE_SIZE = 20
 
 const DOCUMENT_SEARCH_KEYS = ['name', 'tags', 'id']
 
 export interface UseDocumentsOptions {
   onDocumentDeleted?: (id: string) => void
   pageSize?: number
+  initialDocuments?: OwnedDocumentSummary[]
+  initialHasMore?: boolean
 }
 
 export function useDocuments(options: UseDocumentsOptions = {}) {
   const pageSize = options.pageSize ?? DEFAULT_DOCUMENTS_PAGE_SIZE
 
-  let documents = $state<OwnedDocumentSummary[]>([])
+  let documents = $state<OwnedDocumentSummary[]>(options.initialDocuments ?? [])
   let loadingDocuments = $state(false)
   let documentsError = $state<string | null>(null)
-  let hasMore = $state(false)
+  let hasMore = $state(options.initialHasMore ?? false)
 
   let creating = $state(false)
 

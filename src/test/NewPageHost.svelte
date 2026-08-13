@@ -21,4 +21,4 @@
   })
 </script>
 
-<NewPage data={{ maxContentLength: 100000 }} params={{}} form={null} />
+<NewPage data={{ maxContentLength: 100000, documents: [], hasMore: false }} params={{}} form={null} />
