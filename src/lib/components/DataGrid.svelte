@@ -78,8 +78,6 @@
   let headerWrapper: HTMLElement | null = null
   let rootEl: HTMLElement | null = null
 
-  let initializedWidths = false
-
   // Resolve initialColumnWidths to per-column pixels. Every column (including
   // the last) gets an explicit width; the last column absorbs the exact
   // remainder of the available width so the table never overflows the
@@ -117,9 +115,14 @@
   }
 
   $effect(() => {
-    if (!gridContainer || initializedWidths) return
-    initializedWidths = true
-    columnWidths = resize.loadPersistedWidths() ?? (initialColumnWidths?.length ? resolveInitialWidths() : [])
+    if (!gridContainer) return
+    const persisted = resize.loadPersistedWidths()
+    if (persisted != null) {
+      columnWidths = persisted
+    } else if (columnWidths.length === 0 && initialColumnWidths?.length) {
+      const resolved = resolveInitialWidths()
+      if (resolved.length > 0) columnWidths = resolved
+    }
   })
 
   let editSnapshot: { ri: number; ci: number; value: string; committed: boolean } = {
