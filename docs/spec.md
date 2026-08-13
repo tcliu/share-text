@@ -51,9 +51,10 @@ synchronizes through a small fetch-based JSON API.
 
 ## Document Types
 
-- `src/lib/document-type-values.ts` defines the eight allowed type constants
-  (`text`, `csv`, `html`, `javascript`, `json`, `markdown`, `xml`, `yaml`) as
-  an `as const` array, the union type, and the `isDocumentTypeValue` guard.
+- `src/lib/document-type-values.ts` defines the nine allowed type constants
+  (`text`, `csv`, `html`, `javascript`, `json`, `markdown`, `properties`,
+  `xml`, `yaml`) as an `as const` array, the union type, and the
+  `isDocumentTypeValue` guard.
 - `src/lib/document-types.ts` is the type registry: each type entry provides a
   `label`, file `extension`, `mimeType`, `validate` function, optional
   `convertTo` specs, a lazy-loaded `actions` component for type-specific
@@ -67,8 +68,9 @@ synchronizes through a small fetch-based JSON API.
 - Preview components are per-type lazy-loaded chunks rendered by
   `PreviewPane.svelte`: `MarkdownPreview` (renders with `marked`),
   `HtmlPreview` (renders the document in a sandboxed iframe),
-  `StructurePreview` (an editable tree for JSON/XML/YAML, see Editor), and
-  `CsvPreview` (a DataGrid spreadsheet).
+  `StructurePreview` (an editable tree for JSON/XML/YAML, see Editor),
+  `CsvPreview` (a DataGrid spreadsheet), and `PropertiesPreview` (a DataGrid
+  spreadsheet without a header row).
 - Document create accepts an optional `documentType`; the PUT route validates
   the type. On save, the editor validates content against the type and rejects
   invalid content before sending the request.
@@ -207,17 +209,18 @@ synchronizes through a small fetch-based JSON API.
   the first resize the table keeps its normal `w-full`/`min-w` auto layout, so a
   non-resizable table is byte-for-byte unchanged.
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
-  `admin_logout`, `admin_setting_update`, `admin_setting_reset`,
-  `admin_document_rename`, `admin_document_update_updated_by`,
-  `admin_document_update_created_by`, `admin_document_update_key`,
-  `admin_document_delete`).
+  `admin_login_rate_limited`, `admin_logout`, `admin_setting_update`,
+  `admin_setting_reset`, `admin_document_rename`,
+  `admin_document_update_updated_by`, `admin_document_update_created_by`,
+  `admin_document_update_key`, `admin_document_delete`).
 
 ## Limits
 
 - `MAX_DOCUMENTS_PER_IP` (default 10) caps how many documents a single client IP
   can create (`created_by`); exceeding it returns 403. It, the content limit,
-  and `DOCUMENT_KEY_LENGTH` (default 6, the generated id character count) are
-  resolved at request time from `app_config` overrides or env.
+  `DOCUMENT_KEY_LENGTH` (default 6, the generated id character count), and
+  `MAX_DOCUMENT_VERSIONS` are all resolved at request time from `app_config`
+  overrides or env.
 - Content is capped at a hard 1 MiB byte limit plus `MAX_CONTENT_LENGTH` (default
   1048576) characters; both are enforced on create and update.
 - Each document keeps at most `MAX_DOCUMENT_VERSIONS` (default 20) content
@@ -252,6 +255,12 @@ synchronizes through a small fetch-based JSON API.
   percentage to `localStorage`; `use-preview-content.svelte.ts` mirrors content
   into a debounced value (immediate on document switch) so heavy previews do not
   re-render on every keystroke.
+- `DocumentEditorPane` keeps the editor focused across pane toggles: the
+  editor/preview toggles, the mobile drawer button, and the list collapse button
+  set the shared `Button` `preventFocusSteal` flag (a `pointerdown`
+  `preventDefault`, so the button never takes focus), and closing the preview
+  calls the bound editor's `focus()` (forwarded through `LazyCodeEditor` to
+  `CodeEditor`) to return focus to the editor at its current cursor position.
 
 ### Responsive Layout
 

@@ -16,7 +16,7 @@ The page is split into two vertical panes.
 
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
-    document**, and **Refresh** icon buttons (all with tooltips).
+    document**, **Refresh**, and **Login** icon buttons (all with tooltips).
   - The pane lists all shared documents, most recently edited first. New
     documents are added to the list automatically.
   - A search box below the header (with a clear button) searches the whole
@@ -126,29 +126,34 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
 ## Document Types
 
 - A dropdown next to the document name in the editor header selects one of
-  eight types: **Text**, **CSV**, **HTML**, **JavaScript**, **JSON**,
-  **Markdown**, **XML**, or **YAML**. The dropdown is filterable — typing
-  narrows the list.
+  nine types: **Text**, **CSV**, **HTML**, **JavaScript**, **JSON**,
+  **Markdown**, **Properties**, **XML**, or **YAML**. The dropdown is
+  filterable — typing narrows the list.
 - Changing the type marks the document dirty; the new type is persisted on the
   next save. Each type validates its content before saving and rejects invalid
   content with a toast explaining the error.
-- Structured types (JSON, HTML, XML, YAML) show type-specific **Format** /
-  **Convert** actions in the editor toolbar:
+- Structured types (JSON, HTML, XML, YAML, Properties) show type-specific
+  **Format** / **Convert** actions in the editor toolbar:
   - **Format** reformats the content according to the type (e.g. JSON
     pretty-print, HTML/XML indent).
-  - **Convert** offers conversion to a related type (JSON ↔ YAML).
+  - **Convert** offers conversion to a related type (JSON ↔ YAML, Properties →
+    JSON).
 - The selected type determines the export file extension (`{name}.{ext}`),
   enables per-type syntax highlighting, and influences the upload file filter.
 
 ### Preview
 
 - Types with a preview component (**Markdown**, **HTML**, **JSON**, **XML**,
-  **YAML**, **CSV**) show an **Editor view** toggle (pencil icon) and a
+  **YAML**, **CSV**, **Properties**) show an **Editor view** toggle (pencil
+  icon) and a
   **Preview view** toggle (eye icon) in the toolbar instead of a single cycle
   button. The panes can never both be off: whichever pane is the sole active one
   has its toggle disabled. Turning a pane on always lands in split view (editor
   and preview side by side on desktop, stacked on mobile); turning it back off
   returns to the remaining pane.
+- Toggling the panes does not steal focus from the editor: the toggles suppress
+  the pointer's default focus grab, and closing the preview refocuses the editor
+  at its current cursor position.
 - The active mode is encoded in the URL query string (`?preview=true`,
   `?editor=false`), so reloading or sharing the link keeps the mode.
 - **Markdown** renders with `marked` into a sandboxed iframe; **HTML** renders
@@ -200,10 +205,10 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
 ## Clone
 
 - **Clone** in the editor toolbar creates a copy of the current document with a
-  new id. The clone is named `{original-name} (copy)` (or the generated key
-  when the original has no name), inherits the content and type of the source,
-  and the browser navigates to the new document automatically. The clone is
-  owned by the current client IP.
+  new id. The clone is named `{original-name} (copy)` (or **Untitled** when the
+  original has no name), inherits the content and type of the source, and the
+  browser navigates to the new document automatically. The clone is owned by
+  the current client IP.
 
 ## Copy link
 
@@ -286,7 +291,8 @@ keeps the settings draft and documents data alive across tab switches.
   require a valid session.
 - The page has two tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
-    `max_content_length`, `document_key_length`). Each row shows its effective
+    `max_content_length`, `document_key_length`, `max_document_versions`). Each
+    row shows its effective
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
     revert button that deletes the database override. **Apply** persists
     changes, **Reload** re-fetches, **Reset** restores the draft to the current
