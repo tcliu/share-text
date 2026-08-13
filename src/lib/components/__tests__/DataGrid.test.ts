@@ -1888,7 +1888,7 @@ describe('DataGrid (column resize)', () => {
     expect(header1.style.width).not.toBe(wBefore)
   })
 
-  it('trailing splitter stays at the container edge when the table fits; the prev splitter shrinks the last column', async () => {
+  it('trailing splitter left shrinks the last column and moves the previous splitter right so the table stays at container width', async () => {
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
     try {
       render(DataGrid, {
@@ -1900,18 +1900,58 @@ describe('DataGrid (column resize)', () => {
       // Table fills the container (120 + 243 + 36 = 399 <= 400): no horizontal scroll.
       await vi.waitFor(() => expect(colSelector(root, 1).style.width).toBe('243px'))
 
-      // Trailing splitter shrinking is clamped at the container-filling width:
-      // the last splitter stays at the container's right edge.
+      // Trailing splitter left: with the table at container width, the last
+      // column shrinks and the previous column grows by the same amount, so the
+      // previous splitter moves right and the table's minimum width stays the
+      // container width.
       await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, { key: 'ArrowLeft' })
-      expect(colSelector(root, 1).style.width).toBe('243px')
-
-      // Moving the previous splitter right rebalances within the fixed total:
-      // the last column shrinks while the trailing splitter stays put.
-      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, { key: 'ArrowRight' })
       expect(colSelector(root, 0).style.width).toBe('130px')
       expect(colSelector(root, 1).style.width).toBe('233px')
     } finally {
       delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+    }
+  })
+
+  it('persists resized column widths to localStorage under the storageKey', async () => {
+    localStorage.clear()
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+    try {
+      render(DataGrid, {
+        value: [['a', 'b'], ['1', '2']],
+        initialColumnWidths: ['120', '120'],
+        showHeaders: false,
+        storageKey: 'csv-preview',
+      })
+      const root = await screen.findByTestId('data-grid')
+      await vi.waitFor(() => expect(colSelector(root, 1).style.width).toBe('243px'))
+
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, { key: 'ArrowRight' })
+      await vi.waitFor(() => expect(localStorage.getItem('share-text:column-widths:csv-preview')).not.toBeNull())
+      const stored = JSON.parse(localStorage.getItem('share-text:column-widths:csv-preview')!)
+      expect(stored).toEqual([120, 253])
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+      localStorage.clear()
+    }
+  })
+
+  it('restores persisted column widths on mount, overriding initialColumnWidths', async () => {
+    localStorage.clear()
+    localStorage.setItem('share-text:column-widths:csv-preview', JSON.stringify([200, 300]))
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+    try {
+      render(DataGrid, {
+        value: [['a', 'b'], ['1', '2']],
+        initialColumnWidths: ['120', '120'],
+        showHeaders: false,
+        storageKey: 'csv-preview',
+      })
+      const root = await screen.findByTestId('data-grid')
+      await vi.waitFor(() => expect(colSelector(root, 0).style.width).toBe('200px'))
+      expect(colSelector(root, 1).style.width).toBe('300px')
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+      localStorage.clear()
     }
   })
 

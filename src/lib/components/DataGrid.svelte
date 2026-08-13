@@ -6,6 +6,7 @@
   import { createGridClipboard } from './use-grid-clipboard'
   import { createAutoScroll } from './use-grid-autoscroll.svelte'
   import { columnLetter } from './grid-utils'
+  import { createColumnResize } from './use-column-resize.svelte'
   import TableIcon from '$lib/icons/TableIcon.svelte'
   import RowInsertAboveIcon from '$lib/icons/RowInsertAboveIcon.svelte'
   import RowInsertBelowIcon from '$lib/icons/RowInsertBelowIcon.svelte'
@@ -38,6 +39,9 @@
     // resize. px values (e.g. ['200', '400']) or bare numbers are used as-is.
     // When omitted, columns use auto-width with min-w-32.
     initialColumnWidths?: string[]
+    // When set, resized column widths are persisted to localStorage under this
+    // key and restored on mount (overriding initialColumnWidths).
+    storageKey?: string
   }
 
   let {
@@ -49,6 +53,7 @@
     columnLabels,
     hideHeaderToggle = false,
     initialColumnWidths,
+    storageKey,
   }: Props = $props()
 
   const model = createGridModel({
@@ -114,7 +119,7 @@
   $effect(() => {
     if (!gridContainer || initializedWidths) return
     initializedWidths = true
-    columnWidths = initialColumnWidths?.length ? resolveInitialWidths() : []
+    columnWidths = resize.loadPersistedWidths() ?? (initialColumnWidths?.length ? resolveInitialWidths() : [])
   })
 
   let editSnapshot: { ri: number; ci: number; value: string; committed: boolean } = {
@@ -211,105 +216,18 @@
   // outer splitters (and therefore all other columns) fixed. The splitter after
   // the last column moves the table's right edge instead.
 
-  let resizingCol = $state<number | null>(null)
-  let resizeStartX = $state(0)
-  let resizeStartWidth = $state(0)
-  // Fixed combined width of the two adjacent columns being re-partitioned, or
-  // null when resizing the last column's right edge (table edge).
-  let resizeSiblingTotal = $state<number | null>(null)
-  // Frame-throttled drag state: only the latest pointer X is applied per
-  // animation frame so mousemove bursts don't thrash layout.
-  let pendingResizeFrame = false
-  let latestResizeX = 0
-
-  function getColumnCellWidth(ci: number): number {
-    const cell = gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)
-    return cell?.offsetWidth ?? 128
-  }
-
-  function captureAllWidths(): number[] {
-    const widths: number[] = []
-    for (let i = 0; i < model.columnCount; i++) {
-      widths.push(columnWidths[i] ?? getColumnCellWidth(i))
-    }
-    return widths
-  }
-
-  function startColumnResize(event: MouseEvent, ci: number) {
-    event.preventDefault()
-    event.stopPropagation()
-    resizingCol = ci
-    resizeStartX = event.clientX
-    const widths = captureAllWidths()
-    resizeStartWidth = widths[ci]
-    resizeSiblingTotal =
-      ci < model.columnCount - 1 ? widths[ci] + widths[ci + 1] : null
-    columnWidths = widths
-  }
-
-  function applyResizeDiff(diff: number) {
-    if (resizingCol === null) return
-    if (resizeSiblingTotal != null) {
-      const newWidth = Math.max(
-        MIN_COLUMN_WIDTH,
-        Math.min(resizeSiblingTotal - MIN_COLUMN_WIDTH, resizeStartWidth + diff),
-      )
-      columnWidths[resizingCol] = newWidth
-      columnWidths[resizingCol + 1] = resizeSiblingTotal - newWidth
-    } else {
-      // Trailing splitter: moves the table's right edge. Expanding right grows
-      // the table beyond the container (horizontal scroll). Shrinking left
-      // clamps at the width that exactly fills the container, so the last
-      // splitter stays at the container's right edge whenever the table would
-      // otherwise fit without scrolling (mirroring the two-table reference,
-      // where the last splitter stays put while the previous splitter
-      // rebalances columns against it).
-      let newWidth = Math.max(MIN_COLUMN_WIDTH, resizeStartWidth + diff)
-      if (newWidth < resizeStartWidth && gridContainer) {
-        let others = 0
-        for (let i = 0; i < model.columnCount; i++) {
-          if (i !== resizingCol) others += columnWidths[i]
-        }
-        const fillWidth = Math.max(
-          MIN_COLUMN_WIDTH,
-          gridContainer.clientWidth - TABLE_LEFT_BORDER - ROW_NUMBER_WIDTH - others,
-        )
-        newWidth = Math.max(newWidth, Math.min(fillWidth, resizeStartWidth))
-      }
-      columnWidths[resizingCol] = newWidth
-    }
-  }
-
-  function handleResizeMouseMove(event: MouseEvent) {
-    if (resizingCol === null) return
-    latestResizeX = event.clientX
-    if (pendingResizeFrame) return
-    pendingResizeFrame = true
-    requestAnimationFrame(() => {
-      pendingResizeFrame = false
-      if (resizingCol === null) return
-      applyResizeDiff(latestResizeX - resizeStartX)
-    })
-  }
-
-  function handleResizeKeydown(event: KeyboardEvent, ci: number) {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    event.preventDefault()
-    event.stopPropagation()
-    const widths = captureAllWidths()
-    columnWidths = widths
-    resizingCol = ci
-    resizeStartWidth = widths[ci]
-    resizeSiblingTotal =
-      ci < model.columnCount - 1 ? widths[ci] + widths[ci + 1] : null
-    applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
-    resizingCol = null
-  }
-
-  function handleResizeMouseUp() {
-    resizingCol = null
-    pendingResizeFrame = false
-  }
+  const resize = createColumnResize({
+    getColumnCount: () => model.columnCount,
+    getContainer: () => gridContainer,
+    getColumnWidths: () => columnWidths,
+    setColumnWidths: (widths: number[]) => {
+      columnWidths = widths
+    },
+    getColumnCellWidth: (ci: number) => gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)?.offsetWidth ?? 128,
+    getMinWidth: () => MIN_COLUMN_WIDTH,
+    getFillWidthOffset: () => TABLE_LEFT_BORDER + ROW_NUMBER_WIDTH,
+    getStorageKey: () => storageKey,
+  })
 
   // Rescale every column proportionally so the table fills the container when it
   // can, mirroring the two-table reference's container resize: the target
@@ -454,7 +372,7 @@
   function handleWindowMouseUp() {
     sel.endDrag()
     autoScroll.stop()
-    handleResizeMouseUp()
+    resize.handleResizeMouseUp()
   }
 
   function handleInputFocus(ri: number, ci: number) {
@@ -564,7 +482,7 @@
   }
 </script>
 
-<svelte:window onmouseup={handleWindowMouseUp} onmousemove={event => { autoScroll.onWindowMouseMove(event); handleResizeMouseMove(event) }} />
+<svelte:window onmouseup={handleWindowMouseUp} onmousemove={event => { autoScroll.onWindowMouseMove(event); resize.handleResizeMouseMove(event) }} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
@@ -752,8 +670,8 @@
                     class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                     style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
                     aria-label="Resize column {ci + 1}"
-                    onmousedown={event => startColumnResize(event, ci)}
-                    onkeydown={event => handleResizeKeydown(event, ci)}
+                    onmousedown={event => resize.startColumnResize(event, ci)}
+                    onkeydown={event => resize.handleResizeKeydown(event, ci)}
                   ></button>
                 </th>
               {/each}

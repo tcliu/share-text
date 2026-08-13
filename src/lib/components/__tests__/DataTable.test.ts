@@ -164,4 +164,34 @@ describe('DataTable resizable columns', () => {
     const cols = table.querySelectorAll('colgroup col')
     expect(cols).toHaveLength(2)
   })
+
+  it('persists resized column widths to localStorage under the storageKey', async () => {
+    localStorage.clear()
+    const { container } = render(DataTable<Row>, { props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' } })
+    const ths = Array.from(container.querySelectorAll('th[data-col-index]'))
+    Object.defineProperty(ths[0], 'offsetWidth', { configurable: true, value: 200 })
+    Object.defineProperty(ths[1], 'offsetWidth', { configurable: true, value: 250 })
+    const handle = container.querySelector('button[aria-label^="Resize "]') as HTMLButtonElement
+    await fireEvent.mouseDown(handle)
+    await fireEvent.keyDown(handle, { key: 'ArrowRight' })
+    await fireEvent.mouseUp(window)
+
+    await vi.waitFor(() => expect(localStorage.getItem('share-text:column-widths:admin-documents')).not.toBeNull())
+    const stored = JSON.parse(localStorage.getItem('share-text:column-widths:admin-documents')!)
+    expect(stored).toEqual([210, 240])
+    localStorage.clear()
+  })
+
+  it('restores persisted column widths on mount', async () => {
+    localStorage.clear()
+    localStorage.setItem('share-text:column-widths:admin-documents', JSON.stringify([220, 160]))
+    const { container } = render(DataTable<Row>, { props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' } })
+    await vi.waitFor(() => {
+      const cols = container.querySelectorAll('colgroup col')
+      expect(cols).toHaveLength(2)
+    })
+    const widths = Array.from(container.querySelectorAll('colgroup col')).map(c => parseInt((c as HTMLElement).style.width, 10))
+    expect(widths).toEqual([220, 160])
+    localStorage.clear()
+  })
 })
