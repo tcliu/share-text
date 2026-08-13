@@ -85,7 +85,7 @@
   <title>Admin</title>
 </svelte:head>
 
-<div class="flex h-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
+<div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
   {#if authState.state === 'authenticated'}
   <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
     <h1 class="text-md font-semibold text-slate-200">Admin</h1>

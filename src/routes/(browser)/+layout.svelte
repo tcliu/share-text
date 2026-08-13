@@ -223,7 +223,7 @@
     deletePending={deleteTarget !== null} />
 {/snippet}
 
-<div class="flex h-screen overflow-hidden">
+<div class="flex h-dvh overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
