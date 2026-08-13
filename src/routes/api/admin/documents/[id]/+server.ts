@@ -26,7 +26,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     return json({ error: 'Request body must be a JSON object' }, { status: 400 })
   }
 
-  const changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string } = {}
+  const changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string; isPublic?: boolean } = {}
   if (typeof body.name === 'string') {
     try {
       changes.name = normalizeName(body.name)
@@ -55,13 +55,17 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
       return json({ error: error instanceof Error ? error.message : 'Invalid document key' }, { status: 400 })
     }
   }
+  if (typeof body.isPublic === 'boolean') {
+    changes.isPublic = body.isPublic
+  }
   if (
     changes.name === undefined &&
     changes.updatedBy === undefined &&
     changes.createdBy === undefined &&
-    changes.key === undefined
+    changes.key === undefined &&
+    changes.isPublic === undefined
   ) {
-    return json({ error: 'Request body must include a name, updatedBy, createdBy, or key' }, { status: 400 })
+    return json({ error: 'Request body must include a name, updatedBy, createdBy, key, or isPublic' }, { status: 400 })
   }
 
   const existing = await fetchDocumentForAdmin(id)
@@ -84,7 +88,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
-  const details: Record<string, string | number> = {
+  const details: Record<string, string | number | boolean> = {
     id,
     content_size: contentByteSize(updated.content),
     elapsed_ms: Date.now() - startedAt,
@@ -105,13 +109,19 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     details.old_key = existing.id
     details.new_key = changes.key
   }
+  if (changes.isPublic !== undefined) {
+    details.old_is_public = existing.isPublic
+    details.new_is_public = changes.isPublic
+  }
   const action = changes.key !== undefined
     ? 'admin_document_update_key'
     : changes.updatedBy !== undefined
       ? 'admin_document_update_updated_by'
       : changes.createdBy !== undefined
         ? 'admin_document_update_created_by'
-        : 'admin_document_rename'
+        : changes.isPublic !== undefined
+          ? 'admin_document_update_access'
+          : 'admin_document_rename'
   logEvent({
     ip,
     action,
@@ -128,6 +138,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     createdAt: existing.createdAt,
     updatedAt: updated.updatedAt,
     contentSize: contentByteSize(updated.content),
+    isPublic: changes.isPublic ?? existing.isPublic,
     content: updated.content,
   }
   return json({ document })

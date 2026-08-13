@@ -12,8 +12,8 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
   let sessionError = $state('')
 
   function redirectToLogin() {
-    if (page.url.pathname !== '/login') {
-      void goto('/login')
+    if (page.url.pathname !== '/login/admin') {
+      void goto('/login/admin')
     }
   }
 

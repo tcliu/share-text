@@ -5,140 +5,79 @@ import LoginPage from '../+page.svelte'
 import { goto } from '$app/navigation'
 
 const authMocks = vi.hoisted(() => ({
-  isAdminSession: vi.fn(),
-  isAdminConfigured: vi.fn(),
+  isUserSession: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-auth')>('$lib/server/admin-auth')
+vi.mock('$lib/server/user-auth', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/user-auth')>('$lib/server/user-auth')
   return {
     ...actual,
-    isAdminSession: authMocks.isAdminSession,
-    isAdminConfigured: authMocks.isAdminConfigured,
+    isUserSession: authMocks.isUserSession,
   }
 })
 
 import { load } from '../+page.server'
 
-function renderPage(configured: boolean) {
-  return render(LoginPage, { data: { configured } } as never)
-}
-
 beforeEach(() => {
   vi.clearAllMocks()
-  localStorage.clear()
-  authMocks.isAdminSession.mockReset()
-  authMocks.isAdminConfigured.mockReset()
+  authMocks.isUserSession.mockReset()
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) }),
+    vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ user: { id: 1, username: 'alice', email: 'alice@example.com' } }) }),
   )
 })
 
 describe('/login page', () => {
-  it('renders the login form when admin is configured', async () => {
-    const { getByLabelText } = renderPage(true)
+  it('renders the sign-in form', async () => {
+    const { getByLabelText } = render(LoginPage)
 
     await waitFor(() => {
-      expect(getByLabelText('Username')).toBeTruthy()
+      expect(getByLabelText('Username or email')).toBeTruthy()
       expect(getByLabelText('Password')).toBeTruthy()
       expect(getByLabelText('Remember me')).toBeTruthy()
     })
   })
 
-  it('reports a clear message when admin is not configured', async () => {
-    const { getByText } = renderPage(false)
+  it('switches to the create account form', async () => {
+    const { getByText, getByLabelText } = render(LoginPage)
+    await fireEvent.click(getByText('Create account'))
 
     await waitFor(() => {
-      expect(getByText(/Admin authentication is not configured/)).toBeTruthy()
+      expect(getByLabelText('Username')).toBeTruthy()
+      expect(getByLabelText('Email')).toBeTruthy()
+      expect(getByLabelText('Password')).toBeTruthy()
     })
   })
 
-  it('navigates to /admin/properties after signing in', async () => {
-    const { getByLabelText, getByText } = renderPage(true)
-    const username = await waitFor(() => getByLabelText('Username'))
-    await fireEvent.input(username, { target: { value: 'admin' } })
+  it('navigates to / after signing in', async () => {
+    const { getByLabelText, getByText } = render(LoginPage)
+    const identifier = await waitFor(() => getByLabelText('Username or email'))
+    await fireEvent.input(identifier, { target: { value: 'alice' } })
     await fireEvent.input(getByLabelText('Password'), { target: { value: 'secret' } })
-    await fireEvent.click(getByText('Sign in'))
+    await fireEvent.click(getByText('Continue'))
 
     await waitFor(() => {
-      expect(goto).toHaveBeenCalledWith('/admin/properties')
-    })
-  })
-
-  it('remembers the username across sign-ins', async () => {
-    const { getByLabelText, getByText } = renderPage(true)
-    const username = await waitFor(() => getByLabelText('Username'))
-    await fireEvent.input(username, { target: { value: 'admin' } })
-    await fireEvent.input(getByLabelText('Password'), { target: { value: 'secret' } })
-    await fireEvent.click(getByLabelText('Remember me'))
-    await fireEvent.click(getByText('Sign in'))
-
-    await waitFor(() => {
-      expect(JSON.parse(localStorage.getItem('share-text-admin-remembered-login') ?? '{}')).toEqual({
-        username: 'admin',
-      })
-    })
-  })
-
-  it('restores the remembered username and check state on a fresh visit', async () => {
-    localStorage.setItem('share-text-admin-remembered-login', JSON.stringify({ username: 'admin' }))
-    const { getByLabelText } = renderPage(true)
-
-    await waitFor(() => {
-      expect((getByLabelText('Username') as HTMLInputElement).value).toBe('admin')
-      expect((getByLabelText('Remember me') as HTMLInputElement).checked).toBe(true)
-    })
-  })
-
-  it('persists the remembered state across a full sign-in and re-visit cycle', async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({ ok: true }) })
-    vi.stubGlobal('fetch', fetchMock)
-    const { getByLabelText, getByText, unmount } = renderPage(true)
-    const username = await waitFor(() => getByLabelText('Username'))
-    await fireEvent.input(username, { target: { value: 'admin' } })
-    await fireEvent.input(getByLabelText('Password'), { target: { value: 'secret' } })
-    await fireEvent.click(getByLabelText('Remember me'))
-    await fireEvent.click(getByText('Sign in'))
-    await waitFor(() => {
-      expect(goto).toHaveBeenCalledWith('/admin/properties')
-    })
-    expect(JSON.parse(localStorage.getItem('share-text-admin-remembered-login') ?? '{}')).toEqual({
-      username: 'admin',
-    })
-    expect(fetchMock).toHaveBeenCalledWith(
-      '/api/admin/login',
-      expect.objectContaining({ body: JSON.stringify({ username: 'admin', password: 'secret', rememberMe: true }) }),
-    )
-
-    unmount()
-    const fresh = renderPage(true)
-    await waitFor(() => {
-      expect((fresh.getByLabelText('Username') as HTMLInputElement).value).toBe('admin')
-      expect((fresh.getByLabelText('Remember me') as HTMLInputElement).checked).toBe(true)
+      expect(goto).toHaveBeenCalledWith('/')
     })
   })
 })
 
 describe('/login server load', () => {
-  it('redirects to /admin/properties when already authenticated', async () => {
-    authMocks.isAdminSession.mockReturnValue(true)
+  it('redirects to / when already authenticated', async () => {
+    authMocks.isUserSession.mockReturnValue(true)
     try {
       await load({ cookies: { get: () => null } } as never)
-      expect.unreachable('expected a redirect to /admin/properties')
+      expect.unreachable('expected a redirect to /')
     } catch (error) {
       const redirect = error as { status?: number; location?: string }
       expect(redirect.status).toBe(307)
-      expect(redirect.location).toBe('/admin/properties')
+      expect(redirect.location).toBe('/')
     }
   })
 
-  it('returns the configured flag when not authenticated', async () => {
-    authMocks.isAdminSession.mockReturnValue(false)
-    authMocks.isAdminConfigured.mockReturnValue(true)
+  it('does not redirect when not authenticated', async () => {
+    authMocks.isUserSession.mockReturnValue(false)
     const result = await load({ cookies: { get: () => null } } as never)
-    expect(result).toEqual({ configured: true })
+    expect(result).toBeUndefined()
   })
 })

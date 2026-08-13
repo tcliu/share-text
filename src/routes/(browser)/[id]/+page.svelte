@@ -1,13 +1,22 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import type { PageProps } from './$types'
-  import { fetchDocument, updateDocument, fetchDocumentVersions, type Document } from '$lib/documents'
+  import {
+    fetchDocument,
+    updateDocument,
+    fetchDocumentVersions,
+    fetchDocumentAccess,
+    updateDocumentAccess,
+    type Document,
+    type User,
+  } from '$lib/documents'
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
   import { clearDraft, loadDraft, loadDraftDocType, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
   import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
+  import ShareDialog from '$lib/components/ShareDialog.svelte'
 
   let { data }: PageProps = $props()
 
@@ -30,6 +39,10 @@
   let refreshing = $state(false)
   let versionCount = $state(0)
   let draftTimer: ReturnType<typeof setTimeout> | null = null
+  let shareOpen = $state(false)
+  let shareSaving = $state(false)
+  let accessIsPublic = $state(false)
+  let accessSharedWith = $state<User[]>([])
 
   const dirty = $derived(content !== savedContent || docType !== savedDocumentType)
 
@@ -165,7 +178,7 @@
   })
 
   async function handleSave() {
-    if (!dirty || saving) return
+    if (!data.editable || !dirty || saving) return
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
@@ -272,6 +285,34 @@
       handleSave()
     }
   }
+
+  async function openShare() {
+    if (!currentId) return
+    try {
+      const state = await fetchDocumentAccess(currentId)
+      accessIsPublic = state.isPublic
+      accessSharedWith = state.sharedWith
+      shareOpen = true
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load sharing settings')
+    }
+  }
+
+  async function handleShareApply(input: { isPublic: boolean; sharedWith: string[] }) {
+    if (!currentId || shareSaving) return
+    shareSaving = true
+    try {
+      const state = await updateDocumentAccess(currentId, input)
+      accessIsPublic = state.isPublic
+      accessSharedWith = state.sharedWith
+      toast.success('Sharing updated')
+      shareOpen = false
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update sharing settings')
+    } finally {
+      shareSaving = false
+    }
+  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} onpagehide={flushDraft} />
@@ -286,10 +327,22 @@
     maxContentLength={data.maxContentLength}
     {availableTags}
     {versionCount}
+    editable={data.editable}
     onSave={handleSave}
     onReset={handleReset}
     onRename={handleRename}
     onTypeChange={handleTypeChange}
     onClone={handleClone}
-    onTagsSave={handleTagsSave} />
+    onTagsSave={handleTagsSave}
+    onShare={data.canManageAccess ? openShare : undefined} />
+{/if}
+
+{#if shareOpen}
+  <ShareDialog
+    open={shareOpen}
+    isPublic={accessIsPublic}
+    sharedWith={accessSharedWith}
+    pending={shareSaving}
+    onClose={() => (shareOpen = false)}
+    onApply={handleShareApply} />
 {/if}

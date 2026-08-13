@@ -1,9 +1,12 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
+import { isUniqueViolation } from './db-errors'
 import { logEvent } from './logging'
 import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './settings'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
 import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
+import type { Viewer } from './viewer'
+import { findUsersByUsernameOrEmail, type User } from './users'
 
 export const MAX_NAME_LENGTH = 200
 export const MAX_CONTENT_BYTES = 1024 * 1024
@@ -45,6 +48,12 @@ interface DocumentRow {
   created_by?: string
   updated_by: string
   updated_at: Date | string
+  owner_user_id?: string | number | null
+  is_public?: boolean | number | string | null
+}
+
+function toBoolean(value: boolean | number | string | null | undefined) {
+  return value === true || value === 1 || value === '1' || value === 't'
 }
 
 function parseTags(value: string | null | undefined): Tag[] {
@@ -149,18 +158,7 @@ export function isDocumentKeyChars(value: string) {
 }
 
 export function isUniqueKeyViolation(error: unknown) {
-  if (!(error instanceof Error)) {
-    return false
-  }
-  const code = (error as Error & { code?: unknown }).code
-  if (code === '23505') {
-    return true
-  }
-  const errcode = (error as Error & { errcode?: unknown }).errcode
-  if (errcode === 2067) {
-    return true
-  }
-  return error.message.includes('UNIQUE constraint failed')
+  return isUniqueViolation(error)
 }
 
 export function normalizeName(value: string) {
@@ -276,21 +274,38 @@ function appendSearchConditions(options: {
 export interface FetchDocumentSummariesOptions {
   search?: string
   searchKeys?: string[]
-  viewerBy?: string
+  viewer?: Viewer
   limit?: number
   offset?: number
 }
 
 export interface FetchDocumentSummariesResult {
-  documents: Array<DocumentSummary & { owned: boolean }>
+  documents: Array<DocumentSummary & { owned: boolean; editable: boolean }>
   hasMore: boolean
 }
 
+function appendVisibilityCondition(viewer: Viewer | undefined, conditions: string[], params: unknown[]) {
+  if (viewer?.type === 'user') {
+    const ownerIndex = params.length + 1
+    params.push(viewer.userId)
+    const shareIndex = params.length + 1
+    params.push(viewer.userId)
+    conditions.push(
+      `(is_public = true or owner_user_id = $${ownerIndex} or exists (select 1 from document_shares s where s.document_id = documents.id and s.user_id = $${shareIndex}))`,
+    )
+  } else {
+    conditions.push('is_public = true')
+  }
+}
+
 export async function fetchDocumentSummaries(options: FetchDocumentSummariesOptions = {}) {
-  const { search, searchKeys, viewerBy, limit, offset = 0 } = options
-  const sql = 'select key, name, document_type, tags, created_by, updated_by, updated_at from documents'
+  const { search, searchKeys, viewer, limit, offset = 0 } = options
+  const sql =
+    'select key, name, document_type, tags, created_by, updated_by, updated_at, owner_user_id, is_public from documents'
   const params: unknown[] = []
   const conditions: string[] = []
+
+  appendVisibilityCondition(viewer, conditions, params)
 
   if (search) {
     appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: DOCUMENT_SEARCH_COLUMNS, conditions, params })
@@ -311,13 +326,37 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
     params.push(offset)
   }
 
+  const sharedKeys = new Set<string>()
+  if (viewer?.type === 'user') {
+    const shared = await runQuery<{ key: string }>(
+      `select d.key from document_shares s join documents d on d.id = s.document_id where s.user_id = $1`,
+      [viewer.userId],
+    )
+    for (const row of shared.rows) {
+      sharedKeys.add(row.key)
+    }
+  }
+
   const result = await runQuery<DocumentRow>(query, params)
   const rows = limit !== undefined ? result.rows.slice(0, limit) : result.rows
+  const viewerUserId = viewer?.type === 'user' ? viewer.userId : null
   return {
-    documents: rows.map(row => ({
-      ...toDocumentSummary(row),
-      owned: viewerBy !== undefined && row.created_by === viewerBy,
-    })),
+    documents: rows.map(row => {
+      const ownerUserId = row.owner_user_id == null ? null : Number(row.owner_user_id)
+      const owned =
+        viewerUserId !== null
+          ? ownerUserId === viewerUserId
+          : ownerUserId === null && (row.created_by ?? '') === (viewer?.ip ?? '')
+      const editable =
+        viewerUserId !== null
+          ? toBoolean(row.is_public) || owned || sharedKeys.has(row.key)
+          : owned
+      return {
+        ...toDocumentSummary(row),
+        owned,
+        editable,
+      }
+    }),
     hasMore: limit !== undefined ? result.rows.length > limit : false,
   }
 }
@@ -340,11 +379,142 @@ export async function assertWithinDocumentLimit(by: string) {
 }
 
 export async function fetchDocument(id: string) {
-  const result = await runQuery<DocumentRow>('select key, name, content, document_type, tags, updated_by, updated_at from documents where key = $1', [
-    id,
-  ])
+  const result = await runQuery<DocumentRow>(
+    'select key, name, content, document_type, tags, updated_by, updated_at from documents where key = $1',
+    [id],
+  )
   const row = result.rows[0]
   return row ? toDocument(row) : null
+}
+
+export async function claimAnonymousDocuments(ip: string, user: User) {
+  await runQuery(
+    'update documents set owner_user_id = $1, created_by = $2, updated_by = $3 where owner_user_id is null and created_by = $4',
+    [user.id, user.username, user.username, ip],
+  )
+}
+
+interface DocumentAccessRow {
+  key: string
+  created_by: string
+  owner_user_id: string | number | null
+  is_public: boolean | number | string | null
+}
+
+async function fetchDocumentAccessRow(id: string) {
+  const result = await runQuery<DocumentAccessRow>(
+    'select key, created_by, owner_user_id, is_public from documents where key = $1',
+    [id],
+  )
+  return result.rows[0] ?? null
+}
+
+export interface DocumentAccess {
+  document: Document | null
+  canView: boolean
+  canEdit: boolean
+  canDelete: boolean
+  canManageAccess: boolean
+}
+
+export async function resolveDocumentAccess(id: string, viewer: Viewer): Promise<DocumentAccess> {
+  const document = await fetchDocument(id)
+  if (!document) {
+    return { document: null, canView: false, canEdit: false, canDelete: false, canManageAccess: false }
+  }
+  const row = await fetchDocumentAccessRow(id)
+  const ownerUserId = row?.owner_user_id == null ? null : Number(row.owner_user_id)
+  const isPublic = toBoolean(row?.is_public ?? true)
+  const createdBy = row?.created_by ?? ''
+
+  if (viewer.type === 'anonymous') {
+    const owned = ownerUserId === null && createdBy === viewer.ip
+    return {
+      document,
+      canView: isPublic || owned,
+      canEdit: owned,
+      canDelete: owned,
+      canManageAccess: false,
+    }
+  }
+
+  const owned = ownerUserId === viewer.userId
+  const shared = await isSharedWithUser(id, viewer.userId)
+  return {
+    document,
+    canView: isPublic || owned || shared,
+    canEdit: isPublic || owned || shared,
+    canDelete: owned,
+    canManageAccess: owned,
+  }
+}
+
+async function isSharedWithUser(id: string, userId: number) {
+  const result = await runQuery<{ count: number | string }>(
+    `select count(*) as count from document_shares
+     where document_id = (select id from documents where key = $1) and user_id = $2`,
+    [id, userId],
+  )
+  return Number(result.rows[0]?.count ?? 0) > 0
+}
+
+export interface DocumentAccessState {
+  isPublic: boolean
+  sharedWith: User[]
+}
+
+export async function getDocumentAccess(id: string): Promise<DocumentAccessState | null> {
+  const row = await fetchDocumentAccessRow(id)
+  if (!row) {
+    return null
+  }
+  const shares = await runQuery<UserRow & { id: string | number }>(
+    `select u.id, u.username, u.email from document_shares s
+     join users u on u.id = s.user_id
+     where s.document_id = (select id from documents where key = $1)
+     order by u.username asc`,
+    [id],
+  )
+  return {
+    isPublic: toBoolean(row.is_public),
+    sharedWith: shares.rows.map(row => ({ id: Number(row.id), username: row.username, email: row.email })),
+  }
+}
+
+interface UserRow {
+  id: string | number
+  username: string
+  email: string
+}
+
+export async function setDocumentAccess(
+  id: string,
+  input: { isPublic?: boolean; sharedWith?: string[] },
+): Promise<DocumentAccessState | null> {
+  const row = await fetchDocumentAccessRow(id)
+  if (!row) {
+    return null
+  }
+  const ownerUserId = row.owner_user_id == null ? null : Number(row.owner_user_id)
+
+  if (input.isPublic !== undefined) {
+    await runQuery('update documents set is_public = $1 where key = $2', [input.isPublic, id])
+  }
+
+  if (input.sharedWith !== undefined) {
+    const users = await findUsersByUsernameOrEmail(input.sharedWith)
+    const shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
+    await runQuery('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
+    for (const userId of shareeIds) {
+      await runQuery(
+        `insert into document_shares (document_id, user_id, created_at)
+         values ((select id from documents where key = $1), $2, current_timestamp)`,
+        [id, userId],
+      )
+    }
+  }
+
+  return getDocumentAccess(id)
 }
 
 export interface AdminDocumentSummary {
@@ -357,6 +527,7 @@ export interface AdminDocumentSummary {
   createdAt: string
   updatedAt: string
   contentSize: number
+  isPublic: boolean
 }
 
 export interface AdminDocument extends AdminDocumentSummary {
@@ -373,6 +544,7 @@ interface AdminDocumentRow {
   created_at: Date | string
   updated_at: Date | string
   content_size: number | string
+  is_public?: boolean | number | string | null
 }
 
 interface AdminDocumentDetailRow extends AdminDocumentRow {
@@ -391,6 +563,7 @@ function toAdminDocumentSummary(row: AdminDocumentRow): AdminDocumentSummary {
     createdAt: toIsoString(row.created_at),
     updatedAt: toIsoString(row.updated_at),
     contentSize: Number(row.content_size ?? 0),
+    isPublic: toBoolean(row.is_public),
   }
 }
 
@@ -452,7 +625,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   )
   const total = Number(countResult.rows[0]?.count ?? 0)
 
-  let sql = `select key, name, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size
+  let sql = `select key, name, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size, is_public
     from documents${whereClause} order by ${sortColumn} ${sortDir}`
   const listParams = [...params]
   if (limit !== undefined) {
@@ -472,7 +645,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
 
 export async function fetchDocumentForAdmin(id: string) {
   const result = await runQuery<AdminDocumentDetailRow>(
-    `select key, name, content, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size
+    `select key, name, content, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size, is_public
      from documents where key = $1`,
     [id],
   )
@@ -480,7 +653,13 @@ export async function fetchDocumentForAdmin(id: string) {
   return row ? { ...toAdminDocumentSummary(row), content: row.content, documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType } : null
 }
 
-export async function insertDocument(options: { name?: string; content: string; documentType?: DocumentType; by: string }) {
+export async function insertDocument(options: {
+  name?: string
+  content: string
+  documentType?: DocumentType
+  by: string
+  ownerUserId?: number | null
+}) {
   await assertWithinDocumentLimit(options.by)
   const keyLength = await getDocumentKeyLength()
   for (let attempt = 1; ; attempt++) {
@@ -488,10 +667,10 @@ export async function insertDocument(options: { name?: string; content: string; 
     const name = options.name ?? key
     try {
       const result = await runQuery<DocumentRow>(
-        `insert into documents (key, name, content, document_type, tags, created_by, updated_by, created_at, updated_at)
-         values ($1, $2, $3, $4, $5, $6, $7, current_timestamp, current_timestamp)
+        `insert into documents (key, name, content, document_type, tags, created_by, updated_by, owner_user_id, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, current_timestamp, current_timestamp)
          returning id, key, name, content, document_type, tags, updated_by, updated_at`,
-        [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by],
+        [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by, options.ownerUserId ?? null],
       )
       const row = result.rows[0]
       const document = toDocument(row)
@@ -537,6 +716,8 @@ export async function updateDocument(
     // updated_by defaults to the requester `by` value.
     createdBy?: string
     updatedBy?: string
+    // Optional access-control override (used by admin edits).
+    isPublic?: boolean
   },
 ) {
   const updates: string[] = []
@@ -578,6 +759,11 @@ export async function updateDocument(
   if (options.updatedBy !== undefined) {
     updates.push(`updated_by = $${index}`)
     values.push(options.updatedBy)
+    index += 1
+  }
+  if (options.isPublic !== undefined) {
+    updates.push(`is_public = $${index}`)
+    values.push(options.isPublic)
     index += 1
   }
 
@@ -639,6 +825,10 @@ export async function updateDocument(
 
 export async function deleteDocument(id: string) {
   await runQuery(
+    'delete from document_shares where document_id = (select id from documents where key = $1)',
+    [id],
+  )
+  await runQuery(
     'delete from document_versions where document_id = (select id from documents where key = $1)',
     [id],
   )
@@ -660,12 +850,17 @@ export function invalidateTagsCache() {
   tagsCache = null
 }
 
-export async function listDistinctTags() {
+export async function listDistinctTags(viewer?: Viewer) {
   if (tagsCache && Date.now() - tagsCache.ts < 5000) {
     return tagsCache.tags
   }
 
-  const result = await runQuery<{ tags: string | null }>('select tags from documents')
+  const conditions: string[] = []
+  const params: unknown[] = []
+  appendVisibilityCondition(viewer, conditions, params)
+  const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
+
+  const result = await runQuery<{ tags: string | null }>(`select tags from documents${whereClause}`, params)
   const seen = new Map<string, Tag>()
   for (const row of result.rows) {
     const parsed = parseTags(row.tags)

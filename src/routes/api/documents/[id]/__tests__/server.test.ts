@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const documentsMocks = vi.hoisted(() => ({
   updateDocument: vi.fn(),
+  resolveDocumentAccess: vi.fn(),
 }))
 
 vi.mock('$lib/server/documents', async () => {
@@ -9,6 +10,7 @@ vi.mock('$lib/server/documents', async () => {
   return {
     ...actual,
     updateDocument: documentsMocks.updateDocument,
+    resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
   }
 })
 
@@ -33,6 +35,12 @@ describe('PUT /api/documents/[id]', () => {
     vi.clearAllMocks()
     settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
     settingsMocks.getMaxContentLength.mockResolvedValue(1024 * 1024)
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document: { id: 'a1b2c3', name: 'Notes', content: 'body', documentType: 'text', tags: [], updatedAt: '', updatedBy: '' },
+      canView: true,
+      canEdit: true,
+      canDelete: true,
+    })
   })
 
   it('rejects non-object JSON payloads', async () => {
@@ -106,6 +114,7 @@ describe('PUT /api/documents/[id]', () => {
         body: JSON.stringify({ tags }),
       }),
       getClientAddress: () => '127.0.0.1',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(200)

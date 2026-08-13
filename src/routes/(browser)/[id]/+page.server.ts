@@ -1,16 +1,24 @@
 import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
-import { fetchDocument, isDocumentKeyChars } from '$lib/server/documents'
+import { isDocumentKeyChars, resolveDocumentAccess } from '$lib/server/documents'
 import { getMaxContentLength } from '$lib/server/settings'
+import { resolveViewer } from '$lib/server/viewer'
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, cookies, getClientAddress }) => {
   const id = params.id
   if (!isDocumentKeyChars(id)) {
     throw error(404, 'Document not found')
   }
-  const document = await fetchDocument(id)
-  if (!document) {
+  const viewer = await resolveViewer({ cookies, getClientAddress })
+  const access = await resolveDocumentAccess(id, viewer)
+  if (!access.document || !access.canView) {
     throw error(404, 'Document not found')
   }
-  return { document, maxContentLength: await getMaxContentLength() }
+  return {
+    document: access.document,
+    editable: access.canEdit,
+    owned: access.canDelete,
+    canManageAccess: access.canManageAccess,
+    maxContentLength: await getMaxContentLength(),
+  }
 }

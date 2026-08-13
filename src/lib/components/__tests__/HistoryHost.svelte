@@ -28,6 +28,8 @@
     unregisterEditorFocus: () => {},
     openMobileDrawer: () => {},
     isMobile: false,
+    user: null,
+    signOut: () => {},
   })
 
   const document: Document = {

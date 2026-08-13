@@ -18,6 +18,8 @@
     unregisterEditorFocus: () => {},
     openMobileDrawer: () => {},
     isMobile: false,
+    user: null,
+    signOut: () => {},
   })
 </script>
 

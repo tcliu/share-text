@@ -120,7 +120,7 @@ describe('admin layout route tabs', () => {
     expect([...boxes].filter(box => box.checked).length).toBe(0)
   })
 
-  it('redirects to /login when the session is not authenticated', async () => {
+  it('redirects to /login/admin when the session is not authenticated', async () => {
     page.url = new URL('http://localhost/admin/documents') as typeof page.url
     vi.stubGlobal(
       'fetch',
@@ -138,7 +138,7 @@ describe('admin layout route tabs', () => {
     render(Layout)
 
     await waitFor(() => {
-      expect(goto).toHaveBeenCalledWith('/login')
+      expect(goto).toHaveBeenCalledWith('/login/admin')
     })
   })
 

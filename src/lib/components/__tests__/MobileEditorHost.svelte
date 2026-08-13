@@ -40,6 +40,8 @@
     // svelte-ignore state_referenced_locally
     openMobileDrawer: onOpenDrawer ?? (() => {}),
     isMobile: true,
+    user: null,
+    signOut: () => {},
   })
 
   const document = $derived.by<Document>(() => ({

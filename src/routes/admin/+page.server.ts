@@ -6,5 +6,5 @@ export const load: PageServerLoad = ({ cookies }) => {
   if (isAdminSession({ cookies })) {
     throw redirect(307, '/admin/properties')
   }
-  throw redirect(307, '/login')
+  throw redirect(307, '/login/admin')
 }

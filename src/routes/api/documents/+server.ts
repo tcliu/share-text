@@ -14,8 +14,9 @@ import { logEvent } from '$lib/server/logging'
 import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { isBodyRecord } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
+import { resolveViewer } from '$lib/server/viewer'
 
-export const GET: RequestHandler = async ({ url, getClientAddress }) => {
+export const GET: RequestHandler = async ({ url, getClientAddress, cookies }) => {
   const limitParam = url.searchParams.get('limit')
   const offsetParam = url.searchParams.get('offset')
   const { search, searchKeys } = parseSearchParams(url)
@@ -32,10 +33,11 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     return json({ error: 'Invalid search-keys' }, { status: 400 })
   }
 
+  const viewer = await resolveViewer({ cookies, getClientAddress })
   const { documents, hasMore } = await fetchDocumentSummaries({
     search,
     searchKeys,
-    viewerBy: getClientAddress(),
+    viewer,
     limit: limit !== null ? limit : undefined,
     offset,
   })
@@ -43,7 +45,7 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   return json({ documents, hasMore })
 }
 
-export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
     return json({ error: 'Invalid request body' }, { status: 400 })
@@ -56,7 +58,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   const rawName = typeof body.name === 'string' && body.name.trim() !== '' ? body.name : null
   const rawContent = typeof body.content === 'string' ? body.content : ''
   const rawType = typeof body.documentType === 'string' ? body.documentType : undefined
-  const ip = getClientAddress()
+  const viewer = await resolveViewer({ cookies, getClientAddress })
 
   let name: string | undefined
   try {
@@ -74,9 +76,15 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 
   const startedAt = Date.now()
   try {
-    const document = await insertDocument({ name, content: rawContent, documentType: rawType, by: ip })
+    const document = await insertDocument({
+      name,
+      content: rawContent,
+      documentType: rawType,
+      by: viewer.name,
+      ownerUserId: viewer.userId,
+    })
     logEvent({
-      ip,
+      ip: viewer.ip,
       action: 'document_create',
       details: {
         id: document.id,
@@ -89,13 +97,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   } catch (error) {
     if (error instanceof DocumentLimitError) {
       logEvent({
-        ip,
+        ip: viewer.ip,
         action: 'document_limit',
         details: { name: name ?? null, level: 'WARN' },
       })
       return json({ error: error.message }, { status: 403 })
     }
-    logEvent({ ip, action: 'document_create_error', details: { error: error instanceof Error ? error.message : 'Unknown error' } })
+    logEvent({ ip: viewer.ip, action: 'document_create_error', details: { error: error instanceof Error ? error.message : 'Unknown error' } })
     throw error
   }
 }

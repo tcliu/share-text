@@ -11,10 +11,22 @@ export interface DocumentSummary {
 
 export interface OwnedDocumentSummary extends DocumentSummary {
   owned: boolean
+  editable: boolean
 }
 
 export interface Document extends DocumentSummary {
   content: string
+}
+
+export interface User {
+  id: number
+  username: string
+  email: string
+}
+
+export interface DocumentAccessState {
+  isPublic: boolean
+  sharedWith: User[]
 }
 
 export interface DocumentVersionSummary {
@@ -138,4 +150,35 @@ export async function fetchDocumentVersion(id: string, versionId: string): Promi
     throw new Error('Failed to load version')
   }
   return body.version ?? null
+}
+
+export async function fetchDocumentAccess(id: string): Promise<DocumentAccessState> {
+  const response = await fetch(`${BASE_PATH}/${id}/access`)
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.error ?? 'Failed to load sharing settings')
+  }
+  return {
+    isPublic: Boolean(body.isPublic),
+    sharedWith: Array.isArray(body.sharedWith) ? body.sharedWith : [],
+  }
+}
+
+export async function updateDocumentAccess(
+  id: string,
+  options: { isPublic: boolean; sharedWith: string[] },
+): Promise<DocumentAccessState> {
+  const response = await fetch(`${BASE_PATH}/${id}/access`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(options),
+  })
+  const body = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(body.error ?? 'Failed to update sharing settings')
+  }
+  return {
+    isPublic: Boolean(body.isPublic),
+    sharedWith: Array.isArray(body.sharedWith) ? body.sharedWith : [],
+  }
 }

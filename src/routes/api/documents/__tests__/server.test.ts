@@ -53,13 +53,14 @@ describe('GET /api/documents', () => {
     const response = await GET({
       url: new URL('http://localhost/api/documents?limit=20&offset=40'),
       getClientAddress: () => '203.0.113.9',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith({
       search: undefined,
       searchKeys: [],
-      viewerBy: '203.0.113.9',
+      viewer: { type: 'anonymous', userId: null, username: null, ip: '203.0.113.9', name: '203.0.113.9' },
       limit: 20,
       offset: 40,
     })
@@ -75,13 +76,14 @@ describe('GET /api/documents', () => {
     const response = await GET({
       url: new URL('http://localhost/api/documents?search=alpha&search-keys=name,id,updatedBy'),
       getClientAddress: () => '203.0.113.9',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.fetchDocumentSummaries).toHaveBeenCalledWith({
       search: 'alpha',
       searchKeys: ['name', 'id', 'updatedBy'],
-      viewerBy: '203.0.113.9',
+      viewer: { type: 'anonymous', userId: null, username: null, ip: '203.0.113.9', name: '203.0.113.9' },
       limit: undefined,
       offset: 0,
     })
@@ -91,6 +93,7 @@ describe('GET /api/documents', () => {
     const response = await GET({
       url: new URL('http://localhost/api/documents?search=alpha&search-keys=name,createdBy'),
       getClientAddress: () => '203.0.113.9',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(400)
@@ -148,6 +151,7 @@ describe('POST /api/documents', () => {
         body: JSON.stringify({}),
       }),
       getClientAddress: () => '127.0.0.1',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(201)
@@ -155,6 +159,7 @@ describe('POST /api/documents', () => {
       name: undefined,
       content: '',
       by: '127.0.0.1',
+      ownerUserId: null,
     })
     await expect(response.json()).resolves.toEqual({
       document: {
@@ -175,6 +180,7 @@ describe('POST /api/documents', () => {
         body: JSON.stringify({ name: '  Meeting notes  ' }),
       }),
       getClientAddress: () => '127.0.0.1',
+      cookies: { get: () => null },
     } as never)
 
     expect(response.status).toBe(201)
@@ -182,6 +188,7 @@ describe('POST /api/documents', () => {
       name: 'Meeting notes',
       content: '',
       by: '127.0.0.1',
+      ownerUserId: null,
     })
   })
 })

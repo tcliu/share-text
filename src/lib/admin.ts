@@ -29,6 +29,7 @@ export interface AdminDocumentSummary {
   createdAt: string
   updatedAt: string
   contentSize: number
+  isPublic: boolean
 }
 
 export interface AdminDocument extends AdminDocumentSummary {
@@ -141,7 +142,7 @@ export async function fetchAdminDocuments(
 
 export async function updateAdminDocument(
   id: string,
-  changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string },
+  changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string; isPublic?: boolean },
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
     method: 'PUT',

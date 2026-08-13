@@ -16,6 +16,8 @@
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
+  import { useUserAuth } from '$lib/use-user-auth.svelte'
+  import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
   import {
     loadSplitPaneWidth,
     saveSplitPaneWidth,
@@ -32,6 +34,7 @@
     initialHasMore: data?.hasMore,
   })
   const editorGuardState = useEditorGuard()
+  const userAuthState = useUserAuth()
 
   let selectedDocumentRefreshToken = $state(0)
   let deleteTarget = $state<string | null>(null)
@@ -139,6 +142,15 @@
     mobileDrawerOpen = false
   }
 
+  async function handleSignOut() {
+    await userAuthState.signOut()
+    await documentsState.refreshList()
+  }
+
+  $effect(() => {
+    void userAuthState.checkSession()
+  })
+
   afterNavigate(() => {
     closeMobileDrawer()
   })
@@ -192,6 +204,10 @@
     get isMobile() {
       return isMobile
     },
+    get user() {
+      return userAuthState.user
+    },
+    signOut: handleSignOut,
   })
 
   $effect(() => {
@@ -216,6 +232,8 @@
     onNew={handleNew}
     onRefresh={handleRefresh}
     onLogin={() => goto('/login')}
+    user={userAuthState.user}
+    onSignOut={handleSignOut}
     onDelete={handleDelete}
     onLoadMore={documentsState.loadMore}
     onToggleCollapse={handleListCollapse}
@@ -246,11 +264,23 @@
           <RefreshIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={() => goto('/login')}>
-        {#snippet icon()}
-          <PersonIcon />
-        {/snippet}
-      </Button>
+      {#if userAuthState.user}
+        <Button
+          size="sm"
+          ariaLabel="Sign out"
+          tooltip={`Signed in as ${userAuthState.user.username}`}
+          onClick={() => void handleSignOut()}>
+          {#snippet icon()}
+            <SignOutIcon />
+          {/snippet}
+        </Button>
+      {:else}
+        <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={() => goto('/login')}>
+          {#snippet icon()}
+            <PersonIcon />
+          {/snippet}
+        </Button>
+      {/if}
     </div>
   {:else if !isMobile || !showingEditor}
     {@render documentList()}

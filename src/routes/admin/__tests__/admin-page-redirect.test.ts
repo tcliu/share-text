@@ -31,15 +31,15 @@ describe('admin root page', () => {
     }
   })
 
-  it('redirects to /login when the session is not authenticated', async () => {
+  it('redirects to /login/admin when the session is not authenticated', async () => {
     authMocks.isAdminSession.mockReturnValue(false)
     try {
       await load({ cookies: { get: () => null } } as never)
-      expect.unreachable('expected a redirect to /login')
+      expect.unreachable('expected a redirect to /login/admin')
     } catch (error) {
       const redirect = error as { status?: number; location?: string }
       expect(redirect.status).toBe(307)
-      expect(redirect.location).toBe('/login')
+      expect(redirect.location).toBe('/login/admin')
     }
   })
 })

@@ -16,6 +16,7 @@
   import ExportIcon from '$lib/icons/ExportIcon.svelte'
   import FormatIcon from '$lib/icons/FormatIcon.svelte'
   import MenuIcon from '$lib/icons/MenuIcon.svelte'
+  import ShareIcon from '$lib/icons/ShareIcon.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import TagsDialog from './TagsDialog.svelte'
   import KebabMenu from './KebabMenu.svelte'
@@ -46,6 +47,7 @@
     availableTags?: Tag[]
     versionCount?: number
     savedName?: string
+    editable?: boolean
     onSave: () => void
     onReset: () => void
     onRename?: (name: string) => void
@@ -55,6 +57,7 @@
     focusOnReset?: boolean
     focusOnMount?: boolean
     onTagsSave?: (tags: Tag[]) => void
+    onShare?: () => void
   }
 
   let {
@@ -67,6 +70,7 @@
     availableTags = [],
     versionCount = 0,
     savedName,
+    editable = true,
     onSave,
     onReset,
     onRename,
@@ -76,6 +80,7 @@
     focusOnReset = false,
     focusOnMount = false,
     onTagsSave,
+    onShare,
   }: Props = $props()
 
   const dirty = $derived(
@@ -98,6 +103,7 @@
   })
 
   function handleResetClick() {
+    if (!editable) return
     onReset()
     if (focusOnReset) {
       editorRef?.focus()
@@ -166,7 +172,7 @@
   }
 
   function handleSave() {
-    if (!dirty || saving) return
+    if (!editable || !dirty || saving) return
     onSave()
   }
 
@@ -216,7 +222,7 @@
 
 <section class="flex h-full min-w-0 flex-1 flex-col p-4">
   {#snippet nameField()}
-    {#if onRename}
+    {#if onRename && editable}
       <EditableText
         text={document.name}
         className="font-semibold text-slate-200"
@@ -228,16 +234,20 @@
 
   {#snippet typeSelector()}
     <div class="flex flex-none items-center">
-      <SelectDropdown
-        buttonLabel={activeTypeLabel}
-        options={DOCUMENT_TYPE_OPTIONS}
-        activeValue={docType}
-        ariaLabel="Document type"
-        filterable={true}
-        size="sm"
-        onSelect={handleTypeSelect}
-        align="right"
-        autoPlace={true} />
+      {#if editable}
+        <SelectDropdown
+          buttonLabel={activeTypeLabel}
+          options={DOCUMENT_TYPE_OPTIONS}
+          activeValue={docType}
+          ariaLabel="Document type"
+          filterable={true}
+          size="sm"
+          onSelect={handleTypeSelect}
+          align="right"
+          autoPlace={true} />
+      {:else}
+        <span class="text-sm text-slate-400">{activeTypeLabel}</span>
+      {/if}
     </div>
   {/snippet}
 
@@ -282,7 +292,7 @@
     {#if currentType.preview && !context.isMobile}
       {@render previewToggles()}
     {/if}
-    {#if currentType.actions && !context.isMobile}
+    {#if currentType.actions && !context.isMobile && editable}
       {#await currentType.actions() then Actions}
         <Actions
           type={currentType}
@@ -328,7 +338,8 @@
         size="sm"
         ariaLabel="Upload"
         tooltip="Upload"
-        onClick={handleUploadClick}>
+        onClick={handleUploadClick}
+        disabled={!editable}>
         {#snippet icon()}
           {@render uploadIcon()}
         {/snippet}
@@ -348,21 +359,29 @@
           size="sm"
           ariaLabel={currentType.format.title}
           tooltip="Format"
-          onClick={formatState.openDialog}>
+          onClick={formatState.openDialog}
+          disabled={!editable}>
           {#snippet icon()}
             {@render formatIcon()}
           {/snippet}
         </Button>
       {/if}
     {/if}
-    {#if onTagsSave}
+    {#if onTagsSave && editable}
       <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
         {#snippet icon()}
           <TagsIcon />
         {/snippet}
       </Button>
     {/if}
-    <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!dirty || saving}>
+    {#if onShare}
+      <Button size="sm" ariaLabel="Share" tooltip="Share" onClick={onShare}>
+        {#snippet icon()}
+          <ShareIcon />
+        {/snippet}
+      </Button>
+    {/if}
+    <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!editable || !dirty || saving}>
       {#snippet icon()}
         <RefreshIcon />
       {/snippet}
@@ -372,7 +391,7 @@
       ariaLabel="Save"
       tooltip="Save"
       onClick={handleSave}
-      disabled={!dirty || saving}
+      disabled={!editable || !dirty || saving}
       variant="primary"
       accent="cyan">
       {#snippet icon()}
@@ -432,12 +451,16 @@
         <KebabMenu
           ariaLabel="More actions"
           items={[
-            {
-              id: 'upload',
-              label: 'Upload',
-              onClick: handleUploadClick,
-              icon: uploadIcon,
-            },
+            ...(editable
+              ? [
+                  {
+                    id: 'upload',
+                    label: 'Upload',
+                    onClick: handleUploadClick,
+                    icon: uploadIcon,
+                  },
+                ]
+              : []),
             {
               id: 'export',
               label: 'Export',
@@ -455,7 +478,7 @@
                   },
                 ]
               : []),
-            ...(currentType.format
+            ...(currentType.format && editable
               ? [
                   {
                     id: 'format',
@@ -495,6 +518,7 @@
           bind:this={editorRef}
           bind:content
           {docType}
+          {editable}
           autoFocus={focusOnMount}
           recreateKey={document.id}
           {maxContentLength}
@@ -544,6 +568,9 @@
       </span>
     {/if}
     <span class="flex items-center gap-3">
+      {#if !editable}
+        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">Read only</span>
+      {/if}
       {#if refreshing}
         <span class="text-slate-500">Refreshing...</span>
       {/if}

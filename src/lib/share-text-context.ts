@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte'
-import type { DocumentSummary } from './documents'
+import type { DocumentSummary, User } from './documents'
 
 export interface EditorGuard {
   isDirty: () => boolean
@@ -23,6 +23,8 @@ export interface ShareTextContext {
   unregisterEditorFocus: () => void
   openMobileDrawer: () => void
   isMobile: boolean
+  user: User | null
+  signOut: () => void
 }
 
 const KEY = Symbol('share-text-context')

@@ -18,6 +18,13 @@ export function toSqliteSql(sql: string) {
     .replaceAll('current_timestamp', "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
 }
 
+function toSqliteParam(value: unknown): SQLInputValue {
+  if (typeof value === 'boolean') {
+    return value ? 1 : 0
+  }
+  return value as SQLInputValue
+}
+
 export async function readSchemaSql() {
   const schemaUrl = new URL('../../../sql/schema.sql', import.meta.url)
   return readFile(fileURLToPath(schemaUrl), 'utf8')
@@ -37,7 +44,7 @@ export async function createSqliteDb(path = process.env.SQLITE_PATH || DEFAULT_S
   return {
     async query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
       const statement = database.prepare(toSqliteSql(sql))
-      const args = params as SQLInputValue[]
+      const args = params.map(toSqliteParam)
       if (isRowsReturningSql(sql)) {
         const rows = statement.all(...args)
         return { rows: rows as T[], rowCount: rows.length }

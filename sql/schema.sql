@@ -1,3 +1,11 @@
+create table if not exists users (
+  id bigserial primary key,
+  username text unique not null,
+  email text unique not null,
+  password_hash text not null,
+  created_at timestamptz not null default current_timestamp
+);
+
 create table if not exists documents (
   id bigserial primary key,
   key text unique not null,
@@ -7,6 +15,8 @@ create table if not exists documents (
   tags text not null default '[]',
   created_by text not null,
   updated_by text not null,
+  owner_user_id bigint references users(id) on delete set null,
+  is_public boolean not null default true,
   created_at timestamptz not null default current_timestamp,
   updated_at timestamptz not null default current_timestamp
 );
@@ -22,6 +32,21 @@ create table if not exists document_versions (
   document_type text not null default 'text',
   created_by text not null,
   created_at timestamptz not null default current_timestamp
+);
+
+create table if not exists document_shares (
+  document_id bigint not null references documents(id) on delete cascade,
+  user_id bigint not null references users(id) on delete cascade,
+  created_at timestamptz not null default current_timestamp,
+  primary key (document_id, user_id)
+);
+
+create table if not exists user_config (
+  user_id bigint not null references users(id) on delete cascade,
+  key text not null,
+  value text not null,
+  updated_at timestamptz not null default current_timestamp,
+  primary key (user_id, key)
 );
 
 create table if not exists app_config (

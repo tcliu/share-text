@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import type { OwnedDocumentSummary } from '$lib/documents'
+  import type { OwnedDocumentSummary, User } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
@@ -9,6 +9,7 @@
   import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
+  import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
   import SearchInput from './SearchInput.svelte'
   import Chip from './Chip.svelte'
   import { getDocumentType } from '$lib/document-types'
@@ -27,6 +28,8 @@
     onNew: () => void
     onRefresh: () => void
     onLogin: () => void
+    onSignOut?: () => void
+    user?: User | null
     onDelete: (id: string) => void
     onLoadMore: () => void
     onToggleCollapse?: () => void
@@ -48,6 +51,8 @@
     onNew,
     onRefresh,
     onLogin,
+    onSignOut,
+    user = null,
     onDelete,
     onLoadMore,
     onToggleCollapse,
@@ -152,11 +157,20 @@
           <RefreshIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={onLogin}>
-        {#snippet icon()}
-          <PersonIcon />
-        {/snippet}
-      </Button>
+      {#if user}
+        <span class="max-w-24 truncate px-1 text-xs text-slate-400" title={user.username}>{user.username}</span>
+        <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={onSignOut}>
+          {#snippet icon()}
+            <SignOutIcon />
+          {/snippet}
+        </Button>
+      {:else}
+        <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={onLogin}>
+          {#snippet icon()}
+            <PersonIcon />
+          {/snippet}
+        </Button>
+      {/if}
     </div>
   </div>
 

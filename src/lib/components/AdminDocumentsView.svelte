@@ -91,6 +91,13 @@
       cell: updatedByCell,
     },
     {
+      key: 'access',
+      header: 'Access',
+      width: '9%',
+      minWidth: 96,
+      cell: accessCell,
+    },
+    {
       key: 'updatedAt',
       header: 'Updated time',
       width: '14%',
@@ -203,6 +210,21 @@
     className="text-slate-400"
     copyable
     onChange={updatedBy => void documentsState.updateUpdatedBy(document.id, updatedBy)} />
+{/snippet}
+
+{#snippet accessCell(document: AdminDocumentSummary)}
+  <button
+    type="button"
+    aria-label={`Change access for ${document.name}`}
+    aria-pressed={!document.isPublic}
+    onclick={() => void documentsState.updateIsPublic(document.id, !document.isPublic)}
+    class={`rounded-md border px-2 py-0.5 text-xs font-semibold transition ${
+      document.isPublic
+        ? 'border-slate-700 bg-slate-950 text-slate-300 hover:border-cyan-500 hover:text-cyan-300'
+        : 'border-amber-500/40 bg-amber-500/10 text-amber-200 hover:border-amber-400'
+    }`}>
+    {document.isPublic ? 'Public' : 'Private'}
+  </button>
 {/snippet}
 
 {#snippet updatedAtCell(document: AdminDocumentSummary)}

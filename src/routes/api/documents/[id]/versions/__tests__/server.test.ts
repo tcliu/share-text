@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const documentsMocks = vi.hoisted(() => ({
-  fetchDocument: vi.fn(),
+  resolveDocumentAccess: vi.fn(),
   fetchDocumentVersions: vi.fn(),
 }))
 
@@ -9,36 +9,52 @@ vi.mock('$lib/server/documents', async () => {
   const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
   return {
     ...actual,
-    fetchDocument: documentsMocks.fetchDocument,
+    resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
     fetchDocumentVersions: documentsMocks.fetchDocumentVersions,
   }
 })
 
 import { GET } from '../+server'
 
+const event = {
+  params: { id: 'a1b2c3' },
+  getClientAddress: () => '127.0.0.1',
+  cookies: { get: () => null },
+}
+
 describe('GET /api/documents/[id]/versions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document: { id: 'a1b2c3' },
+      canView: true,
+      canEdit: true,
+      canDelete: true,
+    })
   })
 
   it('returns 404 for an invalid document id', async () => {
-    const response = await GET({ params: { id: 'not-a-key!' } } as never)
+    const response = await GET({ ...event, params: { id: 'not-a-key!' } } as never)
 
     expect(response.status).toBe(404)
-    expect(documentsMocks.fetchDocument).not.toHaveBeenCalled()
+    expect(documentsMocks.resolveDocumentAccess).not.toHaveBeenCalled()
   })
 
   it('returns 404 when the document does not exist', async () => {
-    documentsMocks.fetchDocument.mockResolvedValue(null)
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document: null,
+      canView: false,
+      canEdit: false,
+      canDelete: false,
+    })
 
-    const response = await GET({ params: { id: 'a1b2c3' } } as never)
+    const response = await GET(event as never)
 
     expect(response.status).toBe(404)
     expect(documentsMocks.fetchDocumentVersions).not.toHaveBeenCalled()
   })
 
   it('returns the version list for an existing document', async () => {
-    documentsMocks.fetchDocument.mockResolvedValue({ id: 'a1b2c3' })
     documentsMocks.fetchDocumentVersions.mockResolvedValue([
       {
         id: '2',
@@ -50,7 +66,7 @@ describe('GET /api/documents/[id]/versions', () => {
       },
     ])
 
-    const response = await GET({ params: { id: 'a1b2c3' } } as never)
+    const response = await GET(event as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.fetchDocumentVersions).toHaveBeenCalledWith('a1b2c3')

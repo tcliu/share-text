@@ -226,6 +226,19 @@ export function useAdminDocuments(params: {
     }
   }
 
+  async function updateIsPublic(id: string, isPublic: boolean) {
+    try {
+      await updateAdminDocument(id, { isPublic })
+      toast.success(isPublic ? 'Document set to public' : 'Document set to private')
+      void load()
+      onAdminChange()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+      }
+    }
+  }
+
   async function confirmDelete() {
     const target = deleteTarget
     deleteTarget = null
@@ -334,6 +347,7 @@ export function useAdminDocuments(params: {
     updateUpdatedBy,
     updateCreatedBy,
     updateKey,
+    updateIsPublic,
     confirmDelete,
   }
 }

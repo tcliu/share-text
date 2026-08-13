@@ -1,9 +1,10 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { fetchDocument, fetchDocumentVersion } from '$lib/server/documents'
+import { fetchDocumentVersion, resolveDocumentAccess } from '$lib/server/documents'
 import { parseDocumentId, parseVersionId } from '$lib/server/request-utils'
+import { resolveViewer } from '$lib/server/viewer'
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
   const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
@@ -14,9 +15,13 @@ export const GET: RequestHandler = async ({ params }) => {
     return json({ error: 'Version not found' }, { status: 404 })
   }
 
-  const document = await fetchDocument(id)
-  if (!document) {
+  const viewer = await resolveViewer({ cookies, getClientAddress })
+  const access = await resolveDocumentAccess(id, viewer)
+  if (!access.document) {
     return json({ error: 'Document not found' }, { status: 404 })
+  }
+  if (!access.canView) {
+    return json({ error: 'Document not found' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
   }
 
   const version = await fetchDocumentVersion(id, versionId)

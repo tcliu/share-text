@@ -4,31 +4,36 @@ import {
   assertContentWithinLimit,
   contentByteSize,
   deleteDocument,
-  fetchDocument,
   isValidDocumentType,
   normalizeName,
+  resolveDocumentAccess,
   updateDocument,
 } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
 import { getDefaultTagColor, isTagColor } from '$lib/tag-colors'
+import { resolveViewer } from '$lib/server/viewer'
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
   const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
-  const document = await fetchDocument(id)
+  const viewer = await resolveViewer({ cookies, getClientAddress })
+  const { document, canView } = await resolveDocumentAccess(id, viewer)
   if (!document) {
     return json({ error: 'Document not found' }, { status: 404 })
+  }
+  if (!canView) {
+    return json({ error: 'Document not found' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
   }
 
   return json({ document })
 }
 
-export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
+export const PUT: RequestHandler = async ({ params, request, getClientAddress, cookies }) => {
   const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
@@ -85,9 +90,17 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     return json({ error: 'Invalid document type' }, { status: 400 })
   }
 
-  const ip = getClientAddress()
+  const viewer = await resolveViewer({ cookies, getClientAddress })
+  const access = await resolveDocumentAccess(id, viewer)
+  if (!access.document) {
+    return json({ error: 'Document not found' }, { status: 404 })
+  }
+  if (!access.canEdit) {
+    return json({ error: 'You do not have permission to edit this document' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
+  }
+
   const startedAt = Date.now()
-  const document = await updateDocument(id, { name, content, documentType: docType, tags, by: ip })
+  const document = await updateDocument(id, { name, content, documentType: docType, tags, by: viewer.name })
   if (!document) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -96,24 +109,27 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   if (document.documentType !== undefined) {
     details.type = document.documentType
   }
-  logEvent({ ip, action: 'document_save', details })
+  logEvent({ ip: viewer.ip, action: 'document_save', details })
 
   return json({ document })
 }
 
-export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
+export const DELETE: RequestHandler = async ({ params, getClientAddress, cookies }) => {
   const id = await parseDocumentId(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
-  const ip = getClientAddress()
-  const startedAt = Date.now()
-  const document = await fetchDocument(id)
-  if (!document) {
+  const viewer = await resolveViewer({ cookies, getClientAddress })
+  const access = await resolveDocumentAccess(id, viewer)
+  if (!access.document) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
+  if (!access.canDelete) {
+    return json({ error: 'You do not have permission to delete this document' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
+  }
 
+  const startedAt = Date.now()
   try {
     const deleted = await deleteDocument(id)
     if (!deleted) {
@@ -121,17 +137,17 @@ export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
     }
 
     logEvent({
-      ip,
+      ip: viewer.ip,
       action: 'document_delete',
-      details: { id, name: document.name, elapsed_ms: Date.now() - startedAt },
+      details: { id, name: access.document.name, elapsed_ms: Date.now() - startedAt },
     })
 
     return new Response(null, { status: 204 })
   } catch (error) {
     logEvent({
-      ip,
+      ip: viewer.ip,
       action: 'document_delete_error',
-      details: { id, name: document.name, error: error instanceof Error ? error.message : 'Unknown error', elapsed_ms: Date.now() - startedAt },
+      details: { id, name: access.document.name, error: error instanceof Error ? error.message : 'Unknown error', elapsed_ms: Date.now() - startedAt },
     })
     throw error
   }

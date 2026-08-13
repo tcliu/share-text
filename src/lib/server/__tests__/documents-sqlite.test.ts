@@ -83,7 +83,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const mine = await insertDocument({ name: 'mine', content: '', by: '10.0.0.7' })
     await insertDocument({ name: 'theirs', content: '', by: '10.0.0.8' })
 
-    const summaries = await fetchDocumentSummaries({ viewerBy: '10.0.0.7' })
+    const summaries = await fetchDocumentSummaries({
+      viewer: { type: 'anonymous', userId: null, username: null, ip: '10.0.0.7', name: '10.0.0.7' },
+    })
     const mineSummary = summaries.documents.find(summary => summary.id === mine.id)
     const theirsSummary = summaries.documents.find(summary => summary.id !== mine.id)
 
