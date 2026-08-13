@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { render, fireEvent } from '@testing-library/svelte'
+import { render, fireEvent, waitFor } from '@testing-library/svelte'
+import { EditorView } from '@codemirror/view'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import MobileEditorHost from './MobileEditorHost.svelte'
 
@@ -13,6 +14,10 @@ describe('DocumentEditorPane mobile header', () => {
     }
     vi.stubGlobal('ResizeObserver', ResizeObserverStub)
     vi.spyOn(history, 'replaceState').mockImplementation(() => {})
+    Object.defineProperty(Range.prototype, 'getClientRects', {
+      configurable: true,
+      value: () => [],
+    })
   })
 
   it('shows the name, type selector, tags, and actions in stacked rows', async () => {
@@ -125,5 +130,26 @@ describe('DocumentEditorPane mobile header', () => {
     expect(queryByText('Upload')).toBeTruthy()
     expect(queryByText('Export')).toBeTruthy()
     expect(queryByText('History')).toBeNull()
+  })
+
+  it('preserves the editor cursor position when closing the preview on mobile', async () => {
+    const { getByRole } = render(MobileEditorHost, { docType: 'markdown' })
+
+    await waitFor(() => expect(document.querySelector('.cm-content')).toBeTruthy())
+    const editor = document.querySelector<HTMLElement>('.cm-content')!
+    const view = EditorView.findFromDOM(editor)!
+    view.dispatch({ selection: { anchor: 3 } })
+
+    const previewView = getByRole('button', { name: 'Preview view' })
+    await fireEvent.click(previewView)
+    await vi.waitFor(() => expect(previewView.getAttribute('aria-pressed')).toBe('true'))
+
+    await fireEvent.click(getByRole('button', { name: 'Preview view' }))
+    await vi.waitFor(() =>
+      expect(getByRole('button', { name: 'Preview view' }).getAttribute('aria-pressed')).toBe('false'),
+    )
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(editor))
+    expect(view.state.selection.main.head).toBe(3)
   })
 })

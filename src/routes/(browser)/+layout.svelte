@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import { tick } from 'svelte'
   import { toast } from 'svelte-sonner'
   import { page } from '$app/stores'
   import { goto, afterNavigate } from '$app/navigation'
@@ -69,6 +70,8 @@
       return
     }
     if ($page.url.pathname === '/new') {
+      closeMobileDrawer()
+      await tick()
       editorFocus?.()
       return
     }

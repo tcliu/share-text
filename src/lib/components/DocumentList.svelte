@@ -136,6 +136,7 @@
           size="sm"
           ariaLabel="Collapse document list"
           tooltip="Collapse document list"
+          preventFocusSteal
           onClick={onToggleCollapse}>
           {#snippet icon()}
             <ChevronsLeftIcon />

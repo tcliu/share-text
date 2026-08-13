@@ -86,6 +86,7 @@
   )
 
   let editorRef = $state<{ focus: () => void } | null>(null)
+  let refocusEditor = $state(false)
 
   $effect(() => {
     if (focusOnMount) {
@@ -273,7 +274,12 @@
       variant={previewState.editorActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.editorActive}
       disabled={previewState.editorDisabled}
-      onClick={() => previewState.setEditor(!previewState.editorActive)}>
+      preventFocusSteal
+      onClick={() => {
+        const opening = !previewState.editorActive
+        previewState.setEditor(!previewState.editorActive)
+        if (opening) refocusEditor = true
+      }}>
       {#snippet icon()}
         <PencilIcon />
       {/snippet}
@@ -285,7 +291,12 @@
       variant={previewState.previewActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.previewActive}
       disabled={previewState.previewDisabled}
-      onClick={() => previewState.setPreview(!previewState.previewActive)}>
+      preventFocusSteal
+      onClick={() => {
+        const closing = previewState.previewActive
+        previewState.setPreview(!previewState.previewActive)
+        if (closing) editorRef?.focus()
+      }}>
       {#snippet icon()}
         <EyeIcon />
       {/snippet}
@@ -433,6 +444,7 @@
             ariaLabel="Open document list"
             tooltip="Document list"
             className="shrink-0"
+            preventFocusSteal
             onClick={context.openMobileDrawer}>
             {#snippet icon()}
               {@render menuIcon()}
@@ -514,7 +526,8 @@
           bind:this={editorRef}
           bind:content
           {docType}
-          autoFocus={focusOnMount}
+          autoFocus={focusOnMount || refocusEditor}
+          onAutoFocused={() => (refocusEditor = false)}
           recreateKey={document.id}
           {maxContentLength}
           containerClass="h-full"
