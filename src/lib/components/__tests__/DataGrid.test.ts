@@ -32,17 +32,30 @@ function hasCellValue(root: HTMLElement, value: string): boolean {
 }
 
 function expectRangeHighlight(root: HTMLElement, r1: number, c1: number, r2: number, c2: number) {
-  const borderColor = 'rgba(34, 211, 238, 0.6)'
+  const color = 'rgba(34, 211, 238, 0.6)'
   for (let r = r1; r <= r2; r++) {
     for (let c = c1; c <= c2; c++) {
       const box = boxOf(root, r, c)
       expect(box.className).toContain('bg-slate-800')
       expect(box.className).not.toContain('ring-cyan-500/60')
-      const shadow = box.style.boxShadow
-      if (r === r1) expect(shadow).toContain(`inset 0 1px 0 0 ${borderColor}`)
-      if (r === r2) expect(shadow).toContain(`inset 0 -1px 0 0 ${borderColor}`)
-      if (c === c1) expect(shadow).toContain(`inset 1px 0 0 0 ${borderColor}`)
-      if (c === c2) expect(shadow).toContain(`inset -1px 0 0 0 ${borderColor}`)
+      if (r === r2) expect(box.style.borderBottomColor).toBe(color)
+      else expect(box.style.borderBottomColor).toBe('')
+      if (c === c2) expect(box.style.borderRightColor).toBe(color)
+      else expect(box.style.borderRightColor).toBe('')
+    }
+  }
+  // The outline's top and left edges live on the borders that own those grid
+  // lines: the cell above the region (border-bottom) and the cell left of the
+  // region (border-right). Cells touching the top row / first column carry them
+  // on the label row / row-number column instead.
+  if (r1 > 0) {
+    for (let c = c1; c <= c2; c++) {
+      expect(boxOf(root, r1 - 1, c).style.borderBottomColor).toBe(color)
+    }
+  }
+  if (c1 > 0) {
+    for (let r = r1; r <= r2; r++) {
+      expect(boxOf(root, r, c1 - 1).style.borderRightColor).toBe(color)
     }
   }
 }
@@ -89,8 +102,17 @@ describe('DataGrid (reusable grid)', () => {
     const topLeft = boxOf(root, 0, 0)
     expect(topLeft.className).not.toMatch(/\bborder-t\b|\bborder-l\b/)
     expect(topLeft.className).toContain('p-0')
-    expect(topLeft.style.boxShadow).toContain('inset 0 1px 0 0')
-    expect(topLeft.style.boxShadow).toContain('inset 1px 0 0 0')
+    // The outline sits on the owning grid-line borders, not on the cell itself,
+    // so the top-left cell keeps its box and borders untouched.
+    expect(topLeft.style.boxShadow).toBe('')
+    expect(topLeft.style.borderBottomColor).toBe('')
+    expect(topLeft.style.borderRightColor).toBe('')
+    // The region's top edge runs along the label row's bottom border and its
+    // left edge along the row-number column's right border.
+    expect((root.querySelector('[data-select-all]') as HTMLElement).style.borderBottomColor).toContain(
+      'rgba(34, 211, 238, 0.6)',
+    )
+    expect(rowSelector(root, 1).style.borderRightColor).toContain('rgba(34, 211, 238, 0.6)')
   })
 
   it('emits the edited matrix via onChange', async () => {
@@ -126,7 +148,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(first)
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     expect(document.activeElement).not.toBe(first)
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
   })
 
   it('clicking the same cell keeps the input focused for editing', async () => {
@@ -142,7 +164,7 @@ describe('DataGrid (reusable grid)', () => {
     input.focus()
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     expect(document.activeElement).toBe(input)
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
   })
 
   it('top-left checkbox selects all rows via row selectors and toggles them off again', async () => {
@@ -427,7 +449,7 @@ describe('DataGrid (reusable grid)', () => {
     })
     const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(boxOf(root, 1, 1))
-    expect(boxOf(root, 1, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 1).className).toContain('bg-slate-800')
     await fireEvent.mouseDown(rowSelector(root, 1))
     expect(boxOf(root, 1, 1).className).not.toContain('ring-cyan-500/60')
     expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
@@ -704,7 +726,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'ArrowRight' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 1, 1)))
-    expect(boxOf(root, 1, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 1).className).toContain('bg-slate-800')
   })
 
   it('a click on an edited cell keeps normal input behavior without extending the grid selection', async () => {
@@ -721,7 +743,7 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseEnter(boxOf(root, 1, 1))
     await fireEvent.mouseUp(window)
     expect(document.activeElement).toBe(input)
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
     expect(boxOf(root, 1, 1).className).not.toContain('bg-slate-800')
   })
 
@@ -893,7 +915,7 @@ describe('DataGrid (reusable grid)', () => {
     boxOf(root, 0, 1).focus()
     await fireEvent.keyDown(boxOf(root, 0, 1), { key: 'ArrowRight' })
     await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 3 columns'))
-    expect(boxOf(root, 0, 2).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 0, 2).className).toContain('bg-slate-800')
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 0, 2)))
   })
 
@@ -909,7 +931,7 @@ describe('DataGrid (reusable grid)', () => {
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
     await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 2 columns'))
-    expect(boxOf(root, 2, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 2, 1).className).toContain('bg-slate-800')
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 2, 1)))
   })
 
@@ -925,7 +947,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
     await fireEvent.dblClick(boxOf(root, 1, 0))
     const input = gridCell(root, 1, 0) as HTMLInputElement
     await vi.waitFor(() => expect(document.activeElement).toBe(input))
@@ -1069,12 +1091,14 @@ describe('DataGrid (reusable grid)', () => {
     expect((gridCell(root, 3, 3) as HTMLInputElement).value).toBe('z')
   })
 
-  it('selecting a row in a single-column grid shows no single-cell ring', async () => {
+  it('selecting a row in a single-column grid outlines the row on its borders', async () => {
     render(DataGrid, { value: [['h'], ['a'], ['b']] })
     const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(rowSelector(root, 1))
     expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
     expect(boxOf(root, 1, 0).className).not.toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).style.borderBottomColor).toContain('rgba(34, 211, 238, 0.6)')
+    expect(rowSelector(root, 1).style.borderRightColor).toContain('rgba(34, 211, 238, 0.6)')
   })
 
   it('the focused row-number cell of a selected row has no focus ring', async () => {
@@ -1377,7 +1401,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(rowSelector(root, 1))
     await fireEvent.keyDown(rowSelector(root, 1), { key: 'ArrowRight' })
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
   })
 
   it('ArrowUp at the first data row moves to the header cell above without selecting the column', async () => {
@@ -1443,7 +1467,7 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(colSelector(root, 1))
     await fireEvent.keyDown(colSelector(root, 1), { key: 'ArrowDown' })
     expect(document.activeElement).toBe(boxOf(root, 0, 1))
-    expect(boxOf(root, 0, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 0, 1).className).toContain('bg-slate-800')
   })
 
   it('Ctrl+clicking two separated columns draws a complete border around each column region', async () => {
@@ -1460,20 +1484,19 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(colSelector(root, 2), { ctrlKey: true })
     const color = 'rgba(34, 211, 238, 0.6)'
     const c0Top = boxOf(root, 0, 0)
-    expect(c0Top.style.boxShadow).toContain(`inset 0 1px 0 0 ${color}`)
-    expect(c0Top.style.boxShadow).toContain(`inset 1px 0 0 0 ${color}`)
-    expect(c0Top.style.boxShadow).toContain(`inset -1px 0 0 0 ${color}`)
+    expect(c0Top.style.borderRightColor).toContain(color)
+    expect(c0Top.style.borderBottomColor).toBe('')
     const c0Bottom = boxOf(root, 2, 0)
-    expect(c0Bottom.style.boxShadow).toContain(`inset 0 -1px 0 0 ${color}`)
-    expect(c0Bottom.style.boxShadow).toContain(`inset 1px 0 0 0 ${color}`)
-    expect(c0Bottom.style.boxShadow).toContain(`inset -1px 0 0 0 ${color}`)
+    expect(c0Bottom.style.borderBottomColor).toContain(color)
+    expect(c0Bottom.style.borderRightColor).toContain(color)
     const c2Top = boxOf(root, 0, 2)
-    expect(c2Top.style.boxShadow).toContain(`inset 0 1px 0 0 ${color}`)
-    expect(c2Top.style.boxShadow).toContain(`inset 1px 0 0 0 ${color}`)
-    expect(c2Top.style.boxShadow).toContain(`inset -1px 0 0 0 ${color}`)
+    expect(c2Top.style.borderRightColor).toContain(color)
+    expect(c2Top.style.borderBottomColor).toBe('')
     const c2Bottom = boxOf(root, 2, 2)
-    expect(c2Bottom.style.boxShadow).toContain(`inset 0 -1px 0 0 ${color}`)
-    expect(boxOf(root, 1, 1).style.boxShadow).toBe('')
+    expect(c2Bottom.style.borderBottomColor).toContain(color)
+    const middle = boxOf(root, 1, 1)
+    expect(middle.style.borderRightColor).toContain(color)
+    expect(middle.style.borderBottomColor).toBe('')
   })
 
   it('Ctrl+clicking two separated rows draws a complete border around each row region', async () => {
@@ -1491,18 +1514,17 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(rowSelector(root, 2), { ctrlKey: true })
     const color = 'rgba(34, 211, 238, 0.6)'
     const r0c0 = boxOf(root, 0, 0)
-    expect(r0c0.style.boxShadow).toContain(`inset 0 1px 0 0 ${color}`)
-    expect(r0c0.style.boxShadow).toContain(`inset 0 -1px 0 0 ${color}`)
-    expect(r0c0.style.boxShadow).toContain(`inset 1px 0 0 0 ${color}`)
+    expect(r0c0.style.borderBottomColor).toContain(color)
+    expect(r0c0.style.borderRightColor).toBe('')
     const r0c1 = boxOf(root, 0, 1)
-    expect(r0c1.style.boxShadow).toContain(`inset 0 1px 0 0 ${color}`)
-    expect(r0c1.style.boxShadow).toContain(`inset 0 -1px 0 0 ${color}`)
-    expect(r0c1.style.boxShadow).toContain(`inset -1px 0 0 0 ${color}`)
+    expect(r0c1.style.borderBottomColor).toContain(color)
+    expect(r0c1.style.borderRightColor).toContain(color)
+    const r1c0 = boxOf(root, 1, 0)
+    expect(r1c0.style.borderBottomColor).toContain(color)
+    expect(r1c0.style.borderRightColor).toBe('')
     const r2c0 = boxOf(root, 2, 0)
-    expect(r2c0.style.boxShadow).toContain(`inset 0 1px 0 0 ${color}`)
-    expect(r2c0.style.boxShadow).toContain(`inset 0 -1px 0 0 ${color}`)
-    expect(r2c0.style.boxShadow).toContain(`inset 1px 0 0 0 ${color}`)
-    expect(boxOf(root, 1, 0).style.boxShadow).toBe('')
+    expect(r2c0.style.borderBottomColor).toContain(color)
+    expect(r2c0.style.borderRightColor).toBe('')
   })
 
   it('Delete on a selected row removes the row and keeps focus in the grid', async () => {
@@ -1632,7 +1654,7 @@ describe('DataGrid (reusable grid)', () => {
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowRight' })
     await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 3 columns'))
-    expect(boxOf(root, 2, 2).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 2, 2).className).toContain('bg-slate-800')
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 2, 2)))
   })
 
@@ -1653,7 +1675,7 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 2, 0))
     expect(boxOf(root, 1, 1).className).not.toContain('bg-slate-800')
     expect(boxOf(root, 2, 1).className).not.toContain('bg-slate-800')
-    expect(boxOf(root, 2, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 2, 0).className).toContain('bg-slate-800')
   })
 })
 

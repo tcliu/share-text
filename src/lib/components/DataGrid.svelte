@@ -625,7 +625,7 @@
                 role="columnheader"
                 aria-label="Select all"
                 class="sticky left-0 top-0 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
-                style="min-width:2.25rem;max-width:2.25rem;"
+                style="min-width:2.25rem;max-width:2.25rem;{sel.selectAllBorderStyle()}"
                 data-select-all
                 tabindex="-1"
                 onmousedown={sel.handleSelectAllMousedown}
@@ -640,7 +640,7 @@
                   aria-colindex={ci + 1}
                   aria-sort={isSortActive ? (isSortAsc ? 'ascending' : 'descending') : undefined}
                   class="select-none {sel.columnSelectorClass(ci, ci === model.columnCount - 1)} group"
-                  style="position:relative;{columnWidthStyle(ci)}"
+                  style="position:relative;{columnWidthStyle(ci)}{sel.labelRowBorderStyle(ci)}"
                   data-col-selector={ci}
                   tabindex="-1"
                   onmousedown={event => sel.handleColumnSelectorMousedown(event, ci)}
@@ -684,7 +684,7 @@
                 <th
                   role="columnheader"
                   class="sticky left-0 top-6 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
-                  style="min-width:2.25rem;max-width:2.25rem;"
+                  style="min-width:2.25rem;max-width:2.25rem;{sel.rowNumberBorderStyle(0)}"
                 ></th>
                 {#each model.rows[0].cells as cell, ci (cell.id)}
                   <th
@@ -706,7 +706,7 @@
                     <input
                       data-row={0}
                       data-col={ci}
-                      class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-inset focus:ring-cyan-500/70"
+                      class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-cyan-500/70"
                       value={cell.value}
                       oninput={event => model.setValue(0, ci, event.currentTarget.value)}
                       onfocus={() => {
@@ -750,6 +750,7 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
                     aria-rowindex={showHeaders ? ri + 3 : ri + 2}
                     aria-selected={sel.selectedRows.has(actualRi)}
                     class="select-none {sel.rowSelectorClass(actualRi)}"
+                    style={sel.rowNumberBorderStyle(actualRi)}
                     data-row-selector={actualRi}
                     tabindex="-1"
                     onmousedown={event => sel.handleRowSelectorMousedown(event, actualRi)}
@@ -778,7 +779,7 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
                       <input
                         data-row={actualRi}
                         data-col={ci}
-                        class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-inset focus:ring-cyan-500/70"
+                        class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-cyan-500/70"
                         value={cell.value}
                         oninput={event => model.setValue(actualRi, ci, event.currentTarget.value)}
                         onfocus={() => handleInputFocus(actualRi, ci)}

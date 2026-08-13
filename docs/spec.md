@@ -376,7 +376,14 @@ any cell in that column invalidates it and hides the sort status (`aria-sort`
 cleared) so the user can resort. The grid's outer edges come from the table's
 `border-t`/`border-l` only, so cells keep single-edge borders (`border-r`/
 `border-b`); any column-width math must subtract `TABLE_LEFT_BORDER` (1px) to
-keep the table's border box inside the scroll container.
+keep the table's border box inside the scroll container. The selection outline
+recolors those owning borders (`rangeHighlightStyle` in
+`use-grid-selection.svelte.ts`): a grid line is cyan when exactly one of the two
+cells it separates is selected, so the outline sits exactly on the shared
+borders instead of being drawn inside the cells. The outline's top edge above
+the first data row runs along the column-label row's `border-b` and the left
+edge of column 0 along the row-number column's `border-r`; single cells are
+highlighted the same way instead of via an inset ring.
 
 The grid is split into two sibling tables inside a flex column: the header
 table (top) and body table (below). Only the body wrapper

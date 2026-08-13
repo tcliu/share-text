@@ -322,7 +322,7 @@ describe('CsvPreview (custom grid)', () => {
     await fireEvent.keyDown(c00, { key: 'Enter' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 1, 0)))
     expect(c00.value).toBe('edited')
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
   })
 
   it('Enter on a selected (non-editing) cell switches to edit mode, Enter again finishes', async () => {
@@ -348,7 +348,7 @@ describe('CsvPreview (custom grid)', () => {
     await fireEvent.keyDown(last, { key: 'Enter' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 1, 0)))
     expect(last.value).toBe('edited')
-    expect(boxOf(root, 1, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
   })
 
   it('typing on a highlighted cell switches to edit mode and updates the value', async () => {
@@ -383,7 +383,7 @@ describe('CsvPreview (custom grid)', () => {
     await fireEvent.keyDown(c00, { key: 'Escape' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 0, 0)))
     expect(c00.value).toBe('a')
-    expect(boxOf(root, 0, 0).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 0, 0).className).toContain('bg-slate-800')
   })
 
   it('arrow keys navigate the selection highlight across cells without typing', async () => {
@@ -393,11 +393,11 @@ describe('CsvPreview (custom grid)', () => {
     c10Box.focus()
     await fireEvent.keyDown(c10Box, { key: 'ArrowRight' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 1, 1)))
-    expect(boxOf(root, 1, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 1, 1).className).toContain('bg-slate-800')
 
     await fireEvent.keyDown(boxOf(root, 1, 1), { key: 'ArrowDown' })
     await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 2, 1)))
-    expect(boxOf(root, 2, 1).className).toContain('ring-cyan-500/60')
+    expect(boxOf(root, 2, 1).className).toContain('bg-slate-800')
   })
 
   it('deletes all selected rows when the clicked row is selected', async () => {
