@@ -60,12 +60,26 @@
     if (!visible) {
       return
     }
+    const trigger = anchor?.parentElement
     const reposition = () => place()
+    const hideWhenAway = (event: PointerEvent) => {
+      if (!trigger || (event.target instanceof Node && trigger.contains(event.target))) {
+        return
+      }
+      hide()
+    }
+    const hideOnBlur = () => hide()
     window.addEventListener('scroll', reposition, true)
     window.addEventListener('resize', reposition)
+    window.addEventListener('pointermove', hideWhenAway, true)
+    window.addEventListener('pointerdown', hideWhenAway, true)
+    window.addEventListener('blur', hideOnBlur)
     return () => {
       window.removeEventListener('scroll', reposition, true)
       window.removeEventListener('resize', reposition)
+      window.removeEventListener('pointermove', hideWhenAway, true)
+      window.removeEventListener('pointerdown', hideWhenAway, true)
+      window.removeEventListener('blur', hideOnBlur)
     }
   })
 
