@@ -4,6 +4,8 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 readonly DOMAIN_STATE_FILE="${ROOT_DIR}/.vercel/domain-state.json"
+readonly DEPLOY_MAX_ATTEMPTS=3
+readonly DEPLOY_RETRY_DELAY=5
 
 usage() {
   cat <<'EOF'
@@ -32,6 +34,43 @@ run_vercel_api() {
     cd /tmp/opencode
     run_vercel_cli api "$@"
   )
+}
+
+check_vercel_auth() {
+  if ! run_vercel_cli whoami >/dev/null 2>&1; then
+    echo 'Vercel CLI is not authenticated. Run `vercel login` and retry the deploy.' >&2
+    exit 1
+  fi
+}
+
+run_deploy_with_retry() {
+  local app_version="$1"
+  local attempt
+  local output=""
+  local status=1
+
+  for attempt in $(seq 1 "${DEPLOY_MAX_ATTEMPTS}"); do
+    set +e
+    output="$(
+      cd "${ROOT_DIR}"
+      APP_VERSION="${app_version}" run_vercel_cli deploy --prod --yes --no-wait --format json
+    )"
+    status=$?
+    set -e
+
+    if [[ ${status} -eq 0 ]]; then
+      printf '%s' "${output}"
+      return 0
+    fi
+
+    if [[ ${attempt} -lt ${DEPLOY_MAX_ATTEMPTS} ]]; then
+      echo "-> Deploy attempt ${attempt}/${DEPLOY_MAX_ATTEMPTS} failed (exit ${status}). Retrying in ${DEPLOY_RETRY_DELAY}s..." >&2
+      sleep "${DEPLOY_RETRY_DELAY}"
+    fi
+  done
+
+  printf '%s' "${output}" >&2
+  return "${status}"
 }
 
 project_id() {
@@ -117,20 +156,30 @@ EOF
 
 wait_for_ready_deployment() {
   local deployment_url="$1"
-  local inspect_output
-  local inspect_status
-  local ready_state
+  local inspect_output=""
+  local inspect_status=0
+  local ready_state=""
+  local attempt
 
   echo "-> Waiting for Vercel deployment to become ready..."
-  set +e
-  inspect_output="$(run_vercel_cli inspect "${deployment_url}" --wait --timeout 5m --format json 2>&1)"
-  inspect_status=$?
-  set -e
+  for attempt in $(seq 1 "${DEPLOY_MAX_ATTEMPTS}"); do
+    set +e
+    inspect_output="$(run_vercel_cli inspect "${deployment_url}" --wait --timeout 5m --format json 2>&1)"
+    inspect_status=$?
+    set -e
 
-  ready_state="$(deployment_ready_state "${inspect_output}")"
-  if [[ "${ready_state}" == "READY" ]]; then
-    return 0
-  fi
+    ready_state="$(deployment_ready_state "${inspect_output}")"
+    if [[ "${ready_state}" == "READY" ]]; then
+      return 0
+    fi
+
+    if [[ ${inspect_status} -eq 0 || ${attempt} -ge ${DEPLOY_MAX_ATTEMPTS} ]]; then
+      break
+    fi
+
+    echo "-> Inspect attempt ${attempt}/${DEPLOY_MAX_ATTEMPTS} failed (exit ${inspect_status}). Retrying in ${DEPLOY_RETRY_DELAY}s..." >&2
+    sleep "${DEPLOY_RETRY_DELAY}"
+  done
 
   if [[ -n "${ready_state}" ]]; then
     echo "Vercel deployment did not reach READY (state: ${ready_state}) -> ${deployment_url}" >&2
@@ -348,11 +397,10 @@ deploy_vercel() {
     exit 1
   fi
 
+  check_vercel_auth
+
   echo '-> Deploying to Vercel...'
-  deploy_output="$(
-    cd "${ROOT_DIR}"
-    APP_VERSION="${app_version}" run_vercel_cli deploy --prod --yes --no-wait --format json
-  )"
+  deploy_output="$(run_deploy_with_retry "${app_version}")"
 
   deployment_url="$(extract_deployment_url "${deploy_output}")"
   if [[ -z "${deployment_url}" ]]; then
