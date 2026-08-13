@@ -4,7 +4,18 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
-  import RefreshIcon from './RefreshIcon.svelte'
+  import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
+  import PencilIcon from '$lib/icons/PencilIcon.svelte'
+  import EyeIcon from '$lib/icons/EyeIcon.svelte'
+  import CopyIcon from '$lib/icons/CopyIcon.svelte'
+  import TagsIcon from '$lib/icons/TagsIcon.svelte'
+  import SaveIcon from '$lib/icons/SaveIcon.svelte'
+  import CloneIcon from '$lib/icons/CloneIcon.svelte'
+  import HistoryIcon from '$lib/icons/HistoryIcon.svelte'
+  import UploadIcon from '$lib/icons/UploadIcon.svelte'
+  import ExportIcon from '$lib/icons/ExportIcon.svelte'
+  import FormatIcon from '$lib/icons/FormatIcon.svelte'
+  import MenuIcon from '$lib/icons/MenuIcon.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import TagsDialog from './TagsDialog.svelte'
   import KebabMenu from './KebabMenu.svelte'
@@ -250,9 +261,7 @@
       disabled={previewState.editorDisabled}
       onClick={() => previewState.setEditor(!previewState.editorActive)}>
       {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.419a4 4 0 0 0-.885 1.343Z" />
-        </svg>
+        <PencilIcon />
       {/snippet}
     </Button>
     <Button
@@ -264,13 +273,7 @@
       disabled={previewState.previewDisabled}
       onClick={() => previewState.setPreview(!previewState.previewActive)}>
       {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
-          <path
-            fill-rule="evenodd"
-            d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
-            clip-rule="evenodd" />
-        </svg>
+        <EyeIcon />
       {/snippet}
     </Button>
   {/snippet}
@@ -294,10 +297,7 @@
       onClick={handleCopy}
       disabled={content.length === 0}>
       {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-          <rect x="7" y="7" width="10" height="10" rx="1.5" />
-          <path d="M13 7V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2" />
-        </svg>
+        <CopyIcon />
       {/snippet}
     </Button>
     {#if onClone || cloneDisabled}
@@ -358,10 +358,7 @@
     {#if onTagsSave}
       <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.6 3H6a2 2 0 0 0-2 2v4.6a2 2 0 0 0 .59 1.41l4.4 4.4a2 2 0 0 0 2.83 0l3.58-3.58a2 2 0 0 0 0-2.83L11.99 3.6A2 2 0 0 0 10.6 3Z" />
-            <circle cx="7.25" cy="7.25" r="1.25" />
-          </svg>
+          <TagsIcon />
         {/snippet}
       </Button>
     {/if}
@@ -379,56 +376,33 @@
       variant="primary"
       accent="cyan">
       {#snippet icon()}
-        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-          <path
-            d="M4 2h9l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm0 2v13h12V7.7L12.3 4H4Zm2 2v3h6V4H6v2Zm1 7h6v1H7v-1Z" />
-        </svg>
+        <SaveIcon />
       {/snippet}
     </Button>
   {/snippet}
 
   {#snippet cloneIcon()}
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-      <rect x="3" y="3" width="10" height="10" rx="1.5" />
-      <path d="M13 7h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2" />
-    </svg>
+    <CloneIcon />
   {/snippet}
 
   {#snippet historyIcon()}
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-      <circle cx="10" cy="10" r="7" />
-      <path stroke-linecap="round" stroke-linejoin="round" d="M10 6v4.2l2.8 1.8" />
-    </svg>
+    <HistoryIcon />
   {/snippet}
 
   {#snippet uploadIcon()}
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M10 16V7m0 0 3.5 3.5M10 7 6.5 10.5M4 4h12" />
-    </svg>
+    <UploadIcon />
   {/snippet}
 
   {#snippet exportIcon()}
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 16h12" />
-    </svg>
+    <ExportIcon />
   {/snippet}
 
   {#snippet formatIcon()}
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fill-rule="evenodd"
-        d="M3 5a1 1 0 0 1 1-1h12a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Zm0 5a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Zm0 5a1 1 0 0 1 1-1h5a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1Z"
-        clip-rule="evenodd" />
-    </svg>
+    <FormatIcon />
   {/snippet}
 
   {#snippet menuIcon()}
-    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fill-rule="evenodd"
-        d="M3 5.25A.75.75 0 0 1 3.75 4.5h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 5.25Zm0 4.75a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75A.75.75 0 0 1 3 10Zm0 4.75a.75.75 0 0 1 .75-.75h12.5a.75.75 0 0 1 0 1.5H3.75a.75.75 0 0 1-.75-.75Z"
-        clip-rule="evenodd" />
-    </svg>
+    <MenuIcon />
   {/snippet}
 
   {#if context.isMobile}

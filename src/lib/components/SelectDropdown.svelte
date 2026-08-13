@@ -1,5 +1,6 @@
 <script lang="ts">
   import { positionPanel } from '$lib/position-panel.svelte'
+  import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
 
   interface Option {
     value: string
@@ -184,16 +185,7 @@
         onfocus={handleControlFocus}
         onkeydown={handleControlKeydown}
         class={resolvedControlClass} />
-      <svg
-        class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden="true">
-        <path
-          fill-rule="evenodd"
-          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
-          clip-rule="evenodd" />
-      </svg>
+      <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
     </div>
   {:else}
     <button
@@ -204,12 +196,7 @@
       onclick={toggle}
       class={resolvedButtonClass}>
       <span>{buttonLabel}</span>
-      <svg class="h-4 w-4 text-slate-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-        <path
-          fill-rule="evenodd"
-          d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z"
-          clip-rule="evenodd" />
-      </svg>
+      <ChevronDownIcon className="h-4 w-4 text-slate-500" />
     </button>
   {/if}
   {#if open}

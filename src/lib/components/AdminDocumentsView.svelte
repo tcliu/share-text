@@ -9,6 +9,7 @@
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
   import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
+  import ExternalLinkIcon from '$lib/icons/ExternalLinkIcon.svelte'
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
@@ -146,18 +147,7 @@
       aria-label={`Open document ${document.id}`}
       class="shrink-0 text-slate-400 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-cyan-300"
       onclick={(e) => e.stopPropagation()}>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true">
-        <path d="M15 3h6v6" />
-        <path d="M10 14 21 3" />
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      </svg>
+      <ExternalLinkIcon />
     </a>
   </div>
 {/snippet}

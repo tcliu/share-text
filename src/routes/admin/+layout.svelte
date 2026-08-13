@@ -3,7 +3,10 @@
   import { page } from '$app/state'
   import { beforeNavigate, goto } from '$app/navigation'
   import Button from '$lib/components/Button.svelte'
-  import RefreshIcon from '$lib/components/RefreshIcon.svelte'
+  import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
+  import DocumentIcon from '$lib/icons/DocumentIcon.svelte'
+  import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
+  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import Spinner from '$lib/components/Spinner.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import Tabs, { type Tab } from '$lib/components/Tabs.svelte'
@@ -89,25 +92,12 @@
     <div class="flex items-center gap-2">
       <Button size="sm" ariaLabel="Go to Documents" tooltip="Go to Documents" onClick={() => goto('/')}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M9 12h6M9 16h6M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z" />
-            <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-          </svg>
+          <DocumentIcon />
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void authState.handleLogout()}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path
-                d="M3 4a1 1 0 0 1 1-1h7a1 1 0 1 1 0 2H5v10h6a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1V4Zm11.7 4.3a1 1 0 0 1 1.4 0l2 2a1 1 0 0 1 0 1.4l-2 2a1 1 0 1 1-1.4-1.4l.3-.3H11a1 1 0 1 1 0-2h4.1l-.4-.3a1 1 0 0 1 0-1.4Z" />
-            </svg>
+            <SignOutIcon />
           {/snippet}
         </Button>
     </div>
@@ -158,12 +148,7 @@
           onClick={() => (state.documentsState.bulkDeleteOpen = true)}
           className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path
-                fill-rule="evenodd"
-                d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
-                clip-rule="evenodd" />
-            </svg>
+            <DeleteIcon />
           {/snippet}
         </Button>
         <Button

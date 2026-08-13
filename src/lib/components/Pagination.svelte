@@ -1,6 +1,8 @@
 <script lang="ts">
   import NumberInput from './NumberInput.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
+  import ChevronLeftIcon from '$lib/icons/ChevronLeftIcon.svelte'
+  import ChevronRightIcon from '$lib/icons/ChevronRightIcon.svelte'
 
   interface Props {
     total: number
@@ -140,12 +142,7 @@
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
-    <svg class={`${SIZE_CLASS[size].icon}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fill-rule="evenodd"
-        d="M11.78 4.22a.75.75 0 0 1 0 1.06L7.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06l-5.25-5.25a.75.75 0 0 1 0-1.06l5.25-5.25a.75.75 0 0 1 1.06 0Z"
-        clip-rule="evenodd" />
-    </svg>
+    <ChevronLeftIcon className={SIZE_CLASS[size].icon} />
   </button>
 
   {#if showStartEllipsis}
@@ -180,12 +177,7 @@
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
-    <svg class={`${SIZE_CLASS[size].icon}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path
-        fill-rule="evenodd"
-        d="M8.22 15.78a.75.75 0 0 1 0-1.06L12.94 10 8.22 5.28a.75.75 0 1 1 1.06-1.06l5.25 5.25a.75.75 0 0 1 0 1.06l-5.25 5.25a.75.75 0 0 1-1.06 0Z"
-        clip-rule="evenodd" />
-    </svg>
+    <ChevronRightIcon className={SIZE_CLASS[size].icon} />
   </button>
 
   <div class="flex items-center gap-1.5">

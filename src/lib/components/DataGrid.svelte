@@ -6,6 +6,18 @@
   import { createGridClipboard } from './use-grid-clipboard'
   import { createAutoScroll } from './use-grid-autoscroll.svelte'
   import { columnLetter } from './grid-utils'
+  import TableIcon from '$lib/icons/TableIcon.svelte'
+  import RowInsertAboveIcon from '$lib/icons/RowInsertAboveIcon.svelte'
+  import RowInsertBelowIcon from '$lib/icons/RowInsertBelowIcon.svelte'
+  import ColumnInsertBeforeIcon from '$lib/icons/ColumnInsertBeforeIcon.svelte'
+  import ColumnInsertAfterIcon from '$lib/icons/ColumnInsertAfterIcon.svelte'
+  import DeleteRowsIcon from '$lib/icons/DeleteRowsIcon.svelte'
+  import DeleteColumnsIcon from '$lib/icons/DeleteColumnsIcon.svelte'
+  import TrimIcon from '$lib/icons/TrimIcon.svelte'
+  import UndoIcon from '$lib/icons/UndoIcon.svelte'
+  import RedoIcon from '$lib/icons/RedoIcon.svelte'
+  import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
+  import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
 
   interface Props {
     value?: string[][]
@@ -474,18 +486,7 @@
       {#if !hideHeaderToggle}
         <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
           {#snippet icon()}
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true">
-              <rect x="3" y="3" width="14" height="14" rx="1" />
-              <path d="M3 8h14" />
-              <path d="M8 8v9" />
-            </svg>
+            <TableIcon />
           {/snippet}
         </Button>
       {/if}
@@ -496,18 +497,7 @@
         onClick={() => sel.insertRowAt(sel.actionRow, false)}
         disabled={sel.rowInsertDisabled}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M3 7h14" />
-            <path d="M10 3v4" />
-          </svg>
+          <RowInsertAboveIcon />
         {/snippet}
       </Button>
       <Button
@@ -516,18 +506,7 @@
         tooltip="Insert row below"
         onClick={() => (sel.noSelection ? sel.addRow() : sel.insertRowAt(sel.actionRow, true))}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M3 13h14" />
-            <path d="M10 13v4" />
-          </svg>
+          <RowInsertBelowIcon />
         {/snippet}
       </Button>
       {#if maxColumns == null}
@@ -538,18 +517,7 @@
           onClick={() => sel.insertColumnAt(sel.actionCol, true)}
           disabled={sel.colInsertDisabled}>
           {#snippet icon()}
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true">
-              <rect x="3" y="3" width="14" height="14" rx="1" />
-              <path d="M7 3v14" />
-              <path d="M3 10h4" />
-            </svg>
+            <ColumnInsertBeforeIcon />
           {/snippet}
         </Button>
         <Button
@@ -558,18 +526,7 @@
           tooltip="Insert column after"
           onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}>
           {#snippet icon()}
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true">
-              <rect x="3" y="3" width="14" height="14" rx="1" />
-              <path d="M13 3v14" />
-              <path d="M13 10h4" />
-            </svg>
+            <ColumnInsertAfterIcon />
           {/snippet}
         </Button>
       {/if}
@@ -580,19 +537,7 @@
         onClick={() => sel.deleteSelectedRows()}
         disabled={selState.selectedRows.size === 0}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M4 6h12" />
-            <path d="M8 6V4h4v2" />
-            <path d="M6 6l.7 10h6.6L14 6" />
-            <path d="M9 9v4M11 9v4" />
-          </svg>
+          <DeleteRowsIcon />
         {/snippet}
       </Button>
       {#if maxColumns == null}
@@ -603,18 +548,7 @@
           onClick={() => sel.deleteSelectedColumns()}
           disabled={selState.selectedCols.size === 0}>
           {#snippet icon()}
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true">
-              <path d="M5 3h2l1-1l2-1h2l2 1 1 1h2" />
-              <path d="M6 5l1 12h6l1-12" />
-              <path d="M9 8v6M11 8v6" />
-            </svg>
+            <DeleteColumnsIcon />
           {/snippet}
         </Button>
       {/if}
@@ -625,19 +559,7 @@
         onClick={handleTrim}
         disabled={!model.needsTrim}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <rect x="3" y="3" width="14" height="14" rx="1" />
-            <path d="M3 8h14M8 3v14" />
-            <path d="M9 10h4" />
-            <path d="M12 8l2 2-2 2" />
-          </svg>
+          <TrimIcon />
         {/snippet}
       </Button>
       <Button
@@ -650,17 +572,7 @@
         }}
         disabled={!historyState.canUndo}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-            <path d="M3 3v5h5" />
-          </svg>
+          <UndoIcon />
         {/snippet}
       </Button>
       <Button
@@ -673,17 +585,7 @@
         }}
         disabled={!historyState.canRedo}>
         {#snippet icon()}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-          </svg>
+          <RedoIcon />
         {/snippet}
       </Button>
     </div>
@@ -745,9 +647,7 @@
                       aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} ascending`}
                       onmousedown={event => event.stopPropagation()}
                       onclick={() => handleSortClick(ci, 'asc')}>
-                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
-                        <path d="M10 4l6 8H4l6-8Z" />
-                      </svg>
+                      <SortAscIcon className="h-2.5 w-2.5" />
                     </button>
                     <button
                       type="button"
@@ -755,9 +655,7 @@
                       aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} descending`}
                       onmousedown={event => event.stopPropagation()}
                       onclick={() => handleSortClick(ci, 'desc')}>
-                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
-                        <path d="M10 16 4 8h12l-6 8Z" />
-                      </svg>
+                      <SortDescIcon className="h-2.5 w-2.5" />
                     </button>
                   </span>
                 </span>

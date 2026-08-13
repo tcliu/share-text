@@ -4,8 +4,11 @@
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
-  import PersonIcon from './PersonIcon.svelte'
-  import RefreshIcon from './RefreshIcon.svelte'
+  import PersonIcon from '$lib/icons/PersonIcon.svelte'
+  import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
+  import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
+  import PlusIcon from '$lib/icons/PlusIcon.svelte'
+  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import SearchInput from './SearchInput.svelte'
   import Chip from './Chip.svelte'
   import { getDocumentType } from '$lib/document-types'
@@ -135,20 +138,13 @@
           tooltip="Collapse document list"
           onClick={onToggleCollapse}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m11.5 5.5-4 4.5 4 4.5M15.5 5.5l-4 4.5 4 4.5" />
-            </svg>
+            <ChevronsLeftIcon />
           {/snippet}
         </Button>
       {/if}
       <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={onNew}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path
-              fill-rule="evenodd"
-              d="M10 3a1 1 0 0 1 1 1v5h5a1 1 0 1 1 0 2h-5v5a1 1 0 1 1-2 0v-5H4a1 1 0 1 1 0-2h5V4a1 1 0 0 1 1-1Z"
-              clip-rule="evenodd" />
-          </svg>
+          <PlusIcon />
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="Refresh" tooltip="Refresh" onClick={onRefresh} disabled={loading}>
@@ -211,12 +207,7 @@
                   onKeyDown={handleDeleteKeydown}
                   className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
                   {#snippet icon()}
-                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path
-                        fill-rule="evenodd"
-                        d="M8.75 2.75a1.75 1.75 0 0 0-1.67 1.23L6.89 4.5H4.5a.75.75 0 0 0 0 1.5h.44l.83 9.12A2.25 2.25 0 0 0 8.01 17.25h3.98a2.25 2.25 0 0 0 2.24-2.13l.83-9.12h.44a.75.75 0 0 0 0-1.5h-2.39l-.19-.52a1.75 1.75 0 0 0-1.67-1.23h-2.5Z"
-                        clip-rule="evenodd" />
-                    </svg>
+                    <DeleteIcon />
                   {/snippet}
                 </Button>
               </span>

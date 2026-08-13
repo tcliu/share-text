@@ -11,6 +11,8 @@
     type DocumentVersionSummary,
   } from '$lib/documents'
   import { formatTimestamp } from '$lib/date-format'
+  import CompareIcon from '$lib/icons/CompareIcon.svelte'
+  import RestoreIcon from '$lib/icons/RestoreIcon.svelte'
 
   interface Props {
     open: boolean
@@ -161,10 +163,7 @@
           disabled={actionsDisabled}
           onClick={toggleCompare}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <rect x="3" y="4" width="6.5" height="12" rx="1.5" />
-              <rect x="10.5" y="4" width="6.5" height="12" rx="1.5" />
-            </svg>
+            <CompareIcon />
           {/snippet}
         </Button>
         <Button
@@ -177,10 +176,7 @@
           disabled={actionsDisabled}
           onClick={requestRestore}>
           {#snippet icon()}
-            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3.75 9.75 9 4.5" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.75H13.5a3.75 3.75 0 0 1 0 7.5H12" />
-            </svg>
+            <RestoreIcon />
           {/snippet}
         </Button>
       </div>

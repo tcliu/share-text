@@ -3,6 +3,9 @@
   import Self from './StructureNode.svelte'
   import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
+  import ChevronRightSmallIcon from '$lib/icons/ChevronRightSmallIcon.svelte'
+  import EditIcon from '$lib/icons/EditIcon.svelte'
+  import CopyIcon from '$lib/icons/CopyIcon.svelte'
   import {
     type StructureEntry,
     childEntries,
@@ -186,14 +189,7 @@
       aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
       onclick={() => (open = !open)}
     >
-      <svg
-        class="h-3 w-3 text-slate-500 transition-transform {open ? 'rotate-90' : ''}"
-        viewBox="0 0 12 12"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <path d="M4 2l4 4-4 4z" />
-      </svg>
+      <ChevronRightSmallIcon className="h-3 w-3 text-slate-500 transition-transform {open ? 'rotate-90' : ''}" />
     </button>
     <Copyable
       copyText={copyValue(value)}
@@ -286,18 +282,7 @@
                   className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
                 >
                   {#snippet icon()}
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                    </svg>
+                    <EditIcon />
                   {/snippet}
                 </Button>
               </span>
@@ -313,18 +298,7 @@
                 className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
               >
                 {#snippet icon()}
-                  <svg
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.7"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <rect x="7" y="7" width="9" height="9" rx="1.5" />
-                    <path d="M5.5 13H5A1.5 1.5 0 0 1 3.5 11.5V5A1.5 1.5 0 0 1 5 3.5h6.5A1.5 1.5 0 0 1 13 5v.5" />
-                  </svg>
+                  <CopyIcon />
                 {/snippet}
               </Button>
             </span>

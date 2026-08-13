@@ -1,4 +1,7 @@
 <script lang="ts">
+  import ChevronUpSmallIcon from '$lib/icons/ChevronUpSmallIcon.svelte'
+  import ChevronDownSmallIcon from '$lib/icons/ChevronDownSmallIcon.svelte'
+
   interface Props {
     value: string
     min?: number
@@ -143,17 +146,7 @@
         tabindex="-1"
         aria-label="Increment"
         class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 transition hover:text-cyan-300 disabled:opacity-40">
-        <svg
-          class="h-3 w-3"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true">
-          <path d="M3 7.5 6 4.5 9 7.5" />
-        </svg>
+        <ChevronUpSmallIcon className="h-3 w-3" />
       </button>
       <button
         type="button"
@@ -162,17 +155,7 @@
         tabindex="-1"
         aria-label="Decrement"
         class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 transition hover:text-cyan-300 disabled:opacity-40">
-        <svg
-          class="h-3 w-3"
-          viewBox="0 0 12 12"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.75"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true">
-          <path d="M3 4.5 6 7.5 9 4.5" />
-        </svg>
+        <ChevronDownSmallIcon className="h-3 w-3" />
       </button>
     </div>
   {/if}

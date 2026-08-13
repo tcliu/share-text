@@ -4,6 +4,8 @@
   import Pagination from './Pagination.svelte'
   import SearchInput from './SearchInput.svelte'
   import Spinner from './Spinner.svelte'
+  import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
+  import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
 
   export type SortDirection = 'asc' | 'desc'
 
@@ -222,18 +224,14 @@
                       class="leading-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
                       aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} ascending`}
                       onclick={() => handleSortClick(column, 'asc')}>
-                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
-                        <path d="M10 4l6 8H4l6-8Z" />
-                      </svg>
+                      <SortAscIcon className="h-2.5 w-2.5" />
                     </button>
                     <button
                       type="button"
                       class="-mt-1 leading-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
                       aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} descending`}
                       onclick={() => handleSortClick(column, 'desc')}>
-                      <svg viewBox="0 0 20 20" fill="currentColor" class="h-2.5 w-2.5" aria-hidden="true">
-                        <path d="M10 16 4 8h12l-6 8Z" />
-                      </svg>
+                      <SortDescIcon className="h-2.5 w-2.5" />
                     </button>
                   </span>
                 </span>

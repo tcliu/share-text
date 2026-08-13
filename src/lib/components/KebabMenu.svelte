@@ -12,6 +12,7 @@
 
 <script lang="ts">
   import { positionPanel } from '$lib/position-panel.svelte'
+  import KebabIcon from '$lib/icons/KebabIcon.svelte'
 
   interface Props {
     items: KebabMenuItem[]
@@ -138,9 +139,7 @@
     aria-controls={open ? menuId : undefined}
     onclick={toggle}
     class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300">
-    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-      <path d="M10 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" />
-    </svg>
+    <KebabIcon className="h-4 w-4" />
   </button>
   {#if open}
     <div

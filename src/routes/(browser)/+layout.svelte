@@ -1,13 +1,17 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte'
   import { toast } from 'svelte-sonner'
   import { page } from '$app/stores'
   import { goto, afterNavigate } from '$app/navigation'
+  import type { LayoutData } from './$types'
   import { setShareTextContext } from '$lib/share-text-context'
   import DocumentList from '$lib/components/DocumentList.svelte'
   import Splitter from '$lib/components/Splitter.svelte'
   import Button from '$lib/components/Button.svelte'
-  import PersonIcon from '$lib/components/PersonIcon.svelte'
-  import RefreshIcon from '$lib/components/RefreshIcon.svelte'
+  import PersonIcon from '$lib/icons/PersonIcon.svelte'
+  import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
+  import ChevronsRightIcon from '$lib/icons/ChevronsRightIcon.svelte'
+  import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
@@ -20,9 +24,13 @@
     SPLIT_PANE_MIN_WIDTH,
   } from '$lib/split-pane'
 
-  let { children } = $props()
+  let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
-  const documentsState = useDocuments()
+  // svelte-ignore state_referenced_locally
+  const documentsState = useDocuments({
+    initialDocuments: data?.documents,
+    initialHasMore: data?.hasMore,
+  })
   const editorGuardState = useEditorGuard()
 
   let selectedDocumentRefreshToken = $state(0)
@@ -187,7 +195,9 @@
   })
 
   $effect(() => {
-    void documentsState.refreshList()
+    if (data?.documents === undefined) {
+      void documentsState.refreshList()
+    }
   })
 </script>
 
@@ -218,19 +228,12 @@
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="m8.5 5.5 4 4.5-4 4.5M4.5 5.5l4 4.5-4 4.5" />
-          </svg>
+          <ChevronsRightIcon />
         {/snippet}
       </Button>
       <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={handleNew}>
         {#snippet icon()}
-          <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path
-              fill-rule="evenodd"
-              d="M10 3a.75.75 0 0 1 .75.75v5.5h5.5a.75.75 0 0 1 0 1.5h-5.5v5.5a.75.75 0 0 1-1.5 0v-5.5h-5.5a.75.75 0 0 1 0-1.5h5.5v-5.5A.75.75 0 0 1 10 3Z"
-              clip-rule="evenodd" />
-          </svg>
+          <PlusIcon />
         {/snippet}
       </Button>
       <Button

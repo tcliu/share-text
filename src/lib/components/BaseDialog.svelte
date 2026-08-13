@@ -4,6 +4,7 @@
 
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
+  import CloseIcon from '$lib/icons/CloseIcon.svelte'
 
   interface Props {
     title?: string
@@ -128,9 +129,7 @@
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
         class="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">
-        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"
-          ><path
-            d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" /></svg>
+        <CloseIcon className="h-4 w-4" />
       </button>
       {#if header}
         {@render header()}
