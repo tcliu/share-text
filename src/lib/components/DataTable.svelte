@@ -58,6 +58,9 @@
     sortDirection?: SortDirection
     onSort?: (key: string, direction: SortDirection) => void
     sortAriaLabel?: (column: DataTableColumn<T>) => string
+    // Adds draggable (and arrow-key) resize handles to each data column header.
+    // Off by default; the selectable checkbox column stays fixed.
+    resizable?: boolean
   }
 
   let {
@@ -92,6 +95,7 @@
     sortDirection = $bindable('asc' as SortDirection),
     onSort,
     sortAriaLabel,
+    resizable = false,
   }: Props<T> = $props()
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
@@ -171,6 +175,144 @@
     }
   })
 
+  // --- Column resize (opt-in via `resizable`) ---
+  //
+  // Each data column header hosts a splitter. Dragging the splitter between
+  // columns i and i+1 re-partitions those two adjacent columns within a fixed
+  // combined total; the splitter after the last column moves the table's right
+  // edge. Widths are captured from the rendered table on the first resize, then
+  // held in `columnWidths` (pixels per data column) with the table switched to
+  // fixed layout via a sized `<colgroup>`.
+
+  const MIN_COLUMN_WIDTH = 60
+  const SELECT_COLUMN_WIDTH = 40
+
+  // Pixel width per data column; empty until the first resize.
+  let columnWidths = $state<number[]>([])
+  let tableContainer: HTMLElement | null = null
+
+  let resizingCol = $state<number | null>(null)
+  let resizeStartX = $state(0)
+  let resizeStartWidth = $state(0)
+  // Fixed combined width of the two adjacent columns being re-partitioned, or
+  // null when resizing the last column's right edge (table edge).
+  let resizeSiblingTotal = $state<number | null>(null)
+  // Frame-throttled drag state: only the latest pointer X is applied per
+  // animation frame so mousemove bursts don't thrash layout.
+  let pendingResizeFrame = false
+  let latestResizeX = 0
+
+  const managedWidths = $derived(resizable && columnWidths.length > 0)
+
+  const totalWidth = $derived.by(() => {
+    let sum = selectable ? SELECT_COLUMN_WIDTH : 0
+    for (let i = 0; i < columns.length; i++) {
+      sum += columnWidths[i] ?? 0
+    }
+    return sum
+  })
+
+  function columnMinWidth(i: number): number {
+    const mw = columns[i]?.minWidth
+    return typeof mw === 'number' && Number.isFinite(mw) && mw >= 0 ? mw : MIN_COLUMN_WIDTH
+  }
+
+  function getColumnCellWidth(i: number): number {
+    const th = tableContainer?.querySelector<HTMLElement>(`th[data-col-index="${i}"]`)
+    return th?.offsetWidth ?? MIN_COLUMN_WIDTH
+  }
+
+  function captureAllWidths(): number[] {
+    const widths: number[] = []
+    for (let i = 0; i < columns.length; i++) {
+      widths.push(columnWidths[i] ?? getColumnCellWidth(i))
+    }
+    return widths
+  }
+
+  function startColumnResize(event: MouseEvent, i: number) {
+    event.preventDefault()
+    event.stopPropagation()
+    resizingCol = i
+    resizeStartX = event.clientX
+    const widths = captureAllWidths()
+    resizeStartWidth = widths[i]
+    resizeSiblingTotal = i < columns.length - 1 ? widths[i] + widths[i + 1] : null
+    columnWidths = widths
+  }
+
+  function applyResizeDiff(diff: number) {
+    if (resizingCol === null) return
+    const i = resizingCol
+    if (resizeSiblingTotal != null) {
+      const newWidth = Math.max(
+        columnMinWidth(i),
+        Math.min(resizeSiblingTotal - columnMinWidth(i + 1), resizeStartWidth + diff),
+      )
+      columnWidths[i] = newWidth
+      columnWidths[i + 1] = resizeSiblingTotal - newWidth
+    } else {
+      let newWidth = Math.max(columnMinWidth(i), resizeStartWidth + diff)
+      if (newWidth < resizeStartWidth && tableContainer) {
+        let others = 0
+        for (let j = 0; j < columns.length; j++) {
+          if (j !== i) others += columnWidths[j]
+        }
+        const selectWidth = selectable ? SELECT_COLUMN_WIDTH : 0
+        const fillWidth = Math.max(
+          columnMinWidth(i),
+          tableContainer.clientWidth - selectWidth - others,
+        )
+        newWidth = Math.max(newWidth, Math.min(fillWidth, resizeStartWidth))
+      }
+      columnWidths[i] = newWidth
+    }
+  }
+
+  function handleResizeMouseMove(event: MouseEvent) {
+    if (resizingCol === null) return
+    latestResizeX = event.clientX
+    if (pendingResizeFrame) return
+    pendingResizeFrame = true
+    requestAnimationFrame(() => {
+      pendingResizeFrame = false
+      if (resizingCol === null) return
+      applyResizeDiff(latestResizeX - resizeStartX)
+    })
+  }
+
+  function handleResizeKeydown(event: KeyboardEvent, i: number) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    event.preventDefault()
+    event.stopPropagation()
+    const widths = captureAllWidths()
+    columnWidths = widths
+    resizingCol = i
+    resizeStartWidth = widths[i]
+    resizeSiblingTotal = i < columns.length - 1 ? widths[i] + widths[i + 1] : null
+    applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
+    resizingCol = null
+  }
+
+  function handleResizeMouseUp() {
+    resizingCol = null
+    pendingResizeFrame = false
+  }
+
+  // Keep columnWidths aligned with the current column count whenever the
+  // `columns` prop changes while the table is in managed mode.
+  $effect(() => {
+    const count = columns.length
+    if (columnWidths.length === count) return
+    if (count === 0) return
+    if (columnWidths.length === 0) return
+    const next: number[] = []
+    for (let i = 0; i < count; i++) {
+      next.push(columnWidths[i] ?? getColumnCellWidth(i))
+    }
+    columnWidths = next
+  })
+
   function handleSortClick(column: DataTableColumn<T>, direction: SortDirection) {
     if (!column.sortable) {
       return
@@ -181,6 +323,8 @@
   }
 </script>
 
+<svelte:window onmouseup={handleResizeMouseUp} onmousemove={handleResizeMouseMove} />
+
 <div class="flex flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
   <SearchInput
     bind:value={searchValue}
@@ -190,9 +334,20 @@
     placeholder={searchPlaceholder}
     wrapperClass={fillHeight ? 'shrink-0' : ''} />
 
-  <div class={fillHeight ? FILL_CONTAINER_CLASS : containerClass}>
+  <div class={fillHeight ? FILL_CONTAINER_CLASS : containerClass} bind:this={tableContainer}>
     <table
-      class="w-full border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {tableClass}">
+      class="border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {managedWidths ? '' : `w-full ${tableClass}`}"
+      style={managedWidths ? `table-layout:fixed;width:${totalWidth}px;` : ''}>
+      {#if managedWidths}
+        <colgroup>
+          {#if selectable}
+            <col style="width:{SELECT_COLUMN_WIDTH}px;" />
+          {/if}
+          {#each Array.from({ length: columns.length }) as _, i}
+            <col style="width:{columnWidths[i]}px;" />
+          {/each}
+        </colgroup>
+      {/if}
       <thead>
         <tr class="text-left text-sm font-medium text-slate-500">
           {#if selectable}
@@ -206,13 +361,14 @@
                 onChange={() => onToggleAll?.()} />
             </th>
           {/if}
-          {#each resolvedColumns as column (column.key)}
+          {#each resolvedColumns as column, i (column.key)}
             {@const isActive = sortKey === column.key}
             {@const isAsc = isActive && sortDirection === 'asc'}
             {@const isDesc = isActive && sortDirection === 'desc'}
             <th
-              class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.widthClass} {column.minWidthClass} {column.sortable ? 'group' : ''}"
-              style={[column.widthStyle, column.minWidthStyle].filter(Boolean).join('; ')}
+              class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.sortable ? 'group' : ''} {managedWidths ? '' : column.widthClass} {managedWidths ? '' : column.minWidthClass}"
+              style={managedWidths ? '' : [column.widthStyle, column.minWidthStyle].filter(Boolean).join('; ')}
+              data-col-index={i}
               aria-sort={isActive ? (isAsc ? 'ascending' : 'descending') : undefined}>
               {#if column.sortable}
                 <span class="flex w-full items-center gap-2 text-left">
@@ -237,6 +393,15 @@
                 </span>
               {:else}
                 {column.header}
+              {/if}
+              {#if resizable}
+                <button
+                  type="button"
+                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+                  style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
+                  aria-label={`Resize ${column.header} column`}
+                  onmousedown={event => startColumnResize(event, i)}
+                  onkeydown={event => handleResizeKeydown(event, i)}></button>
               {/if}
             </th>
           {/each}
@@ -268,8 +433,8 @@
               {/if}
               {#each resolvedColumns as column (column.key)}
                 <td
-                  class="border-b border-slate-800/50 px-3 py-2 {column.minWidthClass} {column.cellClass}"
-                  style={column.minWidthStyle}>
+                  class="border-b border-slate-800/50 px-3 py-2 {managedWidths ? '' : column.minWidthClass} {column.cellClass}"
+                  style={managedWidths ? '' : column.minWidthStyle}>
                   {@render column.cell?.(row)}
                 </td>
               {/each}

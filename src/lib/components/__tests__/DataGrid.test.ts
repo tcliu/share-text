@@ -1888,6 +1888,33 @@ describe('DataGrid (column resize)', () => {
     expect(header1.style.width).not.toBe(wBefore)
   })
 
+  it('trailing splitter stays at the container edge when the table fits; the prev splitter shrinks the last column', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+    try {
+      render(DataGrid, {
+        value: [['a', 'b'], ['1', '2']],
+        initialColumnWidths: ['120', '120'],
+        showHeaders: false,
+      })
+      const root = await screen.findByTestId('data-grid')
+      // Table fills the container (120 + 243 + 36 = 399 <= 400): no horizontal scroll.
+      await vi.waitFor(() => expect(colSelector(root, 1).style.width).toBe('243px'))
+
+      // Trailing splitter shrinking is clamped at the container-filling width:
+      // the last splitter stays at the container's right edge.
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, { key: 'ArrowLeft' })
+      expect(colSelector(root, 1).style.width).toBe('243px')
+
+      // Moving the previous splitter right rebalances within the fixed total:
+      // the last column shrinks while the trailing splitter stays put.
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, { key: 'ArrowRight' })
+      expect(colSelector(root, 0).style.width).toBe('130px')
+      expect(colSelector(root, 1).style.width).toBe('233px')
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+    }
+  })
+
   it('non-arrow keypresses on the splitter are ignored', async () => {
     render(DataGrid, {
       value: [['a', 'b'], ['1', '2']],
@@ -1914,11 +1941,11 @@ describe('DataGrid (column resize)', () => {
     await vi.waitFor(() => expect(root.querySelector('colgroup')).not.toBeNull())
   })
 
-  it('after a manual resize, enlarging the container makes the last column absorb the extra space', async () => {
-    const captured: { callback: ResizeObserverCallback | null } = { callback: null }
+  it('after a manual resize, enlarging the container scales every column proportionally', async () => {
+    const callbacks: ResizeObserverCallback[] = []
     class MockResizeObserver {
       constructor(callback: ResizeObserverCallback) {
-        captured.callback = callback
+        callbacks.push(callback)
       }
       observe() {}
       unobserve() {}
@@ -1941,10 +1968,88 @@ describe('DataGrid (column resize)', () => {
       expect(header1.style.width).toBe('110px')
 
       Object.defineProperty(container, 'clientWidth', { value: 600, configurable: true })
-      captured.callback!([], {} as ResizeObserver)
-      await vi.waitFor(() => expect(header1.style.width).toBe('433px'))
+      for (const callback of callbacks) callback([], {} as ResizeObserver)
+      await vi.waitFor(() => expect(colSelector(root, 0).style.width).toBe('305px'))
+      expect(header1.style.width).toBe('258px')
     } finally {
       vi.unstubAllGlobals()
     }
+  })
+
+  it('re-fits columns only on the outer viewport resize, not the body wrapper scrollbar', async () => {
+    const observed: Element[] = []
+    class MockResizeObserver {
+      observe(target: Element) {
+        observed.push(target)
+      }
+      unobserve() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', MockResizeObserver)
+    try {
+      render(DataGrid, {
+        value: [['a', 'b'], ['1', '2']],
+        initialColumnWidths: ['120', '120'],
+        showHeaders: false,
+      })
+      const root = await screen.findByTestId('data-grid')
+      const viewport = root.querySelector('.overflow-hidden.rounded-md') as HTMLElement
+      const body = root.querySelector('.overflow-auto') as HTMLElement
+      // The header-padding observer tracks the body wrapper's scrollbar...
+      expect(observed).toContain(body)
+      // ...while the column rescale watches the outer viewport, so a scrollbar
+      // appearing/disappearing on the body wrapper never collapses an
+      // overflowing table back into a fitted one.
+      expect(observed).toContain(viewport)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('deleting a column rescales the survivors to keep filling the container', async () => {
+    render(DataGrid, {
+      value: [
+        ['a', 'b', 'c'],
+        ['1', '2', '3'],
+      ],
+      initialColumnWidths: ['120', '120', '120'],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const container = root.querySelector('.overflow-auto') as HTMLElement
+    Object.defineProperty(container, 'clientWidth', { value: 400, configurable: true })
+    await vi.waitFor(() => expect(colSelector(root, 0).style.width).toBeTruthy())
+
+    await fireEvent.mouseDown(colSelector(root, 0))
+    await fireEvent.keyDown(colSelector(root, 0), { key: 'Delete' })
+
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 2 columns'))
+    const w0 = parseInt(colSelector(root, 0).style.width, 10)
+    const w1 = parseInt(colSelector(root, 1).style.width, 10)
+    expect(w0).toBeGreaterThanOrEqual(60)
+    expect(w1).toBeGreaterThanOrEqual(60)
+    expect(w0 + w1).toBe(363)
+  })
+
+  it('a column inserted after a splitter resize gets a default width instead of 0px', async () => {
+    render(DataGrid, {
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
+      showHeaders: false,
+    })
+    const root = await screen.findByTestId('data-grid')
+    const container = root.querySelector('.overflow-auto') as HTMLElement
+    Object.defineProperty(container, 'clientWidth', { value: 400, configurable: true })
+    Object.defineProperty(colSelector(root, 0), 'offsetWidth', { value: 200, configurable: true })
+    Object.defineProperty(colSelector(root, 1), 'offsetWidth', { value: 200, configurable: true })
+
+    await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, { key: 'ArrowRight' })
+    await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
+    await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 3 columns'))
+    expect(colSelector(root, 0).style.width).toBe('210px')
+    expect(colSelector(root, 1).style.width).toBe('190px')
+    expect(colSelector(root, 2).style.width).toBe('128px')
   })
 })

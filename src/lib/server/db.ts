@@ -1,5 +1,5 @@
 import type { Db } from './db-types'
-import { createPgDb } from './db-pg'
+import { createNeonDb } from './db-neon'
 import { createSqliteDb } from './db-sqlite'
 import { resolveProfile } from './profile'
 
@@ -16,7 +16,7 @@ export async function getDb(): Promise<Db> {
 
   dbPromise = (async () => {
     const profile = resolveProfile()
-    const initialized = profile === 'prod' ? createPgDb() : await createSqliteDb()
+    const initialized = profile === 'prod' ? createNeonDb() : await createSqliteDb()
     if (profile === 'prod') {
       await initialized.query("alter table documents add column if not exists tags text not null default '[]'")
       await initialized.query(

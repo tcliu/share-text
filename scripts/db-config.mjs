@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { Pool } from 'pg'
+import { Pool } from '@neondatabase/serverless'
 
 export function parseEnvFile(filePath) {
   if (!existsSync(filePath)) return {}

@@ -241,7 +241,7 @@
     deletePending={deleteTarget !== null} />
 {/snippet}
 
-<div class="flex h-screen overflow-hidden">
+<div class="flex h-dvh overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
       <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
@@ -283,17 +283,21 @@
       {/if}
     </div>
   {:else if !isMobile || !showingEditor}
-    {@render documentList()}
-    {#if !isMobile}
-      <Splitter
-        value={leftPaneWidth}
-        min={leftPaneMinWidth}
-        max={SPLIT_PANE_MAX_WIDTH}
-        onChange={handleSplitPaneChange}
-        onDragEnd={handleSplitPaneDragEnd} />
-    {/if}
+    <div class={`flex ${showingEditor ? 'hidden md:flex' : 'w-full md:w-auto'}`}>
+      {@render documentList()}
+      {#if !isMobile}
+        <Splitter
+          className="hidden md:block"
+          value={leftPaneWidth}
+          min={leftPaneMinWidth}
+          max={SPLIT_PANE_MAX_WIDTH}
+          onChange={handleSplitPaneChange}
+          onDragEnd={handleSplitPaneDragEnd} />
+      {/if}
+    </div>
   {/if}
-  <main class={`min-w-0 flex-1 ${isMobile && !showingEditor ? 'hidden' : 'flex flex-col'}`}>
+  <main
+    class={`min-w-0 flex-1 ${showingEditor ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
     {@render children()}
   </main>
 </div>

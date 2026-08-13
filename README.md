@@ -44,7 +44,7 @@ an explicit `PROFILE=dev|prod` wins; otherwise `NODE_ENV=production` resolves to
 | Profile | Backend | Database |
 |---|---|---|
 | `dev` | SQLite (`node:sqlite`) | `.data/share-text-dev.sqlite`, auto-created |
-| `prod` | PostgreSQL (`pg`) | `DATABASE_URL` (Neon) |
+| `prod` | PostgreSQL (`@neondatabase/serverless`) | `DATABASE_URL` (Neon) |
 
 `PROFILE=prod npm run dev` runs the prod profile locally against Postgres, and
 `SQLITE_PATH` overrides the dev database file path.

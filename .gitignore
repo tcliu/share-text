@@ -6,7 +6,6 @@ node_modules/
 .env.*
 !.env.example
 .vercel/
-.agent/
 .tmp/
 .worktrees/
 .vercel
