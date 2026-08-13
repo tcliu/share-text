@@ -260,11 +260,13 @@ its own row when the screen is too narrow for both. On mobile the action row
 opens with a `KebabMenu` (three-dot) holding the Upload, Export, History, and
 Format actions in that order (History only when the document has 2+ versions;
 the menu owns the `FormatDialog`), followed by the Editor view / Preview view
-toggle pair and the Copy, Clone, Tags, Reset, and Save toolbar buttons (Clone
-only when available). On desktop the toolbar shows the TypeActions plus the
-Copy, Clone, History, Upload, Export, Format, Tags, Reset, and Save buttons
-(History between Clone and Upload, Format between Export and Tags, Reset
-directly before Save). On desktop the header lays the name/tags group, the type
+toggle pair and the Copy, Clone, Tags, Copy link, Reset, and Save toolbar
+buttons (Clone only when available; Copy link and Tags only for saved
+documents). On desktop the toolbar shows the TypeActions plus the
+Copy, Clone, History, Upload, Export, Format, Tags, Copy link, Reset, and Save
+buttons (History between Clone and Upload, Format between Export and Tags,
+Copy link directly after Tags, Reset directly before Save). On desktop the
+header lays the name/tags group, the type
 selector, and the (self-wrapping) button panel out in one wrapping flex
 (content-driven wrapping): the name/tags group uses `flex-basis: min-content`
 and the type selector is a separate right-anchored item, so when the pane

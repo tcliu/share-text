@@ -44,7 +44,8 @@ The page is split into two vertical panes.
       with icon buttons (all with tooltips): an **Editor view** toggle and a
       **Preview view** toggle, type-specific **Format**/convert actions,
       **History** (when the document has multiple versions), **Copy**,
-      **Clone**, **Upload**, **Export**, **Tags**, **Reset**, and **Save**,
+      **Clone**, **Upload**, **Export**, **Tags**, **Copy link**, **Reset**, and
+      **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
@@ -62,8 +63,8 @@ navigating to a document. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
 and the action row opens with a three-dot (kebab) menu holding **Upload**,
 **Export**, **History**, and **Format**, followed by the **Editor view** /
-**Preview view** toggles and the **Copy**, **Clone**, **Tags**, **Reset**, and
-**Save** buttons.
+**Preview view** toggles and the **Copy**, **Clone**, **Tags**, **Copy link**,
+**Reset**, and **Save** buttons.
 
 ## Navigation
 
@@ -199,6 +200,13 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
   when the original has no name), inherits the content and type of the source,
   and the browser navigates to the new document automatically. The clone is
   owned by the current client IP.
+
+## Copy link
+
+- **Copy link** in the editor toolbar copies the document's shareable URL (the
+  origin plus the document's route id, without any query or hash) to the
+  clipboard and confirms with a toast. It only appears for saved documents,
+  next to **Tags** in the toolbar.
 
 ## Split Pane Resize
 
