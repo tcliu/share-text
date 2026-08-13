@@ -180,6 +180,20 @@ synchronizes through a small fetch-based JSON API.
   `containerClass` cap: the root becomes a `min-h-0 flex-1` column and the
   scroll container drops its `max-h` for `min-h-0 overflow-auto` (the search
   box and pagination stay pinned via `shrink-0`).
+- The Documents table opts into resizable columns via `DataTable`'s `resizable`
+  prop, which adds a draggable (and Arrow-key) splitter to each data column
+  header — the checkbox column stays fixed. On the first resize the component
+  snapshots each column's rendered `offsetWidth` into `columnWidths` (pixels per
+  data column), switches the table to `table-layout: fixed` with a sized
+  `<colgroup>` (fixed 40px checkbox column plus the data columns), and pins the
+  table `style.width` to the total. Mid-column splitters re-partition two
+  adjacent columns within a fixed combined total (both kept above their column's
+  numeric `minWidth`, default 60px); the trailing splitter moves the table's
+  right edge, clamping its shrink to the width that fills the container. The
+  drag is requestAnimationFrame-throttled and handled on `svelte:window`; an
+  effect keeps `columnWidths` aligned when the `columns` prop changes. Before
+  the first resize the table keeps its normal `w-full`/`min-w` auto layout, so a
+  non-resizable table is byte-for-byte unchanged.
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
   `admin_logout`, `admin_setting_update`, `admin_setting_reset`,
   `admin_document_rename`, `admin_document_update_updated_by`,
@@ -350,6 +364,23 @@ cleared) so the user can resort. The grid's outer edges come from the table's
 `border-b`); any column-width math must subtract `TABLE_LEFT_BORDER` (1px) to
 keep the table's border box inside the scroll container.
 
+The grid is split into two sibling tables inside a flex column: the header
+table (top) and body table (below). Only the body wrapper
+(`min-h-0 flex-1 overflow-auto`) scrolls, so the trailing resize splitter in
+the header row stays reachable without scrolling; the header wrapper
+(`flex-none overflow-hidden`) never scrolls vertically. Each table carries its
+own `<colgroup>` and `style.width`, so the two tables share identical column
+widths in managed mode. A scroll listener mirrors the body wrapper's
+`scrollLeft` into the header wrapper (its hidden scrollbar is what moves the
+sticky header row horizontally), and wheel events over the header forward
+`deltaY`/`deltaX` to the body wrapper. Sticky positioning is per-table (the
+row-number cells stick to the body wrapper, the header cells to the header
+wrapper), so the pinned column stays aligned across both tables. When the body
+wrapper shows a vertical scrollbar, its `offsetWidth − clientWidth` is added as
+`padding-right` on the header wrapper so the header's right edge lines up with
+the body's visible area; a small `ResizeObserver` on the body wrapper keeps that
+padding in sync with scrollbar appearance.
+
 Cell editing is spreadsheet-style: a single click only selects the cell;
 double-clicking enters edit mode with the cursor after the last character, and
 double-clicking again while editing selects all text (`handleCellDoubleClick`
@@ -376,8 +407,21 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
   absorbs the exact remainder, so on first layout the table's border box fills
   the container. Because the table's outer left edge is a 1px `border-l`,
   `resolveInitialWidths` computes `available` as `clientWidth − 36 − 1`
-  (`TABLE_LEFT_BORDER`). Percentage widths are re-resolved through a
-  `ResizeObserver` on container resize.
+  (`TABLE_LEFT_BORDER`). A `ResizeObserver` on the outer viewport (the
+  `overflow-hidden` flex column, not the scrolling body wrapper) re-runs the
+  width math on container resize (see below).
+- **Proportional container resize.** On container resize the `ResizeObserver`
+  scales every column proportionally — each column becomes `round(width ×
+  available / total)`, clamped to 60px — rather than leaving non-last columns
+  fixed and shrinking only the last. The last column then absorbs the exact
+  remainder so the table still fills the container edge-to-edge. The target
+  `available` is `max(60 × columnCount, clientWidth − 36 − 1)`, so a container
+  too narrow to hold even the minimum-width columns keeps the table overflowing
+  (horizontal scroll preserved) instead of squeezing it — the same `usableDataWidth`
+  floor as the two-table reference. The observer watches the outer viewport
+  rather than the body wrapper so that the wrapper's own scrollbar appearing or
+  disappearing never triggers a re-fit: an intentionally overflowing table stays
+  overflowing until the pane itself is resized.
 - **Making an auto-width grid measured.** When a grid built with auto-width
   columns first starts a resize, `startColumnResize` snapshots every column's
   rendered `offsetWidth` and captures existing `columnWidths`, handed to the
@@ -393,13 +437,21 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
     grows the table beyond the container and introduces a horizontal scrollbar;
     shrinking left clamps at the width that exactly fills the container (the
     live `gridContainer.clientWidth` minus the row-number column, 1px border,
-    and other columns), so the table never leaves empty space while the grid
-    needs no scrolling. The drag (mousemove/mouseup) is handled on
-    `svelte:window`, so interaction continues outside the container.
+    and other columns), so the last splitter stays at the container's right edge
+    whenever the table would fit without scrolling — mirroring the two-table
+    reference, where the trailing splitter stays put while the previous splitter
+    rebalances columns against it. The drag (mousemove/mouseup) is handled on
+    `svelte:window`, so interaction continues outside the container, and
+    `mousemove` applies only the latest pointer X once per animation frame
+    (requestAnimationFrame-throttled) so pointer bursts don't thrash layout.
 - **Structural changes.** An effect keeps `columnWidths` aligned with the
   current column count in managed mode (columns are inserted/removed via the
-  toolbar), reusing the stored width or the rendered cell width (default 128)
-  for new columns.
+  toolbar). A newly inserted column gets a fixed default width (128px, matching
+  the auto-width `min-w-32` floor) — never a live measurement, since mid-effect
+  its cells render at 0px and would pin the column invisible. When a column is
+  removed the survivors are rescaled to refill the container (same
+  `rescaleToContainer` used by the proportional container-resize path), so
+  deleting a column never leaves a gap at the table's right edge.
 - Structured previews use `StructurePreview.svelte` (parse/serialize JSON, YAML,
   or XML) rendering an editable `StructureTree`/`StructureNode`; edits are
   patched immutably via `structure-value.ts` and serialized back to content.

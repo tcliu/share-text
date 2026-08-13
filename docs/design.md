@@ -173,10 +173,12 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
 - `Tab` and `Enter` move between cells, `Escape` cancels the current edit, and a
   multi-cell clipboard paste fills cells from the anchor. Edits feed back into
   the document content and participate in the normal dirty/save flow.
-- Column widths are adjustable by dragging the dividers between column headers.
-  Dragging the divider after the last column grows the grid beyond the visible
-  area (a horizontal scrollbar appears); shrinking it stops once the grid again
-  fills the pane without scrolling.
+- Column widths are adjustable by dragging the dividers between column headers
+  (or by focusing a divider and pressing the arrow keys). Dragging the divider
+  after the last column grows the grid beyond the visible area (a horizontal
+  scrollbar appears); shrinking it stops once the grid again fills the pane
+  without scrolling. Resizing the pane keeps the chosen column proportions,
+  scaling every column proportionally rather than squeezing only the last.
 
 ## Tags
 
@@ -283,6 +285,10 @@ keeps the settings draft and documents data alive across tab switches.
     pagination, row-selection with bulk delete, inline editing of the ID, name,
     created-by, and updated-by cells (copyable editable text), and single-row
     delete (behind a confirm dialog). Editing the ID renames the document key.
+    Column widths are adjustable by dragging the dividers between column headers
+    (the checkbox column stays fixed); before any adjustment the columns use
+    their configured percentage widths, and the table scrolls horizontally once
+    the columns no longer fit.
 
 ### Runtime properties
 
