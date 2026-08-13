@@ -39,7 +39,7 @@
     {/if}
   </div>
   {#if activeTab}
-    <div class="min-h-0 flex-1">
+    <div class="flex min-h-0 flex-1 flex-col">
       {@render activeTab.content(state)}
     </div>
   {/if}
