@@ -27,12 +27,17 @@ describe('column-width-storage localStorage helpers', () => {
     expect(loadColumnWidths('csv-preview')).toEqual([162, 243])
   })
 
-  it('falls back to the stored value when localStorage.getItem throws', () => {
+  it('returns null when localStorage.getItem throws', () => {
     saveColumnWidths('csv-preview', [200, 300])
     const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('storage unavailable')
     })
-    expect(loadColumnWidths('csv-preview')).toEqual([200, 300])
+    expect(loadColumnWidths('csv-preview')).toBeNull()
     getItem.mockRestore()
+  })
+
+  it('clamps non-finite and negative widths to the default', () => {
+    saveColumnWidths('csv-preview', [Number.POSITIVE_INFINITY, -4, 162.4])
+    expect(loadColumnWidths('csv-preview')).toEqual([128, 128, 162])
   })
 })
