@@ -49,7 +49,7 @@ describe('Tooltip', () => {
     await vi.waitFor(() => expect(queryByRole('tooltip')).toBeNull())
   })
 
-  it('does not show tooltips on touch-only devices (no hover support)', () => {
+  it('does not show hover tooltips on touch-only devices', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
     const { getByRole, queryByRole } = render(Button, { ariaLabel: 'Save', tooltip: 'Save' })
     const button = getByRole('button', { name: 'Save' })
@@ -58,5 +58,37 @@ describe('Tooltip', () => {
     fireEvent.mouseEnter(trigger)
     expect(queryByRole('tooltip')).toBeNull()
     expect(button.getAttribute('aria-label')).toBe('Save')
+  })
+
+  it('shows a tooltip on long-press and dismisses it on touch-only devices', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+    const { getByRole, queryByRole } = render(Button, { ariaLabel: 'Save', tooltip: 'Save' })
+    const trigger = getByRole('button', { name: 'Save' }).parentElement!
+
+    trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    expect(queryByRole('tooltip')).toBeNull()
+
+    await vi.advanceTimersByTimeAsync(500)
+    expect(queryByRole('tooltip')).toBeTruthy()
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(queryByRole('tooltip')).toBeNull()
+
+    vi.useRealTimers()
+  })
+
+  it('does not show a tooltip for a quick tap on touch-only devices', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: false }))
+    const { getByRole, queryByRole } = render(Button, { ariaLabel: 'Save', tooltip: 'Save' })
+    const trigger = getByRole('button', { name: 'Save' }).parentElement!
+
+    trigger.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch' }))
+    trigger.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'touch' }))
+    await vi.advanceTimersByTimeAsync(500)
+    expect(queryByRole('tooltip')).toBeNull()
+
+    vi.useRealTimers()
   })
 })

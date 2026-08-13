@@ -43,6 +43,25 @@
       window.matchMedia('(hover: hover)').matches,
   )
 
+  const LONG_PRESS_MS = 500
+  const TOOLTIP_LINGER_MS = 2000
+  let pressTimer: ReturnType<typeof setTimeout> | null = null
+  let dismissTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearPressTimer() {
+    if (pressTimer) {
+      clearTimeout(pressTimer)
+      pressTimer = null
+    }
+  }
+
+  function clearDismissTimer() {
+    if (dismissTimer) {
+      clearTimeout(dismissTimer)
+      dismissTimer = null
+    }
+  }
+
   $effect(() => {
     const trigger = anchor?.parentElement
     if (!trigger || !supportsHover) {
@@ -59,6 +78,41 @@
       trigger.removeEventListener('mouseleave', leave)
       trigger.removeEventListener('focusin', enter)
       trigger.removeEventListener('focusout', leave)
+    }
+  })
+
+  $effect(() => {
+    const trigger = anchor?.parentElement
+    if (!trigger || supportsHover) {
+      return
+    }
+    const startPress = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch') {
+        return
+      }
+      clearPressTimer()
+      clearDismissTimer()
+      pressTimer = setTimeout(() => {
+        pressTimer = null
+        show()
+        dismissTimer = setTimeout(() => {
+          dismissTimer = null
+          hide()
+        }, TOOLTIP_LINGER_MS)
+      }, LONG_PRESS_MS)
+    }
+    const cancelPress = () => clearPressTimer()
+    trigger.addEventListener('pointerdown', startPress)
+    trigger.addEventListener('pointerup', cancelPress)
+    trigger.addEventListener('pointercancel', cancelPress)
+    trigger.addEventListener('pointerleave', cancelPress)
+    return () => {
+      trigger.removeEventListener('pointerdown', startPress)
+      trigger.removeEventListener('pointerup', cancelPress)
+      trigger.removeEventListener('pointercancel', cancelPress)
+      trigger.removeEventListener('pointerleave', cancelPress)
+      clearPressTimer()
+      clearDismissTimer()
     }
   })
 
