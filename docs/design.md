@@ -41,13 +41,29 @@ The page is split into two vertical panes.
   - When a document is selected (`/{doc-id}`), it shows:
     - a header row with the editable document name, a document type selector
       dropdown, and visible tag chips on the left, and a toolbar on the right
-      with icon buttons (all with tooltips): a **Preview** mode toggle,
-      type-specific **Format**/convert actions, **Copy**, **Clone**, **Upload**,
-      **Export**, **Reset**, **Tags**, and **Save**,
+      with icon buttons (all with tooltips): an **Editor view** toggle and a
+      **Preview view** toggle, type-specific **Format**/convert actions,
+      **History** (when the document has multiple versions), **Copy**,
+      **Clone**, **Upload**, **Export**, **Tags**, **Reset**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
       indicator, and character count (with limit).
+
+### Responsive layout
+
+On screens narrower than the `md` breakpoint (767px) the two panes stop being
+side by side and become full-screen pages: the document list occupies the whole
+screen on `/`, and opening a document (or `/new`) hides the list and shows the
+editor full screen. From the editor, a hamburger button before the document
+name opens a left slide-out drawer with the document list; the drawer closes on
+its collapse button, on Escape, on tapping the dark backdrop, and after
+navigating to a document. On mobile the editor header stacks into rows —
+document name and type selector, then the tag chips, then the action buttons —
+and the action row opens with a three-dot (kebab) menu holding **Upload**,
+**Export**, **History**, and **Format**, followed by the **Editor view** /
+**Preview view** toggles and the **Copy**, **Clone**, **Tags**, **Reset**, and
+**Save** buttons.
 
 ## Navigation
 
@@ -126,10 +142,12 @@ The page is split into two vertical panes.
 ### Preview
 
 - Types with a preview component (**Markdown**, **HTML**, **JSON**, **XML**,
-  **YAML**, **CSV**) show a **Preview** button in the toolbar that cycles
-  through three modes: **editor**, **split**, and **preview-only**. Split shows
-  the CodeMirror source and the rendered preview side by side; preview-only
-  hides the editor entirely.
+  **YAML**, **CSV**) show an **Editor view** toggle (pencil icon) and a
+  **Preview view** toggle (eye icon) in the toolbar instead of a single cycle
+  button. The panes can never both be off: whichever pane is the sole active one
+  has its toggle disabled. Turning a pane on always lands in split view (editor
+  and preview side by side on desktop, stacked on mobile); turning it back off
+  returns to the remaining pane.
 - The active mode is encoded in the URL query string (`?preview=true`,
   `?editor=false`), so reloading or sharing the link keeps the mode.
 - **Markdown** renders with `marked` into a sandboxed iframe; **HTML** renders

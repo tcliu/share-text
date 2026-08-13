@@ -101,7 +101,8 @@ synchronizes through a small fetch-based JSON API.
   document's versions explicitly (also handled by the `on delete cascade` FK
   on Postgres), and because versions reference the immutable numeric
   `documents.id`, an admin rename of the key never requires migrating version
-  rows. The production `db.ts` bootstrap creates
+  rows; the version queries resolve the app-facing key to that numeric id via
+  a subquery. The production `db.ts` bootstrap creates
   the table if it does not exist, matching the tags-column migration.
 - Tags are normalized on write: trimmed, deduplicated case-insensitively,
   sorted by name, with colors drawn from the fixed palette and same-family
@@ -125,9 +126,9 @@ synchronizes through a small fetch-based JSON API.
   cached in memory for a short TTL and invalidated on write.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
-  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with `/admin`
-  redirecting to `/admin/properties`; the two tabs are real routes
-  (`/admin/properties`, `/admin/documents`) backed by empty `+page.svelte` shells.
+  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the two
+  tabs as real routes (`/admin/properties`, `/admin/documents`) backed by empty
+  `+page.svelte` shells.
   A `+layout.server.ts` guards every `/admin/*` route server-side, redirecting
   unauthenticated sessions to `/login` before the client shell renders; the layout
   then redirects there on the client only when the session is genuinely gone
@@ -142,12 +143,43 @@ synchronizes through a small fetch-based JSON API.
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default
   24-hour one; the password is never stored client-side.
+- The console routes its tabs as real routes so each keeps a stable, shareable
+  URL: `/admin` redirects (`+page.server.ts`) to `/admin/properties` when the
+  session is authenticated and to `/login` when it is not. `Tabs` renders the
+  tab bar (marking the active path with `aria-current="page"`, wrapped in a
+  `nav` landmark labelled via the `ariaLabel` prop), the active tab's toolbar,
+  and the active tab's content; the layout stays mounted across tab navigation
+  so the settings draft and documents data survive tab switches, and the
+  documents list lazy-loads via a layout `$effect` on the documents path. The
+  `beforeNavigate` discard guard lets navigations within `/admin` through
+  without prompting, since the shared state survives tab switches, and the
+  admin layout renders no top header row until the session is `authenticated`.
+  The pre-login page lives at `/login` (`+page.server.ts` redirects
+  authenticated sessions to `/admin/properties` and returns the `configured`
+  flag otherwise; `+page.svelte` renders the shared `LoginPanel`), and a
+  successful sign-in there navigates to `/admin/properties`.
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
   `name`, `updatedBy`, `createdBy`, and `key`. Attribution fields are bounded
   by `MAX_ATTRIBUTION_LENGTH` (defaulting `updated_by` to the requester IP
   otherwise); changing `key` renames the document id and must match the
   configured `document_key_length` charset, returning 409 on collision.
+- The Documents table (`DataTable.svelte`) sorts via the shared two-arrow
+  header pattern: `handleSortClick(column, direction)` passes the explicit
+  direction through `onSort`. Column sizing prefers the `width`/`minWidth`
+  props (`widthClass`/`minWidthClass` override them when given): a number is
+  pixels, a string ending in `%` is a percentage (rebased so percentage columns
+  sum to 100% before the `width` is applied), and any other string must be a
+  valid CSS length — malformed width/min-width values are ignored and reported
+  to the console. The derived width/min-width are applied as inline `style` on
+  the cells (never as utility classes built at runtime); those inline minimums
+  keep core columns (Key, Name, attribution, timestamps) from collapsing below
+  a readable width when the panel narrows; overflow is handled by the
+  container's horizontal scroll and the table's `min-w` floor. A `fillHeight`
+  prop makes the table fill the available flex height instead of the fixed
+  `containerClass` cap: the root becomes a `min-h-0 flex-1` column and the
+  scroll container drops its `max-h` for `min-h-0 overflow-auto` (the search
+  box and pagination stay pinned via `shrink-0`).
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
   `admin_logout`, `admin_setting_update`, `admin_setting_reset`,
   `admin_document_rename`, `admin_document_update_updated_by`,
@@ -176,10 +208,15 @@ synchronizes through a small fetch-based JSON API.
   shares the document list, refresh/create/delete operations, a
   selected-document refresh token, editor dirty-state guard registration, and
   editor-focus registration (the shell focuses the active editor on navigation).
-- `(browser)/+layout.svelte` is the shell: it owns the document list (loaded in
-  pages), runs `beforeNavigate` through the dirty guard, and hosts the discard
-  and delete confirm dialogs. Deleting the currently selected document navigates
-  to `/`.
+- `(browser)/+layout.svelte` is the shell: it owns the document list, runs
+  `beforeNavigate` through the dirty guard, and hosts the discard and delete
+  confirm dialogs. The first page of summaries is preloaded on the server via
+  `(browser)/+layout.server.ts` (the same `fetchDocumentSummaries`/
+  `getClientAddress` path as the API, `DEFAULT_DOCUMENTS_PAGE_SIZE`) and seeded
+  once into `useDocuments` via `initialDocuments`/`initialHasMore`, so the list
+  renders without a client fetch or a "Loading documents..." flash; the layout
+  only falls back to a client `refreshList()` when no seed was provided (e.g.
+  component tests). Deleting the currently selected document navigates to `/`.
 - `(browser)/new/+page.svelte` drives the new-document draft page: it keeps
   name/content/type in `$state`, persists a `share-text:draft:new` draft, and
   creates the document through the API client on save.
@@ -189,6 +226,60 @@ synchronizes through a small fetch-based JSON API.
   percentage to `localStorage`; `use-preview-content.svelte.ts` mirrors content
   into a debounced value (immediate on document switch) so heavy previews do not
   re-render on every keystroke.
+
+### Responsive Layout
+
+Below the `md` breakpoint (767px, driven by a `matchMedia`-backed `isMobile`
+`$state` exposed through the share-text context) the split panes collapse into
+full-screen pages with no splitter: the document list occupies the whole screen
+when no editor is open (on `/`), and opening a document (route `/[id]` or
+`/new`) hides the list and shows the editor full screen. The document list is
+still reachable from an editor via a left slide-out `MobileDrawer`: the editor
+header shows a hamburger button before the filename that opens it
+(`openMobileDrawer` on the share-text context, set on the layout's
+`mobileDrawerOpen` state), and the drawer renders the same shared `documentList`
+snippet the layout uses on the list route. The drawer is a `fixed inset-0 z-50`
+overlay whose dark backdrop closes on click, whose panel (`w-full max-w-sm`)
+hosts the list, and which closes on the collapse button, on Escape, and on any
+client-side navigation via `afterNavigate`. The panel is exposed as
+`role="dialog"`/`aria-modal` with a `tabindex="-1"` ref: opening it moves focus
+to the panel, Tab is trapped within it, and closing restores focus to the
+element focused before it opened. Its Escape handling follows the shared dialog
+keydown protocol (respects `event.defaultPrevented`, marks
+`shareTextDialogHandled`, stops immediate propagation) so it never double-fires
+with `BaseDialog`.
+
+On mobile the `DocumentEditorPane` header stacks into three rows — document
+name + right-aligned type selector, then the tag chips, then the action
+buttons — and both the tag and action rows `flex-wrap` when horizontal space
+runs out; the first row is itself a wrapping flex where the name keeps a usable
+width (`flex-1` with `min-w-[min(12rem,60%)]`), so the type selector drops to
+its own row when the screen is too narrow for both. On mobile the action row
+opens with a `KebabMenu` (three-dot) holding the Upload, Export, History, and
+Format actions in that order (History only when the document has 2+ versions;
+the menu owns the `FormatDialog`), followed by the Editor view / Preview view
+toggle pair and the Copy, Clone, Tags, Reset, and Save toolbar buttons (Clone
+only when available). On desktop the toolbar shows the TypeActions plus the
+Copy, Clone, History, Upload, Export, Format, Tags, Reset, and Save buttons
+(History between Clone and Upload, Format between Export and Tags, Reset
+directly before Save). On desktop the header lays the name/tags group, the type
+selector, and the (self-wrapping) button panel out in one wrapping flex
+(content-driven wrapping): the name/tags group uses `flex-basis: min-content`
+and the type selector is a separate right-anchored item, so when the pane
+narrows enough that the button panel would crowd the type selector the panel
+wraps to its own row (left-aligned, since the shared row is kept flush-right by
+the name group filling the space) and the type selector stays right-aligned at
+the end of the first row; the buttons can themselves span multiple rows. The
+`DocumentList` header shows a single collapse button (double-chevron-left icon)
+before the New button; it renders only when the layout passes
+`onToggleCollapse`, and the layout's derived `handleListCollapse` wires it to
+toggle the desktop pane (`leftPaneCollapsed`, whose `w-11` rail with Show-list,
+New, Refresh, Login buttons expands back with a double-chevron-right icon) and
+to close the mobile drawer (so the button is absent on the mobile list route
+where there is nothing to collapse). `DocumentList` sizes itself full-width on
+mobile via `w-full` (the inline `width` style is only set on desktop). The left
+pane header shows a Login button after the Refresh button that navigates to
+`/login`, so admin sign-in is reachable from the document browser.
 
 ## Editor
 
@@ -200,14 +291,72 @@ synchronizes through a small fetch-based JSON API.
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
   per-type language extensions from the type registry.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
-  `usePreviewMode` cycles editor/split/preview modes through the URL,
+  `usePreviewMode` holds the editor/split/preview tri-state and reads/writes it
+  to the URL (`?preview=true`, `?editor=false`) via two toggle setters
+  (`setEditor`/`setPreview`) that always land on split when turning a pane on,
   `usePreviewContent` debounces the source, and a `Splitter` in percentage mode
   divides the panes with the ratio persisted via `editor-preview-split.ts`.
+  On desktop the split lays the editor left and preview right with a vertical
+  `Splitter` (`editorWidthPct`); on mobile the same split stacks the editor on
+  top and the preview underneath (the content container switches to `flex-col`,
+  each pane `min-h-0`, `flex-basis`/`flex-1` from `editorWidthPct`) with a
+  horizontal `Splitter`. The `Splitter` component takes an `orientation` prop
+  (`vertical` default for left/right dividers, `horizontal` for top/bottom
+  dividers) that selects the drag axis, resize cursor, negative-margin/thickness
+  classes, and arrow keys. When the current type has no preview component, the
+  toggles and preview params are ignored for layout (the editor fills the pane).
 - CSV previews use a spreadsheet grid: `DataGrid.svelte` renders
   `use-grid-model.svelte.ts` (per-cell committed flags, self-echo
   reconciliation, bounded undo/redo history) with `use-grid-selection`,
   `use-grid-clipboard`, and `use-grid-autoscroll` composables; `CsvPreview`
   wires parsing/serialization via `csv-utils.ts` (papaparse).
+
+### Grid Model
+
+The grid model (`use-grid-model.svelte.ts`) tracks a per-cell `committed`
+flag. Arrow navigation past the last row/column appends *pending* rows/columns
+whose cells stay uncommitted until a value is typed (`setValue`/paste/major
+structural operations mark cells committed), so pure navigation never
+serializes trailing empty cells into the CSV. `matrix()` bounds itself to the
+committed region, and `pruneTrailingPendingRows`/`pruneTrailingPendingColumns`
+drop empty pending rows/columns on navigate-away, Escape, or mouse click. The
+model keeps a self-echo reconciliation: an incoming `value` that differs from
+the last committed matrix only by trailing all-empty rows (the `parseCsv`
+round-trip drops them) is treated as a self-echo so committed-but-empty rows
+(e.g. toolbar inserts) survive the preview content feedback; a genuine
+external change with different data rows still rebuilds the grid.
+
+### DataGrid
+
+`DataGrid.svelte` renders the grid for the CSV and Properties previews. It
+accepts `maxColumns` to lock the grid to a fixed column count (disabling
+column insert/delete/append, nav growth, and trimming, and clamping pastes to
+it), `columnLabels` to show custom header labels instead of column letters,
+`hideHeaderToggle` when the grid type has no header row (e.g. Properties), and
+`initialColumnWidths` (percentage strings, px numbers, or omitted) to switch
+the table to `table-layout: fixed` with explicit widths (see **DataGrid Column
+Resize** below).
+
+The column label row (topmost header row) also sorts data rows using the same
+two-arrow header pattern as the admin `DataTable`: `model.sortRows(columnIndex,
+direction)` uses the natural `compareGridValues` (numeric cells numerically,
+otherwise locale-aware) and skips the header row when headers are on — the
+header stays pinned while only the rows below reorder. The reorder commits
+through the normal commit path, so it is undoable and reflected in `onChange`.
+The sort indicator is a snapshot of the sort column taken at sort time; editing
+any cell in that column invalidates it and hides the sort status (`aria-sort`
+cleared) so the user can resort. The grid's outer edges come from the table's
+`border-t`/`border-l` only, so cells keep single-edge borders (`border-r`/
+`border-b`); any column-width math must subtract `TABLE_LEFT_BORDER` (1px) to
+keep the table's border box inside the scroll container.
+
+Cell editing is spreadsheet-style: a single click only selects the cell;
+double-clicking enters edit mode with the cursor after the last character, and
+double-clicking again while editing selects all text (`handleCellDoubleClick`
+in `use-grid-selection.svelte.ts`). While a cell is being edited, mouse
+interaction inside it behaves like a normal text input (caret placement /
+in-cell text selection); grid range-dragging only works from a non-editing
+cell.
 
 ### DataGrid Column Resize
 
@@ -270,14 +419,29 @@ History (clock) button in the editor toolbar. Clicking it opens `HistoryDialog`:
   and the current editor content (right); each split pane shows its own
   document type tag between its label and the content, since a version may
   have a different type than the current state. Restore copies the selected
-  version's content and type back into the editor. When the selected version
-  already matches the current editor content and type, both buttons are hidden
-  since there is nothing to compare or restore.
+  version's content and type back into the editor. The two buttons are disabled
+  (and show no tooltip) whenever there is nothing to act on — no version
+  selected yet, a version still loading, or the selected version already
+  matching the current editor content and type; they stay in place while a
+  version loads so the panel never resizes, and only the disabled state
+  changes, so Restore can never act on a stale version.
 - Restore copies the selected version's content and type back into the editor
   as unsaved changes (the user reviews and saves, which appends a new version);
   when the editor already has unsaved changes the restore is confirmed first.
 - The editor page tracks the version count and refreshes it after each save so
   the History button appears as soon as a document has multiple versions.
+- On mobile the dialog is full screen (`fullscreen` prop on `BaseDialog`,
+  driven by the `isMobile` context passed from the editor pane) instead of a
+  centered modal. The action panel stays visible and the content pane plus the
+  loading spinner use a fixed `h-[60vh]` (the version list stays capped at
+  `max-h-[70vh]`), so the dialog never resizes when switching between versions
+  of different content lengths — long content scrolls inside the pane via
+  `overflow-auto`. The dialog itself never needs a scrollbar even on short
+  viewports: the `BaseDialog` children wrapper, the dialog root, the
+  list/content row (`md:h-[60vh]`), and the content pane are all `min-h-0`
+  flex items, so when the fixed `60vh` pane plus the dialog chrome would
+  overflow `BaseDialog`'s `max-h-[90vh]`, flexbox shrinks the pane to fit
+  automatically.
 
 ## Concurrency
 
