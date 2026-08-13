@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/svelte'
+import { fireEvent, render } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import DataTable, { type DataTableColumn } from '../DataTable.svelte'
 
@@ -134,5 +134,34 @@ describe('DataTable fillHeight', () => {
 
     const scroll = container.querySelector('.overflow-auto')!
     expect(scroll.className).toContain('max-h-')
+  })
+})
+
+describe('DataTable resizable columns', () => {
+  it('renders a resize handle per data column only when resizable', () => {
+    const { container } = render(DataTable<Row>, { props: baseProps() })
+    expect(container.querySelector('button[aria-label^="Resize"]')).toBeNull()
+
+    const resizable = render(DataTable<Row>, { props: { ...baseProps(), resizable: true } })
+    const handles = Array.from(
+      resizable.container.querySelectorAll('button[aria-label^="Resize "]'),
+    )
+    expect(handles).toHaveLength(2)
+    expect(handles.every(h => h.className.includes('cursor-col-resize'))).toBe(true)
+  })
+
+  it('switches to fixed layout with a colgroup once a column starts resizing', async () => {
+    const { container } = render(DataTable<Row>, { props: { ...baseProps(), resizable: true } })
+    const table = container.querySelector('table') as HTMLTableElement
+    expect(table.className).toContain('w-full')
+    expect(table.querySelector('colgroup')).toBeNull()
+
+    const handle = container.querySelector('button[aria-label^="Resize "]') as HTMLButtonElement
+    await fireEvent.mouseDown(handle)
+    await fireEvent.mouseUp(window)
+
+    expect(table.style.tableLayout).toBe('fixed')
+    const cols = table.querySelectorAll('colgroup col')
+    expect(cols).toHaveLength(2)
   })
 })
