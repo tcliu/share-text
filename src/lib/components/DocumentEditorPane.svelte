@@ -8,7 +8,6 @@
   import PencilIcon from '$lib/icons/PencilIcon.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
-  import LinkIcon from '$lib/icons/LinkIcon.svelte'
   import TagsIcon from '$lib/icons/TagsIcon.svelte'
   import SaveIcon from '$lib/icons/SaveIcon.svelte'
   import CloneIcon from '$lib/icons/CloneIcon.svelte'
@@ -177,19 +176,6 @@
       toast.success('Copied to clipboard')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to copy')
-    }
-  }
-
-  async function handleCopyLink() {
-    try {
-      const url = new URL(window.location.href)
-      url.pathname = `/${document.id}`
-      url.search = ''
-      url.hash = ''
-      await navigator.clipboard.writeText(url.toString())
-      toast.success('Link copied to clipboard')
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy link')
     }
   }
 
@@ -373,11 +359,6 @@
       <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
         {#snippet icon()}
           <TagsIcon />
-        {/snippet}
-      </Button>
-      <Button size="sm" ariaLabel="Copy sharable link" tooltip="Copy link" onClick={handleCopyLink}>
-        {#snippet icon()}
-          <LinkIcon />
         {/snippet}
       </Button>
     {/if}
