@@ -124,8 +124,8 @@
 </script>
 
 <aside
-  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50"
-  style={width !== undefined ? `width: ${width}px` : undefined}>
+  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 md:w-[var(--aside-w,100%)]"
+  style={width !== undefined ? `--aside-w: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
       <span class="p-1 text-md font-semibold text-slate-200">ShareText</span>
