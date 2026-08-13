@@ -176,9 +176,11 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
 - Column widths are adjustable by dragging the dividers between column headers
   (or by focusing a divider and pressing the arrow keys). Dragging the divider
   after the last column grows the grid beyond the visible area (a horizontal
-  scrollbar appears); shrinking it stops once the grid again fills the pane
-  without scrolling. Resizing the pane keeps the chosen column proportions,
-  scaling every column proportionally rather than squeezing only the last.
+  scrollbar appears, and the grid scrolls along so the divider stays visible);
+  shrinking it stops once the grid again fills the pane without scrolling.
+  Resizing the pane keeps the chosen column proportions, scaling every column
+  proportionally rather than squeezing only the last. Adjusted widths are saved
+  to `localStorage` and restored the next time the grid is opened.
 
 ## Tags
 

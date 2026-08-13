@@ -191,9 +191,19 @@ synchronizes through a small fetch-based JSON API.
   table `style.width` to the total. Mid-column splitters re-partition two
   adjacent columns within a fixed combined total (both kept above their column's
   numeric `minWidth`, default 60px); the trailing splitter moves the table's
-  right edge, clamping its shrink to the width that fills the container. The
+  right edge, expanding right beyond the container (horizontal scroll) and
+  absorbing a left drag in the previous column — the previous splitter moves
+  right, the last column shrinks, and the table's minimum width stays the
+  container width. The resize engine itself lives in the shared
+  `createColumnResize` composable (`use-column-resize.svelte.ts`), which owns
+  the drag state and width math and takes the column count, scroll container,
+  header-cell measurement, per-column minimum, and fixed reserved width as
+  callbacks. The
   drag is requestAnimationFrame-throttled and handled on `svelte:window`; an
-  effect keeps `columnWidths` aligned when the `columns` prop changes. Before
+  effect keeps `columnWidths` aligned when the `columns` prop changes. When a
+  `storageKey` prop is set, resized widths are persisted to `localStorage`
+  (JSON array via `$lib/column-width-storage.ts`) and restored on mount,
+  overriding the derived/auto layout. Before
   the first resize the table keeps its normal `w-full`/`min-w` auto layout, so a
   non-resizable table is byte-for-byte unchanged.
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
@@ -430,22 +440,37 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
   model until the grid structure changes.
 - **Splitters.** Every column-selector header cell (first `thead` row) hosts an
   absolutely-positioned `w-1.5` handle (mid-column handles offset `right:-3px`
-  to straddle the boundary, the trailing one at `right:0`). Each data column is
+  to straddle the boundary, the trailing one at `right:0`). The resize engine is
+  the shared `createColumnResize` composable (same one DataTable uses), which
+  owns the drag state and width math and takes the column count, scroll
+  container, header-cell measurement, per-column minimum, and fixed reserved
+  width as callbacks. Each data column is
   therefore bounded by two splitters:
   - A **mid-column** splitter re-partitions its two adjacent columns within a
     fixed combined total (both kept ≥ 60px and above their partner's minimum),
     so all outer and non-adjacent columns stay put.
   - The **trailing** splitter moves the table's right edge. Expanding right
-    grows the table beyond the container and introduces a horizontal scrollbar;
-    shrinking left clamps at the width that exactly fills the container (the
-    live `gridContainer.clientWidth` minus the row-number column, 1px border,
-    and other columns), so the last splitter stays at the container's right edge
-    whenever the table would fit without scrolling — mirroring the two-table
-    reference, where the trailing splitter stays put while the previous splitter
-    rebalances columns against it. The drag (mousemove/mouseup) is handled on
+    grows the table beyond the container and introduces a horizontal scrollbar.
+    Shrinking left while the table overflows shrinks the last column until the
+    table reaches the container width; once it would shrink below the container
+    (the fill width, i.e. the live `gridContainer.clientWidth` minus the
+    row-number column, 1px border, and other columns), the shortfall is absorbed
+    by the previous column — the previous splitter moves right, the last column
+    keeps shrinking, and the table's minimum width stays the container width
+    with the trailing splitter anchored at the container's right edge. While
+    dragging right past the container, the body wrapper auto-scrolls fully right
+    so the trailing splitter stays visible at the container's right edge (the
+    header wrapper mirrors that scroll); the scroll is applied in a nested
+    animation frame after the width flush, and again on mouseup so the splitter
+    stays reachable for a follow-up drag. The drag
+    (mousemove/mouseup) is handled on
     `svelte:window`, so interaction continues outside the container, and
     `mousemove` applies only the latest pointer X once per animation frame
     (requestAnimationFrame-throttled) so pointer bursts don't thrash layout.
+- **Persistence.** A `storageKey` prop (set by the CSV and Properties previews)
+  persists `columnWidths` to `localStorage` as a JSON array via
+  `$lib/column-width-storage.ts` on every resize and restores it on mount,
+  overriding `initialColumnWidths`/auto layout when the column count matches.
 - **Structural changes.** An effect keeps `columnWidths` aligned with the
   current column count in managed mode (columns are inserted/removed via the
   toolbar). A newly inserted column gets a fixed default width (128px, matching
