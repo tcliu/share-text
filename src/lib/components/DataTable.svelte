@@ -244,12 +244,11 @@
   })
 
   // Restore persisted column widths on first mount so the user's splitter
-  // positions survive a reload.
-  let widthsLoaded = false
+  // positions survive a reload. loadPersistedWidths caches its result, so the
+  // assignment below never re-fires.
   $effect(() => {
-    if (widthsLoaded) return
-    widthsLoaded = true
-    columnWidths = resize.loadPersistedWidths() ?? []
+    const persisted = resize.loadPersistedWidths()
+    if (persisted != null) columnWidths = persisted
   })
 
   function handleSortClick(column: DataTableColumn<T>, direction: SortDirection) {

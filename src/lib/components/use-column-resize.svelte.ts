@@ -130,12 +130,18 @@ export function createColumnResize(config: ColumnResizeConfig) {
   function keepTrailingSplitterVisible() {
     const body = getContainer()
     if (!body || resizingCol !== getColumnCount() - 1) return
-    requestAnimationFrame(() => {
-      const maxScroll = body.scrollWidth - body.clientWidth
-      if (maxScroll > body.scrollLeft) {
-        body.scrollLeft = maxScroll
-      }
-    })
+    requestAnimationFrame(scrollTrailingSplitterIntoView)
+  }
+
+  // Pin the trailing splitter at the container's right edge after the new
+  // column widths have been flushed to layout.
+  function scrollTrailingSplitterIntoView() {
+    const body = getContainer()
+    if (!body) return
+    const maxScroll = body.scrollWidth - body.clientWidth
+    if (maxScroll > body.scrollLeft) {
+      body.scrollLeft = maxScroll
+    }
   }
 
   function handleResizeKeydown(event: KeyboardEvent, ci: number) {
@@ -149,6 +155,7 @@ export function createColumnResize(config: ColumnResizeConfig) {
     resizeSiblingTotal =
       ci < getColumnCount() - 1 ? captured[ci] + captured[ci + 1] : null
     applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
+    keepTrailingSplitterVisible()
     resizingCol = null
   }
 
@@ -159,23 +166,22 @@ export function createColumnResize(config: ColumnResizeConfig) {
     // The last keepTrailingSplitterVisible frame may have been skipped once
     // resizingCol cleared; settle the trailing splitter at the right edge.
     if (trailing) {
-      requestAnimationFrame(() => {
-        const body = getContainer()
-        if (!body) return
-        const maxScroll = body.scrollWidth - body.clientWidth
-        if (maxScroll > body.scrollLeft) {
-          body.scrollLeft = maxScroll
-        }
-      })
+      requestAnimationFrame(scrollTrailingSplitterIntoView)
     }
   }
 
   // Restore persisted widths when their column count matches the current grid.
+  // The result is cached: the first call loads from storage and later calls
+  // return the same value, so a consumer can assign the result from a setup
+  // $effect without a local once-flag.
+  let persistedWidths: number[] | null | undefined = undefined
   function loadPersistedWidths(): number[] | null {
-    const storageKey = getStorageKey()
-    if (!storageKey) return null
-    const stored = loadColumnWidths(storageKey)
-    return stored && stored.length === getColumnCount() ? stored : null
+    if (persistedWidths === undefined) {
+      const storageKey = getStorageKey()
+      const stored = storageKey ? loadColumnWidths(storageKey) : null
+      persistedWidths = stored && stored.length === getColumnCount() ? stored : null
+    }
+    return persistedWidths
   }
 
   // Persist resized column widths so the user's splitter positions survive a
