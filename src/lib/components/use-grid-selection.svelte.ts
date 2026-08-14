@@ -3,6 +3,12 @@ import { keyOf, keysInRect, rectOfKeys, columnLetter } from './grid-utils'
 import type { createGridModel } from './use-grid-model.svelte'
 import type { createGridClipboard } from './use-grid-clipboard'
 
+// The cyan color used for the selection outline, applied by recoloring the
+// cell borders that form the grid lines. Exported so the multiline editor
+// overlay can keep its expanded border in the same color while a cell is being
+// edited (the editing cell is always selected).
+export const RANGE_COLOR = 'rgba(34, 211, 238, 0.6)'
+
 type Model = ReturnType<typeof createGridModel>
 type Clipboard = ReturnType<typeof createGridClipboard>
 
@@ -97,8 +103,6 @@ export function createGridSelection(opts: {
   function isCellSelected(ri: number, ci: number): boolean {
     return highlightKeys.has(keyOf(ri, ci))
   }
-
-  const RANGE_COLOR = 'rgba(34, 211, 238, 0.6)'
 
   function cellClass(base: string, ri: number, ci: number): string {
     if (!isCellSelected(ri, ci)) return base

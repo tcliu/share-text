@@ -28,7 +28,9 @@ function colSelector(root: HTMLElement, ci: number): HTMLElement {
 }
 
 function hasCellValue(root: HTMLElement, value: string): boolean {
-  return Array.from(root.querySelectorAll('input')).some(i => (i as HTMLInputElement).value === value)
+  return Array.from(root.querySelectorAll('textarea')).some(
+    i => (i as HTMLTextAreaElement).value === value,
+  )
 }
 
 function expectRangeHighlight(root: HTMLElement, r1: number, c1: number, r2: number, c2: number) {
@@ -119,14 +121,123 @@ describe('DataGrid (reusable grid)', () => {
     const onChange = vi.fn()
     render(DataGrid, { value: [['a'], ['1']], onChange })
     const root = await screen.findByTestId('data-grid')
-    const input = Array.from(root.querySelectorAll('input')).find(
-      i => (i as HTMLInputElement).value === '1',
-    ) as HTMLInputElement
+    const input = Array.from(root.querySelectorAll('textarea')).find(
+      i => (i as HTMLTextAreaElement).value === '1',
+    ) as HTMLTextAreaElement
     input.focus()
     await fireEvent.input(input, { target: { value: '9' } })
     await fireEvent.blur(input)
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
     expect(onChange.mock.calls[0][0]).toEqual([['a'], ['9']])
+  })
+
+  it('Shift+Enter inserts a newline and doubles the cell editor height while editing', async () => {
+    render(DataGrid, { value: [['a'], ['1']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    expect(editor.tagName).toBe('TEXTAREA')
+    editor.focus()
+    await fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+    await fireEvent.input(editor, { target: { value: 'a\nb' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(2))
+    expect(editor.value).toBe('a\nb')
+    expect(document.activeElement).toBe(editor)
+  })
+
+  it('Enter commits a multiline cell, moves to the next row, and restores the single-line height', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, { value: [['a'], ['1']], showHeaders: false, onChange })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    editor.focus()
+    await fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+    await fireEvent.input(editor, { target: { value: 'a\nb' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(2))
+    await fireEvent.keyDown(editor, { key: 'Enter' })
+    await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
+    expect(onChange.mock.calls[0][0]).toEqual([['a\nb'], ['1']])
+    await vi.waitFor(() => expect(editor.rows).toBe(1))
+    expect(editor.value).toBe('a\nb')
+    await vi.waitFor(() => expect(document.activeElement).toBe(boxOf(root, 1, 0)))
+  })
+
+  it('a multiline cell that is not being edited renders at single-line height showing its first line', async () => {
+    render(DataGrid, { value: [['a\nb'], ['1']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    expect(editor.rows).toBe(1)
+    expect(editor.value).toBe('a\nb')
+  })
+
+  it('focusing a cell with existing multiline content grows it to double height while editing', async () => {
+    render(DataGrid, { value: [['a\nb'], ['1']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    expect(editor.rows).toBe(1)
+    editor.focus()
+    await vi.waitFor(() => expect(editor.rows).toBe(2))
+  })
+
+  it('a multiline editor expands as an overlay without moving the rows below', async () => {
+    render(DataGrid, { value: [['a', 'x'], ['1', 'y'], ['2', 'z']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    const below = gridCell(root, 1, 0) as HTMLTextAreaElement
+    editor.focus()
+    await fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+    await fireEvent.input(editor, { target: { value: 'a\nb' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(2))
+    // The editor floats over the rows below instead of growing the row, sized
+    // in single-line units (rows), so no explicit height is set.
+    expect(editor.style.position).toBe('absolute')
+    expect(editor.style.height).toBe('')
+    // The overlay spans the cell's border box and keeps its left/right/bottom
+    // border in the selection outline color, so all expanded lines stay
+    // wrapped in the same blue border as the cell.
+    expect(editor.style.left).toBe('-1px')
+    expect(editor.style.right).toBe('-1px')
+    expect(editor.style.borderLeftWidth).toBe('1px')
+    expect(editor.style.borderRightWidth).toBe('1px')
+    expect(editor.style.borderBottomWidth).toBe('1px')
+    expect(editor.style.borderLeftColor).toBe('rgba(34, 211, 238, 0.6)')
+    expect(editor.style.borderRightColor).toBe('rgba(34, 211, 238, 0.6)')
+    expect(editor.style.borderBottomColor).toBe('rgba(34, 211, 238, 0.6)')
+    expect(boxOf(root, 0, 0).style.position).toBe('relative')
+    expect(boxOf(root, 0, 0).style.zIndex).toBe('20')
+    expect(below.rows).toBe(1)
+  })
+
+  it('a multiline editor grows one line at a time up to 5 lines, then scrolls', async () => {
+    render(DataGrid, { value: [['a', 'x'], ['1', 'y'], ['2', 'z']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    editor.focus()
+    await fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+    // 3 lines: grows to 3 rows, no scrollbar yet.
+    await fireEvent.input(editor, { target: { value: 'a\nb\nc' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(3))
+    expect(editor.style.overflowY).not.toBe('auto')
+    // 5 lines: the cap, still no scrollbar.
+    await fireEvent.input(editor, { target: { value: 'a\nb\nc\nd\ne' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(5))
+    expect(editor.style.overflowY).not.toBe('auto')
+    // 6 lines: capped at 5 rows and scrolls.
+    await fireEvent.input(editor, { target: { value: 'a\nb\nc\nd\ne\nf' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(5))
+    expect(editor.style.overflowY).toBe('auto')
+  })
+
+  it('Escape discards a newline typed into a cell', async () => {
+    render(DataGrid, { value: [['a'], ['1']], showHeaders: false })
+    const root = await screen.findByTestId('data-grid')
+    const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
+    editor.focus()
+    await fireEvent.keyDown(editor, { key: 'Enter', shiftKey: true })
+    await fireEvent.input(editor, { target: { value: 'a\nb' } })
+    await vi.waitFor(() => expect(editor.rows).toBe(2))
+    await fireEvent.keyDown(editor, { key: 'Escape' })
+    await vi.waitFor(() => expect(editor.rows).toBe(1))
+    expect(editor.value).toBe('a')
   })
 
   it('renders an empty state when value is empty', async () => {
@@ -143,7 +254,7 @@ describe('DataGrid (reusable grid)', () => {
       ],
     })
     const root = await screen.findByTestId('data-grid')
-    const first = gridCell(root, 0, 0) as HTMLInputElement
+    const first = gridCell(root, 0, 0) as HTMLTextAreaElement
     first.focus()
     expect(document.activeElement).toBe(first)
     await fireEvent.mouseDown(boxOf(root, 1, 0))
@@ -160,7 +271,7 @@ describe('DataGrid (reusable grid)', () => {
     })
     const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(boxOf(root, 1, 0))
-    const input = gridCell(root, 1, 0) as HTMLInputElement
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
     input.focus()
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     expect(document.activeElement).toBe(input)
@@ -737,7 +848,7 @@ describe('DataGrid (reusable grid)', () => {
       ],
     })
     const root = await screen.findByTestId('data-grid')
-    const input = gridCell(root, 1, 0) as HTMLInputElement
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
     input.focus()
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     await fireEvent.mouseEnter(boxOf(root, 1, 1))
@@ -785,8 +896,8 @@ describe('DataGrid (reusable grid)', () => {
     const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'Delete' })
-    expect((gridCell(root, 1, 0) as HTMLInputElement).value).toBe('')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('2')
+    expect((gridCell(root, 1, 0) as HTMLTextAreaElement).value).toBe('')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('2')
   })
 
   it('Delete clears every cell in a selected range', async () => {
@@ -801,8 +912,8 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseEnter(boxOf(root, 1, 1))
     await fireEvent.mouseUp(window)
     await fireEvent.keyDown(boxOf(root, 1, 1), { key: 'Delete' })
-    expect((gridCell(root, 1, 0) as HTMLInputElement).value).toBe('')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('')
+    expect((gridCell(root, 1, 0) as HTMLTextAreaElement).value).toBe('')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('')
   })
 
   it('Escaping an uncommitted appended row discards it', async () => {
@@ -811,7 +922,7 @@ describe('DataGrid (reusable grid)', () => {
     boxOf(root, 1, 0).focus()
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'ArrowDown' })
     await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 1 columns'))
-    const blank = gridCell(root, 2, 0) as HTMLInputElement
+    const blank = gridCell(root, 2, 0) as HTMLTextAreaElement
     blank.focus()
     await fireEvent.keyDown(blank, { key: 'Escape' })
     await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 1 columns'))
@@ -840,7 +951,7 @@ describe('DataGrid (reusable grid)', () => {
       ],
     })
     const root = await screen.findByTestId('data-grid')
-    const input = gridCell(root, 0, 1) as HTMLInputElement
+    const input = gridCell(root, 0, 1) as HTMLTextAreaElement
     input.focus()
     await fireEvent.input(input, { target: { value: '' } })
     await fireEvent.blur(input)
@@ -852,7 +963,7 @@ describe('DataGrid (reusable grid)', () => {
     const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 1, 0)
     box.focus()
-    await fireEvent.input(gridCell(root, 1, 0) as HTMLInputElement, { target: { value: '' } })
+    await fireEvent.input(gridCell(root, 1, 0) as HTMLTextAreaElement, { target: { value: '' } })
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
     expect(root.textContent).toContain('3 rows · 1 columns')
     expect(hasCellValue(root, '2')).toBe(true)
@@ -861,7 +972,7 @@ describe('DataGrid (reusable grid)', () => {
   it('keeps an emptied row when the input is blurred', async () => {
     render(DataGrid, { value: [['a'], ['1'], ['2']] })
     const root = await screen.findByTestId('data-grid')
-    const input = gridCell(root, 1, 0) as HTMLInputElement
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
     input.focus()
     await fireEvent.input(input, { target: { value: '' } })
     await fireEvent.blur(input)
@@ -949,7 +1060,7 @@ describe('DataGrid (reusable grid)', () => {
     expect(document.activeElement).toBe(boxOf(root, 1, 0))
     expect(boxOf(root, 1, 0).className).toContain('bg-slate-800')
     await fireEvent.dblClick(boxOf(root, 1, 0))
-    const input = gridCell(root, 1, 0) as HTMLInputElement
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(input))
     expect(input.selectionStart).toBe(input.value.length)
     expect(input.selectionEnd).toBe(input.value.length)
@@ -966,7 +1077,7 @@ describe('DataGrid (reusable grid)', () => {
     const box = boxOf(root, 1, 0)
     await fireEvent.mouseDown(box)
     await fireEvent.dblClick(box)
-    const input = gridCell(root, 1, 0) as HTMLInputElement
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(input))
     expect(input.selectionStart).toBe(input.value.length)
     await fireEvent.mouseDown(box)
@@ -997,8 +1108,8 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.keyDown(boxOf(root, 1, 1), { key: 'c', ctrlKey: true })
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'v', ctrlKey: true })
-    expect((gridCell(root, 1, 0) as HTMLInputElement).value).toBe('2')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('2')
+    expect((gridCell(root, 1, 0) as HTMLTextAreaElement).value).toBe('2')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('2')
   })
 
   it('copies and pastes a selected range with Ctrl+C / Ctrl+V', async () => {
@@ -1016,10 +1127,10 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'c', ctrlKey: true })
     await fireEvent.mouseDown(boxOf(root, 0, 1))
     await fireEvent.keyDown(boxOf(root, 0, 1), { key: 'v', ctrlKey: true })
-    expect((gridCell(root, 0, 1) as HTMLInputElement).value).toBe('a')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('1')
-    expect((gridCell(root, 0, 0) as HTMLInputElement).value).toBe('a')
-    expect((gridCell(root, 1, 0) as HTMLInputElement).value).toBe('1')
+    expect((gridCell(root, 0, 1) as HTMLTextAreaElement).value).toBe('a')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('1')
+    expect((gridCell(root, 0, 0) as HTMLTextAreaElement).value).toBe('a')
+    expect((gridCell(root, 1, 0) as HTMLTextAreaElement).value).toBe('1')
   })
 
   it('paste of a copied range into the last row appends a new row', async () => {
@@ -1038,8 +1149,8 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 1, 0))
     await fireEvent.keyDown(boxOf(root, 1, 0), { key: 'v', ctrlKey: true })
     await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 2 columns'))
-    expect((gridCell(root, 1, 0) as HTMLInputElement).value).toBe('a')
-    expect((gridCell(root, 2, 0) as HTMLInputElement).value).toBe('1')
+    expect((gridCell(root, 1, 0) as HTMLTextAreaElement).value).toBe('a')
+    expect((gridCell(root, 2, 0) as HTMLTextAreaElement).value).toBe('1')
   })
 
   it('paste auto-expands columns when the pasted range would overflow the last column', async () => {
@@ -1057,10 +1168,10 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 0, 1))
     await fireEvent.keyDown(boxOf(root, 0, 1), { key: 'v', ctrlKey: true })
     expect(root.textContent).toContain('2 rows · 3 columns')
-    expect((gridCell(root, 0, 1) as HTMLInputElement).value).toBe('a')
-    expect((gridCell(root, 0, 2) as HTMLInputElement).value).toBe('b')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('1')
-    expect((gridCell(root, 1, 2) as HTMLInputElement).value).toBe('2')
+    expect((gridCell(root, 0, 1) as HTMLTextAreaElement).value).toBe('a')
+    expect((gridCell(root, 0, 2) as HTMLTextAreaElement).value).toBe('b')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('1')
+    expect((gridCell(root, 1, 2) as HTMLTextAreaElement).value).toBe('2')
   })
 
   it('copying a disjoint multi-region selection emits the full bounding box and pastes with auto-expansion', async () => {
@@ -1082,13 +1193,13 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 1, 1))
     await fireEvent.keyDown(boxOf(root, 1, 1), { key: 'v', ctrlKey: true })
     expect(root.textContent).toContain('4 rows · 4 columns')
-    expect((gridCell(root, 1, 1) as HTMLInputElement).value).toBe('a')
-    expect((gridCell(root, 1, 2) as HTMLInputElement).value).toBe('b')
-    expect((gridCell(root, 1, 3) as HTMLInputElement).value).toBe('c')
-    expect((gridCell(root, 2, 1) as HTMLInputElement).value).toBe('1')
-    expect((gridCell(root, 2, 3) as HTMLInputElement).value).toBe('3')
-    expect((gridCell(root, 3, 1) as HTMLInputElement).value).toBe('x')
-    expect((gridCell(root, 3, 3) as HTMLInputElement).value).toBe('z')
+    expect((gridCell(root, 1, 1) as HTMLTextAreaElement).value).toBe('a')
+    expect((gridCell(root, 1, 2) as HTMLTextAreaElement).value).toBe('b')
+    expect((gridCell(root, 1, 3) as HTMLTextAreaElement).value).toBe('c')
+    expect((gridCell(root, 2, 1) as HTMLTextAreaElement).value).toBe('1')
+    expect((gridCell(root, 2, 3) as HTMLTextAreaElement).value).toBe('3')
+    expect((gridCell(root, 3, 1) as HTMLTextAreaElement).value).toBe('x')
+    expect((gridCell(root, 3, 3) as HTMLTextAreaElement).value).toBe('z')
   })
 
   it('selecting a row in a single-column grid outlines the row on its borders', async () => {
@@ -1193,7 +1304,7 @@ describe('DataGrid (reusable grid)', () => {
     const root = await screen.findByTestId('data-grid')
     await fireEvent.click(root.querySelector('button[aria-label="Insert row below"]') as HTMLButtonElement)
     await vi.waitFor(() => expect(root.textContent).toContain('3 rows · 1 columns'))
-    const newRow = gridCell(root, 2, 0) as HTMLInputElement
+    const newRow = gridCell(root, 2, 0) as HTMLTextAreaElement
     expect(newRow.value).toBe('')
     await vi.waitFor(() => expect(document.activeElement).toBe(newRow))
   })
@@ -1203,7 +1314,7 @@ describe('DataGrid (reusable grid)', () => {
     const root = await screen.findByTestId('data-grid')
     await fireEvent.click(root.querySelector('button[aria-label="Insert column after"]') as HTMLButtonElement)
     await vi.waitFor(() => expect(root.textContent).toContain('2 rows · 2 columns'))
-    const newHeader = gridCell(root, 0, 1) as HTMLInputElement
+    const newHeader = gridCell(root, 0, 1) as HTMLTextAreaElement
     expect(newHeader.value).toBe('')
     await vi.waitFor(() => expect(document.activeElement).toBe(newHeader))
   })
@@ -1226,8 +1337,8 @@ describe('DataGrid (reusable grid)', () => {
     expect(above.disabled).toBe(false)
     expect(below.disabled).toBe(false)
     await fireEvent.click(above)
-    expect((gridCell(root, 2, 0) as HTMLInputElement).value).toBe('')
-    expect((gridCell(root, 3, 0) as HTMLInputElement).value).toBe('b')
+    expect((gridCell(root, 2, 0) as HTMLTextAreaElement).value).toBe('')
+    expect((gridCell(root, 3, 0) as HTMLTextAreaElement).value).toBe('b')
   })
 
   it('Insert row buttons stay enabled for a data cell selection while a header cell selection keeps them disabled', async () => {
@@ -1253,7 +1364,7 @@ describe('DataGrid (reusable grid)', () => {
     await fireEvent.mouseDown(boxOf(root, 0, 0))
     expect(document.activeElement).toBe(boxOf(root, 0, 0))
     await fireEvent.dblClick(boxOf(root, 0, 0))
-    const input = gridCell(root, 0, 0) as HTMLInputElement
+    const input = gridCell(root, 0, 0) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(input))
     expect(input.selectionStart).toBe(input.value.length)
     expect(input.selectionEnd).toBe(input.value.length)
