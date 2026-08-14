@@ -19,6 +19,7 @@
     autoFocus?: boolean
     recreateKey?: string
     maxContentLength?: number
+    onAutoFocused?: () => void
     onContentChange?: (content: string) => void
   }
 
@@ -32,6 +33,7 @@
     autoFocus = false,
     recreateKey = '',
     maxContentLength = 0,
+    onAutoFocused,
     onContentChange,
   }: Props = $props()
 
@@ -163,6 +165,7 @@
         })
         if (autoFocus) {
           editorView.focus()
+          onAutoFocused?.()
         }
       })
       .catch(error => {

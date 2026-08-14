@@ -8,6 +8,7 @@
   import PencilIcon from '$lib/icons/PencilIcon.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
+  import LinkIcon from '$lib/icons/LinkIcon.svelte'
   import TagsIcon from '$lib/icons/TagsIcon.svelte'
   import SaveIcon from '$lib/icons/SaveIcon.svelte'
   import CloneIcon from '$lib/icons/CloneIcon.svelte'
@@ -90,6 +91,7 @@
   )
 
   let editorRef = $state<{ focus: () => void } | null>(null)
+  let refocusEditor = $state(false)
 
   $effect(() => {
     if (focusOnMount) {
@@ -185,6 +187,19 @@
     }
   }
 
+  async function handleCopyLink() {
+    try {
+      const url = new URL(window.location.href)
+      url.pathname = `/${document.id}`
+      url.search = ''
+      url.hash = ''
+      await navigator.clipboard.writeText(url.toString())
+      toast.success('Link copied to clipboard')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to copy link')
+    }
+  }
+
   function handleExport() {
     const currentType = getDocumentType(docType)
     const blob = new Blob([content], { type: `${currentType.mimeType};charset=utf-8` })
@@ -269,7 +284,12 @@
       variant={previewState.editorActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.editorActive}
       disabled={previewState.editorDisabled}
-      onClick={() => previewState.setEditor(!previewState.editorActive)}>
+      preventFocusSteal
+      onClick={() => {
+        const opening = !previewState.editorActive
+        previewState.setEditor(!previewState.editorActive)
+        if (opening) refocusEditor = true
+      }}>
       {#snippet icon()}
         <PencilIcon />
       {/snippet}
@@ -281,7 +301,12 @@
       variant={previewState.previewActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.previewActive}
       disabled={previewState.previewDisabled}
-      onClick={() => previewState.setPreview(!previewState.previewActive)}>
+      preventFocusSteal
+      onClick={() => {
+        const closing = previewState.previewActive
+        previewState.setPreview(!previewState.previewActive)
+        if (closing) editorRef?.focus()
+      }}>
       {#snippet icon()}
         <EyeIcon />
       {/snippet}
@@ -373,6 +398,11 @@
           <TagsIcon />
         {/snippet}
       </Button>
+      <Button size="sm" ariaLabel="Copy sharable link" tooltip="Copy link" onClick={handleCopyLink}>
+        {#snippet icon()}
+          <LinkIcon />
+        {/snippet}
+      </Button>
     {/if}
     {#if onShare}
       <Button size="sm" ariaLabel="Share" tooltip="Share" onClick={onShare}>
@@ -433,6 +463,7 @@
             ariaLabel="Open document list"
             tooltip="Document list"
             className="shrink-0"
+            preventFocusSteal
             onClick={context.openMobileDrawer}>
             {#snippet icon()}
               {@render menuIcon()}
@@ -518,8 +549,9 @@
           bind:this={editorRef}
           bind:content
           {docType}
-          {editable}
-          autoFocus={focusOnMount}
+{editable}
+          autoFocus={focusOnMount || refocusEditor}
+          onAutoFocused={() => (refocusEditor = false)}
           recreateKey={document.id}
           {maxContentLength}
           containerClass="h-full"

@@ -14,6 +14,7 @@
     ariaPressed?: boolean
     onClick?: (event: MouseEvent) => void
     onKeyDown?: (event: KeyboardEvent) => void
+    preventFocusSteal?: boolean
     ariaLabel?: string
     tooltip?: string
     tooltipAlign?: 'center' | 'left' | 'right'
@@ -31,6 +32,7 @@
     className = '',
     onClick,
     onKeyDown,
+    preventFocusSteal = false,
     ariaLabel,
     tooltip,
     tooltipAlign = 'center',
@@ -78,6 +80,10 @@
     }
     return `${common} border border-slate-700 bg-slate-950 hover:border-slate-500 hover:text-slate-100`
   })
+
+  function handlePreventFocusSteal(event: PointerEvent) {
+    event.preventDefault()
+  }
 </script>
 
 {#snippet buttonInner()}
@@ -97,15 +103,17 @@
   {/if}
 {/snippet}
 
+{#snippet buttonElement()}
+  <button {type} aria-label={ariaLabel} aria-pressed={ariaPressed} onclick={onClick} onkeydown={onKeyDown} onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined} {disabled} class={`${baseClass} ${className}`}>
+    {@render buttonInner()}
+  </button>
+{/snippet}
+
 {#if tooltip}
   <span class="group relative inline-flex">
-    <button {type} aria-label={ariaLabel} aria-pressed={ariaPressed} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
-      {@render buttonInner()}
-    </button>
+    {@render buttonElement()}
     <Tooltip align={tooltipAlign}>{tooltip}</Tooltip>
   </span>
 {:else}
-  <button {type} aria-label={ariaLabel} aria-pressed={ariaPressed} onclick={onClick} onkeydown={onKeyDown} {disabled} class={`${baseClass} ${className}`}>
-    {@render buttonInner()}
-  </button>
+  {@render buttonElement()}
 {/if}

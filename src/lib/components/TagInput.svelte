@@ -211,7 +211,7 @@
           role="option"
           aria-selected={index === activeIndex}
           class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${index === activeIndex ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'}`}
-          onmousedown={e => e.preventDefault()}
+          onpointerdown={e => e.preventDefault()}
           onmouseenter={() => {
             activeIndex = index
             navigated = true

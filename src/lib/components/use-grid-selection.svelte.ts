@@ -98,34 +98,44 @@ export function createGridSelection(opts: {
     return highlightKeys.has(keyOf(ri, ci))
   }
 
-  function selectionBounds(): { r1: number; c1: number; r2: number; c2: number } | null {
-    if (highlightKeys.size === 0) return null
-    return rectOfKeys(highlightKeys)
-  }
+  const RANGE_COLOR = 'rgba(34, 211, 238, 0.6)'
 
   function cellClass(base: string, ri: number, ci: number): string {
     if (!isCellSelected(ri, ci)) return base
-    const b = selectionBounds()
-    if (!b || (b.r2 - b.r1 + 1) * (b.c2 - b.c1 + 1) === 1) {
-      if (s.selectedRows.size > 0 || s.selectedCols.size > 0) {
-        return `${base} bg-slate-800 outline-none`
-      }
-      return `${base} bg-slate-800 outline-none ring-1 ring-inset ring-cyan-500/60`
-    }
     return `${base} bg-slate-800 outline-none`
   }
 
+  // The selection outline is drawn by recoloring the actual cell borders that
+  // form the grid lines, so the cyan line sits exactly on top of the border it
+  // separates (a highlighted cell and a non-highlighted cell). The grid line
+  // between two cells is the right/bottom border of the cell that owns it, so
+  // every data cell colors border-right/border-bottom cyan when its selection
+  // state differs from the adjacent cell's — the outline is the set of grid
+  // lines between the highlighted region and the rest of the grid.
   function rangeHighlightStyle(ri: number, ci: number): string {
-    if (!isCellSelected(ri, ci)) return ''
-    const b = selectionBounds()
-    if (!b || (b.r2 - b.r1 + 1) * (b.c2 - b.c1 + 1) === 1) return ''
-    const color = 'rgba(34, 211, 238, 0.6)'
     const parts: string[] = []
-    if (!isCellSelected(ri - 1, ci)) parts.push(`inset 0 1px 0 0 ${color}`)
-    if (!isCellSelected(ri + 1, ci)) parts.push(`inset 0 -1px 0 0 ${color}`)
-    if (!isCellSelected(ri, ci - 1)) parts.push(`inset 1px 0 0 0 ${color}`)
-    if (!isCellSelected(ri, ci + 1)) parts.push(`inset -1px 0 0 0 ${color}`)
-    return parts.length ? `box-shadow: ${parts.join(', ')}` : ''
+    if (isCellSelected(ri, ci) !== isCellSelected(ri + 1, ci)) parts.push(`border-bottom-color:${RANGE_COLOR}`)
+    if (isCellSelected(ri, ci) !== isCellSelected(ri, ci + 1)) parts.push(`border-right-color:${RANGE_COLOR}`)
+    return parts.join(';')
+  }
+
+  // The column-label row's bottom borders are the grid lines above the
+  // header-data row (or the first data row when headers are off), so they carry
+  // the outline's top edge for a region touching the top of the grid.
+  function labelRowBorderStyle(ci: number): string {
+    return isCellSelected(0, ci) ? `border-bottom-color:${RANGE_COLOR}` : ''
+  }
+
+  // The select-all cell sits above the header-data row's first cell; its bottom
+  // border is the top edge of a region that includes cell (0, 0).
+  function selectAllBorderStyle(): string {
+    return isCellSelected(0, 0) ? `border-bottom-color:${RANGE_COLOR}` : ''
+  }
+
+  // The row-number cells' right borders are the grid lines left of column 0, so
+  // they carry the outline's left edge for a region touching column 0.
+  function rowNumberBorderStyle(ri: number): string {
+    return isCellSelected(ri, 0) ? `border-right-color:${RANGE_COLOR}` : ''
   }
 
   function applyRange(a: { ri: number; ci: number }, b: { ri: number; ci: number }) {
@@ -748,9 +758,11 @@ export function createGridSelection(opts: {
     get highlightKeys() { return highlightKeys },
     get isDragging() { return isDragging },
     isCellSelected,
-    selectionBounds,
     cellClass,
     rangeHighlightStyle,
+    labelRowBorderStyle,
+    selectAllBorderStyle,
+    rowNumberBorderStyle,
     rowSelectorClass,
     columnSelectorClass,
     trClass,

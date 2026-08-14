@@ -65,6 +65,7 @@ Keys:
 | `SESSION_SECRET` | Secret signing the admin session cookie (required in `prod`) |
 | `SCHEMA_NAME` | PostgreSQL schema name for table isolation in `prod` (default `public`) |
 | `DOCUMENT_KEY_LENGTH` | Generated document id character count (default 6, admin changes take effect for new keys immediately) |
+| `MAX_DOCUMENT_VERSIONS` | Max content versions kept per document (default 20, admin-adjustable) |
 
 ## Database Setup
 

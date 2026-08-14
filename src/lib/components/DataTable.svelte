@@ -6,6 +6,7 @@
   import Spinner from './Spinner.svelte'
   import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
   import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
+  import { createColumnResize } from './use-column-resize.svelte'
 
   export type SortDirection = 'asc' | 'desc'
 
@@ -61,6 +62,9 @@
     // Adds draggable (and arrow-key) resize handles to each data column header.
     // Off by default; the selectable checkbox column stays fixed.
     resizable?: boolean
+    // When set, resized column widths are persisted to localStorage under this
+    // key and restored on mount.
+    storageKey?: string
   }
 
   let {
@@ -96,6 +100,7 @@
     onSort,
     sortAriaLabel,
     resizable = false,
+    storageKey,
   }: Props<T> = $props()
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
@@ -191,17 +196,6 @@
   let columnWidths = $state<number[]>([])
   let tableContainer: HTMLElement | null = null
 
-  let resizingCol = $state<number | null>(null)
-  let resizeStartX = $state(0)
-  let resizeStartWidth = $state(0)
-  // Fixed combined width of the two adjacent columns being re-partitioned, or
-  // null when resizing the last column's right edge (table edge).
-  let resizeSiblingTotal = $state<number | null>(null)
-  // Frame-throttled drag state: only the latest pointer X is applied per
-  // animation frame so mousemove bursts don't thrash layout.
-  let pendingResizeFrame = false
-  let latestResizeX = 0
-
   const managedWidths = $derived(resizable && columnWidths.length > 0)
 
   const totalWidth = $derived.by(() => {
@@ -222,82 +216,18 @@
     return th?.offsetWidth ?? MIN_COLUMN_WIDTH
   }
 
-  function captureAllWidths(): number[] {
-    const widths: number[] = []
-    for (let i = 0; i < columns.length; i++) {
-      widths.push(columnWidths[i] ?? getColumnCellWidth(i))
-    }
-    return widths
-  }
-
-  function startColumnResize(event: MouseEvent, i: number) {
-    event.preventDefault()
-    event.stopPropagation()
-    resizingCol = i
-    resizeStartX = event.clientX
-    const widths = captureAllWidths()
-    resizeStartWidth = widths[i]
-    resizeSiblingTotal = i < columns.length - 1 ? widths[i] + widths[i + 1] : null
-    columnWidths = widths
-  }
-
-  function applyResizeDiff(diff: number) {
-    if (resizingCol === null) return
-    const i = resizingCol
-    if (resizeSiblingTotal != null) {
-      const newWidth = Math.max(
-        columnMinWidth(i),
-        Math.min(resizeSiblingTotal - columnMinWidth(i + 1), resizeStartWidth + diff),
-      )
-      columnWidths[i] = newWidth
-      columnWidths[i + 1] = resizeSiblingTotal - newWidth
-    } else {
-      let newWidth = Math.max(columnMinWidth(i), resizeStartWidth + diff)
-      if (newWidth < resizeStartWidth && tableContainer) {
-        let others = 0
-        for (let j = 0; j < columns.length; j++) {
-          if (j !== i) others += columnWidths[j]
-        }
-        const selectWidth = selectable ? SELECT_COLUMN_WIDTH : 0
-        const fillWidth = Math.max(
-          columnMinWidth(i),
-          tableContainer.clientWidth - selectWidth - others,
-        )
-        newWidth = Math.max(newWidth, Math.min(fillWidth, resizeStartWidth))
-      }
-      columnWidths[i] = newWidth
-    }
-  }
-
-  function handleResizeMouseMove(event: MouseEvent) {
-    if (resizingCol === null) return
-    latestResizeX = event.clientX
-    if (pendingResizeFrame) return
-    pendingResizeFrame = true
-    requestAnimationFrame(() => {
-      pendingResizeFrame = false
-      if (resizingCol === null) return
-      applyResizeDiff(latestResizeX - resizeStartX)
-    })
-  }
-
-  function handleResizeKeydown(event: KeyboardEvent, i: number) {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    event.preventDefault()
-    event.stopPropagation()
-    const widths = captureAllWidths()
-    columnWidths = widths
-    resizingCol = i
-    resizeStartWidth = widths[i]
-    resizeSiblingTotal = i < columns.length - 1 ? widths[i] + widths[i + 1] : null
-    applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
-    resizingCol = null
-  }
-
-  function handleResizeMouseUp() {
-    resizingCol = null
-    pendingResizeFrame = false
-  }
+  const resize = createColumnResize({
+    getColumnCount: () => columns.length,
+    getContainer: () => tableContainer,
+    getColumnWidths: () => columnWidths,
+    setColumnWidths: (widths: number[]) => {
+      columnWidths = widths
+    },
+    getColumnCellWidth,
+    getMinWidth: columnMinWidth,
+    getFillWidthOffset: () => (selectable ? SELECT_COLUMN_WIDTH : 0),
+    getStorageKey: () => storageKey,
+  })
 
   // Keep columnWidths aligned with the current column count whenever the
   // `columns` prop changes while the table is in managed mode.
@@ -313,6 +243,14 @@
     columnWidths = next
   })
 
+  // Restore persisted column widths on first mount so the user's splitter
+  // positions survive a reload. loadPersistedWidths caches its result, so the
+  // assignment below never re-fires.
+  $effect(() => {
+    const persisted = resize.loadPersistedWidths()
+    if (persisted != null) columnWidths = persisted
+  })
+
   function handleSortClick(column: DataTableColumn<T>, direction: SortDirection) {
     if (!column.sortable) {
       return
@@ -323,7 +261,7 @@
   }
 </script>
 
-<svelte:window onmouseup={handleResizeMouseUp} onmousemove={handleResizeMouseMove} />
+<svelte:window onmouseup={resize.handleResizeMouseUp} onmousemove={resize.handleResizeMouseMove} />
 
 <div class="flex flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
   <SearchInput
@@ -400,8 +338,8 @@
                   class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                   style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
                   aria-label={`Resize ${column.header} column`}
-                  onmousedown={event => startColumnResize(event, i)}
-                  onkeydown={event => handleResizeKeydown(event, i)}></button>
+                  onmousedown={event => resize.startColumnResize(event, i)}
+                  onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
               {/if}
             </th>
           {/each}

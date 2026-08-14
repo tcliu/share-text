@@ -9,6 +9,7 @@
     autoFocus?: boolean
     recreateKey?: string
     maxContentLength?: number
+    onAutoFocused?: () => void
     onContentChange?: (content: string) => void
   }
 
@@ -22,6 +23,7 @@
     autoFocus = false,
     recreateKey = '',
     maxContentLength = 0,
+    onAutoFocused,
     onContentChange,
   }: Props = $props()
 
@@ -71,6 +73,7 @@
     {autoFocus}
     {recreateKey}
     {maxContentLength}
+    onAutoFocused={onAutoFocused}
     onContentChange={handleContentChange}></EditorComponent>
 {:else}
   <div class={containerClass}>

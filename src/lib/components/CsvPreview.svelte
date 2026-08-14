@@ -34,4 +34,4 @@
   }
 </script>
 
-<DataGrid value={parsedRows} onChange={handleChange} testId="csv-preview" />
+<DataGrid value={parsedRows} onChange={handleChange} testId="csv-preview" storageKey="csv-preview" />
