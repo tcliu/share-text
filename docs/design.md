@@ -51,6 +51,11 @@ The page is split into two vertical panes.
     - a footer with the last-updated timestamp, updating-by IP, refreshing
       indicator, and character count (with limit).
 
+- When the `DEV_TAG` environment variable is set (in the local `.env.dev` of a
+  feature worktree), a small sticky rectangular block appears at the bottom left
+  of the browser showing the tag value, marking which worktree's changes the
+  current build belongs to. It renders on every page and has no close button.
+
 ### Responsive layout
 
 On screens narrower than the `md` breakpoint (767px) the two panes stop being
