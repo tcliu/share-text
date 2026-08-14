@@ -6,7 +6,7 @@ Read this `AGENTS.md` and the applicable shared reference files under `$AI_CONFI
 
 ## Project conventions
 
-- Code changes are applied in a separate git branch and worktree under `.worktrees/` per the shared `references/git.md` worktree practice, unless the user opts to apply them on top of the current worktree. A new worktree needs the gitignored local dev files copied from the default worktree: `.env.dev` and the SQLite database `.data/share-text-dev.sqlite` (copy the file, not just the empty `.data/` directory).
+- Code changes are applied in a separate git branch and worktree under `.worktrees/` per the shared `references/git.md` worktree practice, unless the user opts to apply them on top of the current worktree. Create worktrees with `node scripts/create-worktree.mjs <branch>` from the default worktree; it copies the gitignored local dev files (`.env.dev` and all files under `.data/`) and sets `DEV_TAG=<branch>` in the new worktree's `.env.dev` so the bottom-left worktree-tag block identifies the branch.
 - Server persistence goes through the `Db` interface (`src/lib/server/db-types.ts`), writing engine-agnostic SQL with `$n` placeholders and `current_timestamp` so DDL stays portable across adapters. Follow the SQL conventions in `references/sql.md` (including binding a placeholder once per occurrence).
 - Mutations are logged via `$lib/server/logging` with key identifying info (document id, name, size, IP, `elapsed_ms`).
 - Document tags are stored as a JSON array of `{ name, color }` objects in the `documents.tags` column; `color` must be one of the hex `TAG_COLORS` in `src/lib/tag-colors.ts`, and chips/dropdowns render via the `tagChipStyle`/`tagDotStyle` inline-style helpers there (class helpers `tagChipClass`/`tagDotClass` carry the non-colour base styles). Tag badges render with the `Chip` component (`src/lib/components/Chip.svelte`).
@@ -44,3 +44,5 @@ npm run check
 npm run build
 npm test
 ```
+
+Then review the change with the `code-review` skill — reporting findings with severity, location, rule, and fix — before presenting it as done.

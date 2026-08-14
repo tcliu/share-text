@@ -322,7 +322,10 @@ pane header shows a Login button after the Refresh button that navigates to
 
 - The editor is CodeMirror 6, lazy-loaded via `LazyCodeEditor` (dynamic
   `import()`) so the initial route bundle stays small. A transaction filter caps
-  document length at `maxContentLength`.
+  document length at `maxContentLength` for user edits, composing the truncation
+  sequentially so it stays valid against the edit's base doc; programmatic
+  content syncs (`filter: false`) bypass the filter so loading a document that
+  exceeds the limit never truncates it or marks it dirty.
 - `DocumentEditorPane.svelte` orchestrates the toolbar, CodeMirror editor, and
   preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
@@ -544,8 +547,22 @@ History (clock) button in the editor toolbar. Clicking it opens `HistoryDialog`:
 
 Writes are last-write-wins with no conflict detection or merge.
 
+## Dev Environment Tag
+
+- `DEV_TAG` (default unset) is read by the root `+layout.server.ts` load from
+  `process.env` like other env vars (loaded into `process.env` in dev from the
+  local `.env`/`.env.local`/`.env.dev` files by `vite.config.ts` at startup, so
+  it takes effect on the next dev-server start). When set, the root
+  `+layout.svelte` renders a sticky rectangular block at the bottom left of the
+  browser showing the tag value, marking which worktree's changes the current
+  build belongs to. Production builds are unaffected when unset.
+
 ## Scripts
 
+- `scripts/create-worktree.mjs <branch>` creates a feature worktree: it runs
+  `git worktree add .worktrees/<branch> -b <branch>`, copies the gitignored
+  local dev files from the default worktree (`.env.dev` and all files under
+  `.data/`), and sets `DEV_TAG=<branch>` in the new worktree's `.env.dev`.
 - `scripts/apply-schema.mjs` applies `sql/schema.sql` to the dev SQLite database
   or, under `PROFILE=prod`, to the PostgreSQL database.
 - `scripts/recreate-schema.mjs` drops and recreates the schema. In `prod` mode
