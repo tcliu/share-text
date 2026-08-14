@@ -422,6 +422,42 @@ interaction inside it behaves like a normal text input (caret placement /
 in-cell text selection); grid range-dragging only works from a non-editing
 cell.
 
+Cells are editable as multiline text. Each cell editor is a `<textarea>`
+(`<input>` cannot hold `\n`) styled identically to a single-line input. While
+editing, `Shift+Enter` inserts a newline (the default textarea behavior, left
+unintercepted); a plain `Enter` commits and moves down as before. Non-edited
+cells always render `rows=1` with `overflow-hidden` and `wrap="off"`, so a
+multiline value displays its first line in the normal-height cell. While a body
+cell is being edited and its value contains a newline — tracked via a
+component-level `editingCell` `$state` set on focus and cleared on blur — its
+editor becomes a
+floating overlay so the rest of the grid keeps its layout: the `textarea` is
+positioned absolutely (`top:0;left:-1px;right:-1px;width:auto`, no explicit
+height) — the `left/right:-1px` make it span the cell's border box — and it
+carries the cell's left/right/bottom border in the selection-outline color
+(`RANGE_COLOR`, exported from `use-grid-selection.svelte`), so the expanded
+lines stay wrapped in the same blue border as the cell while it is being edited
+(the editing cell is always selected). The left border is needed because the
+base row's left grid line is the neighboring cell's border, which is only one
+row tall; without the overlay's own left border, the expanded area below the
+base row would lose its blue wrap on that side. The top edge stays the
+neighbor cell's border (colored by the selection outline), since the overlay
+starts at the cell's top. The owning `td` keeps the same
+`position:relative;z-index:20`, so the overlay paints on top of the rows below
+instead of growing the row. The overlay grows
+one line at a time in the same units as a single-line cell: its `rows`
+attribute is `min(lineCount, 5)` where `lineCount` is the number of newline-
+separated lines in the current value, so each line uses the single-line cell's
+line height; once the value exceeds 5 lines the editor switches to
+`overflow-y:auto` and stays capped at a 5-line block instead of growing
+further. The moment the value loses its newline or the cell loses focus the
+editor returns to the in-flow single-line height. Header-row editors keep
+`rows=2` growth instead of the overlay because the header band is a fixed-
+height band whose wrapper clips any absolutely positioned child. Pressing
+`Enter` (or blurring) returns the cell to single-line height. CSV and
+properties serialization already round-trips embedded newlines (papaparse
+quotes fields), so multiline cells survive the preview content feedback.
+
 ### DataGrid Column Resize
 
 `DataGrid` supports per-column width control. Its immediate consumer is the

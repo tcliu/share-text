@@ -2,7 +2,7 @@
   import { tick } from 'svelte'
   import Button from './Button.svelte'
   import { createGridModel } from './use-grid-model.svelte'
-  import { createGridSelection, createInitialSelectionState } from './use-grid-selection.svelte'
+  import { createGridSelection, createInitialSelectionState, RANGE_COLOR } from './use-grid-selection.svelte'
   import { createGridClipboard } from './use-grid-clipboard'
   import { createAutoScroll } from './use-grid-autoscroll.svelte'
   import { columnLetter } from './grid-utils'
@@ -70,6 +70,25 @@
   // Width given to a freshly inserted column in managed mode, matching the
   // auto-width `min-w-32` floor.
   const DEFAULT_COLUMN_WIDTH = 128
+  // The tallest an editing multiline cell may grow; beyond this the editor
+  // scrolls vertically.
+  const EDITOR_MAX_LINES = 5
+  // While a multiline cell is being edited, its editor floats as an overlay
+  // anchored to the cell, so the row never grows and the rest of the grid
+  // keeps its layout. Height is driven by the `rows` attribute, so every line
+  // matches a single-line cell's line height. The overlay spans the cell's
+  // border box (`left/right:-1px` against the padding box reach the border-box
+  // left/right edges) and carries the cell's own right/bottom border plus a
+  // left border in the selection outline color (the editing cell is always
+  // selected), so the expanded lines stay wrapped in the same blue border as
+  // the cell on every side — the base row's top/left grid lines come from the
+  // neighboring cells, but the expanded area below the base row would otherwise
+  // fall outside them.
+  const EDITOR_OVERLAY_STYLE =
+    `position:absolute;top:0;left:-1px;right:-1px;width:auto;border-left:1px solid ${RANGE_COLOR};border-right:1px solid ${RANGE_COLOR};border-bottom:1px solid ${RANGE_COLOR};`
+  // Appended to EDITOR_OVERLAY_STYLE when the editing value exceeds
+  // EDITOR_MAX_LINES, so the overlay scrolls instead of growing further.
+  const EDITOR_OVERLAY_SCROLL_STYLE = 'overflow-y:auto;'
 
   // Column widths in pixels. Empty array means auto-width (min-w-32 fallback).
   let columnWidths = $state<number[]>([])
@@ -132,12 +151,19 @@
     committed: true,
   }
 
+  // The cell whose editor currently has focus. Multiline cells grow to double
+  // height only while being edited; on commit/blur they return to single-line.
+  let editingCell = $state<{ ri: number; ci: number } | null>(null)
+  function isCellEditing(ri: number, ci: number): boolean {
+    return editingCell?.ri === ri && editingCell?.ci === ci
+  }
+
   function gridEl<T extends Element>(selector: string): T | null {
     return rootEl?.querySelector<T>(selector) ?? null
   }
 
-  function cellInputEl(ri: number, ci: number): HTMLInputElement | null {
-    return gridEl<HTMLInputElement>(`input[data-row="${ri}"][data-col="${ci}"]`)
+  function cellInputEl(ri: number, ci: number): HTMLTextAreaElement | null {
+    return gridEl<HTMLTextAreaElement>(`[data-row="${ri}"][data-col="${ci}"]`)
   }
 
   const focus = {
@@ -363,12 +389,16 @@
     return `width:${w}px;min-width:${w}px;`
   }
 
-  function cellStyles(ci: number, highlightStyle: string): string {
+  // `expanded` marks a cell whose editor is a multiline overlay: the cell is
+  // positioned and raised so the absolute editor paints on top of the rows
+  // below instead of growing the row.
+  function cellStyles(ci: number, highlightStyle: string, expanded: boolean): string {
     const ws = columnWidthStyle(ci)
-    if (!ws && !highlightStyle) return ''
+    if (!ws && !highlightStyle && !expanded) return ''
     const parts: string[] = []
     if (ws) parts.push(ws)
     if (highlightStyle) parts.push(highlightStyle)
+    if (expanded) parts.push('position:relative;z-index:20;')
     return parts.join(';')
   }
 
@@ -382,6 +412,7 @@
     const cell = model.rows[ri]?.cells[ci]
     editSnapshot = { ri, ci, value: cell?.value ?? '', committed: cell?.committed ?? true }
     sel.setActiveCell(ri, ci)
+    editingCell = { ri, ci }
   }
 
   function handleInputKeydown(event: KeyboardEvent, ri: number, ci: number) {
@@ -403,11 +434,14 @@
         focus.cellInput(ri - 1, model.columnCount - 1)
         return
       }
+    } else if (event.key === 'Enter' && event.shiftKey) {
+      // Insert a newline (default textarea behavior); the oninput handler
+      // persists it and the cell grows to double height.
     } else if (event.key === 'Enter') {
       event.preventDefault()
       const nextRi = Math.min(model.rowCount - 1, ri + 1)
       sel.setActiveCell(nextRi, ci)
-      ;(event.target as HTMLInputElement).blur()
+      ;(event.target as HTMLTextAreaElement).blur()
       tick().then(() => focus.cellBox(nextRi, ci))
     } else if (event.key === 'Escape') {
       event.preventDefault()
@@ -416,7 +450,7 @@
         cell.value = editSnapshot.value
         cell.committed = editSnapshot.committed
       }
-      ;(event.target as HTMLInputElement).blur()
+      ;(event.target as HTMLTextAreaElement).blur()
       model.pruneTrailingPendingRows(ri - 1)
       model.pruneTrailingPendingColumns(ci - 1)
       const target = model.rows[ri] ? ri : ri - 1
@@ -439,6 +473,7 @@
   }
 
   function handleBodyBlur() {
+    editingCell = null
     model.flushCommit()
   }
 
@@ -696,17 +731,19 @@
                       0,
                       ci,
                     )}
-                    style={cellStyles(ci, sel.rangeHighlightStyle(0, ci))}
+                    style={cellStyles(ci, sel.rangeHighlightStyle(0, ci), false)}
                     tabindex="-1"
                     onmousedown={event => sel.handleCellMousedown(event, 0, ci)}
                     ondblclick={event => sel.handleCellDoubleClick(event, 0, ci)}
                     onmouseenter={() => sel.handleCellMouseOver(0, ci)}
                     onkeydown={event => sel.handleBoxKeydown(event, 0, ci)}
                     onpaste={event => handleBoxPaste(event, 0, ci)}>
-                    <input
+                    <textarea
                       data-row={0}
                       data-col={ci}
-                      class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-cyan-500/70"
+                      rows={isCellEditing(0, ci) && cell.value.includes('\n') ? 2 : 1}
+                      wrap="off"
+                      class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
                       value={cell.value}
                       oninput={event => model.setValue(0, ci, event.currentTarget.value)}
                       onfocus={() => {
@@ -714,7 +751,7 @@
                         focus.cellInputAtEnd(0, ci)
                       }}
                       onblur={() => handleBodyBlur()}
-                      onkeydown={event => handleInputKeydown(event, 0, ci)} />
+                      onkeydown={event => handleInputKeydown(event, 0, ci)}></textarea>
                   </th>
                 {/each}
               </tr>
@@ -759,6 +796,9 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
                     <span class="px-1.5 text-xs text-slate-500">{ri + 1}</span>
                   </td>
                   {#each row.cells as cell, ci (cell.id)}
+                    {@const lineCount = cell.value.split('\n').length}
+                    {@const expanded = isCellEditing(actualRi, ci) && lineCount > 1}
+                    {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <td
                       role="gridcell"
@@ -769,22 +809,27 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
                         actualRi,
                         ci,
                       )}
-                      style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci))}
+                      style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci), expanded)}
                       tabindex="-1"
                       onmousedown={event => sel.handleCellMousedown(event, actualRi, ci)}
                       ondblclick={event => sel.handleCellDoubleClick(event, actualRi, ci)}
                       onmouseenter={() => sel.handleCellMouseOver(actualRi, ci)}
                       onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
                       onpaste={event => handleBoxPaste(event, actualRi, ci)}>
-                      <input
+                      <textarea
                         data-row={actualRi}
                         data-col={ci}
-                        class="w-full border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800 focus:ring-1 focus:ring-cyan-500/70"
+                        rows={expanded ? editorLines : 1}
+                        wrap="off"
+                        class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
+                        style={expanded
+                          ? EDITOR_OVERLAY_STYLE + (lineCount > EDITOR_MAX_LINES ? EDITOR_OVERLAY_SCROLL_STYLE : '')
+                          : ''}
                         value={cell.value}
                         oninput={event => model.setValue(actualRi, ci, event.currentTarget.value)}
                         onfocus={() => handleInputFocus(actualRi, ci)}
                         onblur={() => handleBodyBlur()}
-                        onkeydown={event => handleInputKeydown(event, actualRi, ci)} />
+                        onkeydown={event => handleInputKeydown(event, actualRi, ci)}></textarea>
                     </td>
                   {/each}
                 </tr>

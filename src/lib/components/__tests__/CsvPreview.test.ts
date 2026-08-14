@@ -12,7 +12,7 @@ function headerCell(root: HTMLElement, text: string): HTMLElement {
   const rows = Array.from(root.querySelectorAll('thead tr, tbody tr') as NodeListOf<HTMLElement>)
   for (const row of rows) {
     const cell = Array.from(row.querySelectorAll('td, th') as NodeListOf<HTMLElement>).find(
-      t => (t.querySelector('input') as HTMLInputElement)?.value === text,
+      t => (t.querySelector('textarea') as HTMLTextAreaElement)?.value === text,
     )
     if (cell) return cell
   }
@@ -22,20 +22,26 @@ function headerCell(root: HTMLElement, text: string): HTMLElement {
 function selectorCellOfRow(root: HTMLElement, rowText: string): HTMLElement {
   const rows = Array.from(root.querySelectorAll('thead tr, tbody tr') as NodeListOf<HTMLElement>)
   const row = rows.find(r =>
-    Array.from(r.querySelectorAll('input')).some(i => (i as HTMLInputElement).value === rowText),
+    Array.from(r.querySelectorAll('textarea')).some(
+      i => (i as HTMLTextAreaElement).value === rowText,
+    ),
   )
   if (!row) throw new Error(`row with "${rowText}" not found`)
   return row.querySelector('td, th') as HTMLElement
 }
 
-function cellInput(root: HTMLElement, value: string): HTMLInputElement {
-  const input = Array.from(root.querySelectorAll('input')).find(i => (i as HTMLInputElement).value === value)
+function cellInput(root: HTMLElement, value: string): HTMLTextAreaElement {
+  const input = Array.from(root.querySelectorAll('textarea')).find(
+    i => (i as HTMLTextAreaElement).value === value,
+  )
   if (!input) throw new Error(`input with value "${value}" not found`)
-  return input as HTMLInputElement
+  return input as HTMLTextAreaElement
 }
 
 function hasCellValue(root: HTMLElement, value: string): boolean {
-  return Array.from(root.querySelectorAll('input')).some(i => (i as HTMLInputElement).value === value)
+  return Array.from(root.querySelectorAll('textarea')).some(
+    i => (i as HTMLTextAreaElement).value === value,
+  )
 }
 
 function allRows(root: HTMLElement): HTMLElement[] {
@@ -196,7 +202,7 @@ describe('CsvPreview (custom grid)', () => {
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
     expect(emitted).toBe('')
-    const newCell = gridCell(root, 2, 0) as HTMLInputElement
+    const newCell = gridCell(root, 2, 0) as HTMLTextAreaElement
     newCell.focus()
     await fireEvent.input(newCell, { target: { value: 'Charlie' } })
     await fireEvent.blur(newCell)
@@ -219,7 +225,7 @@ describe('CsvPreview (custom grid)', () => {
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
-    const newCell = gridCell(root, 2, 0) as HTMLInputElement
+    const newCell = gridCell(root, 2, 0) as HTMLTextAreaElement
     newCell.focus()
     await fireEvent.input(newCell, { target: { value: 'Charlie' } })
     await fireEvent.blur(newCell)
@@ -273,7 +279,7 @@ describe('CsvPreview (custom grid)', () => {
     const root = await screen.findByTestId('csv-preview')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert row below' }))
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
-    const newRow = gridCell(root, 2, 0) as HTMLInputElement
+    const newRow = gridCell(root, 2, 0) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(newRow))
   })
 
@@ -282,7 +288,7 @@ describe('CsvPreview (custom grid)', () => {
     const root = await screen.findByTestId('csv-preview')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
     await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
-    const newHeader = gridCell(root, 0, 2) as HTMLInputElement
+    const newHeader = gridCell(root, 0, 2) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(newHeader))
   })
 
@@ -302,7 +308,7 @@ describe('CsvPreview (custom grid)', () => {
   it('navigates between cells with Tab / Shift+Tab', async () => {
     render(CsvPreview, { content: 'a,b,c\n1,2,3\n4,5,6' })
     const root = await screen.findByTestId('csv-preview')
-    const cell = (r: number, c: number) => root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLInputElement
+    const cell = (r: number, c: number) => root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLTextAreaElement
 
     cell(0, 0).focus()
     fireEvent.keyDown(cell(0, 0), { key: 'Tab' })
@@ -316,7 +322,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Enter finishes editing, moves the selection to (r+1, c) as non-editing cell', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
     const root = await screen.findByTestId('csv-preview')
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
+    const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     c00.focus()
     await fireEvent.input(c00, { target: { value: 'edited' } })
     await fireEvent.keyDown(c00, { key: 'Enter' })
@@ -331,7 +337,7 @@ describe('CsvPreview (custom grid)', () => {
     const c00Box = boxOf(root, 0, 0)
     c00Box.focus()
     await fireEvent.keyDown(c00Box, { key: 'Enter' })
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
+    const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     expect(document.activeElement).toBe(c00)
     await fireEvent.input(c00, { target: { value: 'done' } })
     await fireEvent.keyDown(c00, { key: 'Enter' })
@@ -342,7 +348,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Enter on the last row just confirms and stays non-editing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
     const root = await screen.findByTestId('csv-preview')
-    const last = gridCell(root, 1, 0) as HTMLInputElement
+    const last = gridCell(root, 1, 0) as HTMLTextAreaElement
     last.focus()
     await fireEvent.input(last, { target: { value: 'edited' } })
     await fireEvent.keyDown(last, { key: 'Enter' })
@@ -357,7 +363,7 @@ describe('CsvPreview (custom grid)', () => {
     const box = boxOf(root, 0, 0)
     box.focus()
     await fireEvent.keyDown(box, { key: 'x' })
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
+    const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     expect(c00.value).toBe('x')
     expect(document.activeElement).toBe(c00)
   })
@@ -368,7 +374,7 @@ describe('CsvPreview (custom grid)', () => {
     const box = boxOf(root, 0, 0)
     const text = 'hello'
     await fireEvent.paste(box, { clipboardData: { getData: () => text } })
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
+    const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     expect(c00.value).toBe('hello')
     expect(document.activeElement).toBe(c00)
   })
@@ -376,7 +382,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Esc in edit mode discards the change and returns to non-editing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
     const root = await screen.findByTestId('csv-preview')
-    const c00 = gridCell(root, 0, 0) as HTMLInputElement
+    const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     c00.focus()
     await fireEvent.input(c00, { target: { value: 'changed' } })
     expect(c00.value).toBe('changed')
@@ -428,7 +434,7 @@ describe('CsvPreview (custom grid)', () => {
     const root = await screen.findByTestId('csv-preview')
     await fireEvent.mouseDown(headerCell(root, 'name'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column before' }))
-    const newInput = gridCell(root, 0, 0) as HTMLInputElement
+    const newInput = gridCell(root, 0, 0) as HTMLTextAreaElement
     await vi.waitFor(() => expect(document.activeElement).toBe(newInput))
   })
 
