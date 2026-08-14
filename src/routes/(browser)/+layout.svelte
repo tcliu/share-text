@@ -20,7 +20,6 @@
   import {
     loadSplitPaneWidth,
     saveSplitPaneWidth,
-    SPLIT_PANE_DEFAULT_WIDTH,
     SPLIT_PANE_MAX_WIDTH,
     SPLIT_PANE_MIN_WIDTH,
   } from '$lib/split-pane'
@@ -37,14 +36,10 @@
   let selectedDocumentRefreshToken = $state(0)
   let deleteTarget = $state<string | null>(null)
   let leftPaneCollapsed = $state(false)
-  let leftPaneWidth = $state(SPLIT_PANE_DEFAULT_WIDTH)
+  let leftPaneWidth = $state(loadSplitPaneWidth())
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
   let editorFocus = $state<(() => void) | null>(null)
   let mobileDrawerOpen = $state(false)
-
-  $effect(() => {
-    leftPaneWidth = loadSplitPaneWidth()
-  })
 
   const selectedId = $derived($page.params.id ?? null)
   const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
