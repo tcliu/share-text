@@ -322,7 +322,10 @@ pane header shows a Login button after the Refresh button that navigates to
 
 - The editor is CodeMirror 6, lazy-loaded via `LazyCodeEditor` (dynamic
   `import()`) so the initial route bundle stays small. A transaction filter caps
-  document length at `maxContentLength`.
+  document length at `maxContentLength` for user edits, composing the truncation
+  sequentially so it stays valid against the edit's base doc; programmatic
+  content syncs (`filter: false`) bypass the filter so loading a document that
+  exceeds the limit never truncates it or marks it dirty.
 - `DocumentEditorPane.svelte` orchestrates the toolbar, CodeMirror editor, and
   preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { EditorState, EditorSelection, type Extension } from '@codemirror/state'
+  import { EditorState, type Extension } from '@codemirror/state'
   import { EditorView, keymap, lineNumbers } from '@codemirror/view'
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
@@ -8,6 +8,7 @@
   import { search, searchKeymap } from '@codemirror/search'
   import { githubDark } from '@uiw/codemirror-theme-github'
   import { getDocumentType } from '$lib/document-types'
+  import { maxContentLengthFilter } from './code-editor-max-content'
 
   interface Props {
     content: string
@@ -60,20 +61,7 @@
       indentUnit.of('  '),
       EditorState.tabSize.of(2),
       EditorView.lineWrapping,
-      EditorState.transactionFilter.of(tr => {
-        if (!tr.docChanged || maxContentLength <= 0 || tr.newDoc.length <= maxContentLength) {
-          return tr
-        }
-        const insert = tr.newDoc.toString().slice(0, maxContentLength)
-        return [
-          tr,
-          {
-            changes: { from: 0, to: tr.newDoc.length, insert },
-            selection: EditorSelection.single(maxContentLength),
-            scrollIntoView: true,
-          },
-        ]
-      }),
+      maxContentLengthFilter(maxContentLength),
       EditorView.theme({
         '&': {
           height: '100%',
@@ -136,6 +124,7 @@
     if (current === nextContent) return
     editorView.dispatch({
       changes: { from: 0, to: current.length, insert: nextContent },
+      filter: false,
     })
   }
 
