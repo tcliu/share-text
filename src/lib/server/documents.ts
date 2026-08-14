@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
 import { isUniqueViolation } from './db-errors'
+import { toIsoString } from './iso-string'
 import { logEvent } from './logging'
+import { appendSearchConditions } from './sql-search'
 import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './settings'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
 import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
@@ -233,42 +235,8 @@ export function toDocument(row: DocumentRow): Document {
   }
 }
 
-function toIsoString(value: Date | string) {
-  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
-}
-
 function runQuery<T>(sql: string, params: unknown[] = []) {
   return getDb().then(db => db.query<T>(sql, params))
-}
-
-/**
- * Appends a case-insensitive substring search condition across the requested
- * searchable columns. Uses leading-wildcard LIKE patterns which defeat B-tree
- * index scans. Acceptable for SQLite (no trigram index available) and
- * small-to-medium Postgres datasets. For large Postgres deployments, add a
- * pg_trgm GIN index on the searchable columns.
- */
-function appendSearchConditions(options: {
-  search: string
-  searchKeys: string[]
-  columns: Record<string, string>
-  conditions: string[]
-  params: unknown[]
-}) {
-  const { search, searchKeys, columns, conditions, params } = options
-  const searchColumns = (searchKeys.length > 0 ? searchKeys : ['name'])
-    .map(key => columns[key])
-    .filter((column): column is string => Boolean(column))
-  if (searchColumns.length === 0) {
-    conditions.push('1 = 0')
-    return
-  }
-  const likeClauses: string[] = []
-  for (const column of searchColumns) {
-    params.push(`%${search.toLowerCase()}%`)
-    likeClauses.push(`lower(${column}) like $${params.length}`)
-  }
-  conditions.push(`(${likeClauses.join(' or ')})`)
 }
 
 export interface FetchDocumentSummariesOptions {
@@ -280,11 +248,14 @@ export interface FetchDocumentSummariesOptions {
 }
 
 export interface FetchDocumentSummariesResult {
-  documents: Array<DocumentSummary & { owned: boolean; editable: boolean }>
+  documents: Array<DocumentSummary & { owned: boolean; editable: boolean; isPublic: boolean }>
   hasMore: boolean
 }
 
 function appendVisibilityCondition(viewer: Viewer | undefined, conditions: string[], params: unknown[]) {
+  if (viewer?.type === 'admin') {
+    return
+  }
   if (viewer?.type === 'user') {
     const ownerIndex = params.length + 1
     params.push(viewer.userId)
@@ -308,7 +279,7 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
   appendVisibilityCondition(viewer, conditions, params)
 
   if (search) {
-    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: DOCUMENT_SEARCH_COLUMNS, conditions, params })
+    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: DOCUMENT_SEARCH_COLUMNS, defaultKeys: ['name'], conditions, params })
   }
 
   let query = sql
@@ -326,35 +297,26 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
     params.push(offset)
   }
 
-  const sharedKeys = new Set<string>()
-  if (viewer?.type === 'user') {
-    const shared = await runQuery<{ key: string }>(
-      `select d.key from document_shares s join documents d on d.id = s.document_id where s.user_id = $1`,
-      [viewer.userId],
-    )
-    for (const row of shared.rows) {
-      sharedKeys.add(row.key)
-    }
-  }
-
   const result = await runQuery<DocumentRow>(query, params)
   const rows = limit !== undefined ? result.rows.slice(0, limit) : result.rows
   const viewerUserId = viewer?.type === 'user' ? viewer.userId : null
+  const isAdminViewer = viewer?.type === 'admin'
   return {
     documents: rows.map(row => {
       const ownerUserId = row.owner_user_id == null ? null : Number(row.owner_user_id)
-      const owned =
-        viewerUserId !== null
+      const owned = isAdminViewer
+        ? true
+        : viewerUserId !== null
           ? ownerUserId === viewerUserId
           : ownerUserId === null && (row.created_by ?? '') === (viewer?.ip ?? '')
-      const editable =
-        viewerUserId !== null
-          ? toBoolean(row.is_public) || owned || sharedKeys.has(row.key)
-          : owned
+      // Every document a registered user can see is public, owned, or shared
+      // (enforced by appendVisibilityCondition), so it is always editable.
+      const editable = isAdminViewer || viewerUserId !== null ? true : owned
       return {
         ...toDocumentSummary(row),
         owned,
         editable,
+        isPublic: toBoolean(row.is_public),
       }
     }),
     hasMore: limit !== undefined ? result.rows.length > limit : false,
@@ -427,6 +389,16 @@ export async function resolveDocumentAccess(id: string, viewer: Viewer): Promise
   const isPublic = toBoolean(row?.is_public ?? true)
   const createdBy = row?.created_by ?? ''
 
+  if (viewer.type === 'admin') {
+    return {
+      document,
+      canView: true,
+      canEdit: true,
+      canDelete: true,
+      canManageAccess: true,
+    }
+  }
+
   if (viewer.type === 'anonymous') {
     const owned = ownerUserId === null && createdBy === viewer.ip
     return {
@@ -469,7 +441,7 @@ export async function getDocumentAccess(id: string): Promise<DocumentAccessState
     return null
   }
   const shares = await runQuery<UserRow & { id: string | number }>(
-    `select u.id, u.username, u.email from document_shares s
+    `select u.id, u.username, u.email, u.status from document_shares s
      join users u on u.id = s.user_id
      where s.document_id = (select id from documents where key = $1)
      order by u.username asc`,
@@ -477,7 +449,12 @@ export async function getDocumentAccess(id: string): Promise<DocumentAccessState
   )
   return {
     isPublic: toBoolean(row.is_public),
-    sharedWith: shares.rows.map(row => ({ id: Number(row.id), username: row.username, email: row.email })),
+    sharedWith: shares.rows.map(row => ({
+      id: Number(row.id),
+      username: row.username,
+      email: row.email,
+      status: row.status === 'inactive' ? 'inactive' : 'active',
+    })),
   }
 }
 
@@ -485,6 +462,7 @@ interface UserRow {
   id: string | number
   username: string
   email: string
+  status: string | null
 }
 
 export async function setDocumentAccess(
@@ -497,22 +475,28 @@ export async function setDocumentAccess(
   }
   const ownerUserId = row.owner_user_id == null ? null : Number(row.owner_user_id)
 
-  if (input.isPublic !== undefined) {
-    await runQuery('update documents set is_public = $1 where key = $2', [input.isPublic, id])
-  }
-
+  let shareeIds: number[] | undefined
   if (input.sharedWith !== undefined) {
     const users = await findUsersByUsernameOrEmail(input.sharedWith)
-    const shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
-    await runQuery('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
-    for (const userId of shareeIds) {
-      await runQuery(
-        `insert into document_shares (document_id, user_id, created_at)
-         values ((select id from documents where key = $1), $2, current_timestamp)`,
-        [id, userId],
-      )
-    }
+    shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
   }
+
+  const db = await getDb()
+  await db.transaction(async query => {
+    if (input.isPublic !== undefined) {
+      await query('update documents set is_public = $1 where key = $2', [input.isPublic, id])
+    }
+    if (shareeIds !== undefined) {
+      await query('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
+      for (const userId of shareeIds) {
+        await query(
+          `insert into document_shares (document_id, user_id, created_at)
+           values ((select id from documents where key = $1), $2, current_timestamp)`,
+          [id, userId],
+        )
+      }
+    }
+  })
 
   return getDocumentAccess(id)
 }
@@ -610,7 +594,7 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   const params: unknown[] = []
 
   if (search) {
-    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_SEARCH_COLUMNS, conditions, params })
+    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_SEARCH_COLUMNS, defaultKeys: ['name'], conditions, params })
   }
   if (by) {
     conditions.push(`created_by = $${params.length + 1}`)
@@ -844,15 +828,27 @@ export async function deleteDocument(id: string) {
  * request. Invalidated on document create, update (when tags change),
  * and delete.
  */
-let tagsCache: { tags: Tag[]; ts: number } | null = null
+let tagsCache = new Map<string, { tags: Tag[]; ts: number }>()
+
+function tagsCacheKey(viewer?: Viewer) {
+  if (viewer?.type === 'admin') {
+    return 'admin'
+  }
+  if (viewer?.type === 'user') {
+    return `user:${viewer.userId}`
+  }
+  return `anonymous:${viewer?.ip ?? ''}`
+}
 
 export function invalidateTagsCache() {
-  tagsCache = null
+  tagsCache.clear()
 }
 
 export async function listDistinctTags(viewer?: Viewer) {
-  if (tagsCache && Date.now() - tagsCache.ts < 5000) {
-    return tagsCache.tags
+  const cacheKey = tagsCacheKey(viewer)
+  const cached = tagsCache.get(cacheKey)
+  if (cached && Date.now() - cached.ts < 5000) {
+    return cached.tags
   }
 
   const conditions: string[] = []
@@ -874,7 +870,7 @@ export async function listDistinctTags(viewer?: Viewer) {
   }
   const tags = Array.from(seen.values())
   tags.sort((a, b) => a.name.localeCompare(b.name))
-  tagsCache = { tags, ts: Date.now() }
+  tagsCache.set(cacheKey, { tags, ts: Date.now() })
   return tags
 }
 

@@ -10,6 +10,7 @@
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
+  import LockIcon from '$lib/icons/LockIcon.svelte'
   import SearchInput from './SearchInput.svelte'
   import Chip from './Chip.svelte'
   import { getDocumentType } from '$lib/document-types'
@@ -28,6 +29,7 @@
     onNew: () => void
     onRefresh: () => void
     onLogin: () => void
+    onProfile?: () => void
     onSignOut?: () => void
     user?: User | null
     onDelete: (id: string) => void
@@ -51,6 +53,7 @@
     onNew,
     onRefresh,
     onLogin,
+    onProfile,
     onSignOut,
     user = null,
     onDelete,
@@ -159,7 +162,11 @@
         {/snippet}
       </Button>
       {#if user}
-        <span class="max-w-24 truncate px-1 text-xs text-slate-400" title={user.username}>{user.username}</span>
+        <Button size="sm" ariaLabel="Profile" tooltip={`Profile (${user.username})`} onClick={onProfile}>
+          {#snippet icon()}
+            <PersonIcon />
+          {/snippet}
+        </Button>
         <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={onSignOut}>
           {#snippet icon()}
             <SignOutIcon />
@@ -209,6 +216,14 @@
                   label={getDocumentType(document.documentType).label}
                   chipClass={tagChipClass()}
                   style={tagChipStyle(getDocumentType(document.documentType).chipColor)} />
+              {/if}
+              {#if document.isPublic === false}
+                <span
+                  class={tagChipClass()}
+                  style="color: #94a3b8; border-color: rgba(148,163,184,0.4); background-color: rgba(148,163,184,0.1);">
+                  <LockIcon className="h-3 w-3" />
+                  Private
+                </span>
               {/if}
             </div>
             {#if document.owned}

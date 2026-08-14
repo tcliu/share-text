@@ -29,13 +29,23 @@
   }
 
   function show() {
+    hideQueued = false
     place()
     visible = true
   }
 
   function hide() {
-    visible = false
     clearDismissTimer()
+    if (!visible) {
+      return
+    }
+    hideQueued = true
+    queueMicrotask(() => {
+      if (hideQueued) {
+        hideQueued = false
+        visible = false
+      }
+    })
   }
 
   const supportsHover = $derived(
@@ -48,6 +58,7 @@
   const TOOLTIP_LINGER_MS = 2000
   let pressTimer: ReturnType<typeof setTimeout> | null = null
   let dismissTimer: ReturnType<typeof setTimeout> | null = null
+  let hideQueued = false
 
   function clearPressTimer() {
     if (pressTimer) {

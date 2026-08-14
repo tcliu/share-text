@@ -1,5 +1,5 @@
 import { Pool, type PoolClient } from '@neondatabase/serverless'
-import type { Db, DbResult } from './db-types'
+import type { Db, DbQuery, DbResult } from './db-types'
 
 let pool: Pool | null = null
 
@@ -32,6 +32,23 @@ export function createNeonDb(): Db {
     async query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
       const result = await getPool().query(sql, params)
       return { rows: result.rows as T[], rowCount: result.rowCount }
+    },
+    async transaction<T>(fn: (query: DbQuery) => Promise<T>): Promise<T> {
+      const client = await getPool().connect()
+      try {
+        await client.query('begin')
+        const result = await fn(async <R>(sql: string, params: unknown[] = []) => {
+          const res = await client.query(sql, params)
+          return { rows: res.rows as R[], rowCount: res.rowCount }
+        })
+        await client.query('commit')
+        return result
+      } catch (error) {
+        await client.query('rollback').catch(() => {})
+        throw error
+      } finally {
+        client.release()
+      }
     },
     async close() {
       if (!pool) return

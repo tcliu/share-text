@@ -19,6 +19,7 @@
     createDocument: () => {},
     deleteDocument: () => {},
     refreshList: async () => {},
+    updateDocumentSummary: () => {},
     selectedDocumentRefreshToken: 0,
     requestSelectedDocumentRefresh: () => {},
     registerEditorGuard: () => {},

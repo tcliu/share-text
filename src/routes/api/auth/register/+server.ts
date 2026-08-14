@@ -11,7 +11,7 @@ import { createUser } from '$lib/server/users'
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const ip = getClientAddress()
 
-  if (isLoginRateLimited(ip)) {
+  if (await isLoginRateLimited(ip)) {
     logEvent({ ip, action: 'user_register_rate_limited', details: { level: 'WARN' } })
     return json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
   }
@@ -29,13 +29,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
   try {
     user = await createUser({ username, email, password })
   } catch (error) {
-    recordLoginAttempt(ip)
+    await recordLoginAttempt(ip)
     const message = error instanceof Error ? error.message : 'Failed to create account'
     logEvent({ ip, action: 'user_register_failed', details: { username: username.trim(), error: message } })
     return json({ error: message }, { status: 400 })
   }
 
-  resetLoginAttempts(ip)
+  await resetLoginAttempts(ip)
   await claimAnonymousDocuments(ip, user)
   cookies.set(USER_SESSION_COOKIE, createUserSessionToken(user.id), {
     httpOnly: true,

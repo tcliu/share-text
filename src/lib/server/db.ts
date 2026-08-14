@@ -25,6 +25,7 @@ export async function getDb(): Promise<Db> {
           username text unique not null,
           email text unique not null,
           password_hash text not null,
+          status text not null default 'active',
           created_at timestamptz not null default current_timestamp
         )`,
       )
@@ -56,9 +57,17 @@ export async function getDb(): Promise<Db> {
         )`,
       )
       await initialized.query(
+        `create table if not exists login_attempts (
+          ip text primary key,
+          attempt_count integer not null default 0,
+          reset_at timestamptz not null
+        )`,
+      )
+      await initialized.query(
         'alter table documents add column if not exists owner_user_id bigint references users(id) on delete set null',
       )
       await initialized.query('alter table documents add column if not exists is_public boolean not null default true')
+      await initialized.query("alter table users add column if not exists status text not null default 'active'")
     }
     db = initialized
     return initialized

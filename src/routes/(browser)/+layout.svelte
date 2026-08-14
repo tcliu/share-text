@@ -15,6 +15,7 @@
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
+  import ProfileDialog from '$lib/components/ProfileDialog.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
@@ -43,6 +44,7 @@
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
   let editorFocus = $state<(() => void) | null>(null)
   let mobileDrawerOpen = $state(false)
+  let profileOpen = $state(false)
 
   const selectedId = $derived($page.params.id ?? null)
   const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
@@ -185,6 +187,7 @@
     createDocument: handleNew,
     deleteDocument: handleDelete,
     refreshList: documentsState.refreshList,
+    updateDocumentSummary: documentsState.updateDocumentSummary,
     get selectedDocumentRefreshToken() {
       return selectedDocumentRefreshToken
     },
@@ -230,6 +233,7 @@
     onNew={handleNew}
     onRefresh={handleRefresh}
     onLogin={() => goto('/login')}
+    onProfile={() => (profileOpen = true)}
     user={userAuthState.user}
     onSignOut={handleSignOut}
     onDelete={handleDelete}
@@ -324,4 +328,8 @@
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />
+{/if}
+
+{#if profileOpen && userAuthState.user}
+  <ProfileDialog user={userAuthState.user} onClose={() => (profileOpen = false)} />
 {/if}

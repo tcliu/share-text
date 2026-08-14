@@ -7,7 +7,6 @@
     title: string
     message: string
     confirmLabel: string
-    cancelLabel?: string
     className?: string
     maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     confirmColor?: 'rose' | 'amber' | 'emerald' | 'cyan'
@@ -20,7 +19,6 @@
     title,
     message,
     confirmLabel,
-    cancelLabel = 'Cancel',
     className = '',
     maxWidth = 'md',
     confirmColor = 'rose',
@@ -38,7 +36,6 @@
         <Button variant="primary" accent={confirmColor} onClick={onConfirm}>
           {confirmLabel}
         </Button>
-        <Button onClick={onCancel}>{cancelLabel}</Button>
       {/snippet}
     </Buttons>
   </div>

@@ -3,6 +3,7 @@ create table if not exists users (
   username text unique not null,
   email text unique not null,
   password_hash text not null,
+  status text not null default 'active',
   created_at timestamptz not null default current_timestamp
 );
 
@@ -47,6 +48,12 @@ create table if not exists user_config (
   value text not null,
   updated_at timestamptz not null default current_timestamp,
   primary key (user_id, key)
+);
+
+create table if not exists login_attempts (
+  ip text primary key,
+  attempt_count integer not null default 0,
+  reset_at timestamptz not null
 );
 
 create table if not exists app_config (

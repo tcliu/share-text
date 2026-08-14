@@ -82,4 +82,50 @@ describe('SQLite adapter', () => {
     const result = await db.query<{ key: string }>('select key, name, updated_at from documents order by updated_at desc')
     expect(result.rows.map(row => row.key)).toEqual(['key-new', 'key-old'])
   })
+
+  it('commits and rolls back within a transaction', async () => {
+    await db.query('insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)', [
+      'tx1',
+      'Tx1',
+      '',
+      '1.1.1.1',
+      '1.1.1.1',
+    ])
+
+    await db.transaction(async query => {
+      await query('update documents set name = ? where key = ?', ['Renamed', 'tx1'])
+      await query('insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)', [
+        'tx2',
+        'Tx2',
+        '',
+        '1.1.1.1',
+        '1.1.1.1',
+      ])
+    })
+
+    const after = await db.query<{ key: string; name: string }>(
+      'select key, name from documents where key in (?, ?) order by key',
+      ['tx1', 'tx2'],
+    )
+    expect(after.rows).toEqual([
+      { key: 'tx1', name: 'Renamed' },
+      { key: 'tx2', name: 'Tx2' },
+    ])
+
+    await expect(
+      db.transaction(async query => {
+        await query('insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)', [
+          'tx3',
+          'Tx3',
+          '',
+          '1.1.1.1',
+          '1.1.1.1',
+        ])
+        throw new Error('boom')
+      }),
+    ).rejects.toThrow('boom')
+
+    const afterRollback = await db.query<{ key: string }>('select key from documents where key = ?', ['tx3'])
+    expect(afterRollback.rows).toHaveLength(0)
+  })
 })

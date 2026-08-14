@@ -3,13 +3,16 @@
   import Copyable from './Copyable.svelte'
   import DataTable, { type DataTableColumn } from './DataTable.svelte'
   import EditableText from './EditableText.svelte'
+  import EditDocumentDialog from './EditDocumentDialog.svelte'
+  import Button from './Button.svelte'
+  import EditIcon from '$lib/icons/EditIcon.svelte'
+  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import type { AdminDocumentSummary } from '$lib/admin'
   import Chip from './Chip.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
   import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
-  import ExternalLinkIcon from '$lib/icons/ExternalLinkIcon.svelte'
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
@@ -39,7 +42,7 @@
     {
       key: 'name',
       header: 'Name',
-      width: '18%',
+      width: '17%',
       minWidth: 160,
       cellClass: 'max-w-0',
       sortable: true,
@@ -65,7 +68,7 @@
     {
       key: 'length',
       header: 'Length',
-      width: '9%',
+      width: '8%',
       cellClass: 'text-slate-400',
       sortable: true,
       cell: lengthCell,
@@ -73,7 +76,7 @@
     {
       key: 'createdBy',
       header: 'Created by',
-      width: '13%',
+      width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
       sortable: true,
@@ -83,7 +86,7 @@
     {
       key: 'updatedBy',
       header: 'Updated by',
-      width: '13%',
+      width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
       sortable: true,
@@ -93,18 +96,25 @@
     {
       key: 'access',
       header: 'Access',
-      width: '9%',
+      width: '8%',
       minWidth: 96,
       cell: accessCell,
     },
     {
       key: 'updatedAt',
       header: 'Updated time',
-      width: '14%',
+      width: '12%',
       minWidth: 144,
       cellClass: 'text-slate-500',
       sortable: true,
       cell: updatedAtCell,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      width: '8%',
+      minWidth: 96,
+      cell: actionsCell,
     },
   ]
 </script>
@@ -142,23 +152,13 @@
   storageKey="admin-documents" />
 
 {#snippet idCell(document: AdminDocumentSummary)}
-  <div class="group flex min-w-0 items-center gap-1">
-    <EditableText
-      text={document.id}
-      size="sm"
-      className="font-mono text-slate-500"
-      copyable
-      onChange={key => void documentsState.updateKey(document.id, key)} />
-    <a
-      href={`/${document.id}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`Open document ${document.id}`}
-      class="shrink-0 text-slate-400 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-cyan-300"
-      onclick={(e) => e.stopPropagation()}>
-      <ExternalLinkIcon />
-    </a>
-  </div>
+  <EditableText
+    text={document.id}
+    size="sm"
+    className="font-mono text-slate-500 transition-colors hover:text-cyan-300"
+    copyable
+    onActivate={() => window.open(`/${document.id}`, '_blank', 'noopener')}
+    onChange={key => void documentsState.updateKey(document.id, key)} />
 {/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
@@ -197,41 +197,61 @@
 {/snippet}
 
 {#snippet createdByCell(document: AdminDocumentSummary)}
-  <EditableText
+  <Copyable
     text={document.createdBy}
-    size="sm"
-    className="text-slate-400"
-    copyable
-    onChange={createdBy => void documentsState.updateCreatedBy(document.id, createdBy)} />
+    className="block truncate text-slate-400"
+    copyAriaLabel={`Copy created by ${document.createdBy}`} />
 {/snippet}
 
 {#snippet updatedByCell(document: AdminDocumentSummary)}
-  <EditableText
+  <Copyable
     text={document.updatedBy}
-    size="sm"
-    className="text-slate-400"
-    copyable
-    onChange={updatedBy => void documentsState.updateUpdatedBy(document.id, updatedBy)} />
+    className="block truncate text-slate-400"
+    copyAriaLabel={`Copy updated by ${document.updatedBy}`} />
 {/snippet}
 
 {#snippet accessCell(document: AdminDocumentSummary)}
-  <button
-    type="button"
-    aria-label={`Change access for ${document.name}`}
-    aria-pressed={!document.isPublic}
-    onclick={() => void documentsState.updateIsPublic(document.id, !document.isPublic)}
-    class={`rounded-md border px-2 py-0.5 text-xs font-semibold transition ${
+  <span
+    class={`inline-flex rounded-md border px-2 py-0.5 text-xs font-semibold ${
       document.isPublic
-        ? 'border-slate-700 bg-slate-950 text-slate-300 hover:border-cyan-500 hover:text-cyan-300'
-        : 'border-amber-500/40 bg-amber-500/10 text-amber-200 hover:border-amber-400'
+        ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
+        : 'border-slate-700 bg-slate-950 text-slate-400'
     }`}>
     {document.isPublic ? 'Public' : 'Private'}
-  </button>
+  </span>
 {/snippet}
 
 {#snippet updatedAtCell(document: AdminDocumentSummary)}
   {formatTimestamp(document.updatedAt)}
 {/snippet}
+
+{#snippet actionsCell(document: AdminDocumentSummary)}
+  <div class="flex items-center gap-1">
+    <Button size="sm" ariaLabel={`Edit document ${document.name}`} tooltip="Edit" onClick={() => documentsState.openEdit(document)}>
+      {#snippet icon()}
+        <EditIcon />
+      {/snippet}
+    </Button>
+    <Button
+      size="sm"
+      ariaLabel={`Delete document ${document.name}`}
+      tooltip="Delete"
+      className="text-slate-400 hover:border-rose-500 hover:text-rose-300"
+      onClick={() => (documentsState.deleteTarget = document)}>
+      {#snippet icon()}
+        <DeleteIcon />
+      {/snippet}
+    </Button>
+  </div>
+{/snippet}
+
+{#if documentsState.editTarget}
+  <EditDocumentDialog
+    document={documentsState.editTarget}
+    pending={documentsState.saving}
+    onSave={input => void documentsState.saveDocument(input)}
+    onClose={() => documentsState.closeEdit()} />
+{/if}
 
 {#if documentsState.deleteTarget}
   <ConfirmDialog

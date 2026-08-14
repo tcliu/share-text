@@ -6,6 +6,7 @@
   import Button from './Button.svelte'
   import Checkbox from './Checkbox.svelte'
   import Chip from './Chip.svelte'
+  import Combobox, { type ComboboxOption } from './Combobox.svelte'
   import FormField from './FormField.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
 
@@ -13,19 +14,20 @@
     open: boolean
     isPublic: boolean
     sharedWith: User[]
+    currentUser?: User
     pending?: boolean
     onClose: () => void
     onApply: (input: { isPublic: boolean; sharedWith: string[] }) => void
   }
 
-  let { open, isPublic, sharedWith, pending = false, onClose, onApply }: Props = $props()
+  let { open, isPublic, sharedWith, currentUser, pending = false, onClose, onApply }: Props = $props()
 
   let draftIsPublic = $state(false)
   let draftSharees = $state<string[]>([])
-  let addValue = $state('')
-  let suggestions = $state<User[]>([])
-  let suggestionsOpen = $state(false)
+  let userSuggestions = $state<ComboboxOption[]>([])
   let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+  const shareeOptions = $derived(draftSharees.map(username => ({ value: username, label: username })))
 
   $effect(() => {
     if (open) {
@@ -54,102 +56,73 @@
     onApply({ isPublic: draftIsPublic, sharedWith: draftSharees })
   }
 
-  function handleInput() {
-    suggestionsOpen = true
+  function handleQueryChange(query: string) {
     if (searchTimer) {
       clearTimeout(searchTimer)
     }
-    const query = addValue.trim()
-    if (!query) {
-      suggestions = []
+    if (!query.trim()) {
+      userSuggestions = []
       searchTimer = null
       return
     }
     searchTimer = setTimeout(() => {
       searchTimer = null
-      void searchUsers(query)
+      void searchUsers(query.trim())
         .then(users => {
-          suggestions = users.filter(user => !draftSharees.includes(user.username))
+          userSuggestions = users
+            .filter(
+              user =>
+                user.username !== currentUser?.username && !draftSharees.includes(user.username),
+            )
+            .map(user => ({ value: user.username, label: user.username, detail: user.email }))
         })
         .catch(() => {
-          suggestions = []
+          userSuggestions = []
         })
     }, 250)
   }
 
-  function addSharee(value: string) {
-    const normalized = value.trim()
-    if (!normalized || draftSharees.includes(normalized)) {
+  function addSharee(username: string) {
+    const normalized = username.trim()
+    const isSelf = currentUser
+      ? normalized.toLowerCase() === currentUser.username.toLowerCase()
+      : false
+    if (!normalized || isSelf || draftSharees.includes(normalized)) {
       return
     }
     draftSharees = [...draftSharees, normalized]
-    addValue = ''
-    suggestions = []
-    suggestionsOpen = false
+    userSuggestions = []
   }
 
-  function handleInputKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      const first = suggestions[0]
-      addSharee(first ? first.username : addValue)
-    } else if (event.key === 'Escape') {
-      suggestionsOpen = false
-    }
-  }
-
-  function removeSharee(value: string) {
-    draftSharees = draftSharees.filter(item => item !== value)
+  function removeSharee(username: string) {
+    draftSharees = draftSharees.filter(value => value !== username)
   }
 </script>
 
 {#if open}
   <BaseDialog title="Sharing" maxWidth="lg" onCancel={onClose} pending={pending}>
     <div class="flex flex-col gap-4">
-      <Checkbox bind:checked={draftIsPublic} name="isPublic" label="Anyone with the link can view and edit" />
+      <Checkbox bind:checked={draftIsPublic} name="isPublic" label="Anyone with the link can view" />
 
       <FormField label="Shared with" htmlFor="share-user-input">
-        <input
+        <Combobox
           id="share-user-input"
-          bind:value={addValue}
-          type="text"
+          selected={shareeOptions}
+          suggestions={userSuggestions}
           placeholder="Add by username or email"
-          oninput={handleInput}
-          onkeydown={handleInputKeydown}
-          onfocus={() => (suggestionsOpen = suggestions.length > 0)}
-          onblur={() => setTimeout(() => (suggestionsOpen = false), 120)}
-          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
-      </FormField>
-
-      {#if suggestionsOpen && suggestions.length > 0}
-        <ul class="flex flex-col gap-1 rounded-lg border border-slate-800 bg-slate-950 p-1">
-          {#each suggestions as user (user.id)}
-            <li>
-              <button
-                type="button"
-                onmousedown={event => event.preventDefault()}
-                onclick={() => addSharee(user.username)}
-                class="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm text-slate-200 transition hover:bg-slate-800">
-                <span>{user.username}</span>
-                <span class="text-xs text-slate-500">{user.email}</span>
-              </button>
-            </li>
-          {/each}
-        </ul>
-      {/if}
-
-      {#if draftSharees.length > 0}
-        <div class="flex flex-wrap gap-1.5">
-          {#each draftSharees as sharee (sharee)}
+          onQueryChange={handleQueryChange}
+          onAdd={item => addSharee(item.value)}
+          onRemove={removeSharee}>
+          {#snippet chip(item: ComboboxOption, remove: (username: string) => void)}
             <Chip
-              label={sharee}
+              label={item.label}
               chipClass={tagChipClass()}
-              style={tagChipStyle(sharee)}
-              ariaLabel={`Remove ${sharee}`}
-              onRemove={() => removeSharee(sharee)} />
-          {/each}
-        </div>
-      {/if}
+              style={tagChipStyle(item.value)}
+              ariaLabel={`Remove ${item.label}`}
+              onRemove={() => remove(item.value)} />
+          {/snippet}
+        </Combobox>
+      </FormField>
 
       <Buttons>
         {#snippet children()}

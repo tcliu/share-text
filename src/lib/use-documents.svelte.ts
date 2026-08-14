@@ -99,6 +99,12 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     return requestDocuments(0, false)
   }
 
+  function updateDocumentSummary(id: string, changes: Partial<OwnedDocumentSummary>) {
+    documents = documents.map(document =>
+      document.id === id ? { ...document, ...changes } : document,
+    )
+  }
+
   function loadMore() {
     if (!hasMore || loadingDocuments) return
     return requestDocuments(documents.length, true)
@@ -155,6 +161,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     },
     refreshList,
     loadMore,
+    updateDocumentSummary,
     performCreate,
     performDelete,
     handleSearchInput,

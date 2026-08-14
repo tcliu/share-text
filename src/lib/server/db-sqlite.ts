@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { SQLInputValue } from 'node:sqlite'
-import type { Db, DbResult } from './db-types'
+import type { Db, DbQuery, DbResult } from './db-types'
 
 export const DEFAULT_SQLITE_PATH = '.data/share-text-dev.sqlite'
 
@@ -41,19 +41,52 @@ export async function createSqliteDb(path = process.env.SQLITE_PATH || DEFAULT_S
   const schema = await readSchemaSql()
   database.exec(toSqliteSql(schema))
 
+  // Serializes every statement through a promise chain so a transaction's
+  // BEGIN/COMMIT cannot be interleaved by other statements on the same
+  // connection (node:sqlite is synchronous but our API is async).
+  let tail: Promise<unknown> = Promise.resolve()
+
+  function enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = tail.then(task)
+    tail = result.then(
+      () => undefined,
+      () => undefined,
+    )
+    return result
+  }
+
+  function execute<T>(sql: string, params: unknown[]): DbResult<T> {
+    const statement = database.prepare(toSqliteSql(sql))
+    const args = params.map(toSqliteParam)
+    if (isRowsReturningSql(sql)) {
+      const rows = statement.all(...args)
+      return { rows: rows as T[], rowCount: rows.length }
+    }
+    const result = statement.run(...args)
+    return { rows: [], rowCount: Number(result.changes) }
+  }
+
   return {
-    async query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
-      const statement = database.prepare(toSqliteSql(sql))
-      const args = params.map(toSqliteParam)
-      if (isRowsReturningSql(sql)) {
-        const rows = statement.all(...args)
-        return { rows: rows as T[], rowCount: rows.length }
-      }
-      const result = statement.run(...args)
-      return { rows: [], rowCount: Number(result.changes) }
+    query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
+      return enqueue(() => Promise.resolve(execute<T>(sql, params)))
     },
-    async close() {
-      database.close()
+    async transaction<T>(fn: (query: DbQuery) => Promise<T>): Promise<T> {
+      return enqueue(async () => {
+        database.exec('BEGIN')
+        try {
+          const result = await fn(async <R>(sql: string, params: unknown[] = []) => execute<R>(sql, params))
+          database.exec('COMMIT')
+          return result
+        } catch (error) {
+          database.exec('ROLLBACK')
+          throw error
+        }
+      })
+    },
+    async close(): Promise<void> {
+      await enqueue(async () => {
+        database.close()
+      })
     },
   }
 }

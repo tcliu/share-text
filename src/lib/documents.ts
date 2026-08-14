@@ -12,6 +12,7 @@ export interface DocumentSummary {
 export interface OwnedDocumentSummary extends DocumentSummary {
   owned: boolean
   editable: boolean
+  isPublic: boolean
 }
 
 export interface Document extends DocumentSummary {

@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte'
-import type { DocumentSummary, User } from './documents'
+import type { DocumentSummary, OwnedDocumentSummary, User } from './documents'
 
 export interface EditorGuard {
   isDirty: () => boolean
@@ -14,6 +14,7 @@ export interface ShareTextContext {
   createDocument: () => void
   deleteDocument: (id: string) => void
   refreshList: () => Promise<void>
+  updateDocumentSummary: (id: string, changes: Partial<OwnedDocumentSummary>) => void
   selectedDocumentRefreshToken: number
   requestSelectedDocumentRefresh: () => void
   registerEditorGuard: (guard: EditorGuard) => void

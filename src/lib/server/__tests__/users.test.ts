@@ -6,11 +6,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
 import {
   createUser,
+  deleteUser,
+  findAdminUserById,
   findUserByCredentials,
   findUserById,
+  listUsers,
   normalizeEmail,
+  normalizeStatus,
   normalizeUsername,
   searchUsers,
+  updateUser,
 } from '$lib/server/users'
 
 beforeEach(async () => {
@@ -92,5 +97,77 @@ describe('users against the SQLite backend (dev profile)', () => {
 
     expect(await searchUsers('')).toEqual([])
     expect(await searchUsers('zzz')).toEqual([])
+  })
+
+  it('creates users as active and rejects login for inactive users', async () => {
+    const user = await createUser({ username: 'alice', email: 'alice@example.com', password: 's3cret' })
+    expect(user.status).toBe('active')
+    expect(await findUserByCredentials('alice', 's3cret')).toMatchObject({ id: user.id })
+
+    await updateUser(user.id, { status: 'inactive' })
+    expect(await findUserByCredentials('alice', 's3cret')).toBeNull()
+    expect((await findUserById(user.id))?.status).toBe('inactive')
+  })
+
+  it('excludes inactive users from search and share resolution', async () => {
+    const alice = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+    await updateUser(alice.id, { status: 'inactive' })
+
+    expect((await searchUsers('ali')).map(user => user.username)).toEqual([])
+    const resolved = await (await import('$lib/server/users')).findUsersByUsernameOrEmail(['alice', 'bob'])
+    expect(resolved.map(user => user.username)).toEqual(['bob'])
+  })
+
+  it('updates username, email, and password', async () => {
+    const user = await createUser({ username: 'alice', email: 'alice@example.com', password: 'oldpass' })
+
+    const updated = await updateUser(user.id, { username: 'alice2', email: 'alice2@example.com', password: 'newpass' })
+    expect(updated).toMatchObject({ username: 'alice2', email: 'alice2@example.com', status: 'active' })
+
+    expect(await findUserByCredentials('alice2', 'newpass')).toMatchObject({ id: user.id })
+    expect(await findUserByCredentials('alice', 'oldpass')).toBeNull()
+  })
+
+  it('rejects updating to a duplicate username or email', async () => {
+    await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+
+    await expect(updateUser(bob.id, { username: 'alice' })).rejects.toThrow('already taken')
+    await expect(updateUser(bob.id, { email: 'alice@example.com' })).rejects.toThrow('already taken')
+  })
+
+  it('lists users with search, sort, and pagination', async () => {
+    await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+    await createUser({ username: 'carol', email: 'carol@example.com', password: 'x' })
+
+    const all = await listUsers({ sortBy: 'username', order: 'asc' })
+    expect(all.total).toBe(3)
+    expect(all.users.map(user => user.username)).toEqual(['alice', 'bob', 'carol'])
+    expect(all.users.every(user => typeof user.createdAt === 'string')).toBe(true)
+
+    const search = await listUsers({ search: 'bo', searchKeys: ['username'] })
+    expect(search.users.map(user => user.username)).toEqual(['bob'])
+
+    const page = await listUsers({ sortBy: 'username', order: 'asc', limit: 2, offset: 0 })
+    expect(page.users).toHaveLength(2)
+    expect(page.hasMore).toBe(true)
+    const page2 = await listUsers({ sortBy: 'username', order: 'asc', limit: 2, offset: 2 })
+    expect(page2.users.map(user => user.username)).toEqual(['carol'])
+    expect(page2.hasMore).toBe(false)
+  })
+
+  it('deletes a user', async () => {
+    const user = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    expect(await deleteUser(user.id)).toBe(true)
+    expect(await findAdminUserById(user.id)).toBeNull()
+    expect(await deleteUser(user.id)).toBe(false)
+  })
+
+  it('normalizes status values', () => {
+    expect(normalizeStatus('active')).toBe('active')
+    expect(normalizeStatus('inactive')).toBe('inactive')
+    expect(() => normalizeStatus('banned')).toThrow('status must be active or inactive')
   })
 })

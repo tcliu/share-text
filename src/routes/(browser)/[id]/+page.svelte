@@ -305,7 +305,14 @@
       const state = await updateDocumentAccess(currentId, input)
       accessIsPublic = state.isPublic
       accessSharedWith = state.sharedWith
-      toast.success('Sharing updated')
+      context.updateDocumentSummary(currentId, { isPublic: state.isPublic })
+      const resolved = new Set(state.sharedWith.map(user => user.username.toLowerCase()))
+      const missing = input.sharedWith.filter(username => !resolved.has(username.trim().toLowerCase()))
+      if (missing.length > 0) {
+        toast.warning(`Not shared (user not found): ${missing.join(', ')}`)
+      } else {
+        toast.success('Sharing updated')
+      }
       shareOpen = false
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update sharing settings')
@@ -342,6 +349,7 @@
     open={shareOpen}
     isPublic={accessIsPublic}
     sharedWith={accessSharedWith}
+    currentUser={context.user ?? undefined}
     pending={shareSaving}
     onClose={() => (shareOpen = false)}
     onApply={handleShareApply} />

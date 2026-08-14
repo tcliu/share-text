@@ -1,30 +1,57 @@
 import { getDb } from './db'
 import { isUniqueViolation } from './db-errors'
+import { toIsoString } from './iso-string'
 import { hashPassword, verifyPassword } from './password'
+import { appendSearchConditions } from './sql-search'
 
 export const MAX_USERNAME_LENGTH = 32
 export const MAX_EMAIL_LENGTH = 254
 const USERNAME_PATTERN = /^[a-z0-9_]{3,32}$/
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+export type UserStatus = 'active' | 'inactive'
+
 export interface User {
   id: number
   username: string
   email: string
+  status: UserStatus
+}
+
+export interface AdminUser {
+  id: number
+  username: string
+  email: string
+  status: UserStatus
+  createdAt: string
 }
 
 interface UserRow {
   id: string | number
   username: string
   email: string
+  status: string | null
 }
 
 interface UserWithHashRow extends UserRow {
   password_hash: string
 }
 
+interface UserAdminRow extends UserRow {
+  created_at: Date | string
+}
+
 function toUser(row: UserRow): User {
-  return { id: Number(row.id), username: row.username, email: row.email }
+  return {
+    id: Number(row.id),
+    username: row.username,
+    email: row.email,
+    status: row.status === 'inactive' ? 'inactive' : 'active',
+  }
+}
+
+function toAdminUser(row: UserAdminRow): AdminUser {
+  return { ...toUser(row), createdAt: toIsoString(row.created_at) }
 }
 
 export function normalizeUsername(value: string) {
@@ -51,19 +78,26 @@ export function normalizeEmail(value: string) {
   return email
 }
 
+export function normalizeStatus(value: string): UserStatus {
+  if (value === 'active' || value === 'inactive') {
+    return value
+  }
+  throw new Error('status must be active or inactive')
+}
+
 export async function createUser(input: { username: string; email: string; password: string }): Promise<User> {
   const username = normalizeUsername(input.username)
   const email = normalizeEmail(input.email)
   if (!input.password) {
     throw new Error('password is required')
   }
-  const passwordHash = hashPassword(input.password)
+  const passwordHash = await hashPassword(input.password)
   const db = await getDb()
   try {
     const result = await db.query<UserRow>(
       `insert into users (username, email, password_hash, created_at)
        values ($1, $2, $3, current_timestamp)
-       returning id, username, email`,
+       returning id, username, email, status`,
       [username, email, passwordHash],
     )
     return toUser(result.rows[0])
@@ -77,9 +111,19 @@ export async function createUser(input: { username: string; email: string; passw
 
 export async function findUserById(id: number): Promise<User | null> {
   const db = await getDb()
-  const result = await db.query<UserRow>('select id, username, email from users where id = $1', [id])
+  const result = await db.query<UserRow>('select id, username, email, status from users where id = $1', [id])
   const row = result.rows[0]
   return row ? toUser(row) : null
+}
+
+export async function findAdminUserById(id: number): Promise<AdminUser | null> {
+  const db = await getDb()
+  const result = await db.query<UserAdminRow>(
+    'select id, username, email, status, created_at from users where id = $1',
+    [id],
+  )
+  const row = result.rows[0]
+  return row ? toAdminUser(row) : null
 }
 
 export async function findUserByCredentials(identifier: string, password: string): Promise<User | null> {
@@ -89,11 +133,11 @@ export async function findUserByCredentials(identifier: string, password: string
   }
   const db = await getDb()
   const result = await db.query<UserWithHashRow>(
-    'select id, username, email, password_hash from users where username = $1 or email = $2',
+    'select id, username, email, status, password_hash from users where username = $1 or email = $2',
     [value, value],
   )
   const row = result.rows[0]
-  if (!row || !verifyPassword(password, row.password_hash)) {
+  if (!row || row.status === 'inactive' || !(await verifyPassword(password, row.password_hash))) {
     return null
   }
   return toUser(row)
@@ -112,7 +156,7 @@ export async function findUsersByUsernameOrEmail(values: string[]): Promise<User
     return `(username = $${params.length - 1} or email = $${params.length})`
   })
   const result = await db.query<UserRow>(
-    `select id, username, email from users where ${conditions.join(' or ')}`,
+    `select id, username, email, status from users where (${conditions.join(' or ')}) and status = 'active'`,
     params,
   )
   return result.rows.map(toUser)
@@ -125,10 +169,125 @@ export async function searchUsers(query: string, limit = 10): Promise<User[]> {
   }
   const db = await getDb()
   const result = await db.query<UserRow>(
-    `select id, username, email from users
-     where lower(username) like $1 or lower(email) like $2
+    `select id, username, email, status from users
+     where (lower(username) like $1 or lower(email) like $2) and status = 'active'
      order by username asc limit $3`,
     [`${value}%`, `${value}%`, limit],
   )
   return result.rows.map(toUser)
+}
+
+const ADMIN_USER_SORT_COLUMNS: Record<string, string> = {
+  id: 'id',
+  username: 'username',
+  email: 'email',
+  status: 'status',
+  createdAt: 'created_at',
+}
+
+const ADMIN_USER_SEARCH_COLUMNS: Record<string, string> = {
+  username: 'username',
+  email: 'email',
+}
+
+export interface ListUsersOptions {
+  search?: string
+  searchKeys?: string[]
+  limit?: number
+  offset?: number
+  sortBy?: string
+  order?: 'asc' | 'desc'
+}
+
+export async function listUsers(options: ListUsersOptions = {}) {
+  const { search, searchKeys, limit, offset = 0, sortBy, order } = options
+  const sortColumn = ADMIN_USER_SORT_COLUMNS[sortBy ?? 'id'] ?? ADMIN_USER_SORT_COLUMNS.id
+  const sortDir = order === 'asc' ? 'asc' : 'desc'
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  if (search) {
+    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_USER_SEARCH_COLUMNS, defaultKeys: ['username'], conditions, params })
+  }
+
+  const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
+
+  const db = await getDb()
+  const countResult = await db.query<{ count: number | string }>(
+    `select count(*) as count from users${whereClause}`,
+    params,
+  )
+  const total = Number(countResult.rows[0]?.count ?? 0)
+
+  let sql = `select id, username, email, status, created_at from users${whereClause} order by ${sortColumn} ${sortDir}`
+  const listParams = [...params]
+  if (limit !== undefined) {
+    sql += ` limit $${listParams.length + 1}`
+    listParams.push(limit)
+    sql += ` offset $${listParams.length + 1}`
+    listParams.push(offset)
+  }
+
+  const result = await db.query<UserAdminRow>(sql, listParams)
+  return {
+    users: result.rows.map(toAdminUser),
+    total,
+    hasMore: limit !== undefined ? offset + result.rows.length < total : false,
+  }
+}
+
+export interface UpdateUserInput {
+  username?: string
+  email?: string
+  password?: string
+  status?: UserStatus
+}
+
+export async function updateUser(id: number, input: UpdateUserInput): Promise<User | null> {
+  const sets: string[] = []
+  const params: unknown[] = []
+  if (input.username !== undefined) {
+    params.push(normalizeUsername(input.username))
+    sets.push(`username = $${params.length}`)
+  }
+  if (input.email !== undefined) {
+    params.push(normalizeEmail(input.email))
+    sets.push(`email = $${params.length}`)
+  }
+  if (input.password !== undefined) {
+    if (!input.password) {
+      throw new Error('password is required')
+    }
+    params.push(await hashPassword(input.password))
+    sets.push(`password_hash = $${params.length}`)
+  }
+  if (input.status !== undefined) {
+    params.push(normalizeStatus(input.status))
+    sets.push(`status = $${params.length}`)
+  }
+  if (sets.length === 0) {
+    return findUserById(id)
+  }
+
+  params.push(id)
+  const db = await getDb()
+  try {
+    const result = await db.query<UserRow>(
+      `update users set ${sets.join(', ')} where id = $${params.length} returning id, username, email, status`,
+      params,
+    )
+    const row = result.rows[0]
+    return row ? toUser(row) : null
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Error('username or email is already taken')
+    }
+    throw error
+  }
+}
+
+export async function deleteUser(id: number): Promise<boolean> {
+  const db = await getDb()
+  const result = await db.query('delete from users where id = $1', [id])
+  return (result.rowCount ?? 0) > 0
 }

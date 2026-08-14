@@ -1,4 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+// @vitest-environment node
+process.env.PROFILE = 'dev'
+process.env.SQLITE_PATH = ':memory:'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getDb } from '$lib/server/db'
 import {
   createSessionToken,
   getAdminUsername,
@@ -12,6 +17,11 @@ import {
   verifySessionToken,
 } from '$lib/server/admin-auth'
 
+beforeEach(async () => {
+  const db = await getDb()
+  await db.query('delete from login_attempts')
+})
+
 afterEach(() => {
   delete process.env.ADMIN_USERNAME
   delete process.env.ADMIN_PASSWORD
@@ -20,40 +30,40 @@ afterEach(() => {
 })
 
 describe('password hashing', () => {
-  it('verifies a hashed password', () => {
-    const hash = hashPassword('s3cret')
+  it('verifies a hashed password', async () => {
+    const hash = await hashPassword('s3cret')
     expect(hash.startsWith('scrypt$')).toBe(true)
-    expect(verifyPassword('s3cret', hash)).toBe(true)
-    expect(verifyPassword('wrong', hash)).toBe(false)
+    expect(await verifyPassword('s3cret', hash)).toBe(true)
+    expect(await verifyPassword('wrong', hash)).toBe(false)
   })
 
-  it('rejects malformed hashes', () => {
-    expect(verifyPassword('x', 'not-a-hash')).toBe(false)
-    expect(verifyPassword('x', 'md5$abc$def')).toBe(false)
+  it('rejects malformed hashes', async () => {
+    expect(await verifyPassword('x', 'not-a-hash')).toBe(false)
+    expect(await verifyPassword('x', 'md5$abc$def')).toBe(false)
   })
 })
 
 describe('admin credentials', () => {
-  it('verifies username and password from env', () => {
+  it('verifies username and password from env', async () => {
     process.env.ADMIN_USERNAME = 'root'
     process.env.ADMIN_PASSWORD = 'hunter2'
     expect(getAdminUsername()).toBe('root')
-    expect(verifyAdminCredentials('root', 'hunter2')).toBe(true)
-    expect(verifyAdminCredentials('root', 'wrong')).toBe(false)
-    expect(verifyAdminCredentials('other', 'hunter2')).toBe(false)
+    expect(await verifyAdminCredentials('root', 'hunter2')).toBe(true)
+    expect(await verifyAdminCredentials('root', 'wrong')).toBe(false)
+    expect(await verifyAdminCredentials('other', 'hunter2')).toBe(false)
   })
 
-  it('prefers an explicit password hash over the plain password', () => {
-    const hash = hashPassword('hashed-pass')
+  it('prefers an explicit password hash over the plain password', async () => {
+    const hash = await hashPassword('hashed-pass')
     process.env.ADMIN_PASSWORD_HASH = hash
     process.env.ADMIN_PASSWORD = 'plain-pass'
-    expect(verifyAdminCredentials('admin', 'hashed-pass')).toBe(true)
-    expect(verifyAdminCredentials('admin', 'plain-pass')).toBe(false)
+    expect(await verifyAdminCredentials('admin', 'hashed-pass')).toBe(true)
+    expect(await verifyAdminCredentials('admin', 'plain-pass')).toBe(false)
   })
 
-  it('reports that admin is not configured without any password source', () => {
-    expect(isAdminConfigured()).toBe(false)
-    expect(verifyAdminCredentials('admin', 'anything')).toBe(false)
+  it('reports that admin is not configured without any password source', async () => {
+    expect(await isAdminConfigured()).toBe(false)
+    expect(await verifyAdminCredentials('admin', 'anything')).toBe(false)
   })
 })
 
@@ -87,22 +97,22 @@ describe('session tokens', () => {
 })
 
 describe('login rate limiting', () => {
-  it('allows attempts up to the threshold then blocks', () => {
-    resetLoginAttempts('10.0.0.1')
-    expect(isLoginRateLimited('10.0.0.1')).toBe(false)
+  it('allows attempts up to the threshold then blocks', async () => {
+    await resetLoginAttempts('10.0.0.1')
+    expect(await isLoginRateLimited('10.0.0.1')).toBe(false)
     for (let i = 0; i < 5; i++) {
-      recordLoginAttempt('10.0.0.1')
+      await recordLoginAttempt('10.0.0.1')
     }
-    expect(isLoginRateLimited('10.0.0.1')).toBe(true)
+    expect(await isLoginRateLimited('10.0.0.1')).toBe(true)
   })
 
-  it('tracks each IP independently', () => {
-    resetLoginAttempts('10.0.0.1')
-    resetLoginAttempts('10.0.0.2')
+  it('tracks each IP independently', async () => {
+    await resetLoginAttempts('10.0.0.1')
+    await resetLoginAttempts('10.0.0.2')
     for (let i = 0; i < 5; i++) {
-      recordLoginAttempt('10.0.0.1')
+      await recordLoginAttempt('10.0.0.1')
     }
-    expect(isLoginRateLimited('10.0.0.1')).toBe(true)
-    expect(isLoginRateLimited('10.0.0.2')).toBe(false)
+    expect(await isLoginRateLimited('10.0.0.1')).toBe(true)
+    expect(await isLoginRateLimited('10.0.0.2')).toBe(false)
   })
 })

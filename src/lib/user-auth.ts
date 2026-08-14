@@ -4,6 +4,8 @@ export interface UserSessionInfo {
   user: User | null
 }
 
+export type LoginResult = { kind: 'user'; user: User } | { kind: 'admin' }
+
 const AUTH_PATH = '/api/auth'
 
 async function parseResponse<T>(response: Response, fallback: string): Promise<T> {
@@ -14,14 +16,20 @@ async function parseResponse<T>(response: Response, fallback: string): Promise<T
   return body as T
 }
 
-export async function login(identifier: string, password: string, rememberMe = false): Promise<User> {
+export async function login(identifier: string, password: string, rememberMe = false): Promise<LoginResult> {
   const response = await fetch(`${AUTH_PATH}/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ identifier, password, rememberMe }),
   })
-  const body = await parseResponse<{ user: User }>(response, 'Failed to sign in')
-  return body.user
+  const body = await parseResponse<{ user?: User | null; admin?: boolean }>(response, 'Failed to sign in')
+  if (body.admin) {
+    return { kind: 'admin' }
+  }
+  if (body.user) {
+    return { kind: 'user', user: body.user }
+  }
+  throw new Error('Unexpected login response')
 }
 
 export async function register(username: string, email: string, password: string): Promise<User> {

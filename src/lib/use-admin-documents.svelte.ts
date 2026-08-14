@@ -26,6 +26,8 @@ export function useAdminDocuments(params: {
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
+  let editTarget = $state<AdminDocumentSummary | null>(null)
+  let saving = $state(false)
 
   const searchState = useAdminDocumentsSearch({
     onParamsChange() {
@@ -54,6 +56,8 @@ export function useAdminDocuments(params: {
     bulkDeletePending = false
     bulkDeleteOpen = false
     selectedIds = new Set()
+    editTarget = null
+    saving = false
     searchState.reset()
   }
 
@@ -158,54 +162,45 @@ export function useAdminDocuments(params: {
     }
   }
 
-  async function rename(id: string, name: string) {
-    const value = name.trim()
-    if (!value) {
-      return
-    }
-    try {
-      await updateAdminDocument(id, { name: value })
-      toast.success('Document renamed')
-      void load()
-      onAdminChange()
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to rename document')
-      }
-    }
+  function openEdit(document: AdminDocumentSummary) {
+    editTarget = document
   }
 
-  async function updateUpdatedBy(id: string, updatedBy: string) {
-    const value = updatedBy.trim()
-    if (!value) {
+  function closeEdit() {
+    if (saving) {
       return
     }
+    editTarget = null
+  }
+
+  async function saveDocument(input: {
+    name: string
+    key: string
+    createdBy: string
+    updatedBy: string
+  }) {
+    const target = editTarget
+    if (!target) {
+      return
+    }
+    saving = true
     try {
-      await updateAdminDocument(id, { updatedBy: value })
-      toast.success('Updated by saved')
+      await updateAdminDocument(target.id, {
+        name: input.name,
+        key: input.key,
+        createdBy: input.createdBy,
+        updatedBy: input.updatedBy,
+      })
+      toast.success('Document updated')
+      editTarget = null
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : 'Failed to update document')
       }
-    }
-  }
-
-  async function updateCreatedBy(id: string, createdBy: string) {
-    const value = createdBy.trim()
-    if (!value) {
-      return
-    }
-    try {
-      await updateAdminDocument(id, { createdBy: value })
-      toast.success('Created by saved')
-      void load()
-      onAdminChange()
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update document')
-      }
+    } finally {
+      saving = false
     }
   }
 
@@ -226,15 +221,19 @@ export function useAdminDocuments(params: {
     }
   }
 
-  async function updateIsPublic(id: string, isPublic: boolean) {
+  async function rename(id: string, name: string) {
+    const value = name.trim()
+    if (!value) {
+      return
+    }
     try {
-      await updateAdminDocument(id, { isPublic })
-      toast.success(isPublic ? 'Document set to public' : 'Document set to private')
+      await updateAdminDocument(id, { name: value })
+      toast.success('Document renamed')
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+        toast.error(error instanceof Error ? error.message : 'Failed to rename document')
       }
     }
   }
@@ -321,6 +320,12 @@ export function useAdminDocuments(params: {
     set bulkDeleteOpen(value: boolean) {
       bulkDeleteOpen = value
     },
+    get editTarget() {
+      return editTarget
+    },
+    get saving() {
+      return saving
+    },
     get selectedIds() {
       return selectedIds
     },
@@ -343,11 +348,11 @@ export function useAdminDocuments(params: {
     toggleAllOnCurrentPage,
     toggleSelection,
     confirmBulkDelete,
-    rename,
-    updateUpdatedBy,
-    updateCreatedBy,
+    openEdit,
+    closeEdit,
+    saveDocument,
     updateKey,
-    updateIsPublic,
+    rename,
     confirmDelete,
   }
 }

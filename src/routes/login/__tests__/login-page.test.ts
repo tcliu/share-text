@@ -49,6 +49,15 @@ describe('/login page', () => {
     })
   })
 
+  it('focuses the username input when switching to create account', async () => {
+    const { getByText } = render(LoginPage)
+    await fireEvent.click(getByText('Create account'))
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe('register-username')
+    })
+  })
+
   it('navigates to / after signing in', async () => {
     const { getByLabelText, getByText } = render(LoginPage)
     const identifier = await waitFor(() => getByLabelText('Username or email'))
@@ -58,6 +67,22 @@ describe('/login page', () => {
 
     await waitFor(() => {
       expect(goto).toHaveBeenCalledWith('/')
+    })
+  })
+
+  it('navigates to the admin console after an admin sign-in', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ admin: true }) }),
+    )
+    const { getByLabelText, getByText } = render(LoginPage)
+    const identifier = await waitFor(() => getByLabelText('Username or email'))
+    await fireEvent.input(identifier, { target: { value: 'admin' } })
+    await fireEvent.input(getByLabelText('Password'), { target: { value: 'adminpass' } })
+    await fireEvent.click(getByText('Continue'))
+
+    await waitFor(() => {
+      expect(goto).toHaveBeenCalledWith('/admin/properties')
     })
   })
 })

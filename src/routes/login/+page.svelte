@@ -2,13 +2,13 @@
   import { goto } from '$app/navigation'
   import UserAuthPanel from '$lib/components/UserAuthPanel.svelte'
 
-  function handleAuthenticated() {
-    void goto('/')
+  function handleAuthenticated(admin = false) {
+    void goto(admin ? '/admin/properties' : '/')
   }
 </script>
 
 <svelte:head>
-  <title>Sign in</title>
+  <title>Login</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">

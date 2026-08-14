@@ -20,8 +20,15 @@ export function useUserAuth() {
   }
 
   async function signIn(identifier: string, password: string, rememberMe = false) {
-    user = await login(identifier, password, rememberMe)
-    state = 'signedIn'
+    const result = await login(identifier, password, rememberMe)
+    if (result.kind === 'user') {
+      user = result.user
+      state = 'signedIn'
+    } else {
+      user = null
+      state = 'signedOut'
+    }
+    return result
   }
 
   async function signUp(username: string, email: string, password: string) {

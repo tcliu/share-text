@@ -12,15 +12,21 @@
   import Tabs, { type Tab } from '$lib/components/Tabs.svelte'
   import AdminPropertiesView from '$lib/components/AdminPropertiesView.svelte'
   import AdminDocumentsView from '$lib/components/AdminDocumentsView.svelte'
+  import AdminUsersView from '$lib/components/AdminUsersView.svelte'
   import { useAdminAuth } from '$lib/use-admin-auth.svelte'
   import { useAdminSettings } from '$lib/use-admin-settings.svelte'
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
+  import { useAdminUsers } from '$lib/use-admin-users.svelte'
+  import PlusIcon from '$lib/icons/PlusIcon.svelte'
+  import EditIcon from '$lib/icons/EditIcon.svelte'
 
   const PROPERTIES_PATH = '/admin/properties'
   const DOCUMENTS_PATH = '/admin/documents'
+  const USERS_PATH = '/admin/users'
   type AdminState = {
     settingsState: ReturnType<typeof useAdminSettings>
     documentsState: ReturnType<typeof useAdminDocuments>
+    usersState: ReturnType<typeof useAdminUsers>
   }
 
   let discardPromptOpen = $state(false)
@@ -28,10 +34,12 @@
 
   const settingsState = useAdminSettings(() => authState.handleSignedOut())
   const documentsState = useAdminDocuments({ onSignedOut: () => authState.handleSignedOut() })
+  const usersState = useAdminUsers({ onSignedOut: () => authState.handleSignedOut() })
   const authState = useAdminAuth({
     onSignedOut() {
       settingsState.reset()
       documentsState.reset()
+      usersState.reset()
     },
   })
 
@@ -45,6 +53,13 @@
     if (authState.state !== 'authenticated') return
     if (page.url.pathname === DOCUMENTS_PATH && !documentsState.loaded) {
       void documentsState.load()
+    }
+  })
+
+  $effect(() => {
+    if (authState.state !== 'authenticated') return
+    if (page.url.pathname === USERS_PATH && !usersState.loaded) {
+      void usersState.load()
     }
   })
 
@@ -165,6 +180,40 @@
       {#snippet documentsContent(state: AdminState)}
         <AdminDocumentsView documentsState={state.documentsState} />
       {/snippet}
+      {#snippet usersToolbar(state: AdminState)}
+        <Button
+          size="sm"
+          ariaLabel="Add user"
+          tooltip="Add user"
+          onClick={() => state.usersState.openAdd()}>
+          {#snippet icon()}
+            <PlusIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Set status"
+          tooltip="Set status for selected users"
+          disabled={state.usersState.selectedCount === 0}
+          onClick={() => (state.usersState.bulkStatusOpen = true)}>
+          {#snippet icon()}
+            <EditIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Reload"
+          tooltip="Reload"
+          disabled={state.usersState.loading}
+          onClick={() => void state.usersState.load()}>
+          {#snippet icon()}
+            <RefreshIcon />
+          {/snippet}
+        </Button>
+      {/snippet}
+      {#snippet usersContent(state: AdminState)}
+        <AdminUsersView usersState={state.usersState} />
+      {/snippet}
       {@const adminTabs = [
         {
           label: 'Properties',
@@ -178,9 +227,15 @@
           toolbar: documentsToolbar,
           content: documentsContent,
         },
+        {
+          label: 'Users',
+          path: USERS_PATH,
+          toolbar: usersToolbar,
+          content: usersContent,
+        },
       ] satisfies Tab<AdminState>[]}
       <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
-        <Tabs tabs={adminTabs} state={{ settingsState, documentsState }} pathname={page.url.pathname} ariaLabel="Admin sections" />
+        <Tabs tabs={adminTabs} state={{ settingsState, documentsState, usersState }} pathname={page.url.pathname} ariaLabel="Admin sections" />
       </div>
     {/if}
   </main>

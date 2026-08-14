@@ -19,7 +19,7 @@ import { isBodyRecord } from '$lib/server/request-utils'
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const ip = getClientAddress()
 
-  if (isLoginRateLimited(ip)) {
+  if (await isLoginRateLimited(ip)) {
     logEvent({ ip, action: 'admin_login_rate_limited', details: { level: 'WARN' } })
     return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 })
   }
@@ -33,13 +33,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
   const password = typeof body.password === 'string' ? body.password : ''
   const rememberMe = body.rememberMe === true
 
-  if (!verifyAdminCredentials(username, password)) {
-    recordLoginAttempt(ip)
+  if (!(await verifyAdminCredentials(username, password))) {
+    await recordLoginAttempt(ip)
     logEvent({ ip, action: 'admin_login_failed', details: { username } })
     return json({ error: 'Invalid username or password' }, { status: 401 })
   }
 
-  resetLoginAttempts(ip)
+  await resetLoginAttempts(ip)
   const ttlMs = rememberMe ? ADMIN_SESSION_REMEMBER_TTL_MS : ADMIN_SESSION_TTL_MS
   cookies.set(ADMIN_SESSION_COOKIE, createSessionToken(ttlMs), {
     httpOnly: true,

@@ -17,31 +17,28 @@ export function getAdminUsername() {
   return (process.env.ADMIN_USERNAME || '').trim() || 'admin'
 }
 
-function readAdminPassword() {
+async function readAdminPassword() {
   const plain = (process.env.ADMIN_PASSWORD || '').trim()
   const hash = (process.env.ADMIN_PASSWORD_HASH || '').trim()
   if (hash) {
     return { hash, configured: true }
   }
   if (plain) {
-    return { hash: hashPassword(plain), configured: true }
+    return { hash: await hashPassword(plain), configured: true }
   }
   return { hash: null, configured: false }
 }
 
-export function isAdminConfigured() {
-  return readAdminPassword().configured
+export async function isAdminConfigured() {
+  return (await readAdminPassword()).configured
 }
 
-export function verifyAdminCredentials(username: string, password: string) {
-  if (!isAdminConfigured()) {
-    return false
-  }
-  const { hash } = readAdminPassword()
+export async function verifyAdminCredentials(username: string, password: string) {
+  const { hash } = await readAdminPassword()
   if (!hash) {
     return false
   }
-  return username === getAdminUsername() && verifyPassword(password, hash)
+  return username === getAdminUsername() && (await verifyPassword(password, hash))
 }
 
 export function createSessionToken(ttlMs = ADMIN_SESSION_TTL_MS) {

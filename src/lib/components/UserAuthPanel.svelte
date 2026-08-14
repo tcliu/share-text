@@ -9,7 +9,7 @@
   type Mode = 'signin' | 'register'
 
   interface Props {
-    onAuthenticated: () => void
+    onAuthenticated: (admin: boolean) => void
   }
 
   let { onAuthenticated }: Props = $props()
@@ -21,6 +21,16 @@
   let password = $state('')
   let rememberMe = $state(false)
   let pending = $state(false)
+  let identifierInput = $state<HTMLInputElement | null>(null)
+  let registerUsernameInput = $state<HTMLInputElement | null>(null)
+
+  $effect(() => {
+    if (mode === 'signin') {
+      identifierInput?.focus()
+    } else {
+      registerUsernameInput?.focus()
+    }
+  })
 
   function switchMode(next: Mode) {
     mode = next
@@ -34,8 +44,8 @@
     }
     pending = true
     try {
-      await login(identifier.trim(), password, rememberMe)
-      onAuthenticated()
+      const result = await login(identifier.trim(), password, rememberMe)
+      onAuthenticated(result.kind === 'admin')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to sign in')
     } finally {
@@ -51,7 +61,7 @@
     pending = true
     try {
       await register(username.trim(), email.trim(), password)
-      onAuthenticated()
+      onAuthenticated(false)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create account')
     } finally {
@@ -62,7 +72,7 @@
 
 <div class="flex min-h-full items-center justify-center px-4 py-10">
   <div class="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60">
-    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">{mode === 'signin' ? 'Sign in' : 'Create account'}</h2>
+    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">{mode === 'signin' ? 'Login' : 'Create account'}</h2>
     <div class="mt-4">
       <div class="mb-4 flex rounded-lg border border-slate-700 p-0.5" role="group" aria-label="Account options">
         <button
@@ -70,7 +80,7 @@
           aria-pressed={mode === 'signin'}
           onclick={() => switchMode('signin')}
           class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${mode === 'signin' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}>
-          Sign in
+          Login
         </button>
         <button
           type="button"
@@ -92,6 +102,7 @@
           <FormField label="Username or email" htmlFor="user-identifier">
             <input
               id="user-identifier"
+              bind:this={identifierInput}
               bind:value={identifier}
               type="text"
               autocomplete="username"
@@ -114,6 +125,7 @@
           <FormField label="Username" htmlFor="register-username">
             <input
               id="register-username"
+              bind:this={registerUsernameInput}
               bind:value={username}
               type="text"
               autocomplete="username"
