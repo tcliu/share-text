@@ -179,7 +179,7 @@
       ondblclick={handleTextDoubleClick}>
       {text}
     </button>
-    <span bind:this={editBtn} class="opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+    <span bind:this={editBtn} class="[@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
       <Button
         size="sm"
         variant="ghost"

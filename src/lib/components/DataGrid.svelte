@@ -684,7 +684,7 @@
                   <span class="flex w-full items-center justify-center gap-1.5 text-center">
                     <span>{columnLabels?.[ci] ?? columnLetter(ci)}</span>
                     <span
-                      class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100">
+                      class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100">
                       <button
                         type="button"
                         class="leading-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"

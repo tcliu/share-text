@@ -312,7 +312,7 @@
                 <span class="flex w-full items-center gap-2 text-left">
                   <span>{column.header}</span>
                   <span
-                    class="flex flex-col text-slate-400 transition-opacity {isActive ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100">
+                    class="flex flex-col text-slate-400 transition-opacity {isActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100">
                     <button
                       type="button"
                       class="leading-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
