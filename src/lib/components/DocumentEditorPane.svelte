@@ -451,14 +451,15 @@
         <CopyIcon />
       {/snippet}
     </Button>
+    {#if ttsConfigured}
     <Button
       size="sm"
-      ariaLabel={speaking ? 'Stop reading' : ttsConfigured ? 'Read aloud' : 'Text-to-speech not configured'}
-      tooltip={speaking ? 'Stop reading' : ttsConfigured ? 'Read aloud' : 'Text-to-speech not configured'}
+      ariaLabel={speaking ? 'Stop reading' : 'Read aloud'}
+      tooltip={speaking ? 'Stop reading' : 'Read aloud'}
       variant={speaking ? 'outline' : 'secondary'}
       ariaPressed={speaking}
       onClick={handleReadAloud}
-      disabled={!ttsConfigured || (!speaking && content.length === 0)}>
+      disabled={!speaking && content.length === 0}>
       {#snippet icon()}
         {#if speaking}
           <StopIcon />
@@ -467,6 +468,7 @@
         {/if}
       {/snippet}
     </Button>
+    {/if}
     {#if onClone || cloneDisabled}
       <Button
         size="sm"
