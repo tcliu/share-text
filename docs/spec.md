@@ -228,6 +228,16 @@ synchronizes through a small fetch-based JSON API.
   `AdminDocumentsView`/`AdminUsersView`, and keeps the settings/documents/users
   state alive across tab switches. The old gear-icon dialog
   (`AdminDialog.svelte`) has been removed.
+  `useAdminSettings` also exposes a batch update dialog (`AdminSettingsBatchDialog.svelte`)
+  opened from the Properties toolbar: it pre-fills a Properties-format
+  `key=value` editor with the current effective values, accepts an uploaded
+  `.properties` file, and on **Apply** parses and validates each value against
+  its own setting rule (whole number within the allowed range), sends only the
+  changed settings through the existing `PUT /api/admin/settings`, and refreshes
+  the settings/draft state on success; unknown keys and invalid values reject
+  the whole update. It follows the shared editable-dialog pattern (OK/Apply +
+  Reset, discard-unsaved-changes confirm-on-dismiss) with Apply/Reset disabled
+  while the pre-fill is unmodified.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default
@@ -292,6 +302,31 @@ synchronizes through a small fetch-based JSON API.
   rows are selected, otherwise exporting all records) and saves the returned
   JSON array as `documents-export.json` / `users-export.json` via
   `downloadJson` (`$lib/download-json.ts`), toasting the exported count.
+- Both admin data tables are deletion-toolbar-driven: there are no per-row
+  delete buttons. A **Delete selected** toolbar button (enabled when
+  `selectedCount > 0`) opens a `ConfirmDialog` and runs a bulk delete
+  (`confirmBulkDelete`) that deletes each selected row, clears the selection,
+  reloads the list, and (for documents) fires the per-id `onAdminDelete`
+  callback. The Documents toolbar already had this; the Users toolbar gained
+  it, with `useAdminUsers` mirroring the documents' `bulkDeleteOpen`/
+  `bulkDeletePending`/`confirmBulkDelete` shape (the old per-row
+  `deleteTarget`/`confirmDelete` state was removed from both hooks).
+- The Users tab has no row action column. Its toolbar **Edit** button is
+  context-sensitive via `handleToolbarEdit`: with exactly one row selected it
+  resolves that user from the current page's list and opens the `UserDialog`
+  in edit mode; with multiple rows selected (or a single stale cross-page
+  selection that no longer resolves) it opens the batch status dialog
+  (`bulkStatusOpen`); it is disabled with no selection. Per-row editing was
+  removed, so single-user edits always flow through selection + toolbar Edit.
+- The Documents and Users tables render their copyable/editable cells as plain
+  values on touch-only devices, where the `(hover: hover)`-gated icons would be
+  permanently visible and noisy. `useSupportsHover` (`src/lib/use-supports-hover.svelte.ts`)
+  exposes the `(hover: hover)` matchMedia result as a derived value, and each
+  view conditionally renders either the interactive cell
+  (`EditableText`/`Copyable`) or a `PlainCell` truncating span on touch;
+  editing stays available through the row **Edit** button. The plain-value
+  rendering is done at the view level; the shared components' reveal controls
+  are gated separately via `(hover: hover)`.
 - Admin imports attribute documents to the requester IP (`created_by` /
   `updated_by`), leave them unowned (`owner_user_id null`), honor an optional
   `isPublic` (defaulting to `true`), normalize tags through the same
@@ -398,6 +433,11 @@ synchronizes through a small fetch-based JSON API.
   `preventDefault`, so the button never takes focus), and closing the preview
   calls the bound editor's `focus()` (forwarded through `LazyCodeEditor` to
   `CodeEditor`) to return focus to the editor at its current cursor position.
+  The browser layout's `toggleLeftPane` restores that registered editor focus
+  (via the share-text context `registerEditorFocus` callback) whenever the
+  desktop pane is toggled, covering the cases (keyboard activation, the rail
+  Show-list button) where the `preventFocusSteal` `pointerdown` guard does not
+  apply.
 
 ### Positioned Overlays
 
@@ -468,8 +508,11 @@ before the New button; it renders only when the layout passes
 toggle the desktop pane (`leftPaneCollapsed`, whose `w-11` rail with Show-list,
 New, Refresh, Login buttons expands back with a double-chevron-right icon) and
 to close the mobile drawer (so the button is absent on the mobile list route
-where there is nothing to collapse). `DocumentList` sizes itself full-width on
-mobile via `w-full` (the inline `width` style is only set on desktop). The left
+where there is nothing to collapse). Collapsing or re-expanding the desktop
+pane restores the registered editor focus so the visitor keeps editing after
+the list gives way.
+`DocumentList` sizes itself full-width on mobile via `w-full` (the inline
+`width` style is only set on desktop). The left
 pane header shows a Login button after the Refresh button that navigates to
 `/login`, where visitors sign in or create an account (the account form also
 accepts admin credentials when the identifier matches `ADMIN_USERNAME`). A
@@ -713,11 +756,20 @@ History (clock) button in the editor toolbar. Clicking it opens `HistoryDialog`:
   version's content on demand (`GET .../versions/[versionId]`). The content is
   shown read-only in a monospace view alongside the version's type, author,
   size, and timestamp. Two tooltip icon buttons sit in the pane header:
-  Compare with current splits the content area into the selected version (left)
-  and the current editor content (right); each split pane shows its own
-  document type tag between its label and the content, since a version may
-  have a different type than the current state. Restore copies the selected
-  version's content and type back into the editor. The two buttons are disabled
+  Compare with current replaces the content view with a side-by-side diff: the
+  selected version on the left and the current editor content on the right,
+  aligned row by row with removed lines marked `-` in red and added lines marked
+  `+` in green, each column headed by its own document type tag, since a version
+  may have a different type than the current state. The diff is computed by the
+  `diff` (jsdiff) package's `diffLines`, lazy-loaded when the dialog opens so it
+  never enters the initial bundle (a spinner covers the brief load); the
+  `removed`/`added` blocks a changed region emits are paired into aligned rows
+  by   `buildSideBySideRows` (`src/lib/version-diff.ts`), padding the empty
+  counterpart where line counts differ, and both non-empty inputs are
+  normalized to end with a newline so a trailing-newline-only difference is
+  not reported as a change. Restore copies the
+  selected version's content and type back into the editor. The two buttons are
+  disabled
   (and show no tooltip) whenever there is nothing to act on — no version
   selected yet, a version still loading, or the selected version already
   matching the current editor content and type; they stay in place while a
