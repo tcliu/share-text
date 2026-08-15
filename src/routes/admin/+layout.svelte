@@ -145,6 +145,16 @@
       {#snippet propertiesToolbar(state: AdminState)}
         <Button
           size="sm"
+          ariaLabel="Batch update settings"
+          tooltip="Batch update"
+          disabled={state.settingsState.pending}
+          onClick={() => state.settingsState.openBatch()}>
+          {#snippet icon()}
+            <UploadIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
           ariaLabel="Reload"
           tooltip="Reload"
           disabled={state.settingsState.pending}
@@ -235,12 +245,24 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Set status"
-          tooltip="Set status for selected users"
+          ariaLabel={state.usersState.selectedCount === 1 ? 'Edit selected user' : 'Set status'}
+          tooltip={state.usersState.selectedCount === 1 ? 'Edit selected user' : 'Set status for selected users'}
           disabled={state.usersState.selectedCount === 0}
-          onClick={() => (state.usersState.bulkStatusOpen = true)}>
+          onClick={() => state.usersState.handleToolbarEdit()}>
           {#snippet icon()}
             <EditIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Delete selected"
+          tooltip="Delete selected"
+          disabled={state.usersState.selectedCount === 0}
+          pending={state.usersState.bulkDeletePending}
+          onClick={() => (state.usersState.bulkDeleteOpen = true)}
+          className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
+          {#snippet icon()}
+            <DeleteIcon />
           {/snippet}
         </Button>
         <Button

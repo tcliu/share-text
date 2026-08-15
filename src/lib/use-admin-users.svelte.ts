@@ -31,14 +31,14 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   let page = $state(1)
   let pageSize = $state(10)
   let loading = $state(false)
-  let deleteTarget = $state<AdminUser | null>(null)
-  let deletingPending = $state(false)
   let dialogOpen = $state(false)
   let dialogMode = $state<UserDialogMode>('add')
   let dialogUser = $state<AdminUser | null>(null)
   let saving = $state(false)
   let bulkStatusOpen = $state(false)
   let bulkStatusPending = $state(false)
+  let bulkDeleteOpen = $state(false)
+  let bulkDeletePending = $state(false)
   let importOpen = $state(false)
   let importPending = $state(false)
   let exportPending = $state(false)
@@ -65,13 +65,13 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     total = 0
     page = 1
     loading = false
-    deleteTarget = null
-    deletingPending = false
     dialogOpen = false
     dialogUser = null
     saving = false
     bulkStatusOpen = false
     bulkStatusPending = false
+    bulkDeleteOpen = false
+    bulkDeletePending = false
     importOpen = false
     importPending = false
     exportPending = false
@@ -271,6 +271,24 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     }
   }
 
+  // The toolbar Edit button is context-sensitive: a single selection opens the
+  // edit dialog for that user; multiple selections open the batch status
+  // dialog. The button is disabled with no selection.
+  function handleToolbarEdit() {
+    if (selectedCount === 1) {
+      const id = [...selectedIds][0]
+      const user = users.find(u => String(u.id) === id)
+      if (user) {
+        openEdit(user)
+        return
+      }
+    }
+    if (selectedCount === 0) {
+      return
+    }
+    bulkStatusOpen = true
+  }
+
   async function updateUsername(id: number, username: string) {
     const value = username.trim()
     if (!value) {
@@ -303,26 +321,28 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     }
   }
 
-  async function confirmDelete() {
-    const target = deleteTarget
-    deleteTarget = null
-    if (!target) {
+  async function confirmBulkDelete() {
+    const ids = [...selectedIds]
+    bulkDeleteOpen = false
+    if (ids.length === 0) {
       return
     }
-    deletingPending = true
+    bulkDeletePending = true
     try {
-      await deleteAdminUser(target.id)
+      await Promise.all(ids.map(id => deleteAdminUser(Number(id))))
       const next = new Set(selectedIds)
-      next.delete(String(target.id))
+      for (const id of ids) {
+        next.delete(id)
+      }
       selectedIds = next
-      toast.success('User deleted')
+      toast.success(`${ids.length} user${ids.length === 1 ? '' : 's'} deleted`)
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete user')
+        toast.error(error instanceof Error ? error.message : 'Failed to delete users')
       }
     } finally {
-      deletingPending = false
+      bulkDeletePending = false
     }
   }
 
@@ -366,15 +386,6 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     get loading() {
       return loading
     },
-    get deleteTarget() {
-      return deleteTarget
-    },
-    set deleteTarget(value: AdminUser | null) {
-      deleteTarget = value
-    },
-    get deletingPending() {
-      return deletingPending
-    },
     get dialogOpen() {
       return dialogOpen
     },
@@ -395,6 +406,15 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     },
     get bulkStatusPending() {
       return bulkStatusPending
+    },
+    get bulkDeleteOpen() {
+      return bulkDeleteOpen
+    },
+    set bulkDeleteOpen(value: boolean) {
+      bulkDeleteOpen = value
+    },
+    get bulkDeletePending() {
+      return bulkDeletePending
     },
     get importOpen() {
       return importOpen
@@ -435,8 +455,9 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     toggleSelection,
     toggleAllOnCurrentPage,
     setBulkStatus,
+    handleToolbarEdit,
+    confirmBulkDelete,
     updateUsername,
     updateEmail,
-    confirmDelete,
   }
 }

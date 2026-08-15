@@ -7,19 +7,25 @@
   import ImportDialog from './ImportDialog.svelte'
   import Button from './Button.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
-  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import type { AdminDocumentSummary } from '$lib/admin'
   import Chip from './Chip.svelte'
+  import PlainCell from './PlainCell.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
   import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
+  import { useSupportsHover } from '$lib/use-supports-hover.svelte'
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
   }
 
   let { documentsState }: Props = $props()
+
+  // Touch devices have no hover, so the inline copy/edit icons would be
+  // permanently visible and noisy; show plain values instead (editing stays
+  // available via the row Edit button).
+  const supportsHover = useSupportsHover()
 
   function formatSize(value: number) {
     return value.toLocaleString()
@@ -153,43 +159,63 @@
   storageKey="admin-documents" />
 
 {#snippet idCell(document: AdminDocumentSummary)}
-  <EditableText
-    text={document.id}
-    size="sm"
-    className="font-mono text-slate-500 transition-colors hover:text-cyan-300"
-    copyable
-    onActivate={() => window.open(`/${document.id}`, '_blank', 'noopener')}
-    onChange={key => void documentsState.updateKey(document.id, key)} />
+  {#if supportsHover}
+    <EditableText
+      text={document.id}
+      size="sm"
+      className="font-mono text-slate-500 transition-colors hover:text-cyan-300"
+      copyable
+      onActivate={() => window.open(`/${document.id}`, '_blank', 'noopener')}
+      onChange={key => void documentsState.updateKey(document.id, key)} />
+  {:else}
+    <PlainCell value={document.id} className="font-mono text-slate-500" />
+  {/if}
 {/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
-  <EditableText
-    text={document.name}
-    size="sm"
-    className="text-slate-200"
-    copyable
-    onChange={name => void documentsState.rename(document.id, name)} />
+  {#if supportsHover}
+    <EditableText
+      text={document.name}
+      size="sm"
+      className="text-slate-200"
+      copyable
+      onChange={name => void documentsState.rename(document.id, name)} />
+  {:else}
+    <PlainCell value={document.name} className="text-slate-200" />
+  {/if}
 {/snippet}
 
 {#snippet documentTypeCell(document: AdminDocumentSummary)}
-  <Copyable
-    text={document.documentType}
-    className="text-slate-400 capitalize"
-    copyAriaLabel={`Copy document type ${document.documentType}`} />
+  {#if supportsHover}
+    <Copyable
+      text={document.documentType}
+      className="text-slate-400 capitalize"
+      copyAriaLabel={`Copy document type ${document.documentType}`} />
+  {:else}
+    <PlainCell value={document.documentType} className="capitalize text-slate-400" />
+  {/if}
+{/snippet}
+
+{#snippet tagsChips(document: AdminDocumentSummary)}
+  <span class="flex flex-wrap gap-1">
+    {#each document.tags as tag (tag.name)}
+      <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
+    {/each}
+  </span>
 {/snippet}
 
 {#snippet tagsCell(document: AdminDocumentSummary)}
   {#if (document.tags ?? []).length > 0}
-    <Copyable
-      text={formatTags(document.tags)}
-      className="block text-slate-400"
-      copyAriaLabel={`Copy tags for ${document.name}`}>
-      <span class="flex flex-wrap gap-1">
-        {#each document.tags as tag (tag.name)}
-          <Chip label={tag.name} chipClass={tagChipClass()} style={tagChipStyle(tag.color)} />
-        {/each}
-      </span>
-    </Copyable>
+    {#if supportsHover}
+      <Copyable
+        text={formatTags(document.tags)}
+        className="block text-slate-400"
+        copyAriaLabel={`Copy tags for ${document.name}`}>
+        {@render tagsChips(document)}
+      </Copyable>
+    {:else}
+      {@render tagsChips(document)}
+    {/if}
   {/if}
 {/snippet}
 
@@ -198,17 +224,25 @@
 {/snippet}
 
 {#snippet createdByCell(document: AdminDocumentSummary)}
-  <Copyable
-    text={document.createdBy}
-    className="block truncate text-slate-400"
-    copyAriaLabel={`Copy created by ${document.createdBy}`} />
+  {#if supportsHover}
+    <Copyable
+      text={document.createdBy}
+      className="block truncate text-slate-400"
+      copyAriaLabel={`Copy created by ${document.createdBy}`} />
+  {:else}
+    <PlainCell value={document.createdBy} className="text-slate-400" />
+  {/if}
 {/snippet}
 
 {#snippet updatedByCell(document: AdminDocumentSummary)}
-  <Copyable
-    text={document.updatedBy}
-    className="block truncate text-slate-400"
-    copyAriaLabel={`Copy updated by ${document.updatedBy}`} />
+  {#if supportsHover}
+    <Copyable
+      text={document.updatedBy}
+      className="block truncate text-slate-400"
+      copyAriaLabel={`Copy updated by ${document.updatedBy}`} />
+  {:else}
+    <PlainCell value={document.updatedBy} className="text-slate-400" />
+  {/if}
 {/snippet}
 
 {#snippet accessCell(document: AdminDocumentSummary)}
@@ -237,16 +271,6 @@
         <EditIcon />
       {/snippet}
     </Button>
-    <Button
-      size="sm"
-      ariaLabel={`Delete document ${document.name}`}
-      tooltip="Delete"
-      className="text-slate-400 hover:border-rose-500 hover:text-rose-300"
-      onClick={() => (documentsState.deleteTarget = document)}>
-      {#snippet icon()}
-        <DeleteIcon />
-      {/snippet}
-    </Button>
   </div>
 {/snippet}
 
@@ -267,16 +291,6 @@
     pending={documentsState.importPending}
     onImport={records => void documentsState.submitImport(records)}
     onClose={() => documentsState.closeImport()} />
-{/if}
-
-{#if documentsState.deleteTarget}
-  <ConfirmDialog
-    title="Delete document?"
-    message={`"${documentsState.deleteTarget.name}" will be permanently deleted for everyone.`}
-    confirmLabel="Delete"
-    confirmColor="rose"
-    onConfirm={() => void documentsState.confirmDelete()}
-    onCancel={() => (documentsState.deleteTarget = null)} />
 {/if}
 
 {#if documentsState.bulkDeleteOpen}

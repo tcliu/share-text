@@ -7,17 +7,22 @@
   import UserDialog from './UserDialog.svelte'
   import ImportDialog from './ImportDialog.svelte'
   import Button from './Button.svelte'
-  import EditIcon from '$lib/icons/EditIcon.svelte'
-  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import type { useAdminUsers } from '$lib/use-admin-users.svelte'
   import type { AdminUser } from '$lib/admin'
   import { formatTimestamp } from '$lib/date-format'
+  import PlainCell from './PlainCell.svelte'
+  import { useSupportsHover } from '$lib/use-supports-hover.svelte'
 
   interface Props {
     usersState: ReturnType<typeof useAdminUsers>
   }
 
   let { usersState }: Props = $props()
+
+  // Touch devices have no hover, so the inline copy/edit icons would be
+  // permanently visible and noisy; show plain values instead (editing stays
+  // available via the toolbar Edit button).
+  const supportsHover = useSupportsHover()
 
   const columns: DataTableColumn<AdminUser>[] = [
     {
@@ -65,13 +70,6 @@
       sortable: true,
       cell: createdAtCell,
     },
-    {
-      key: 'actions',
-      header: 'Actions',
-      width: '12%',
-      minWidth: 96,
-      cell: actionsCell,
-    },
   ]
 </script>
 
@@ -112,21 +110,29 @@
 {/snippet}
 
 {#snippet usernameCell(user: AdminUser)}
-  <EditableText
-    text={user.username}
-    size="sm"
-    className="text-slate-200"
-    copyable
-    onChange={username => void usersState.updateUsername(user.id, username)} />
+  {#if supportsHover}
+    <EditableText
+      text={user.username}
+      size="sm"
+      className="text-slate-200"
+      copyable
+      onChange={username => void usersState.updateUsername(user.id, username)} />
+  {:else}
+    <PlainCell value={user.username} className="text-slate-200" />
+  {/if}
 {/snippet}
 
 {#snippet emailCell(user: AdminUser)}
-  <EditableText
-    text={user.email}
-    size="sm"
-    className="text-slate-400"
-    copyable
-    onChange={email => void usersState.updateEmail(user.id, email)} />
+  {#if supportsHover}
+    <EditableText
+      text={user.email}
+      size="sm"
+      className="text-slate-400"
+      copyable
+      onChange={email => void usersState.updateEmail(user.id, email)} />
+  {:else}
+    <PlainCell value={user.email} className="text-slate-400" />
+  {/if}
 {/snippet}
 
 {#snippet statusCell(user: AdminUser)}
@@ -142,26 +148,6 @@
 
 {#snippet createdAtCell(user: AdminUser)}
   {formatTimestamp(user.createdAt)}
-{/snippet}
-
-{#snippet actionsCell(user: AdminUser)}
-  <div class="flex items-center gap-1">
-    <Button size="sm" ariaLabel={`Edit user ${user.username}`} tooltip="Edit" onClick={() => usersState.openEdit(user)}>
-      {#snippet icon()}
-        <EditIcon />
-      {/snippet}
-    </Button>
-    <Button
-      size="sm"
-      ariaLabel={`Delete user ${user.username}`}
-      tooltip="Delete"
-      className="text-slate-400 hover:border-rose-500 hover:text-rose-300"
-      onClick={() => (usersState.deleteTarget = user)}>
-      {#snippet icon()}
-        <DeleteIcon />
-      {/snippet}
-    </Button>
-  </div>
 {/snippet}
 
 {#if usersState.dialogOpen}
@@ -216,12 +202,12 @@
   </BaseDialog>
 {/if}
 
-{#if usersState.deleteTarget}
+{#if usersState.bulkDeleteOpen}
   <ConfirmDialog
-    title="Delete user?"
-    message={`"${usersState.deleteTarget.username}" will be deleted permanently. Their documents become anonymous and sharing entries are removed.`}
+    title={`Delete ${usersState.selectedCount} user${usersState.selectedCount === 1 ? '' : 's'}?`}
+    message="The selected users will be deleted permanently. Their documents become anonymous and sharing entries are removed."
     confirmLabel="Delete"
     confirmColor="rose"
-    onConfirm={() => void usersState.confirmDelete()}
-    onCancel={() => (usersState.deleteTarget = null)} />
+    onConfirm={() => void usersState.confirmBulkDelete()}
+    onCancel={() => (usersState.bulkDeleteOpen = false)} />
 {/if}
