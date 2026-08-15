@@ -106,15 +106,14 @@ buttons.
   button switches to a highlighted **Stop** toggle immediately on click (no
   loading spinner), and clicking it again cancels in-flight synthesis and stops
   playback, so the user can interrupt while audio is still being generated. The
-  button is disabled
-  when the document is empty or when the service is not configured. Repeatedly
+  button is disabled when the document is empty. Repeatedly
   reading the same text skips synthesis: the client caches the audio blob per
   segment (text + language) in memory, so unchanged lines play instantly from
   object URLs (revoked on stop/unmount). The feature is disabled unless a
   `tts_service_url` setting is set — configured
   in the admin **Properties** tab in real time (with `TTS_SERVICE_URL` as the
-  environment fallback); when it is empty the button is disabled with a
-  "not configured" tooltip, and when the service is unreachable it shows a
+  environment fallback); when it is empty the button is hidden entirely, and
+  when the service is unreachable it shows a
   toast explaining the failure.
 - **Export** downloads the content as a `{name}.{extension}` file, where the
   extension is determined by the selected document type (disabled when empty).
