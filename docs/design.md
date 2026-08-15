@@ -38,7 +38,8 @@ The page is split into two vertical panes.
   - The list loads more documents via infinite scroll when scrolling near the
     bottom, both for the full list and for active search results.
   - When collapsed, the pane shrinks to a thin rail with a **Show document
-    list** icon button that restores it.
+    list** icon button that restores it. Collapsing or re-expanding the pane
+    returns focus to the editor so you can keep typing where you left off.
 - **Right pane: editor**
   - When nothing is selected (`/`), an empty-state message prompts the user to
     select or create a document.
@@ -258,6 +259,13 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
   add-user field, the Tags dialog's tag field, and the admin add-user/add-
   document name field. When the first field is pre-filled (as when editing an
   existing user or document), no focus is moved into the dialog.
+- The **Version History** dialog (opened from the History toolbar button when a
+  document has multiple saved versions) lists versions newest first. Selecting
+  one shows its content read-only; **Compare** replaces the view with a
+  side-by-side diff of the selected version (left) against the current editor
+  content (right), with removed lines marked `-` in red and added lines marked
+  `+` in green, and **Restore** copies the selected version's content back into
+  the editor for review and saving.
 
 ## Discard Guard
 
@@ -301,7 +309,8 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 - A **Share** toolbar button opens the **Sharing dialog** on documents you own:
   a checkbox toggles **Anyone with the link can view** (public/private), and a
   searchable combobox adds or removes users shared with the document. Applying
-  the dialog updates the document immediately. Documents default to public;
+  the dialog updates the document immediately; dismissing it with unsaved edits
+  asks for confirmation before discarding them. Documents default to public;
   making one private hides it from everyone except you and the users you share
   it with.
 - Private documents carry a **Private** lock badge in the list and cannot be
@@ -335,13 +344,19 @@ keeps the settings draft and documents/users data alive across tab switches.
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
     revert button that deletes the database override. **Apply** persists
     changes, **Reload** re-fetches, **Reset** restores the draft to the current
-    values.
+    values. A **Batch update** toolbar button opens a dialog with a
+    Properties-format editor pre-filled with the current values (or a pasted/
+    uploaded `.properties` file): **Apply** validates every line against its
+    setting's rule and updates only the changed settings in one all-or-nothing
+    batch.
   - **Documents** — every document across all IPs with search, sortable columns,
-    pagination, row-selection with bulk delete, inline editing of the ID, name,
-    created-by, and updated-by cells (copyable editable text), a
-    **Public/Private** visibility column, and single-row
-    delete (behind a confirm dialog). Editing the ID renames the document key.
-    An **Edit** button opens a dialog split into **Details** and **Content**
+    pagination, and row-selection. A **Delete selected** toolbar button (enabled
+    once at least one row is selected) deletes the selected documents behind a
+    confirm dialog; there is no per-row delete button. The ID, name, created-by,
+    and updated-by cells are copyable editable text on hover-capable devices and
+    plain values on touch devices (where the icons would always be visible and
+    overwhelming), with a **Public/Private** visibility column. Each row's
+    **Edit** button opens a dialog split into **Details** and **Content**
     tabs: the details tab edits the key, name, created-by, and updated-by
     fields, and the content tab edits the document body in a CodeMirror editor
     (loaded lazily). An **Import** button opens an import dialog with a JSON
@@ -354,10 +369,16 @@ keeps the settings draft and documents/users data alive across tab switches.
     their configured percentage widths, and the table scrolls horizontally once
     the columns no longer fit.
   - **Users** — registered user accounts with search, sortable columns,
-    pagination, and row-selection for bulk status changes. An **Add user**
-    dialog creates an account, row actions edit or delete it, and an **Import**
-    button pastes or uploads user records as JSON in the same all-or-nothing
-    batch style as the Documents import.
+    pagination, and row-selection. The toolbar's **Edit** button is
+    context-sensitive: with exactly one row selected it opens the edit dialog
+    for that user; with multiple rows selected it opens the batch status
+    dialog. A **Delete selected** button deletes the selected users behind a
+    confirm dialog. Both are enabled once at least one row is selected, and the
+    table has no per-row action buttons. The username and email cells are
+    editable inline on hover-capable devices and plain on touch devices. An
+    **Add user** dialog creates an account, and an **Import** button pastes or
+    uploads user records as JSON in the same all-or-nothing batch style as the
+    Documents import.
 
 ### Runtime properties
 

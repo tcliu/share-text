@@ -26,8 +26,6 @@ export function useAdminDocuments(params: {
   let page = $state(1)
   let pageSize = $state(10)
   let loading = $state(false)
-  let deleteTarget = $state<AdminDocumentSummary | null>(null)
-  let deletingPending = $state(false)
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
@@ -65,7 +63,6 @@ export function useAdminDocuments(params: {
     total = 0
     page = 1
     loading = false
-    deleteTarget = null
     bulkDeletePending = false
     bulkDeleteOpen = false
     selectedIds = new Set()
@@ -356,30 +353,6 @@ export function useAdminDocuments(params: {
     }
   }
 
-  async function confirmDelete() {
-    const target = deleteTarget
-    deleteTarget = null
-    if (!target) {
-      return
-    }
-    deletingPending = true
-    try {
-      await deleteAdminDocument(target.id)
-      const next = new Set(selectedIds)
-      next.delete(target.id)
-      selectedIds = next
-      toast.success('Document deleted')
-      void load()
-      onAdminDelete(target.id)
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete document')
-      }
-    } finally {
-      deletingPending = false
-    }
-  }
-
   return {
     get documents() {
       return documents
@@ -419,15 +392,6 @@ export function useAdminDocuments(params: {
     },
     get loading() {
       return loading
-    },
-    get deleteTarget() {
-      return deleteTarget
-    },
-    set deleteTarget(value: AdminDocumentSummary | null) {
-      deleteTarget = value
-    },
-    get deletingPending() {
-      return deletingPending
     },
     get bulkDeletePending() {
       return bulkDeletePending
@@ -497,6 +461,5 @@ export function useAdminDocuments(params: {
     saveDocument,
     updateKey,
     rename,
-    confirmDelete,
   }
 }

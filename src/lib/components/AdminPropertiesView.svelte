@@ -2,6 +2,7 @@
   import Button from './Button.svelte'
   import Buttons from './Buttons.svelte'
   import NumberInput from './NumberInput.svelte'
+  import AdminSettingsBatchDialog from './AdminSettingsBatchDialog.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
@@ -80,3 +81,7 @@
     {/snippet}
   </Buttons>
 </div>
+
+{#if settingsState.batchOpen}
+  <AdminSettingsBatchDialog settingsState={settingsState} />
+{/if}

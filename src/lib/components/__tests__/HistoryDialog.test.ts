@@ -123,7 +123,7 @@ describe('HistoryDialog', () => {
     expect(onRestore).toHaveBeenCalledTimes(1)
   })
 
-  it('splits the pane to compare the selected version with the current content', async () => {
+  it('shows a side-by-side diff comparing the selected version with the current content', async () => {
     const { findByText, getByText, getByLabelText } = renderDialog()
 
     expect(await findByText('# v2')).toBeTruthy()
@@ -132,8 +132,25 @@ describe('HistoryDialog', () => {
 
     await fireEvent.click(getByLabelText('Compare with current'))
 
-    expect(getByText('# v1')).toBeTruthy()
-    expect(getByText('# current')).toBeTruthy()
+    expect(await findByText('# v1')).toBeTruthy()
+    expect(await findByText('# current')).toBeTruthy()
+  })
+
+  it('highlights added and removed lines in the diff', async () => {
+    const { findByText, getByText, getByLabelText, getByTestId } = renderDialog()
+
+    expect(await findByText('# v2')).toBeTruthy()
+    await fireEvent.click(getByText('203.0.113.7 · 5 chars'))
+    expect(await findByText('# v1')).toBeTruthy()
+
+    await fireEvent.click(getByLabelText('Compare with current'))
+
+    await waitFor(() => expect(getByTestId('history-diff')).toBeTruthy())
+    const diff = getByTestId('history-diff')
+    const removed = diff.querySelector('[class*="bg-rose"]')
+    const added = diff.querySelector('[class*="bg-emerald"]')
+    expect(removed?.textContent).toContain('# v1')
+    expect(added?.textContent).toContain('# current')
   })
 
   it('shows each pane own document type when the types differ', async () => {

@@ -27,8 +27,8 @@
   }
 </script>
 
-<!-- Reveals on hover/focus via a `group` ancestor unless `alwaysVisible`; must not be portalled -->
-<span class={`shrink-0 ${alwaysVisible ? '' : 'opacity-0 transition group-hover:opacity-100 focus-within:opacity-100'}`}>
+<!-- Reveals on hover/focus via a `group` ancestor on hover-capable devices (hidden state gated behind `(hover: hover)`), always visible on touch devices; must not be portalled -->
+<span class={`shrink-0 ${alwaysVisible ? '' : '[@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100'}`}>
   <Button
     size="sm"
     variant="ghost"

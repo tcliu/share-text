@@ -2,6 +2,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import EditableText from '../EditableText.svelte'
+import { findRevealWrapper, GATED_HIDDEN_CLASS } from '../../../test/reveal-helpers'
 
 describe('EditableText', () => {
   it('renders the text', () => {
@@ -36,6 +37,24 @@ describe('EditableText', () => {
     render(EditableText, { text: 'Test', onChange: vi.fn() })
     await fireEvent.click(screen.getByLabelText('Edit'))
     expect(screen.getByLabelText('Edit text')).toBeTruthy()
+  })
+
+  it('gates the edit button reveal behind the hover media query', () => {
+    render(EditableText, { text: 'Test', onChange: vi.fn() })
+
+    const wrapper = findRevealWrapper(screen.getByLabelText('Edit'))
+    expect(wrapper).not.toBeNull()
+    expect(wrapper?.classList.contains(GATED_HIDDEN_CLASS)).toBe(true)
+    expect(wrapper?.classList.contains('opacity-0')).toBe(false)
+  })
+
+  it('gates the copyable copy button reveal behind the hover media query', () => {
+    render(EditableText, { text: 'Hello', onChange: vi.fn(), copyable: true })
+
+    const wrapper = findRevealWrapper(screen.getByLabelText('Copy Hello'))
+    expect(wrapper).not.toBeNull()
+    expect(wrapper?.classList.contains(GATED_HIDDEN_CLASS)).toBe(true)
+    expect(wrapper?.classList.contains('opacity-0')).toBe(false)
   })
 
   it('commits on Enter and calls onChange', async () => {

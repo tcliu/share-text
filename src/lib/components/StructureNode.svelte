@@ -271,7 +271,7 @@
               <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
             </span>
             {#if onChange}
-              <span bind:this={editBtnEl} class="shrink-0 opacity-0 transition group-hover:opacity-100">
+              <span bind:this={editBtnEl} class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -287,7 +287,7 @@
                 </Button>
               </span>
             {/if}
-            <span class="shrink-0 opacity-0 transition group-hover:opacity-100">
+            <span class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100">
               <Button
                 size="sm"
                 variant="ghost"

@@ -261,7 +261,10 @@
           align="right"
           autoPlace={true} />
       {:else}
-        <span class="text-sm text-slate-400">{activeTypeLabel}</span>
+        <Chip
+          label={activeTypeLabel}
+          chipClass={tagChipClass()}
+          style={tagChipStyle(currentType.chipColor)} />
       {/if}
     </div>
   {/snippet}
@@ -527,7 +530,7 @@
       </div>
     </div>
   {:else}
-    <div class="flex flex-wrap items-start gap-x-3 gap-y-2">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
       <div class="flex min-w-0 grow basis-[min-content] flex-wrap items-center gap-2">
         {@render nameField()}
         {@render tagChips()}

@@ -2,6 +2,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import Copyable from '../Copyable.svelte'
+import { findRevealWrapper, GATED_HIDDEN_CLASS } from '../../../test/reveal-helpers'
 
 describe('Copyable', () => {
   beforeEach(() => {
@@ -41,6 +42,16 @@ describe('Copyable', () => {
     expect(button).toBeTruthy()
     expect(button.closest('.opacity-0')).toBeNull()
     expect(button.closest('div.group')).not.toBeNull()
+  })
+
+  it('gates the inline copy button reveal behind the hover media query', () => {
+    render(Copyable, { text: 'hello world', copyAriaLabel: 'Copy inline' })
+
+    const button = screen.getByLabelText('Copy inline')
+    const wrapper = findRevealWrapper(button)
+    expect(wrapper).not.toBeNull()
+    expect(wrapper?.classList.contains(GATED_HIDDEN_CLASS)).toBe(true)
+    expect(wrapper?.classList.contains('opacity-0')).toBe(false)
   })
 
   it('hides the copy button in top-right position when there is nothing to copy', () => {
