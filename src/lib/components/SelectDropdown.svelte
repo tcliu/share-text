@@ -171,7 +171,7 @@
 
 <div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null}>
   {#if filterable}
-    <div class="relative" bind:this={controlRef}>
+    <div class="relative w-fit" bind:this={controlRef}>
       <input
         type="text"
         bind:value={filterText}
@@ -186,7 +186,7 @@
         onfocus={handleControlFocus}
         onkeydown={handleControlKeydown}
         class={resolvedControlClass} />
-      <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+      <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
     </div>
   {:else}
     <button
