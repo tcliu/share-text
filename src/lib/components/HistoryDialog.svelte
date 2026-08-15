@@ -11,6 +11,7 @@
     type DocumentVersionSummary,
   } from '$lib/documents'
   import { formatTimestamp } from '$lib/date-format'
+  import { buildSideBySideRows } from '$lib/version-diff'
   import CompareIcon from '$lib/icons/CompareIcon.svelte'
   import RestoreIcon from '$lib/icons/RestoreIcon.svelte'
 
@@ -45,6 +46,7 @@
   let compare = $state(false)
   let restorePromptOpen = $state(false)
   let pendingRestore = $state<DocumentVersion | null>(null)
+  let diffLib = $state<typeof import('diff') | null>(null)
 
   const selectedMatchesCurrent = $derived(
     selected !== null && selected.content === currentContent && selected.documentType === currentType,
@@ -57,6 +59,24 @@
   // stale version while a newer selection is loading, and the panel never
   // resizes when switching versions.
   const actionsDisabled = $derived(selected === null || selectedLoading || selectedMatchesCurrent)
+
+  // The diff library is lazy-loaded so it never enters the initial bundle; the
+  // import starts when the dialog opens so Compare rarely waits on it.
+  $effect(() => {
+    if (!open) return
+    let cancelled = false
+    import('diff').then(module => {
+      if (!cancelled) diffLib = module
+    })
+    return () => {
+      cancelled = true
+    }
+  })
+
+  const diffRows = $derived.by(() => {
+    if (!compare || !selected || !diffLib) return null
+    return buildSideBySideRows(selected.content, currentContent, diffLib)
+  })
 
   $effect(() => {
     if (!open) return
@@ -221,33 +241,59 @@
                 </div>
               {/if}
               {#if compare}
-                <div class="grid flex-1 gap-2 md:grid-cols-2">
-                  <div class="flex min-h-40 flex-col gap-1.5">
-                    <div class="truncate text-xs font-medium text-slate-500">
-                      Selected · {formatTimestamp(selected.createdAt)}
+                <div class="flex min-h-0 flex-1 flex-col gap-1.5">
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class="truncate text-xs font-medium text-slate-500">
+                        Selected · {formatTimestamp(selected.createdAt)}
+                      </span>
+                      <span
+                        class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
+                        {selected.documentType}
+                      </span>
                     </div>
-                    <span
-                      class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
-                      {selected.documentType}
-                    </span>
-                    <pre
-                      class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-300">{selected.content ||
-                        '(empty)'}</pre>
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class="text-xs font-medium text-slate-500">Current</span>
+                      <span
+                        class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
+                        {currentType}
+                      </span>
+                    </div>
                   </div>
-                  <div class="flex min-h-40 flex-col gap-1.5">
-                    <div class="truncate text-xs font-medium text-slate-500">Current</div>
-                    <span
-                      class="w-fit rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
-                      {currentType}
-                    </span>
-                    <pre
-                      class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-300">{currentContent ||
-                        '(empty)'}</pre>
-                  </div>
+                  {#if diffRows}
+                    <div
+                      data-testid="history-diff"
+                      class="grid max-h-[70vh] min-w-0 flex-1 grid-cols-2 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 font-mono text-xs leading-5">
+                      {#each diffRows as row}
+                        <div
+                          class="min-h-5 min-w-0 border-r border-slate-800 px-3 py-0.5 {row.leftKind === 'removed'
+                            ? 'bg-rose-500/10 text-rose-300'
+                            : row.leftKind === 'context'
+                              ? 'text-slate-300'
+                              : ''}"><span class="inline-block w-3 shrink-0 select-none">{row.leftKind ===
+                            'removed'
+                            ? '-'
+                            : ''}</span>{row.left}</div>
+                        <div
+                          class="min-h-5 min-w-0 px-3 py-0.5 {row.rightKind === 'added'
+                            ? 'bg-emerald-500/10 text-emerald-300'
+                            : row.rightKind === 'context'
+                              ? 'text-slate-300'
+                              : ''}"><span class="inline-block w-3 shrink-0 select-none">{row.rightKind ===
+                            'added'
+                            ? '+'
+                            : ''}</span>{row.right}</div>
+                      {/each}
+                    </div>
+                  {:else}
+                    <div class="flex flex-1 items-center justify-center">
+                      <Spinner className="h-6 w-6" />
+                    </div>
+                  {/if}
                 </div>
               {:else}
                 <pre
-                  class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5 text-slate-300">{selected.content ||
+                  class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5">{selected.content ||
                     '(empty)'}</pre>
               {/if}
             {:else}
