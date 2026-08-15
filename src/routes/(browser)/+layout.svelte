@@ -10,6 +10,7 @@
   import Splitter from '$lib/components/Splitter.svelte'
   import Button from '$lib/components/Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
+  import AdminIcon from '$lib/icons/AdminIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsRightIcon from '$lib/icons/ChevronsRightIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
@@ -48,6 +49,9 @@
 
   const selectedId = $derived($page.params.id ?? null)
   const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
+
+  const profileIdentity = $derived(userAuthState.admin ?? userAuthState.user)
+  const isAdminIdentity = $derived(userAuthState.admin !== null)
 
   let isMobile = $state(false)
 
@@ -234,7 +238,9 @@
     onRefresh={handleRefresh}
     onLogin={() => goto('/login')}
     onProfile={() => (profileOpen = true)}
-    user={userAuthState.user}
+    onAdmin={() => goto('/admin')}
+    user={profileIdentity}
+    isAdmin={isAdminIdentity}
     onSignOut={handleSignOut}
     onDelete={handleDelete}
     onLoadMore={documentsState.loadMore}
@@ -266,11 +272,18 @@
           <RefreshIcon />
         {/snippet}
       </Button>
-      {#if userAuthState.user}
+      {#if profileIdentity}
+        {#if isAdminIdentity}
+          <Button size="sm" ariaLabel="Admin console" tooltip="Admin console" onClick={() => goto('/admin')}>
+            {#snippet icon()}
+              <AdminIcon />
+            {/snippet}
+          </Button>
+        {/if}
         <Button
           size="sm"
           ariaLabel="Sign out"
-          tooltip={`Signed in as ${userAuthState.user.username}`}
+          tooltip={`Signed in as ${profileIdentity.username}`}
           onClick={() => void handleSignOut()}>
           {#snippet icon()}
             <SignOutIcon />
@@ -330,6 +343,6 @@
     onCancel={() => (deleteTarget = null)} />
 {/if}
 
-{#if profileOpen && userAuthState.user}
-  <ProfileDialog user={userAuthState.user} onClose={() => (profileOpen = false)} />
+{#if profileOpen && profileIdentity}
+  <ProfileDialog user={profileIdentity} onClose={() => (profileOpen = false)} />
 {/if}

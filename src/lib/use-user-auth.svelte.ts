@@ -1,5 +1,5 @@
 import { toast } from 'svelte-sonner'
-import { fetchUserSession, login, logout, register } from '$lib/user-auth'
+import { fetchUserSession, login, logout, register, type AdminIdentity } from '$lib/user-auth'
 import type { User } from '$lib/documents'
 
 export type UserAuthState = 'checking' | 'signedOut' | 'signedIn'
@@ -7,15 +7,18 @@ export type UserAuthState = 'checking' | 'signedOut' | 'signedIn'
 export function useUserAuth() {
   let state = $state<UserAuthState>('checking')
   let user = $state<User | null>(null)
+  let admin = $state<AdminIdentity | null>(null)
 
   async function checkSession() {
     try {
       const session = await fetchUserSession()
       user = session.user
-      state = session.user ? 'signedIn' : 'signedOut'
+      admin = session.admin
+      state = session.user || session.admin ? 'signedIn' : 'signedOut'
     } catch {
       state = 'signedOut'
       user = null
+      admin = null
     }
   }
 
@@ -23,9 +26,11 @@ export function useUserAuth() {
     const result = await login(identifier, password, rememberMe)
     if (result.kind === 'user') {
       user = result.user
+      admin = null
       state = 'signedIn'
     } else {
       user = null
+      admin = null
       state = 'signedOut'
     }
     return result
@@ -33,6 +38,7 @@ export function useUserAuth() {
 
   async function signUp(username: string, email: string, password: string) {
     user = await register(username, email, password)
+    admin = null
     state = 'signedIn'
   }
 
@@ -43,6 +49,7 @@ export function useUserAuth() {
       toast.error('Failed to sign out')
     }
     user = null
+    admin = null
     state = 'signedOut'
   }
 
@@ -52,6 +59,9 @@ export function useUserAuth() {
     },
     get user() {
       return user
+    },
+    get admin() {
+      return admin
     },
     checkSession,
     signIn,

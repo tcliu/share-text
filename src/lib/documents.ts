@@ -25,6 +25,11 @@ export interface User {
   email: string
 }
 
+export interface ProfileIdentity {
+  username: string
+  email?: string | null
+}
+
 export interface DocumentAccessState {
   isPublic: boolean
   sharedWith: User[]

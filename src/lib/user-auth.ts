@@ -1,7 +1,12 @@
 import type { User } from './documents'
 
+export interface AdminIdentity {
+  username: string
+}
+
 export interface UserSessionInfo {
   user: User | null
+  admin: AdminIdentity | null
 }
 
 export type LoginResult = { kind: 'user'; user: User } | { kind: 'admin' }
@@ -49,8 +54,8 @@ export async function logout(): Promise<void> {
 
 export async function fetchUserSession(): Promise<UserSessionInfo> {
   const response = await fetch(`${AUTH_PATH}/session`)
-  const body = await parseResponse<UserSessionInfo>(response, 'Failed to check session')
-  return { user: body.user ?? null }
+  const body = await parseResponse<{ user?: User | null; admin?: AdminIdentity | null }>(response, 'Failed to check session')
+  return { user: body.user ?? null, admin: body.admin ?? null }
 }
 
 export async function searchUsers(query: string): Promise<User[]> {

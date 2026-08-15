@@ -1,10 +1,10 @@
 <script lang="ts">
   import BaseDialog from './BaseDialog.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
-  import type { User } from '$lib/documents'
+  import type { ProfileIdentity } from '$lib/documents'
 
   interface Props {
-    user: User
+    user: ProfileIdentity
     onClose: () => void
   }
 
@@ -19,7 +19,9 @@
       </span>
       <div class="min-w-0">
         <h2 class="truncate text-xl font-semibold tracking-tight text-slate-100">{user.username}</h2>
-        <p class="truncate text-sm text-slate-400">{user.email}</p>
+        {#if user.email}
+          <p class="truncate text-sm text-slate-400">{user.email}</p>
+        {/if}
       </div>
     </div>
   {/snippet}

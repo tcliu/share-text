@@ -1,10 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import type { OwnedDocumentSummary, User } from '$lib/documents'
+  import type { OwnedDocumentSummary, ProfileIdentity } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
+  import AdminIcon from '$lib/icons/AdminIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
@@ -30,8 +31,10 @@
     onRefresh: () => void
     onLogin: () => void
     onProfile?: () => void
+    onAdmin?: () => void
     onSignOut?: () => void
-    user?: User | null
+    user?: ProfileIdentity | null
+    isAdmin?: boolean
     onDelete: (id: string) => void
     onLoadMore: () => void
     onToggleCollapse?: () => void
@@ -54,8 +57,10 @@
     onRefresh,
     onLogin,
     onProfile,
+    onAdmin,
     onSignOut,
     user = null,
+    isAdmin = false,
     onDelete,
     onLoadMore,
     onToggleCollapse,
@@ -162,11 +167,19 @@
         {/snippet}
       </Button>
       {#if user}
-        <Button size="sm" ariaLabel="Profile" tooltip={`Profile (${user.username})`} onClick={onProfile}>
-          {#snippet icon()}
-            <PersonIcon />
-          {/snippet}
-        </Button>
+        {#if isAdmin}
+          <Button size="sm" ariaLabel="Admin console" tooltip={`Admin console (${user.username})`} onClick={onAdmin}>
+            {#snippet icon()}
+              <AdminIcon />
+            {/snippet}
+          </Button>
+        {:else}
+          <Button size="sm" ariaLabel="Profile" tooltip={`Profile (${user.username})`} onClick={onProfile}>
+            {#snippet icon()}
+              <PersonIcon />
+            {/snippet}
+          </Button>
+        {/if}
         <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={onSignOut}>
           {#snippet icon()}
             <SignOutIcon />
