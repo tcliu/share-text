@@ -113,8 +113,10 @@
     }
   }
 
-  function toggleLeftPane() {
+  async function toggleLeftPane() {
     leftPaneCollapsed = !leftPaneCollapsed
+    await tick()
+    editorFocus?.()
   }
 
   const handleListCollapse = $derived.by(() => {
