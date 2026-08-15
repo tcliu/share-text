@@ -8,6 +8,7 @@
   import Checkbox from './Checkbox.svelte'
   import Chip from './Chip.svelte'
   import Combobox, { type ComboboxOption } from './Combobox.svelte'
+  import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
 
@@ -28,6 +29,7 @@
   let userSuggestions = $state<ComboboxOption[]>([])
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   let comboboxRef = $state<ReturnType<typeof Combobox> | null>(null)
+  let discardPromptOpen = $state(false)
 
   $effect(() => {
     if (!open) return
@@ -104,10 +106,31 @@
   function removeSharee(username: string) {
     draftSharees = draftSharees.filter(value => value !== username)
   }
+
+  function handleCancelRequest() {
+    if (discardPromptOpen) {
+      return
+    }
+    if (dirty) {
+      discardPromptOpen = true
+      return
+    }
+    onClose()
+  }
+
+  function handleDiscard() {
+    discardPromptOpen = false
+    onClose()
+  }
 </script>
 
 {#if open}
-  <BaseDialog title="Sharing" maxWidth="lg" onCancel={onClose} pending={pending}>
+  <BaseDialog
+    title="Sharing"
+    maxWidth="lg"
+    onCancel={handleCancelRequest}
+    dismissKeydownCapture={!discardPromptOpen}
+    pending={pending}>
     <div class="flex flex-col gap-4">
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label="Anyone with the link can view" />
 
@@ -140,4 +163,13 @@
       </Buttons>
     </div>
   </BaseDialog>
+{/if}
+
+{#if discardPromptOpen}
+  <ConfirmDialog
+    title="Discard unsaved changes?"
+    message="You have unsaved sharing changes that will be lost."
+    confirmLabel="Discard"
+    onConfirm={handleDiscard}
+    onCancel={() => (discardPromptOpen = false)} />
 {/if}
