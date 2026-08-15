@@ -15,24 +15,42 @@ synchronizes through a small fetch-based JSON API.
   the page manages its own draft (`share-text:draft:new`), validates on save,
   creates the document, and navigates to `/{id}`.
 - `/{doc-id}` — the editor. `[id]/+page.server.ts` validates the id against the
-  `^[0-9a-z]+$` key character set and throws a 404 when invalid or when
-  the document does not exist; the page component renders server data, then
-  re-fetches the document client-side on refresh.
+  `^[0-9a-z]+$` key character set, resolves the viewer, and throws a 404 when
+  the id is invalid or the document does not exist or is not viewable; the page
+  component renders server data (with `editable`/`owned`/`canManageAccess`
+  flags), then re-fetches the document client-side on refresh.
 - `/api/documents` — `GET` returns paginated summaries (`limit`/`offset`,
-  `hasMore`) of every document across all client IPs, with an optional
-  server-side search (`search`, scoped to `search-keys`); each summary carries
-  an `owned` flag set when `created_by` matches the requesting client IP (used
-  by the UI to gate the row delete button). `POST` creates a document (201) and
-  enforces the per-IP create limit.
+  `hasMore`) of every document the viewer can see (public, owned, or shared),
+  with an optional server-side search (`search`, scoped to `search-keys`);
+  each summary carries `owned`/`editable`/`isPublic` flags (used by the UI to
+  gate the row delete button and the private lock badge). `POST` creates a
+  document (201) attributed to the resolved viewer (`owner_user_id` when
+  signed in) and enforces the per-IP create limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
   `content`, `documentType`, `tags`, or any combination thereof and returns
-  the updated document; `DELETE` removes it (204). Validation failures return
-  400, unknown ids 404. A `PUT` that changes `content` or `documentType`
-  records a content-version snapshot.
+  the updated document; `DELETE` removes it (204). All three run through
+  `resolveDocumentAccess` (`canView`/`canEdit`/`canDelete`): anonymous callers
+  without access get 404, signed-in users without access 403. A `PUT` that
+  changes `content` or `documentType` records a content-version snapshot.
 - `/api/documents/[id]/versions` — `GET` returns the saved content versions
   for a document, newest first (metadata only: id, type, author, size,
   timestamp). `/api/documents/[id]/versions/[versionId]` — `GET` returns one
   version including its content.
+- `/api/documents/[id]/access` — `GET` returns the document's
+  `{ isPublic, sharedWith }` state; `PUT` accepts `{ isPublic?, sharedWith? }`
+  and persists it in one `db.transaction`. Both require `canManageAccess`
+  (the owner), and `sharedWith` is capped at `MAX_SHAREES` (100) users resolved
+  by username or email.
+- `/api/auth/login` — `POST` verifies credentials against a registered user
+  (by username or email) or the configured admin (when the identifier matches
+  `ADMIN_USERNAME`), sets the matching HTTP-only session cookie, claims
+  same-IP anonymous documents on a successful user sign-in, and is
+  rate-limited per IP via the `login_attempts` table. `/api/auth/register` —
+  `POST` creates a user account (lowercase username, email, scrypt-hashed
+  password), claims same-IP anonymous documents, and signs it in (201).
+  `/api/auth/logout` clears both session cookies. `/api/auth/session` reports
+  the signed-in `user` (dropping stale sessions for inactive users) and any
+  `admin` identity.
 - `/api/admin/login` — `POST` verifies admin credentials, sets an HTTP-only
   signed session cookie, and is rate-limited per IP. `/api/admin/logout`
   clears the cookie. `/api/admin/session` reports whether admin is configured
@@ -52,8 +70,13 @@ synchronizes through a small fetch-based JSON API.
   the given or an auto-generated key (capped at `MAX_IMPORT_RECORDS`, 500). A
   direct `{ name, content, documentType? }` body creates one document
   attributed to the requester IP.
-- `/api/admin/documents/[id]` — `PUT` updates a document (`name`,
-  `updatedBy`, `createdBy`, and/or `key`); `DELETE` removes it.
+- `/api/admin/documents/[id]` — `GET` returns the full `AdminDocument` (with
+  `content`) for the edit dialog; `PUT` updates a document (`name`,
+  `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`, and/or
+  `content`); `DELETE` removes it.
+- `/api/admin/users/[id]` — `PUT` updates a user (`username`, `email`,
+  `password`, and/or `status`); `DELETE` removes it (leaving documents
+  ownerless and removing share rows via cascade).
 - `/api/admin/documents/export` — `GET` returns a JSON array of documents
   (every document, or only the comma-separated `ids` selection) shaped like
   import records (`{ key, name, content, documentType, tags, isPublic }`) so
@@ -75,8 +98,12 @@ synchronizes through a small fetch-based JSON API.
   the scrypt hash is exported so the export re-imports directly with
   credentials preserved, while a plaintext password never leaves the server.
 
-- `/api/tags` — `GET` returns every distinct tag across all documents, with
-  deduplication on case-insensitive name so each unique tag name appears once.
+- `/api/tags` — `GET` returns every distinct tag across the documents the
+  viewer can see, with deduplication on case-insensitive name so each unique
+  tag name appears once.
+- `/api/users/search` — `GET` searches active users by username/email prefix
+  (`q`), returning at most 10 matches for the share dialog's suggestion
+  combobox; requires a valid user session.
 
 ## Document Types
 
@@ -119,12 +146,16 @@ synchronizes through a small fetch-based JSON API.
     cold TCP/SSL handshake of a plain `pg` pool in serverless runtimes.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
   public `key`, `name`, `content`, `document_type` (text default),
-  `tags` (JSON array default `[]`), `created_by`/`updated_by` IPs,
-  `created_at`/`updated_at`), the `idx_documents_updated_at` index,
-  the `document_versions` table (one content snapshot per save, keyed by the
-  numeric `documents.id`, with the
-  `idx_document_versions_document_id_created_at` index), and the `app_config`
-  key/value table that stores runtime property overrides.
+  `tags` (JSON array default `[]`), `created_by`/`updated_by` attribution,
+  `owner_user_id` FK to `users` (null for anonymous documents), `is_public`
+  (default true), `created_at`/`updated_at`), the
+  `idx_documents_updated_at` index, the `document_versions` table (one content
+  snapshot per save, keyed by the numeric `documents.id`, with the
+  `idx_document_versions_document_id_created_at` index), the account/auth
+  tables — `users`, `document_shares` (document/user pairs with a cascade
+  composite primary key), `user_config`, and `login_attempts` (persisted login
+  rate limiting) — plus the `app_config` key/value table that stores runtime
+  property overrides.
 - Content versions: creating a document records its initial state as the
   first snapshot, and a save that changes `content` or `document_type` inserts
   another row into `document_versions` (content, type, `created_by`, time);
@@ -146,12 +177,36 @@ synchronizes through a small fetch-based JSON API.
   on unique-key collisions up to `MAX_KEY_ATTEMPTS` times. A document created
   without a name is named after its generated key.
 
+### Viewers And Access Control
+
+- `src/lib/server/viewer.ts` resolves a `Viewer` (`anonymous` | `user` |
+  `admin`) per request from the admin and user session cookies: an admin
+  session wins, then the user session token's `sub` is looked up (inactive or
+  missing users fall back to anonymous). Route handlers resolve the viewer
+  once and pass it through, so the client `owned`/`editable` flags always come
+  from the listing/load data.
+- `resolveDocumentAccess` (`src/lib/server/documents.ts`) computes
+  `canView`/`canEdit`/`canDelete`/`canManageAccess` for a document. Anonymous
+  viewers can view public documents and own only documents with
+  `owner_user_id is null` and a matching `created_by` IP; registered users can
+  view and edit public, owned, or shared documents but can delete/manage only
+  what they own; an admin viewer bypasses visibility entirely. Document
+  summaries (`fetchDocumentSummaries`) and the distinct tag list
+  (`listDistinctTags`) apply the same visibility condition, so the list,
+  search, and tag suggestions never leak private documents.
+- `setDocumentAccess` writes `is_public` and the `document_shares` rows for a
+  document in one `db.transaction`, resolving sharee usernames/emails to user
+  ids via `findUsersByUsernameOrEmail`. `claimAnonymousDocuments` reparents
+  same-IP anonymous documents to a user on registration and login.
+
 ## Admin
 
 - `src/lib/server/admin-auth.ts` hashes admin passwords with scrypt
   (`ADMIN_PASSWORD_HASH`, or `ADMIN_PASSWORD` for dev), issues HMAC-signed
-  session tokens (`SESSION_SECRET`), verifies the session cookie, and rate
-  limits failed logins in memory per IP.
+  session tokens (`SESSION_SECRET`), and verifies the session cookie. Login
+  rate limits (shared with user auth via `rate-limit.ts`) persist in the
+  `login_attempts` table, so they survive restarts and are shared across
+  instances.
 - `src/hooks.server.ts` guards every `/api/admin/*` route except `login` and
   `session`, returning 401 for requests without a valid session cookie.
 - `src/lib/server/settings.ts` defines the runtime-adjustable properties and
@@ -159,38 +214,41 @@ synchronizes through a small fetch-based JSON API.
   cached in memory for a short TTL and invalidated on write.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
-  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the two
-  tabs as real routes (`/admin/properties`, `/admin/documents`) backed by empty
-  `+page.svelte` shells.
+  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the three
+  tabs as real routes (`/admin/properties`, `/admin/documents`,
+  `/admin/users`) backed by empty `+page.svelte` shells.
   A `+layout.server.ts` guards every `/admin/*` route server-side, redirecting
-  unauthenticated sessions to `/login` before the client shell renders; the layout
-  then redirects there on the client only when the session is genuinely gone
-  (unauthenticated, session timeout, or sign-out) and shows a retryable error
-  state for transient session-check failures. The auth state machine lives in the
-  `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`); the layout
-  defines the two `Tab` entries (label, path, toolbar snippet, content snippet)
-  that render the shared `AdminPropertiesView`/`AdminDocumentsView`, and keeps
-  the settings/documents state alive across tab switches. The old gear-icon
-  dialog (`AdminDialog.svelte`) has been removed.
+  unauthenticated sessions to `/login/admin` before the client shell renders;
+  the layout then redirects there on the client only when the session is
+  genuinely gone (unauthenticated, session timeout, or sign-out) and shows a
+  retryable error state for transient session-check failures. The auth state
+  machine lives in the `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`);
+  the layout defines the three `Tab` entries (label, path, toolbar snippet,
+  content snippet) that render the shared `AdminPropertiesView`/
+  `AdminDocumentsView`/`AdminUsersView`, and keeps the settings/documents/users
+  state alive across tab switches. The old gear-icon dialog
+  (`AdminDialog.svelte`) has been removed.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default
   24-hour one; the password is never stored client-side.
 - The console routes its tabs as real routes so each keeps a stable, shareable
   URL: `/admin` redirects (`+page.server.ts`) to `/admin/properties` when the
-  session is authenticated and to `/login` when it is not. `Tabs` renders the
-  tab bar (marking the active path with `aria-current="page"`, wrapped in a
-  `nav` landmark labelled via the `ariaLabel` prop), the active tab's toolbar,
-  and the active tab's content; the layout stays mounted across tab navigation
-  so the settings draft and documents data survive tab switches, and the
-  documents list lazy-loads via a layout `$effect` on the documents path. The
+  session is authenticated and to `/login/admin` when it is not. `Tabs`
+  renders the tab bar (marking the active path with `aria-current="page"`,
+  wrapped in a `nav` landmark labelled via the `ariaLabel` prop), the active
+  tab's toolbar, and the active tab's content; the layout stays mounted across
+  tab navigation so the settings draft and documents/users data survive tab
+  switches, and each list lazy-loads via a layout `$effect` on its path. The
   `beforeNavigate` discard guard lets navigations within `/admin` through
   without prompting, since the shared state survives tab switches, and the
   admin layout renders no top header row until the session is `authenticated`.
-  The pre-login page lives at `/login` (`+page.server.ts` redirects
+  The admin sign-in page lives at `/login/admin` (`+page.server.ts` redirects
   authenticated sessions to `/admin/properties` and returns the `configured`
   flag otherwise; `+page.svelte` renders the shared `LoginPanel`), and a
-  successful sign-in there navigates to `/admin/properties`.
+  successful sign-in there navigates to `/admin/properties`. The browser-level
+  account login/register page lives at `/login` (it redirects an existing admin
+  session to `/admin/properties` and a user session to `/`).
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
   `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`, and
@@ -286,8 +344,10 @@ synchronizes through a small fetch-based JSON API.
   `admin_document_update_updated_by`, `admin_document_update_created_by`,
   `admin_document_update_key`, `admin_document_update_content`,
   `admin_document_update_type`, `admin_document_delete`, `admin_document_create`,
-  `admin_document_import`, `admin_user_import`, `admin_document_export`,
-  `admin_user_export`).
+  `admin_document_import`, `admin_user_import`, `admin_user_create`,
+  `admin_user_update_username`, `admin_user_update_email`,
+  `admin_user_update_password`, `admin_user_update_status`,
+  `admin_user_delete`, `admin_document_export`, `admin_user_export`).
 
 ## Limits
 
@@ -313,14 +373,16 @@ synchronizes through a small fetch-based JSON API.
   selected-document refresh token, editor dirty-state guard registration, and
   editor-focus registration (the shell focuses the active editor on navigation).
 - `(browser)/+layout.svelte` is the shell: it owns the document list, runs
-  `beforeNavigate` through the dirty guard, and hosts the discard and delete
-  confirm dialogs. The first page of summaries is preloaded on the server via
-  `(browser)/+layout.server.ts` (the same `fetchDocumentSummaries`/
-  `getClientAddress` path as the API, `DEFAULT_DOCUMENTS_PAGE_SIZE`) and seeded
-  once into `useDocuments` via `initialDocuments`/`initialHasMore`, so the list
-  renders without a client fetch or a "Loading documents..." flash; the layout
-  only falls back to a client `refreshList()` when no seed was provided (e.g.
-  component tests). Deleting the currently selected document navigates to `/`.
+  `beforeNavigate` through the dirty guard, hosts the discard and delete
+  confirm dialogs, and drives `useUserAuth` (session check on mount,
+  sign-out) plus the `ProfileDialog`. The first page of summaries is preloaded
+  on the server via `(browser)/+layout.server.ts` (the same viewer-resolving
+  `fetchDocumentSummaries`/`getClientAddress` path as the API,
+  `DEFAULT_DOCUMENTS_PAGE_SIZE`) and seeded once into `useDocuments` via
+  `initialDocuments`/`initialHasMore`, so the list renders without a client
+  fetch or a "Loading documents..." flash; the layout only falls back to a
+  client `refreshList()` when no seed was provided (e.g. component tests).
+  Deleting the currently selected document navigates to `/`.
 - `(browser)/new/+page.svelte` drives the new-document draft page: it keeps
   name/content/type in `$state`, persists a `share-text:draft:new` draft, and
   creates the document through the API client on save.
@@ -336,6 +398,24 @@ synchronizes through a small fetch-based JSON API.
   `preventDefault`, so the button never takes focus), and closing the preview
   calls the bound editor's `focus()` (forwarded through `LazyCodeEditor` to
   `CodeEditor`) to return focus to the editor at its current cursor position.
+
+### Positioned Overlays
+
+Overlay option panels (dropdowns, tag suggestions) position via the shared
+`positionPanel` action (`src/lib/position-panel.svelte.ts`). Attach it to the
+panel with `use:positionPanel={() => ({ getTrigger, getOpen, align?, autoPlace? })}`
+and keep the `fixed left-0 top-0 z-50 will-change-transform` positioning classes
+on the panel. The action portals the panel to `document.body`, auto-places it
+above/below the trigger (with an 8px viewport margin), and repositions on
+resize and scroll; it restores the panel to its original DOM parent on
+unmount. The owning component keeps its own open/close, keyboard, and
+outside-click handling.
+
+`KebabMenu` (`src/lib/components/KebabMenu.svelte`) follows this pattern for a
+three-dot action menu: it takes `items` (`{ id, label, onClick, disabled?,
+icon? }`) plus an optional `ariaLabel`/`align`/`autoPlace`, keeps its own open
+state and arrow-key focus (`activeIndex` with a `firstEnabledIndex` guard),
+and closes on item click, Escape, outside pointer-down, and scroll.
 
 ### Responsive Layout
 
@@ -391,13 +471,14 @@ to close the mobile drawer (so the button is absent on the mobile list route
 where there is nothing to collapse). `DocumentList` sizes itself full-width on
 mobile via `w-full` (the inline `width` style is only set on desktop). The left
 pane header shows a Login button after the Refresh button that navigates to
-`/login`, so admin sign-in is reachable from the document browser. A signed-in
-registered user sees Profile and Sign out buttons instead (Profile opens
-`ProfileDialog`); a signed-in admin session sees an Admin console button that
-navigates to `/admin` plus Sign out. `/api/auth/session` reports the signed-in
-`user` and, when an admin session is present, an `admin: { username }` identity
-so the browser app can render the admin entry point; `/api/auth/logout` clears
-both the user and admin session cookies.
+`/login`, where visitors sign in or create an account (the account form also
+accepts admin credentials when the identifier matches `ADMIN_USERNAME`). A
+signed-in registered user sees Profile and Sign out buttons instead (Profile
+opens `ProfileDialog`); a signed-in admin session sees an Admin console button
+that navigates to `/admin` plus Sign out. `/api/auth/session` reports the
+signed-in `user` and, when an admin session is present, an `admin: { username }`
+identity so the browser app can render the admin entry point;
+`/api/auth/logout` clears both the user and admin session cookies.
 
 ## Editor
 

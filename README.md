@@ -1,7 +1,8 @@
 # Share Text
 
 A public shared-text webapp where any visitor can create, edit, save, and delete
-documents that are shared with everyone. Built with SvelteKit and deployed to
+documents. Documents are public by default; visitors can register an account to
+own, share, and make documents private. Built with SvelteKit and deployed to
 Vercel with a Neon PostgreSQL store.
 
 - SvelteKit 2 + Svelte 5 (runes), Tailwind CSS v4, CodeMirror 6
@@ -62,7 +63,7 @@ Keys:
 | `ADMIN_USERNAME` | Admin login username (default `admin`) |
 | `ADMIN_PASSWORD` | Plain admin password (dev convenience; prefer a hash) |
 | `ADMIN_PASSWORD_HASH` | scrypt admin password hash for production (`node scripts/hash-password.mjs <password>`) |
-| `SESSION_SECRET` | Secret signing the admin session cookie (required in `prod`) |
+| `SESSION_SECRET` | Secret signing the admin and user session cookies (required in `prod`) |
 | `SCHEMA_NAME` | PostgreSQL schema name for table isolation in `prod` (default `public`) |
 | `DOCUMENT_KEY_LENGTH` | Generated document id character count (default 6, admin changes take effect for new keys immediately) |
 | `MAX_DOCUMENT_VERSIONS` | Max content versions kept per document (default 20, admin-adjustable) |
@@ -70,11 +71,13 @@ Keys:
 ## Database Setup
 
 The committed schema lives in `sql/schema.sql` (portable across Postgres and
-SQLite, idempotent): the `documents` table (with its `updated_at` index and a
-JSON `tags` column) plus the `app_config` key/value table that stores runtime
-property overrides. Each row has an internal auto-incrementing `id` (sequence)
-and a public `key` (`0-9a-z`, default six characters) that identifies the
-document in URLs.
+SQLite, idempotent): the `documents` table (with its `updated_at` index, a JSON
+`tags` column, an `owner_user_id` reference to `users`, and an `is_public` flag)
+plus the `users`/`document_shares`/`user_config`/`login_attempts` tables that
+back accounts, sharing, per-user config, and login rate limits, and the
+`app_config` key/value table that stores runtime property overrides. Each
+document row has an internal auto-incrementing `id` (sequence) and a public
+`key` (`0-9a-z`, default six characters) that identifies the document in URLs.
 
 ```bash
 npm run schema:apply        # applies to the dev SQLite database
@@ -89,26 +92,29 @@ In `dev` the schema is also applied automatically when the server first starts.
 npm run dev
 ```
 
-Open `http://localhost:5173`. The left pane lists all shared documents, most
-recently edited first. The search box filters the whole document store
+Open `http://localhost:5173`. The left pane lists the documents visible to you,
+most recently edited first. The search box filters the document store
 server-side (by name, tag, or id) with a short debounce. Click a name to
 navigate to `/{doc-id}` and load that document's content into the editor. Click
 **New document** to create one; it is added to the list automatically.
-The row delete button appears only for documents created by your client IP (a
-UI convenience — the API itself is open to any visitor, and the admin
-**Documents** tab can delete any document).
+The row delete button appears only for documents you own (created anonymously
+from your client IP, or claimed by your account after sign-in). The admin
+**Documents** tab can delete any document.
 No `DATABASE_URL` is needed — documents are stored in a local SQLite file at
-`.data/share-text-dev.sqlite` (created on first run).
+`.data/share-text-dev.sqlite` (created on first run). The **Login** button in
+the list header opens `/login`, where visitors can sign in or create an account.
 
 ## Admin
 
 The admin console is a dedicated area under `/admin`, reached by navigating
-there directly (`/admin` redirects to `/admin/properties`). Sign in with the
-configured `ADMIN_USERNAME`/`ADMIN_PASSWORD` (or `ADMIN_PASSWORD_HASH` in
-production). Two tabs are available after sign-in as real routes:
-**Properties** (`/admin/properties`, runtime-adjustable application properties)
-and **Documents** (`/admin/documents`, browse all documents across all client
-IPs).
+there directly (`/admin` redirects to `/admin/properties`, or to `/login/admin`
+when signed out). Sign in with the configured `ADMIN_USERNAME`/`ADMIN_PASSWORD`
+(or `ADMIN_PASSWORD_HASH` in production). Three tabs are available after
+sign-in as real routes: **Properties** (`/admin/properties`, runtime-adjustable
+application properties), **Documents** (`/admin/documents`, browse all
+documents across all client IPs), and **Users** (`/admin/users`, manage
+registered user accounts). The Documents and Users toolbars offer JSON
+**Import**/**Export**.
 
 Admin API endpoints live under `/api/admin/*` and are protected by a signed,
 HTTP-only admin session cookie; the session expires after 24 hours (30 days
