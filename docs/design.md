@@ -339,16 +339,15 @@ keeps the settings draft and documents/users data alive across tab switches.
   require a valid session.
 - The page has three tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
-    `max_content_length`, `document_key_length`, `max_document_versions`). Each
-    row shows its effective
+    `max_content_length`, `document_key_length`, `max_document_versions`). The
+    tab splits into **Form** and **Properties** sub-tabs editing the same draft:
+    the form shows each row with its effective
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
-    revert button that deletes the database override. **Apply** persists
-    changes, **Reload** re-fetches, **Reset** restores the draft to the current
-    values. A **Batch update** toolbar button opens a dialog with a
-    Properties-format editor pre-filled with the current values (or a pasted/
-    uploaded `.properties` file): **Apply** validates every line against its
-    setting's rule and updates only the changed settings in one all-or-nothing
-    batch.
+    revert button that deletes the database override; the Properties sub-tab is
+    a `key=value` editor pre-filled with the current values that feeds the same
+    draft (unknown settings are flagged inline and not applied). **Apply**
+    persists the changed settings, **Reload** re-fetches, **Reset** restores
+    both views to the current values.
   - **Documents** — every document across all IPs with search, sortable columns,
     pagination, and row-selection. A **Delete selected** toolbar button (enabled
     once at least one row is selected) deletes the selected documents behind a

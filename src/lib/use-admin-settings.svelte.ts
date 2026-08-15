@@ -1,13 +1,20 @@
 import { toast } from 'svelte-sonner'
-import { AdminAuthError, fetchAdminSettings, resetAdminSetting, updateAdminSettings, type AdminSetting } from '$lib/admin'
-import { parseProperties } from '$lib/document-type-utils'
+import { untrack } from 'svelte'
+import {
+  AdminAuthError,
+  fetchAdminSettings,
+  resetAdminSetting,
+  updateAdminSettings,
+  type AdminSetting,
+} from '$lib/admin'
+import { parseProperties, serializeProperties } from '$lib/document-type-utils'
 
 export function useAdminSettings(onSignedOut: () => void) {
   let settings = $state<AdminSetting[]>([])
   let draftValues = $state<Record<string, string>>({})
   let pending = $state(false)
-  let batchOpen = $state(false)
-  let batchPending = $state(false)
+  let propertiesText = $state('')
+  let lastPushedProperties = $state<Record<string, string> | null>(null)
 
   const hasUnsavedChanges = $derived(
     settings.some(setting => (draftValues[setting.key] ?? String(setting.value)) !== String(setting.value)),
@@ -34,6 +41,56 @@ export function useAdminSettings(onSignedOut: () => void) {
     }
     return { ok: true, value: parsed }
   }
+
+  function pickKnownSettings(record: Record<string, string>): Record<string, string> {
+    const known = new Set(settings.map(setting => setting.key))
+    const picked: Record<string, string> = {}
+    for (const [key, value] of Object.entries(record)) {
+      if (known.has(key)) {
+        picked[key] = value
+      }
+    }
+    return picked
+  }
+
+  function recordsEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+    const keys = Object.keys(a)
+    if (keys.length !== Object.keys(b).length) return false
+    return keys.every(key => a[key] === b[key])
+  }
+
+  // Draft -> properties editor: form edits, Apply, Reload, and Reset resync the
+  // editor text; a draft already explained by the editor's own last push is a
+  // self-echo and must not rewrite the text the user is typing. The reverse
+  // direction (editor -> draft) is explicit in `updatePropertiesText`, so this
+  // effect never reads the editor text.
+  $effect(() => {
+    const draft = draftValues
+    const lastPushed = untrack(() => lastPushedProperties)
+    if (lastPushed && recordsEqual(lastPushed, pickKnownSettings(draft))) return
+    lastPushedProperties = null
+    propertiesText = serializeProperties(draft)
+  })
+
+  const propertiesProblems = $derived.by(() => {
+    const parsed = parseProperties(propertiesText)
+    if (!parsed.ok) {
+      return parsed.error ? [parsed.error] : []
+    }
+    const problems: string[] = []
+    for (const [key, value] of Object.entries(parsed.value ?? {})) {
+      const setting = settings.find(item => item.key === key)
+      if (!setting) {
+        problems.push(`Unknown setting: ${key}`)
+        continue
+      }
+      const validated = validateSettingNumber(setting, value)
+      if (!validated.ok) {
+        problems.push(validated.error)
+      }
+    }
+    return problems
+  })
 
   async function load() {
     try {
@@ -97,9 +154,9 @@ export function useAdminSettings(onSignedOut: () => void) {
   function reset() {
     settings = []
     draftValues = {}
+    propertiesText = ''
+    lastPushedProperties = null
     pending = false
-    batchOpen = false
-    batchPending = false
   }
 
   async function resetSetting(setting: AdminSetting) {
@@ -118,64 +175,6 @@ export function useAdminSettings(onSignedOut: () => void) {
     }
   }
 
-  function openBatch() {
-    batchOpen = true
-  }
-
-  function closeBatch() {
-    if (batchPending) {
-      return
-    }
-    batchOpen = false
-  }
-
-  async function submitBatch(content: string) {
-    const parsed = parseProperties(content)
-    if (!parsed.ok) {
-      toast.error(parsed.error ?? 'Invalid properties')
-      return
-    }
-    const values = parsed.value ?? {}
-    const byKey = new Map(Object.entries(values))
-    for (const key of byKey.keys()) {
-      if (!settings.some(setting => setting.key === key)) {
-        toast.error(`Unknown setting: ${key}`)
-        return
-      }
-    }
-    const changes: Array<{ key: string; value: number | null }> = []
-    for (const setting of settings) {
-      if (!byKey.has(setting.key)) continue
-      const raw = (byKey.get(setting.key) ?? '').trim()
-      const validated = validateSettingNumber(setting, raw)
-      if (!validated.ok) {
-        toast.error(validated.error)
-        return
-      }
-      if (validated.value !== setting.value) {
-        changes.push({ key: setting.key, value: validated.value })
-      }
-    }
-    if (changes.length === 0) {
-      toast.error('No settings changed')
-      return
-    }
-    batchPending = true
-    try {
-      const updated = await updateAdminSettings(changes)
-      settings = updated
-      draftValues = Object.fromEntries(updated.map(item => [item.key, String(item.value)]))
-      toast.success(`${changes.length} setting${changes.length === 1 ? '' : 's'} updated`)
-      batchOpen = false
-    } catch (error) {
-      if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to save settings')
-      }
-    } finally {
-      batchPending = false
-    }
-  }
-
   return {
     get settings() {
       return settings
@@ -189,11 +188,22 @@ export function useAdminSettings(onSignedOut: () => void) {
     get hasUnsavedChanges() {
       return hasUnsavedChanges
     },
-    get batchOpen() {
-      return batchOpen
+    get propertiesProblems() {
+      return propertiesProblems
     },
-    get batchPending() {
-      return batchPending
+    get propertiesText() {
+      return propertiesText
+    },
+    updatePropertiesText(next: string) {
+      propertiesText = next
+      const parsed = parseProperties(next)
+      if (!parsed.ok || !parsed.value) return
+      const known = pickKnownSettings(parsed.value)
+      if (recordsEqual(known, pickKnownSettings(draftValues))) return
+      lastPushedProperties = known
+      for (const [key, value] of Object.entries(known)) {
+        draftValues[key] = value
+      }
     },
     load,
     apply,
@@ -201,11 +211,5 @@ export function useAdminSettings(onSignedOut: () => void) {
     resetDraft,
     reset,
     resetSetting,
-    openBatch,
-    closeBatch,
-    submitBatch,
-    updateDraftValue(key: string, value: string) {
-      draftValues[key] = value
-    },
   }
 }

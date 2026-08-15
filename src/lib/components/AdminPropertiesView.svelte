@@ -1,8 +1,9 @@
 <script lang="ts">
+  import Tabs from './Tabs.svelte'
   import Button from './Button.svelte'
   import Buttons from './Buttons.svelte'
   import NumberInput from './NumberInput.svelte'
-  import AdminSettingsBatchDialog from './AdminSettingsBatchDialog.svelte'
+  import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
@@ -19,11 +20,13 @@
   }
 </script>
 
-<div class="flex flex-col gap-4">
+{#snippet formContent()}
   <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
     {#each settingsState.settings as setting, i}
       <div
-        class="grid items-center gap-2 p-3 md:grid-cols-[minmax(0,1fr)_11rem] {i > 0 ? 'border-t border-slate-800' : ''}">
+        class="grid items-center gap-2 p-3 md:grid-cols-[minmax(0,1fr)_11rem] {i > 0
+          ? 'border-t border-slate-800'
+          : ''}">
         <div>
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-slate-100">{setting.label}</span>
@@ -48,23 +51,37 @@
             disabled={settingsState.pending}
             ariaLabel={setting.label} />
           {#if setting.source === 'database'}
-          <Button
-            size="sm"
-            ariaLabel={`Revert ${setting.label} to environment/default`}
-            tooltip="Revert to environment/default"
-            tooltipAlign="right"
-            disabled={settingsState.pending}
-            onClick={() => void settingsState.resetSetting(setting)}
-            className="shrink-0 text-slate-400 hover:text-cyan-300">
-            {#snippet icon()}
-              <ResetIcon />
-            {/snippet}
-          </Button>
+            <Button
+              size="sm"
+              ariaLabel={`Revert ${setting.label} to environment/default`}
+              tooltip="Revert to environment/default"
+              tooltipAlign="right"
+              disabled={settingsState.pending}
+              onClick={() => void settingsState.resetSetting(setting)}
+              className="shrink-0 text-slate-400 hover:text-cyan-300">
+              {#snippet icon()}
+                <ResetIcon />
+              {/snippet}
+            </Button>
           {/if}
         </div>
       </div>
     {/each}
   </div>
+{/snippet}
+
+{#snippet codeContent()}
+  <AdminPropertiesCodeView {settingsState} />
+{/snippet}
+
+<div class="flex min-h-0 flex-1 flex-col gap-4">
+  <Tabs
+    tabs={[
+      { label: 'Form', path: 'form', content: formContent },
+      { label: 'Properties', path: 'properties', content: codeContent },
+    ]}
+    state={{}}
+    ariaLabel="Properties views" />
 
   <Buttons>
     {#snippet children()}
@@ -77,11 +94,11 @@
         Apply
       </Button>
       <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>Reload</Button>
-      <Button disabled={settingsState.pending || !settingsState.hasUnsavedChanges} onClick={() => settingsState.resetDraft()}>Reset</Button>
+      <Button
+        disabled={settingsState.pending || !settingsState.hasUnsavedChanges}
+        onClick={() => settingsState.resetDraft()}>
+        Reset
+      </Button>
     {/snippet}
   </Buttons>
 </div>
-
-{#if settingsState.batchOpen}
-  <AdminSettingsBatchDialog settingsState={settingsState} />
-{/if}

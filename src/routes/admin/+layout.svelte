@@ -142,28 +142,6 @@
         </Button>
       </div>
     {:else if authState.state === 'authenticated'}
-      {#snippet propertiesToolbar(state: AdminState)}
-        <Button
-          size="sm"
-          ariaLabel="Batch update settings"
-          tooltip="Batch update"
-          disabled={state.settingsState.pending}
-          onClick={() => state.settingsState.openBatch()}>
-          {#snippet icon()}
-            <UploadIcon />
-          {/snippet}
-        </Button>
-        <Button
-          size="sm"
-          ariaLabel="Reload"
-          tooltip="Reload"
-          disabled={state.settingsState.pending}
-          onClick={() => void state.settingsState.reload()}>
-          {#snippet icon()}
-            <RefreshIcon />
-          {/snippet}
-        </Button>
-      {/snippet}
       {#snippet propertiesContent(state: AdminState)}
         <AdminPropertiesView settingsState={state.settingsState} />
       {/snippet}
@@ -283,7 +261,6 @@
         {
           label: 'Properties',
           path: PROPERTIES_PATH,
-          toolbar: propertiesToolbar,
           content: propertiesContent,
         },
         {

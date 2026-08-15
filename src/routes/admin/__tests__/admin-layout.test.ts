@@ -76,17 +76,17 @@ describe('admin layout route tabs', () => {
     vi.stubGlobal('fetch', mockFetch())
   })
 
-  it('renders the tab chrome, properties toolbar, and properties content when authenticated', async () => {
-    const { getByLabelText, getByText } = render(Layout)
+  it('renders the tab chrome and properties content when authenticated', async () => {
+    const { getByRole, getByText } = render(Layout)
 
-    const propertiesLink = await waitFor(() => getByText('Properties').closest('a') as HTMLAnchorElement)
-    const documentsLink = getByText('Documents').closest('a') as HTMLAnchorElement
+    const propertiesLink = await waitFor(() => getByRole('link', { name: 'Properties' }))
+    const documentsLink = getByRole('link', { name: 'Documents' })
     expect(propertiesLink.getAttribute('href')).toBe('/admin/properties')
     expect(documentsLink.getAttribute('href')).toBe('/admin/documents')
     expect(propertiesLink.getAttribute('aria-current')).toBe('page')
     expect(documentsLink.getAttribute('aria-current')).toBeNull()
 
-    expect(getByLabelText('Reload')).toBeTruthy()
+    expect(getByText('Reload')).toBeTruthy()
     await waitFor(() => {
       expect(getByText('Max documents per IP')).toBeTruthy()
     })
@@ -103,10 +103,10 @@ describe('admin layout route tabs', () => {
 
   it('highlights the documents tab, shows its toolbar, and renders the documents list', async () => {
     page.url = new URL('http://localhost/admin/documents') as typeof page.url
-    const { getByLabelText, getByText } = render(Layout)
+    const { getByLabelText, getByRole, getByText } = render(Layout)
 
-    const propertiesLink = await waitFor(() => getByText('Properties').closest('a') as HTMLAnchorElement)
-    const documentsLink = getByText('Documents').closest('a') as HTMLAnchorElement
+    const propertiesLink = await waitFor(() => getByRole('link', { name: 'Properties' }))
+    const documentsLink = getByRole('link', { name: 'Documents' })
     expect(propertiesLink.getAttribute('aria-current')).toBeNull()
     expect(documentsLink.getAttribute('aria-current')).toBe('page')
 

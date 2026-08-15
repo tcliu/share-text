@@ -228,16 +228,19 @@ synchronizes through a small fetch-based JSON API.
   `AdminDocumentsView`/`AdminUsersView`, and keeps the settings/documents/users
   state alive across tab switches. The old gear-icon dialog
   (`AdminDialog.svelte`) has been removed.
-  `useAdminSettings` also exposes a batch update dialog (`AdminSettingsBatchDialog.svelte`)
-  opened from the Properties toolbar: it pre-fills a Properties-format
-  `key=value` editor with the current effective values, accepts an uploaded
-  `.properties` file, and on **Apply** parses and validates each value against
-  its own setting rule (whole number within the allowed range), sends only the
-  changed settings through the existing `PUT /api/admin/settings`, and refreshes
-  the settings/draft state on success; unknown keys and invalid values reject
-  the whole update. It follows the shared editable-dialog pattern (OK/Apply +
-  Reset, discard-unsaved-changes confirm-on-dismiss) with Apply/Reset disabled
-  while the pre-fill is unmodified.
+  `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
+  **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
+  edit the one shared draft held by `useAdminSettings`. `useAdminSettings` also
+  keeps a Properties-format text representation of the draft
+  (`propertiesText`) bound by the code editor (`AdminPropertiesCodeView`); the
+  two directions are reconciled with the shared self-echo guard so the editor is
+  never rewritten by its own push: editor edits are parsed back into the draft
+  (`pickKnownSettings` + merge, unknown settings reported in a live
+  `propertiesProblems` banner and never pushed), while form edits, Apply,
+  Reload, and Reset resync the editor text. Apply persists only the changed
+  settings through `PUT /api/admin/settings`; Reset restores both views from
+  the saved settings. The old batch dialog (`AdminSettingsBatchDialog.svelte`)
+  has been removed.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default

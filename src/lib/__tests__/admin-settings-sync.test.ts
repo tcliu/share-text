@@ -33,6 +33,8 @@ const settings = [
   },
 ]
 
+const INITIAL_PROPERTIES = 'max_documents_per_ip=10\nmax_content_length=1048576'
+
 function makeSettingsFetch() {
   const settingsFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
     if (String(url).includes('/api/admin/settings')) {
@@ -63,96 +65,79 @@ function renderHost() {
   }
 }
 
-describe('useAdminSettings batch update', () => {
+describe('useAdminSettings properties text sync', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
   })
 
-  it('opens and closes the batch dialog', async () => {
+  it('initializes the editor text from the loaded settings', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
 
     await waitFor(() => expect(state().settings.length).toBe(2))
-    expect(state().batchOpen).toBe(false)
-
-    state().openBatch()
-    expect(state().batchOpen).toBe(true)
-
-    state().closeBatch()
-    expect(state().batchOpen).toBe(false)
+    expect(state().propertiesText).toBe(INITIAL_PROPERTIES)
   })
 
-  it('submits only the changed settings and closes the dialog on success', async () => {
-    const settingsFetch = makeSettingsFetch()
-    vi.stubGlobal('fetch', settingsFetch)
+  it('pushes a properties edit into the shared draft and preserves the typed text', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().openBatch()
-    await state().submitBatch('max_documents_per_ip=50\nmax_content_length=1048576')
 
-    const putCalls = settingsFetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
-    expect(putCalls).toHaveLength(1)
-    expect(JSON.parse(String(putCalls[0][1]?.body))).toEqual({
-      settings: [{ key: 'max_documents_per_ip', value: 50 }],
-    })
-    expect(state().batchOpen).toBe(false)
-    expect(state().settings.find(item => item.key === 'max_documents_per_ip')).toMatchObject({
-      value: 50,
-      source: 'database',
-    })
+    state().updatePropertiesText('max_documents_per_ip=50\n# comment\nmax_content_length=1048576')
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
+    expect(state().draftValues['max_content_length']).toBe('1048576')
+    expect(state().propertiesText).toBe('max_documents_per_ip=50\n# comment\nmax_content_length=1048576')
   })
 
-  it('rejects an unknown setting key without calling the API', async () => {
-    const settingsFetch = makeSettingsFetch()
-    vi.stubGlobal('fetch', settingsFetch)
+  it('reconciles a form draft edit back into the editor text', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().openBatch()
-    await state().submitBatch('not_a_setting=5')
 
-    expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
-    expect(state().batchOpen).toBe(true)
+    state().draftValues['max_content_length'] = '2048'
+    await waitFor(() => expect(state().propertiesText).toContain('max_content_length=2048'))
+    expect(state().propertiesText).toBe('max_documents_per_ip=10\nmax_content_length=2048')
   })
 
-  it('rejects a non-integer value for a numeric setting', async () => {
-    const settingsFetch = makeSettingsFetch()
-    vi.stubGlobal('fetch', settingsFetch)
+  it('reports unknown settings in the editor without pushing them', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().openBatch()
-    await state().submitBatch('max_documents_per_ip=abc')
 
-    expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
-    expect(state().batchOpen).toBe(true)
+    state().updatePropertiesText('max_documents_per_ip=50\nnot_a_setting=5')
+    await waitFor(() => expect(state().propertiesProblems).toContain('Unknown setting: not_a_setting'))
+    expect(state().draftValues['not_a_setting']).toBeUndefined()
+    expect(state().draftValues['max_documents_per_ip']).toBe('50')
   })
 
-  it('rejects a value outside the setting range', async () => {
-    const settingsFetch = makeSettingsFetch()
-    vi.stubGlobal('fetch', settingsFetch)
+  it('reports values that fail a setting rule', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().openBatch()
-    await state().submitBatch('max_documents_per_ip=0')
 
-    expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
-    expect(state().batchOpen).toBe(true)
+    state().updatePropertiesText('max_documents_per_ip=abc\nmax_content_length=0')
+    await waitFor(() =>
+      expect(state().propertiesProblems).toEqual(
+        expect.arrayContaining([
+          'Max documents per IP must be an integer',
+          'Max content length (chars) must be between 1 and 1048576',
+        ]),
+      ),
+    )
   })
 
-  it('reports when no values changed', async () => {
-    const settingsFetch = makeSettingsFetch()
-    vi.stubGlobal('fetch', settingsFetch)
+  it('resets both the form draft and the editor text', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().openBatch()
-    await state().submitBatch('max_documents_per_ip=10\nmax_content_length=1048576')
 
-    expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
-    expect(state().batchOpen).toBe(true)
+    state().updatePropertiesText('max_documents_per_ip=50\nmax_content_length=2048')
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
+
+    state().resetDraft()
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('10'))
+    expect(state().draftValues['max_content_length']).toBe('1048576')
+    expect(state().propertiesText).toBe(INITIAL_PROPERTIES)
   })
 })
