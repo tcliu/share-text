@@ -39,4 +39,26 @@ describe('Tabs', () => {
     expect(getByTestId('toolbar-alpha')).toBeTruthy()
     expect(getByTestId('content-alpha')).toBeTruthy()
   })
+
+  it('renders state-mode tab buttons with the first tab active', () => {
+    const { getByText, getByTestId } = render(TabsHost, {})
+
+    const alpha = getByText('Alpha').closest('button') as HTMLButtonElement
+    const beta = getByText('Beta').closest('button') as HTMLButtonElement
+    expect(alpha.getAttribute('aria-pressed')).toBe('true')
+    expect(beta.getAttribute('aria-pressed')).toBe('false')
+    expect(getByTestId('content-alpha').textContent).toBe('world')
+    expect(document.querySelector('[data-testid="content-beta"]')).toBeNull()
+  })
+
+  it('switches the active tab when a state-mode button is clicked', async () => {
+    const { getByText, getByTestId, findByTestId } = render(TabsHost, {})
+
+    await getByText('Beta').click()
+
+    expect(getByText('Alpha').getAttribute('aria-pressed')).toBe('false')
+    expect(getByText('Beta').getAttribute('aria-pressed')).toBe('true')
+    expect((await findByTestId('content-beta')).textContent).toBe('beta-content')
+    expect(document.querySelector('[data-testid="content-alpha"]')).toBeNull()
+  })
 })

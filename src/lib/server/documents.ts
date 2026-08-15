@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { getDb } from './db'
 import { isUniqueViolation } from './db-errors'
+import type { DbQuery } from './db-types'
 import { toIsoString } from './iso-string'
 import { logEvent } from './logging'
 import { appendSearchConditions } from './sql-search'
@@ -279,7 +280,14 @@ export async function fetchDocumentSummaries(options: FetchDocumentSummariesOpti
   appendVisibilityCondition(viewer, conditions, params)
 
   if (search) {
-    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: DOCUMENT_SEARCH_COLUMNS, defaultKeys: ['name'], conditions, params })
+    appendSearchConditions({
+      search,
+      searchKeys: searchKeys ?? [],
+      columns: DOCUMENT_SEARCH_COLUMNS,
+      defaultKeys: ['name'],
+      conditions,
+      params,
+    })
   }
 
   let query = sql
@@ -333,10 +341,8 @@ export async function countDocumentsByCreator(by: string) {
 
 export async function assertWithinDocumentLimit(by: string) {
   const maxDocuments = await getMaxDocumentsPerUser()
-  if (await countDocumentsByCreator(by) >= maxDocuments) {
-    throw new DocumentLimitError(
-      `Each IP can create at most ${maxDocuments} documents`,
-    )
+  if ((await countDocumentsByCreator(by)) >= maxDocuments) {
+    throw new DocumentLimitError(`Each IP can create at most ${maxDocuments} documents`)
   }
 }
 
@@ -594,7 +600,14 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
   const params: unknown[] = []
 
   if (search) {
-    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_SEARCH_COLUMNS, defaultKeys: ['name'], conditions, params })
+    appendSearchConditions({
+      search,
+      searchKeys: searchKeys ?? [],
+      columns: ADMIN_SEARCH_COLUMNS,
+      defaultKeys: ['name'],
+      conditions,
+      params,
+    })
   }
   if (by) {
     conditions.push(`created_by = $${params.length + 1}`)
@@ -634,7 +647,13 @@ export async function fetchDocumentForAdmin(id: string) {
     [id],
   )
   const row = result.rows[0]
-  return row ? { ...toAdminDocumentSummary(row), content: row.content, documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType } : null
+  return row
+    ? {
+        ...toAdminDocumentSummary(row),
+        content: row.content,
+        documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
+      }
+    : null
 }
 
 export async function insertDocument(options: {
@@ -654,7 +673,16 @@ export async function insertDocument(options: {
         `insert into documents (key, name, content, document_type, tags, created_by, updated_by, owner_user_id, created_at, updated_at)
          values ($1, $2, $3, $4, $5, $6, $7, $8, current_timestamp, current_timestamp)
          returning id, key, name, content, document_type, tags, updated_by, updated_at`,
-        [key, name, options.content, options.documentType ?? 'text', '[]', options.by, options.by, options.ownerUserId ?? null],
+        [
+          key,
+          name,
+          options.content,
+          options.documentType ?? 'text',
+          '[]',
+          options.by,
+          options.by,
+          options.ownerUserId ?? null,
+        ],
       )
       const row = result.rows[0]
       const document = toDocument(row)
@@ -686,6 +714,205 @@ export async function insertDocument(options: {
   }
 }
 
+export const MAX_IMPORT_RECORDS = 500
+
+export interface ImportDocumentRecord {
+  name: string
+  content?: string
+  documentType?: string
+  tags?: Tag[]
+  isPublic?: boolean
+  key?: string
+}
+
+export function normalizeImportTags(raw: unknown): Tag[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined
+  }
+  return parseTags(JSON.stringify(raw))
+}
+
+async function prepareImportDocument(record: ImportDocumentRecord, index: number, maxContentLength: number) {
+  let name: string
+  try {
+    name = normalizeName(record.name)
+  } catch (error) {
+    throw new Error(`record ${index}: ${error instanceof Error ? error.message : 'invalid name'}`)
+  }
+  if (typeof record.content !== 'string') {
+    throw new Error(`record ${index}: content is required`)
+  }
+  try {
+    assertContentWithinLimit(record.content, maxContentLength)
+  } catch (error) {
+    throw new Error(`record ${index}: ${error instanceof Error ? error.message : 'invalid content'}`)
+  }
+  const documentType = record.documentType ?? 'text'
+  if (!isValidDocumentType(documentType)) {
+    throw new Error(`record ${index}: invalid document type`)
+  }
+  let key: string | undefined
+  if (record.key !== undefined) {
+    try {
+      key = await normalizeDocumentKey(record.key)
+    } catch (error) {
+      throw new Error(`record ${index}: ${error instanceof Error ? error.message : 'invalid document key'}`)
+    }
+  }
+  return {
+    name,
+    content: record.content,
+    documentType,
+    tags: record.tags ?? [],
+    isPublic: record.isPublic ?? true,
+    key,
+  }
+}
+
+/**
+ * Bulk-create documents for the admin import dialog. All records are
+ * validated up front and then inserted in a single transaction, so an invalid
+ * record aborts the whole import (all-or-nothing). A record may carry an
+ * optional `key`; keys are otherwise auto-generated. A record whose `key`
+ * already exists merges (upserts) into that document — name, content, type,
+ * tags, and visibility are updated and a version snapshot recorded — while
+ * unknown keys insert. Key uniqueness (within the batch and against the
+ * database) is pre-checked inside the transaction so collisions do not rely
+ * on a unique-violation retry that would abort a Postgres transaction.
+ */
+export async function importDocumentsForAdmin(records: ImportDocumentRecord[], by: string): Promise<Document[]> {
+  if (records.length === 0) {
+    throw new Error('No records to import')
+  }
+  const keyLength = await getDocumentKeyLength()
+  const maxContentLength = await getMaxContentLength()
+  const maxDocumentVersions = await getMaxDocumentVersions()
+  const prepared = await Promise.all(
+    records.map((record, index) => prepareImportDocument(record, index + 1, maxContentLength)),
+  )
+
+  const seenKeys = new Set<string>()
+  for (let i = 0; i < prepared.length; i++) {
+    const key = prepared[i].key
+    if (key === undefined) {
+      continue
+    }
+    if (seenKeys.has(key)) {
+      throw new Error(`record ${i + 1}: duplicate document key`)
+    }
+    seenKeys.add(key)
+  }
+
+  const db = await getDb()
+  return db.transaction(async query => {
+    const created: Document[] = []
+    for (let i = 0; i < prepared.length; i++) {
+      const record = prepared[i]
+      if (record.key !== undefined) {
+        const existing = await query<{ key: string }>('select key from documents where key = $1', [record.key])
+        if (existing.rows.length > 0) {
+          const updated = await updateDocument(
+            record.key,
+            {
+              name: record.name,
+              content: record.content,
+              documentType: record.documentType,
+              tags: record.tags,
+              isPublic: record.isPublic,
+              by,
+            },
+            query,
+            { maxContentLength, maxDocumentVersions },
+          )
+          if (updated) {
+            created.push(updated)
+          }
+          continue
+        }
+      }
+      let key: string
+      if (record.key !== undefined) {
+        key = record.key
+      } else {
+        key = generateDocumentKey(keyLength)
+        let available = false
+        for (let attempt = 1; attempt <= MAX_KEY_ATTEMPTS; attempt++) {
+          const existing = await query<{ key: string }>('select key from documents where key = $1', [key])
+          if (existing.rows.length === 0) {
+            available = true
+            break
+          }
+          key = generateDocumentKey(keyLength)
+        }
+        if (!available) {
+          throw new Error('Failed to generate a unique document key')
+        }
+      }
+      const result = await query<DocumentRow>(
+        `insert into documents (key, name, content, document_type, tags, created_by, updated_by, owner_user_id, is_public, created_at, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, null, $8, current_timestamp, current_timestamp)
+         returning id, key, name, content, document_type, tags, updated_by, updated_at`,
+        [key, record.name, record.content, record.documentType, serializeTags(record.tags), by, by, record.isPublic],
+      )
+      const row = result.rows[0]
+      const document = toDocument(row)
+      await insertDocumentVersion(document, row.id, by, query, maxDocumentVersions)
+      created.push(document)
+    }
+    return created
+  })
+}
+
+interface AdminDocumentExportRow {
+  key: string
+  name: string
+  content: string
+  document_type: string
+  tags: string | null
+  is_public: boolean | number | string | null
+}
+
+export interface AdminDocumentExportRecord {
+  key: string
+  name: string
+  content: string
+  documentType: DocumentType
+  tags: Tag[]
+  isPublic: boolean
+}
+
+/**
+ * Export documents for the admin export action, shaped to match the admin
+ * import record format so an export round-trips through import (the `key` is
+ * preserved). When `ids` is provided only those keys are exported; otherwise
+ * every document is exported.
+ */
+export async function exportDocumentsForAdmin(ids?: string[]): Promise<AdminDocumentExportRecord[]> {
+  const conditions: string[] = []
+  const params: unknown[] = []
+  if (ids && ids.length > 0) {
+    const placeholders = ids.map((_, index) => `$${params.length + index + 1}`)
+    conditions.push(`key in (${placeholders.join(', ')})`)
+    params.push(...ids)
+  }
+  const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
+  const db = await getDb()
+  const result = await db.query<AdminDocumentExportRow>(
+    `select key, name, content, document_type, tags, is_public
+     from documents${whereClause}
+     order by updated_at desc`,
+    params,
+  )
+  return result.rows.map(row => ({
+    key: row.key,
+    name: row.name,
+    content: row.content,
+    documentType: (isValidDocumentType(row.document_type) ? row.document_type : 'text') as DocumentType,
+    tags: parseTags(row.tags),
+    isPublic: toBoolean(row.is_public),
+  }))
+}
+
 export async function updateDocument(
   id: string,
   options: {
@@ -703,6 +930,8 @@ export async function updateDocument(
     // Optional access-control override (used by admin edits).
     isPublic?: boolean
   },
+  query: DbQuery = runQuery,
+  limits: { maxContentLength?: number; maxDocumentVersions?: number } = {},
 ) {
   const updates: string[] = []
   const values: unknown[] = []
@@ -714,7 +943,7 @@ export async function updateDocument(
     index += 1
   }
   if (options.content !== undefined) {
-    const maxContentLength = await getMaxContentLength()
+    const maxContentLength = limits.maxContentLength ?? (await getMaxContentLength())
     assertContentWithinLimit(options.content, maxContentLength)
     updates.push(`content = $${index}`)
     values.push(options.content)
@@ -759,7 +988,7 @@ export async function updateDocument(
   // changes, so fetch the pre-update values to detect that.
   let previous: { content: string; document_type: string } | null = null
   if (options.content !== undefined || options.documentType !== undefined) {
-    const before = await runQuery<{ content: string; document_type: string }>(
+    const before = await query<{ content: string; document_type: string }>(
       'select content, document_type from documents where key = $1',
       [id],
     )
@@ -777,7 +1006,7 @@ export async function updateDocument(
   updates.push('updated_at = current_timestamp')
   values.push(id)
 
-  const result = await runQuery<DocumentRow>(
+  const result = await query<DocumentRow>(
     `update documents set ${updates.join(', ')} where key = $${index} returning id, key, name, content, document_type, tags, updated_by, updated_at`,
     values,
   )
@@ -790,7 +1019,7 @@ export async function updateDocument(
     if (contentChanged || typeChanged) {
       const versionStartedAt = Date.now()
       try {
-        await insertDocumentVersion(document, row.id, options.by)
+        await insertDocumentVersion(document, row.id, options.by, query, limits.maxDocumentVersions)
       } catch (error) {
         logEvent({
           ip: options.by,
@@ -808,14 +1037,8 @@ export async function updateDocument(
 }
 
 export async function deleteDocument(id: string) {
-  await runQuery(
-    'delete from document_shares where document_id = (select id from documents where key = $1)',
-    [id],
-  )
-  await runQuery(
-    'delete from document_versions where document_id = (select id from documents where key = $1)',
-    [id],
-  )
+  await runQuery('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
+  await runQuery('delete from document_versions where document_id = (select id from documents where key = $1)', [id])
   const result = await runQuery('delete from documents where key = $1', [id])
   return (result.rowCount ?? 0) > 0
 }
@@ -907,15 +1130,21 @@ function toDocumentVersionSummary(row: DocumentVersionRow): DocumentVersionSumma
   }
 }
 
-async function insertDocumentVersion(document: Document, dbId: string | number, by: string) {
-  const maxVersions = await getMaxDocumentVersions()
-  await runQuery(
+async function insertDocumentVersion(
+  document: Document,
+  dbId: string | number,
+  by: string,
+  query: DbQuery = runQuery,
+  maxDocumentVersionsOverride?: number,
+) {
+  const maxVersions = maxDocumentVersionsOverride ?? (await getMaxDocumentVersions())
+  await query(
     `insert into document_versions (document_id, content, document_type, created_by, created_at)
      values ($1, $2, $3, $4, current_timestamp)`,
     [dbId, document.content, document.documentType, by],
   )
   // Keep only the newest maxVersions snapshots for this document.
-  await runQuery(
+  await query(
     `delete from document_versions where document_id = $1 and id not in (
       select id from document_versions where document_id = $2
       order by created_at desc, id desc limit $3

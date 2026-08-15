@@ -58,6 +58,22 @@ export interface AdminUserListResponse {
   hasMore: boolean
 }
 
+export interface AdminDocumentExportRecord {
+  key: string
+  name: string
+  content: string
+  documentType: string
+  tags: Tag[]
+  isPublic: boolean
+}
+
+export interface AdminUserExportRecord {
+  username: string
+  email: string
+  status: AdminUserStatus
+  passwordHash: string
+}
+
 export interface AdminSessionInfo {
   authenticated: boolean
   configured: boolean
@@ -158,7 +174,15 @@ export async function fetchAdminDocuments(
 
 export async function updateAdminDocument(
   id: string,
-  changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string; isPublic?: boolean },
+  changes: {
+    name?: string
+    updatedBy?: string
+    createdBy?: string
+    key?: string
+    isPublic?: boolean
+    content?: string
+    documentType?: string
+  },
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
     method: 'PUT',
@@ -169,9 +193,39 @@ export async function updateAdminDocument(
   return body.document
 }
 
+export async function createAdminDocument(input: {
+  name: string
+  content: string
+  documentType?: string
+}): Promise<AdminDocument> {
+  const response = await fetch(`${BASE_PATH}/documents`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to create document')
+  return body.document
+}
+
+export async function fetchAdminDocument(id: string): Promise<AdminDocument> {
+  const response = await fetch(`${BASE_PATH}/documents/${id}`)
+  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to load document')
+  return body.document
+}
+
 export async function deleteAdminDocument(id: string): Promise<void> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, { method: 'DELETE' })
   await parseResponse(response, 'Failed to delete document')
+}
+
+export async function importAdminDocuments(records: unknown[]): Promise<AdminDocumentSummary[]> {
+  const response = await fetch(`${BASE_PATH}/documents`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ records }),
+  })
+  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, 'Failed to import documents')
+  return body.documents
 }
 
 export async function fetchAdminUsers(
@@ -244,4 +298,38 @@ export async function updateAdminUser(
 export async function deleteAdminUser(id: number): Promise<void> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, { method: 'DELETE' })
   await parseResponse(response, 'Failed to delete user')
+}
+
+export async function importAdminUsers(records: unknown[]): Promise<AdminUser[]> {
+  const response = await fetch(`${BASE_PATH}/users`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ records }),
+  })
+  const body = await parseResponse<{ users: AdminUser[] }>(response, 'Failed to import users')
+  return body.users
+}
+
+export async function exportAdminDocuments(ids?: string[]): Promise<AdminDocumentExportRecord[]> {
+  const params = new URLSearchParams()
+  if (ids && ids.length > 0) {
+    params.set('ids', ids.join(','))
+  }
+  const queryString = params.toString()
+  const url = queryString ? `${BASE_PATH}/documents/export?${queryString}` : `${BASE_PATH}/documents/export`
+
+  const response = await fetch(url)
+  return parseResponse<AdminDocumentExportRecord[]>(response, 'Failed to export documents')
+}
+
+export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportRecord[]> {
+  const params = new URLSearchParams()
+  if (ids && ids.length > 0) {
+    params.set('ids', ids.join(','))
+  }
+  const queryString = params.toString()
+  const url = queryString ? `${BASE_PATH}/users/export?${queryString}` : `${BASE_PATH}/users/export`
+
+  const response = await fetch(url)
+  return parseResponse<AdminUserExportRecord[]>(response, 'Failed to export users')
 }

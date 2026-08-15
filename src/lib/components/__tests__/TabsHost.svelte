@@ -2,7 +2,7 @@
   import Tabs from '../Tabs.svelte'
 
   interface Props {
-    pathname: string
+    pathname?: string
   }
 
   let { pathname }: Props = $props()

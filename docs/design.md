@@ -16,7 +16,9 @@ The page is split into two vertical panes.
 
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
-    document**, **Refresh**, and **Login** icon buttons (all with tooltips).
+    document**, **Refresh**, and — depending on sign-in state — **Login**,
+    **Profile** + **Sign out** (signed-in user), or **Admin console** + **Sign
+    out** (signed-in admin) icon buttons (all with tooltips).
   - The pane lists all shared documents, most recently edited first. New
     documents are added to the list automatically.
   - A search box below the header (with a clear button) searches the whole
@@ -306,10 +308,23 @@ keeps the settings draft and documents data alive across tab switches.
     pagination, row-selection with bulk delete, inline editing of the ID, name,
     created-by, and updated-by cells (copyable editable text), and single-row
     delete (behind a confirm dialog). Editing the ID renames the document key.
-    Column widths are adjustable by dragging the dividers between column headers
+    An **Edit** button opens a dialog split into **Details** and **Content**
+    tabs: the details tab edits the key, name, created-by, and updated-by
+    fields, and the content tab edits the document body in a CodeMirror editor
+    (loaded lazily). An **Import** button opens an import dialog with a JSON
+    editor: paste or upload a JSON object (single record) or array (multiple
+    records), and **OK** validates and creates the records in one all-or-nothing
+    batch before the table refreshes. A help icon opens a samples panel with
+    copyable example records for each import kind. Column widths are adjustable
+    by dragging the dividers between column headers
     (the checkbox column stays fixed); before any adjustment the columns use
     their configured percentage widths, and the table scrolls horizontally once
     the columns no longer fit.
+  - **Users** — registered user accounts with search, sortable columns,
+    pagination, and row-selection for bulk status changes. An **Add user**
+    dialog creates an account, row actions edit or delete it, and an **Import**
+    button pastes or uploads user records as JSON in the same all-or-nothing
+    batch style as the Documents import.
 
 ### Runtime properties
 

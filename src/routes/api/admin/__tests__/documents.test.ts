@@ -22,8 +22,20 @@ vi.mock('$lib/server/documents', async () => {
   }
 })
 
-import { GET } from '../documents/+server'
-import { DELETE, PUT } from '../documents/[id]/+server'
+const settingsMocks = vi.hoisted(() => ({
+  getMaxContentLength: vi.fn(),
+}))
+
+vi.mock('$lib/server/settings', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/settings')>('$lib/server/settings')
+  return {
+    ...actual,
+    getMaxContentLength: settingsMocks.getMaxContentLength,
+  }
+})
+
+import { GET as listGET } from '../documents/+server'
+import { DELETE, GET, PUT } from '../documents/[id]/+server'
 
 const summary = {
   id: 'a1b2c3',
@@ -44,7 +56,7 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('returns paginated documents with total', async () => {
-    const response = await GET({
+    const response = await listGET({
       url: new URL('http://localhost/api/admin/documents?search=notes&limit=20&offset=0'),
     } as never)
 
@@ -62,7 +74,7 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('forwards searchKeys as a list of column keys', async () => {
-    const response = await GET({
+    const response = await listGET({
       url: new URL('http://localhost/api/admin/documents?search=alpha&search-keys=id,name,updatedBy'),
     } as never)
 
@@ -73,7 +85,7 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('forwards sortBy and order parameters', async () => {
-    const response = await GET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=asc') } as never)
+    const response = await listGET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=asc') } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
@@ -82,7 +94,7 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('ignores an invalid order parameter', async () => {
-    const response = await GET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=sideways') } as never)
+    const response = await listGET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=sideways') } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
@@ -91,8 +103,31 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('rejects invalid pagination parameters', async () => {
-    const response = await GET({ url: new URL('http://localhost/api/admin/documents?limit=abc') } as never)
+    const response = await listGET({ url: new URL('http://localhost/api/admin/documents?limit=abc') } as never)
     expect(response.status).toBe(400)
+  })
+})
+
+describe('GET /api/admin/documents/[id]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
+  })
+
+  it('returns the document with its content', async () => {
+    const response = await GET({ params: { id: 'a1b2c3' } } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.fetchDocumentForAdmin).toHaveBeenCalledWith('a1b2c3')
+    await expect(response.json()).resolves.toEqual({
+      document: { ...summary, content: 'hello world' },
+    })
+  })
+
+  it('returns 404 when the document is missing', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce(null)
+    const response = await GET({ params: { id: 'a1b2c3' } } as never)
+    expect(response.status).toBe(404)
   })
 })
 
@@ -101,6 +136,7 @@ describe('PUT /api/admin/documents/[id]', () => {
     vi.clearAllMocks()
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
     documentsMocks.normalizeDocumentKey.mockImplementation(async (value: string) => value.toLowerCase())
+    settingsMocks.getMaxContentLength.mockResolvedValue(1024 * 1024)
     documentsMocks.updateDocument.mockResolvedValue({
       id: 'a1b2c3',
       name: 'Renamed',
@@ -246,6 +282,54 @@ describe('PUT /api/admin/documents/[id]', () => {
       getClientAddress: () => '203.0.113.9',
     } as never)
     expect(response.status).toBe(409)
+  })
+
+  it('updates the document content', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    documentsMocks.updateDocument.mockResolvedValueOnce({
+      id: 'a1b2c3',
+      name: 'Notes',
+      content: 'hello world!',
+      documentType: 'text',
+      tags: [],
+      updatedAt: '2026-08-03T00:00:00.000Z',
+      updatedBy: '203.0.113.9',
+    })
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content: 'hello world!' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
+      content: 'hello world!',
+      by: '203.0.113.9',
+    })
+    const body = (await response.json()) as { document: { content: string; contentSize: number } }
+    expect(body.document.content).toBe('hello world!')
+    expect(body.document.contentSize).toBe(12)
+  })
+
+  it('returns 400 when the content exceeds the configured limit', async () => {
+    documentsMocks.fetchDocumentForAdmin.mockResolvedValueOnce({ ...summary, content: 'hello world' })
+    settingsMocks.getMaxContentLength.mockResolvedValueOnce(5)
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ content: 'a very long content' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(400)
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
   })
 
   it('returns 400 when the new key has an invalid format', async () => {

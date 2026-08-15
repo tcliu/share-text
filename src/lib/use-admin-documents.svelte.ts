@@ -1,11 +1,16 @@
 import { toast } from 'svelte-sonner'
 import {
   AdminAuthError,
+  createAdminDocument,
   deleteAdminDocument,
+  exportAdminDocuments,
+  fetchAdminDocument,
   fetchAdminDocuments,
+  importAdminDocuments,
   updateAdminDocument,
   type AdminDocumentSummary,
 } from '$lib/admin'
+import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
 
 export function useAdminDocuments(params: {
@@ -26,8 +31,16 @@ export function useAdminDocuments(params: {
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
+  let dialogOpen = $state(false)
+  let dialogMode = $state<'add' | 'edit'>('edit')
   let editTarget = $state<AdminDocumentSummary | null>(null)
+  let editContent = $state('')
+  let editContentLoading = $state(false)
+  let editLoadToken = 0
   let saving = $state(false)
+  let importOpen = $state(false)
+  let importPending = $state(false)
+  let exportPending = $state(false)
 
   const searchState = useAdminDocumentsSearch({
     onParamsChange() {
@@ -56,8 +69,16 @@ export function useAdminDocuments(params: {
     bulkDeletePending = false
     bulkDeleteOpen = false
     selectedIds = new Set()
+    dialogOpen = false
+    dialogMode = 'edit'
     editTarget = null
+    editContent = ''
+    editContentLoading = false
+    editLoadToken += 1
     saving = false
+    importOpen = false
+    importPending = false
+    exportPending = false
     searchState.reset()
   }
 
@@ -162,42 +183,139 @@ export function useAdminDocuments(params: {
     }
   }
 
+  function openImport() {
+    importOpen = true
+  }
+
+  function closeImport() {
+    if (importPending) {
+      return
+    }
+    importOpen = false
+  }
+
+  async function submitImport(records: unknown[]) {
+    importPending = true
+    try {
+      const imported = await importAdminDocuments(records)
+      toast.success(`${imported.length} document${imported.length === 1 ? '' : 's'} imported`)
+      importOpen = false
+      void load()
+      onAdminChange()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to import documents')
+      }
+    } finally {
+      importPending = false
+    }
+  }
+
+  async function exportRecords() {
+    exportPending = true
+    try {
+      const records = await exportAdminDocuments(selectedIds.size > 0 ? [...selectedIds] : undefined)
+      downloadJson('documents-export.json', records)
+      toast.success(`${records.length} document${records.length === 1 ? '' : 's'} exported`)
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to export documents')
+      }
+    } finally {
+      exportPending = false
+    }
+  }
+
+  function openAdd() {
+    dialogMode = 'add'
+    editTarget = null
+    editContent = ''
+    editContentLoading = false
+    dialogOpen = true
+  }
+
   function openEdit(document: AdminDocumentSummary) {
+    dialogMode = 'edit'
+    editLoadToken += 1
     editTarget = document
+    editContent = ''
+    editContentLoading = true
+    dialogOpen = true
+    void loadEditContent(document.id, editLoadToken)
+  }
+
+  async function loadEditContent(id: string, token: number) {
+    try {
+      const full = await fetchAdminDocument(id)
+      if (token !== editLoadToken) {
+        return
+      }
+      editContent = full.content
+    } catch (error) {
+      if (token !== editLoadToken) {
+        return
+      }
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load document content')
+      }
+    } finally {
+      if (token === editLoadToken) {
+        editContentLoading = false
+      }
+    }
   }
 
   function closeEdit() {
     if (saving) {
       return
     }
+    dialogOpen = false
     editTarget = null
+    editContent = ''
   }
 
   async function saveDocument(input: {
     name: string
-    key: string
-    createdBy: string
-    updatedBy: string
+    documentType: string
+    content: string
+    key?: string
+    createdBy?: string
+    updatedBy?: string
   }) {
-    const target = editTarget
-    if (!target) {
-      return
-    }
     saving = true
     try {
-      await updateAdminDocument(target.id, {
-        name: input.name,
-        key: input.key,
-        createdBy: input.createdBy,
-        updatedBy: input.updatedBy,
-      })
-      toast.success('Document updated')
+      if (dialogMode === 'add') {
+        await createAdminDocument({
+          name: input.name,
+          content: input.content,
+          documentType: input.documentType,
+        })
+        toast.success('Document created')
+      } else {
+        const target = editTarget
+        if (!target) {
+          return
+        }
+        await updateAdminDocument(target.id, {
+          name: input.name,
+          key: input.key,
+          createdBy: input.createdBy,
+          updatedBy: input.updatedBy,
+          content: input.content,
+          documentType: input.documentType,
+        })
+        toast.success('Document updated')
+      }
+      dialogOpen = false
       editTarget = null
+      editContent = ''
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+        toast.error(
+          error instanceof Error ? error.message : `Failed to ${dialogMode === 'add' ? 'create' : 'update'} document`,
+        )
       }
     } finally {
       saving = false
@@ -320,11 +438,32 @@ export function useAdminDocuments(params: {
     set bulkDeleteOpen(value: boolean) {
       bulkDeleteOpen = value
     },
+    get dialogOpen() {
+      return dialogOpen
+    },
+    get dialogMode() {
+      return dialogMode
+    },
     get editTarget() {
       return editTarget
     },
+    get editContent() {
+      return editContent
+    },
+    get editContentLoading() {
+      return editContentLoading
+    },
     get saving() {
       return saving
+    },
+    get importOpen() {
+      return importOpen
+    },
+    get importPending() {
+      return importPending
+    },
+    get exportPending() {
+      return exportPending
     },
     get selectedIds() {
       return selectedIds
@@ -348,6 +487,11 @@ export function useAdminDocuments(params: {
     toggleAllOnCurrentPage,
     toggleSelection,
     confirmBulkDelete,
+    openImport,
+    closeImport,
+    submitImport,
+    exportRecords,
+    openAdd,
     openEdit,
     closeEdit,
     saveDocument,

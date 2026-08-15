@@ -1,19 +1,37 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
+  assertContentWithinLimit,
   contentByteSize,
   deleteDocument,
   fetchDocument,
   fetchDocumentForAdmin,
   isUniqueKeyViolation,
+  isValidDocumentType,
   normalizeCreatedBy,
   normalizeDocumentKey,
   normalizeName,
   normalizeUpdatedBy,
   updateDocument,
+  type DocumentType,
 } from '$lib/server/documents'
+import { getMaxContentLength } from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
+
+export const GET: RequestHandler = async ({ params }) => {
+  const id = await parseDocumentId(params.id)
+  if (!id) {
+    return json({ error: 'Document not found' }, { status: 404 })
+  }
+
+  const document = await fetchDocumentForAdmin(id)
+  if (!document) {
+    return json({ error: 'Document not found' }, { status: 404 })
+  }
+
+  return json({ document })
+}
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
   const id = await parseDocumentId(params.id)
@@ -26,13 +44,27 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     return json({ error: 'Request body must be a JSON object' }, { status: 400 })
   }
 
-  const changes: { name?: string; updatedBy?: string; createdBy?: string; key?: string; isPublic?: boolean } = {}
+  const changes: {
+    name?: string
+    updatedBy?: string
+    createdBy?: string
+    key?: string
+    isPublic?: boolean
+    content?: string
+    documentType?: DocumentType
+  } = {}
   if (typeof body.name === 'string') {
     try {
       changes.name = normalizeName(body.name)
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Invalid name' }, { status: 400 })
     }
+  }
+  if (typeof body.documentType === 'string') {
+    if (!isValidDocumentType(body.documentType)) {
+      return json({ error: 'Invalid document type' }, { status: 400 })
+    }
+    changes.documentType = body.documentType
   }
   if (typeof body.updatedBy === 'string') {
     try {
@@ -58,14 +90,27 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   if (typeof body.isPublic === 'boolean') {
     changes.isPublic = body.isPublic
   }
+  if (typeof body.content === 'string') {
+    try {
+      assertContentWithinLimit(body.content, await getMaxContentLength())
+      changes.content = body.content
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
+    }
+  }
   if (
     changes.name === undefined &&
     changes.updatedBy === undefined &&
     changes.createdBy === undefined &&
     changes.key === undefined &&
-    changes.isPublic === undefined
+    changes.isPublic === undefined &&
+    changes.content === undefined &&
+    changes.documentType === undefined
   ) {
-    return json({ error: 'Request body must include a name, updatedBy, createdBy, key, or isPublic' }, { status: 400 })
+    return json(
+      { error: 'Request body must include a name, updatedBy, createdBy, key, isPublic, content, or documentType' },
+      { status: 400 },
+    )
   }
 
   const existing = await fetchDocumentForAdmin(id)
@@ -113,15 +158,24 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     details.old_is_public = existing.isPublic
     details.new_is_public = changes.isPublic
   }
-  const action = changes.key !== undefined
-    ? 'admin_document_update_key'
-    : changes.updatedBy !== undefined
-      ? 'admin_document_update_updated_by'
-      : changes.createdBy !== undefined
-        ? 'admin_document_update_created_by'
-        : changes.isPublic !== undefined
-          ? 'admin_document_update_access'
-          : 'admin_document_rename'
+  if (changes.content !== undefined) {
+    details.old_content_size = contentByteSize(existing.content)
+    details.new_content_size = contentByteSize(changes.content)
+  }
+  const action =
+    changes.key !== undefined
+      ? 'admin_document_update_key'
+      : changes.content !== undefined
+        ? 'admin_document_update_content'
+        : changes.updatedBy !== undefined
+          ? 'admin_document_update_updated_by'
+          : changes.createdBy !== undefined
+            ? 'admin_document_update_created_by'
+            : changes.isPublic !== undefined
+              ? 'admin_document_update_access'
+              : changes.documentType !== undefined
+                ? 'admin_document_update_type'
+                : 'admin_document_rename'
   logEvent({
     ip,
     action,

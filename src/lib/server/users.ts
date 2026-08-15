@@ -1,7 +1,7 @@
 import { getDb } from './db'
 import { isUniqueViolation } from './db-errors'
 import { toIsoString } from './iso-string'
-import { hashPassword, verifyPassword } from './password'
+import { hashPassword, isPasswordHash, verifyPassword } from './password'
 import { appendSearchConditions } from './sql-search'
 
 export const MAX_USERNAME_LENGTH = 32
@@ -60,9 +60,7 @@ export function normalizeUsername(value: string) {
     throw new Error('username is required')
   }
   if (username.length > MAX_USERNAME_LENGTH || !USERNAME_PATTERN.test(username)) {
-    throw new Error(
-      `username must be 3-${MAX_USERNAME_LENGTH} lowercase letters, numbers, or underscores`,
-    )
+    throw new Error(`username must be 3-${MAX_USERNAME_LENGTH} lowercase letters, numbers, or underscores`)
   }
   return username
 }
@@ -107,6 +105,130 @@ export async function createUser(input: { username: string; email: string; passw
     }
     throw error
   }
+}
+
+export const MAX_IMPORT_RECORDS = 500
+
+export interface ImportUserRecord {
+  username: string
+  email: string
+  password?: string
+  passwordHash?: string
+  status?: string
+}
+
+/**
+ * Bulk-create users for the admin import dialog. Every record is normalized
+ * and its password resolved up front (hashing is expensive, so it happens
+ * outside the transaction), then the inserts run in a single transaction so an
+ * invalid or duplicate record aborts the whole import (all-or-nothing). A
+ * record carries either a plaintext `password` (hashed here) or a pre-hashed
+ * `passwordHash` (verified and stored as-is, so exports round-trip).
+ */
+export async function importUsersForAdmin(records: ImportUserRecord[]): Promise<AdminUser[]> {
+  if (records.length === 0) {
+    throw new Error('No records to import')
+  }
+  const prepared = await Promise.all(
+    records.map(async (record, index) => {
+      let username: string
+      let email: string
+      let status: UserStatus
+      try {
+        username = normalizeUsername(record.username)
+        email = normalizeEmail(record.email)
+        status = normalizeStatus(record.status ?? 'active')
+      } catch (error) {
+        throw new Error(`record ${index + 1}: ${error instanceof Error ? error.message : 'invalid record'}`)
+      }
+      let passwordHash: string
+      if (record.passwordHash !== undefined && record.password !== undefined) {
+        throw new Error(`record ${index + 1}: provide only one of password or passwordHash`)
+      }
+      if (record.passwordHash !== undefined) {
+        if (!isPasswordHash(record.passwordHash)) {
+          throw new Error(`record ${index + 1}: invalid passwordHash`)
+        }
+        passwordHash = record.passwordHash
+      } else if (record.password) {
+        passwordHash = await hashPassword(record.password)
+      } else {
+        throw new Error(`record ${index + 1}: password or passwordHash is required`)
+      }
+      return { username, email, status, passwordHash }
+    }),
+  )
+  const seenUsernames = new Set<string>()
+  const seenEmails = new Set<string>()
+  for (let i = 0; i < prepared.length; i++) {
+    const { username, email } = prepared[i]
+    if (seenUsernames.has(username) || seenEmails.has(email)) {
+      throw new Error(`record ${i + 1}: username or email is already taken`)
+    }
+    seenUsernames.add(username)
+    seenEmails.add(email)
+  }
+  const db = await getDb()
+  return db.transaction(async query => {
+    const created: AdminUser[] = []
+    for (let i = 0; i < prepared.length; i++) {
+      const { username, email, status, passwordHash } = prepared[i]
+      try {
+        const result = await query<UserAdminRow>(
+          `insert into users (username, email, password_hash, status, created_at)
+           values ($1, $2, $3, $4, current_timestamp)
+           returning id, username, email, status, created_at`,
+          [username, email, passwordHash, status],
+        )
+        created.push(toAdminUser(result.rows[0]))
+      } catch (error) {
+        if (isUniqueViolation(error)) {
+          throw new Error(`record ${i + 1}: username or email is already taken`)
+        }
+        throw error
+      }
+    }
+    return created
+  })
+}
+
+export interface AdminUserExportRecord {
+  username: string
+  email: string
+  status: UserStatus
+  passwordHash: string
+}
+
+interface AdminUserExportRow extends UserRow {
+  password_hash: string
+}
+
+/**
+ * Export users for the admin export action, shaped to match the admin import
+ * record format. The scrypt `passwordHash` is exported (never a plaintext
+ * password) so an export re-imports directly with credentials preserved. When
+ * `ids` is provided only those users are exported; otherwise every user is.
+ */
+export async function exportUsersForAdmin(ids?: number[]): Promise<AdminUserExportRecord[]> {
+  const conditions: string[] = []
+  const params: unknown[] = []
+  if (ids && ids.length > 0) {
+    const placeholders = ids.map((_, index) => `$${params.length + index + 1}`)
+    conditions.push(`id in (${placeholders.join(', ')})`)
+    params.push(...ids)
+  }
+  const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
+  const db = await getDb()
+  const result = await db.query<AdminUserExportRow>(
+    `select id, username, email, status, password_hash from users${whereClause} order by username asc`,
+    params,
+  )
+  return result.rows.map(row => ({
+    username: row.username,
+    email: row.email,
+    status: row.status === 'inactive' ? 'inactive' : 'active',
+    passwordHash: row.password_hash,
+  }))
 }
 
 export async function findUserById(id: number): Promise<User | null> {
@@ -207,7 +329,14 @@ export async function listUsers(options: ListUsersOptions = {}) {
   const params: unknown[] = []
 
   if (search) {
-    appendSearchConditions({ search, searchKeys: searchKeys ?? [], columns: ADMIN_USER_SEARCH_COLUMNS, defaultKeys: ['username'], conditions, params })
+    appendSearchConditions({
+      search,
+      searchKeys: searchKeys ?? [],
+      columns: ADMIN_USER_SEARCH_COLUMNS,
+      defaultKeys: ['username'],
+      conditions,
+      params,
+    })
   }
 
   const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''

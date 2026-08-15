@@ -2,6 +2,7 @@
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
+  import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
@@ -22,6 +23,7 @@
   let email = $state('')
   let password = $state('')
   let active = $state(true)
+  let discardPromptOpen = $state(false)
 
   $effect(() => {
     username = user?.username ?? ''
@@ -50,6 +52,20 @@
     active = user?.status !== 'inactive'
   }
 
+  function handleCancelRequest() {
+    if (discardPromptOpen) return
+    if (dirty) {
+      discardPromptOpen = true
+      return
+    }
+    onClose()
+  }
+
+  function handleDiscard() {
+    discardPromptOpen = false
+    onClose()
+  }
+
   function handleSave() {
     if (okDisabled) {
       return
@@ -63,7 +79,12 @@
   }
 </script>
 
-<BaseDialog title={mode === 'add' ? 'Add User' : 'Edit User'} maxWidth="md" onCancel={onClose} pending={pending}>
+<BaseDialog
+  title={mode === 'add' ? 'Add User' : 'Edit User'}
+  maxWidth="md"
+  onCancel={handleCancelRequest}
+  dismissKeydownCapture={!discardPromptOpen}
+  pending={pending}>
   <div class="flex flex-col gap-4">
     <FormField label="Username" htmlFor="user-username">
       <input
@@ -110,3 +131,12 @@
     </Buttons>
   </div>
 </BaseDialog>
+
+{#if discardPromptOpen}
+  <ConfirmDialog
+    title="Discard unsaved changes?"
+    message="You have unsaved changes to this user that will be lost."
+    confirmLabel="Discard"
+    onConfirm={handleDiscard}
+    onCancel={() => (discardPromptOpen = false)} />
+{/if}

@@ -2,60 +2,114 @@
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
+  import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
+  import LazyCodeEditor from './LazyCodeEditor.svelte'
+  import SelectDropdown from './SelectDropdown.svelte'
+  import Tabs from './Tabs.svelte'
+  import { DOCUMENT_TYPE_VALUES, getDocumentType } from '$lib/document-types'
   import type { AdminDocumentSummary } from '$lib/admin'
 
   interface Props {
-    document: AdminDocumentSummary
+    mode?: 'add' | 'edit'
+    document?: AdminDocumentSummary | null
+    content: string
+    contentLoading?: boolean
     pending?: boolean
     onSave: (input: {
       name: string
-      key: string
-      createdBy: string
-      updatedBy: string
+      documentType: string
+      content: string
+      key?: string
+      createdBy?: string
+      updatedBy?: string
     }) => void
     onClose: () => void
   }
 
-  let { document, pending = false, onSave, onClose }: Props = $props()
+  let {
+    mode = 'edit',
+    document,
+    content: loadedContent,
+    contentLoading = false,
+    pending = false,
+    onSave,
+    onClose,
+  }: Props = $props()
 
   let key = $state('')
   let name = $state('')
   let createdBy = $state('')
   let updatedBy = $state('')
+  let documentType = $state('text')
+  let content = $state('')
+  let discardPromptOpen = $state(false)
 
   $effect(() => {
-    key = document.id
-    name = document.name
-    createdBy = document.createdBy
-    updatedBy = document.updatedBy
+    key = document?.id ?? ''
+    name = document?.name ?? ''
+    createdBy = document?.createdBy ?? ''
+    updatedBy = document?.updatedBy ?? ''
+    documentType = document?.documentType ?? 'text'
   })
+
+  $effect(() => {
+    content = loadedContent
+  })
+
+  const typeOptions = $derived(DOCUMENT_TYPE_VALUES.map(value => ({ value, label: getDocumentType(value).label })))
 
   const valid = $derived(
     name.trim().length > 0 &&
-      key.trim().length > 0 &&
-      createdBy.trim().length > 0 &&
-      updatedBy.trim().length > 0,
+      (mode === 'add' || (key.trim().length > 0 && createdBy.trim().length > 0 && updatedBy.trim().length > 0)),
   )
 
   const dirty = $derived(
-    key !== document.id ||
-      name !== document.name ||
-      createdBy !== document.createdBy ||
-      updatedBy !== document.updatedBy,
+    mode === 'add'
+      ? name.trim().length > 0 || documentType !== 'text' || content.length > 0
+      : key !== (document?.id ?? '') ||
+          name !== (document?.name ?? '') ||
+          createdBy !== (document?.createdBy ?? '') ||
+          updatedBy !== (document?.updatedBy ?? '') ||
+          documentType !== (document?.documentType ?? 'text') ||
+          content !== loadedContent,
   )
 
-  const okDisabled = $derived(!valid || !dirty)
+  const okDisabled = $derived(!valid || !dirty || contentLoading)
 
   function handleReset() {
-    key = document.id
-    name = document.name
-    createdBy = document.createdBy
-    updatedBy = document.updatedBy
+    key = document?.id ?? ''
+    name = document?.name ?? ''
+    createdBy = document?.createdBy ?? ''
+    updatedBy = document?.updatedBy ?? ''
+    documentType = document?.documentType ?? 'text'
+    content = loadedContent
+  }
+
+  function handleCancelRequest() {
+    if (discardPromptOpen) return
+    if (dirty) {
+      discardPromptOpen = true
+      return
+    }
+    onClose()
+  }
+
+  function handleDiscard() {
+    discardPromptOpen = false
+    onClose()
   }
 
   function handleSave() {
     if (okDisabled) {
+      return
+    }
+    if (mode === 'add') {
+      onSave({
+        name: name.trim(),
+        documentType,
+        content,
+      })
       return
     }
     onSave({
@@ -63,20 +117,24 @@
       name: name.trim(),
       createdBy: createdBy.trim(),
       updatedBy: updatedBy.trim(),
+      documentType,
+      content,
     })
   }
 </script>
 
-<BaseDialog title="Edit Document" maxWidth="md" onCancel={onClose} pending={pending}>
+{#snippet detailsContent()}
   <div class="flex flex-col gap-4">
-    <FormField label="Key" htmlFor="document-key">
-      <input
-        id="document-key"
-        bind:value={key}
-        type="text"
-        autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
-    </FormField>
+    {#if mode === 'edit'}
+      <FormField label="Key" htmlFor="document-key">
+        <input
+          id="document-key"
+          bind:value={key}
+          type="text"
+          autocomplete="off"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+      </FormField>
+    {/if}
     <FormField label="Name" htmlFor="document-name">
       <input
         id="document-name"
@@ -85,29 +143,88 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label="Created by" htmlFor="document-created-by">
-      <input
-        id="document-created-by"
-        bind:value={createdBy}
-        type="text"
-        autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+    <FormField label="Document Type">
+      <SelectDropdown
+        buttonLabel={getDocumentType(documentType).label}
+        options={typeOptions}
+        activeValue={documentType}
+        ariaLabel="Document type"
+        filterable={true}
+        onSelect={value => (documentType = value)} />
     </FormField>
-    <FormField label="Updated by" htmlFor="document-updated-by">
-      <input
-        id="document-updated-by"
-        bind:value={updatedBy}
-        type="text"
-        autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
-    </FormField>
+    {#if mode === 'edit'}
+      <FormField label="Created by" htmlFor="document-created-by">
+        <input
+          id="document-created-by"
+          bind:value={createdBy}
+          type="text"
+          autocomplete="off"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+      </FormField>
+      <FormField label="Updated by" htmlFor="document-updated-by">
+        <input
+          id="document-updated-by"
+          bind:value={updatedBy}
+          type="text"
+          autocomplete="off"
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+      </FormField>
+    {/if}
+  </div>
+{/snippet}
+
+{#snippet contentTab()}
+  <div class="flex h-[45vh] min-h-[16rem] flex-col overflow-hidden rounded-lg">
+    {#if contentLoading}
+      <div
+        class="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400">
+        Loading content...
+      </div>
+    {:else}
+      <LazyCodeEditor
+        bind:content
+        docType={documentType}
+        autoFocus
+        recreateKey={mode === 'edit' && document ? document.id : 'add'}
+        containerClass="h-full"
+        editorClass="h-full rounded-lg border border-slate-700 bg-slate-950"
+        editorAriaLabel="Document content" />
+    {/if}
+  </div>
+{/snippet}
+
+<BaseDialog
+  title={mode === 'add' ? 'Add Document' : 'Edit Document'}
+  maxWidth="3xl"
+  onCancel={handleCancelRequest}
+  dismissKeydownCapture={!discardPromptOpen}
+  {pending}>
+  <div class="flex min-h-0 flex-col gap-4">
+    <Tabs
+      tabs={[
+        { label: 'Details', path: 'details', content: detailsContent },
+        { label: 'Content', path: 'content', content: contentTab },
+      ]}
+      state={{}}
+      ariaLabel="Edit document sections" />
     <Buttons>
       {#snippet children()}
-        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} pending={pending}>
-          OK
+        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
+          {mode === 'add' ? 'Create' : 'OK'}
         </Button>
-        <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>Reset</Button>
+        {#if mode === 'edit'}
+          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>Reset</Button>
+        {/if}
       {/snippet}
     </Buttons>
   </div>
 </BaseDialog>
+
+{#if discardPromptOpen}
+  <ConfirmDialog
+    title="Discard unsaved changes?"
+    message="You have unsaved changes to this document that will be lost."
+    confirmLabel="Discard"
+    onConfirm={handleDiscard}
+    onCancel={() => (discardPromptOpen = false)} />
+{/if}

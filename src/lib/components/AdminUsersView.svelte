@@ -5,6 +5,7 @@
   import DataTable, { type DataTableColumn } from './DataTable.svelte'
   import EditableText from './EditableText.svelte'
   import UserDialog from './UserDialog.svelte'
+  import ImportDialog from './ImportDialog.svelte'
   import Button from './Button.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
@@ -80,12 +81,12 @@
   {columns}
   loading={usersState.loading}
   emptyMessage={usersState.searchQuery ? 'No users match your filter.' : 'No users yet.'}
-  bind:searchValue={usersState.searchInput}
+  bind:searchValue={() => usersState.searchInput, value => (usersState.searchInput = value)}
   onSearchInput={() => usersState.handleSearchInput()}
   onSearchKeydown={event => usersState.handleSearchKeydown(event)}
   searchAriaLabel="Search all users"
   searchPlaceholder="Search users..."
-  bind:searchKeys={usersState.searchKeys}
+  bind:searchKeys={() => usersState.searchKeys, keys => (usersState.searchKeys = keys)}
   selectable
   selectedIds={usersState.selectedIds}
   onToggleSelection={(id, checked) => usersState.toggleSelection(id, checked)}
@@ -170,6 +171,14 @@
     pending={usersState.saving}
     onSave={input => void usersState.saveUser(input)}
     onClose={() => usersState.closeDialog()} />
+{/if}
+
+{#if usersState.importOpen}
+  <ImportDialog
+    kind="users"
+    pending={usersState.importPending}
+    onImport={records => void usersState.submitImport(records)}
+    onClose={() => usersState.closeImport()} />
 {/if}
 
 {#if usersState.bulkStatusOpen}

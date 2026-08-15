@@ -7,12 +7,14 @@
     text: string
     copyAriaLabel?: string
     copyTooltip?: string
+    alwaysVisible?: boolean
   }
 
   let {
     text,
     copyAriaLabel = 'Copy to clipboard',
     copyTooltip = 'Copy',
+    alwaysVisible = false,
   }: Props = $props()
 
   async function handleCopy() {
@@ -25,8 +27,8 @@
   }
 </script>
 
-<!-- Reveals on hover/focus via a `group` ancestor; must not be portalled -->
-<span class="shrink-0 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+<!-- Reveals on hover/focus via a `group` ancestor unless `alwaysVisible`; must not be portalled -->
+<span class={`shrink-0 ${alwaysVisible ? '' : 'opacity-0 transition group-hover:opacity-100 focus-within:opacity-100'}`}>
   <Button
     size="sm"
     variant="ghost"

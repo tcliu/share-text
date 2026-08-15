@@ -68,6 +68,7 @@
 
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
+  let controlRef = $state<HTMLButtonElement | HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   let filterText = $state('')
   let highlightIndex = $state(0)
@@ -155,7 +156,7 @@
     }
     function handlePointerDown(event: MouseEvent) {
       const target = event.target as Node
-      if (containerRef && !containerRef.contains(target) && panelRef && !panelRef.contains(target)) {
+      if (controlRef && !controlRef.contains(target) && panelRef && !panelRef.contains(target)) {
         close()
       }
     }
@@ -170,7 +171,7 @@
 
 <div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null}>
   {#if filterable}
-    <div class="relative">
+    <div class="relative" bind:this={controlRef}>
       <input
         type="text"
         bind:value={filterText}
@@ -190,6 +191,7 @@
   {:else}
     <button
       type="button"
+      bind:this={controlRef}
       aria-label={ariaLabel}
       aria-haspopup="listbox"
       aria-expanded={open}

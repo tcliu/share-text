@@ -42,9 +42,38 @@ synchronizes through a small fetch-based JSON API.
   when `value` is `null`, deletes the override (reverting to env/default).
 - `/api/admin/documents` — `GET` lists every document across all IPs with
   search (`search`, scoped to selected `search-keys`), creator filter (`by`),
-  pagination (`limit`/`offset`), and sorting (`sortBy`/`order`).
+  pagination (`limit`/`offset`), and sorting (`sortBy`/`order`); `POST`
+  dispatches on the body shape — a `{ records: [...] }` body bulk-imports
+  documents where each record is
+  `{ name, content, documentType?, tags?, isPublic?, key? }`. A provided `key`
+  must be unique within the batch; when it already exists the record merges
+  (upserts) into that document — updating name/content/type/tags/visibility
+  and recording a version snapshot — otherwise the document is inserted with
+  the given or an auto-generated key (capped at `MAX_IMPORT_RECORDS`, 500). A
+  direct `{ name, content, documentType? }` body creates one document
+  attributed to the requester IP.
 - `/api/admin/documents/[id]` — `PUT` updates a document (`name`,
   `updatedBy`, `createdBy`, and/or `key`); `DELETE` removes it.
+- `/api/admin/documents/export` — `GET` returns a JSON array of documents
+  (every document, or only the comma-separated `ids` selection) shaped like
+  import records (`{ key, name, content, documentType, tags, isPublic }`) so
+  the result round-trips through the import endpoint with keys preserved.
+- `/api/admin/users` — `GET` lists users with search, pagination, and sorting;
+  `POST` dispatches on the body shape: a `{ records: [...] }` body
+  (`{ username, email, password?, status?, passwordHash? }` per record)
+  bulk-imports users, while a direct `{ username, email, password, status? }`
+  body creates a single user. Both imports are all-or-nothing: all records are
+  validated before any insert and the inserts run in one `db.transaction`, so
+  any invalid or conflicting record aborts the whole import. Since `username`
+  and `email` are both unique, batch-uniqueness for each is validated before
+  hashing and inserting. A record supplies either `password` (hashed with the
+  shared `hashPassword`) or `passwordHash` (a validated `scrypt$...` hash used
+  verbatim, so exports re-import directly), never both.
+- `/api/admin/users/export` — `GET` returns a JSON array of users (every
+  user, or only the comma-separated `ids` selection) shaped like import
+  records plus the password hash (`{ username, email, status, passwordHash }`);
+  the scrypt hash is exported so the export re-imports directly with
+  credentials preserved, while a plaintext password never leaves the server.
 
 - `/api/tags` — `GET` returns every distinct tag across all documents, with
   deduplication on case-insensitive name so each unique tag name appears once.
@@ -164,10 +193,53 @@ synchronizes through a small fetch-based JSON API.
   successful sign-in there navigates to `/admin/properties`.
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
-  `name`, `updatedBy`, `createdBy`, and `key`. Attribution fields are bounded
+  `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`, and
+  `content`. A `documentType` change validates against the closed type set and
+  records a version snapshot like a content change (via `updateDocument`).
+  Attribution fields are bounded
   by `MAX_ATTRIBUTION_LENGTH` (defaulting `updated_by` to the requester IP
   otherwise); changing `key` renames the document id and must match the
   configured `document_key_length` charset, returning 409 on collision.
+  `content` is validated against `MAX_CONTENT_BYTES` and the configured
+  `MAX_CONTENT_LENGTH` and flows through `updateDocument`, so a content change
+  records a version snapshot like any other content save. `GET
+  /api/admin/documents/[id]` returns the full `AdminDocument` (with `content`)
+  for the edit dialog, which loads it once when the dialog opens.
+- The Documents toolbar also offers an **Add** button that opens the same dialog
+  in add mode; saving a new document POSTs a single `{ name, content,
+  documentType? }` body to `/api/admin/documents`, which dispatches on the body
+  shape (a `records` array imports, otherwise it creates one document attributed
+  to the requester IP with an auto-generated key and an initial version
+  snapshot).
+- The edit dialog renders a `Tabs` component in its state mode (button tabs
+  with `aria-pressed`, no routing) with a **Details** tab for the header fields
+  (key, name, created by, updated by — plus a document-type dropdown, with the
+  key/attribution fields hidden in add mode) and a **Content** tab holding a
+  lazily loaded `CodeEditor` bound to the document body whose language mode
+  follows the selected type; OK/Apply and Reset follow the
+  shared editable-form pattern with `content` included in the dirty check, and
+  OK stays disabled until the content fetch settles so the body can never be
+  saved as empty mid-load.
+- The Documents and Users toolbars each offer an **Import** button that opens
+  `ImportDialog.svelte`: a JSON-type lazily loaded `CodeEditor` plus an Upload,
+  OK, and Reset button panel. **Upload** opens a `.json` file picker and loads
+  the file text into the editor; **Reset** clears the editor. **OK** parses the
+  content client-side — a single object is imported as one record, an array as
+  many — and rejects invalid JSON or non-object values with an error toast.
+  The parsed records then go through `importAdminDocuments`/`importAdminUsers`
+  to the import endpoints, and on success the list reloads and the dialog
+  closes. Import errors surface as toasts with the failing record index.
+- A matching **Export** button sits next to each toolbar's Import button. It
+  fetches the export endpoints (passing the currently selected ids when any
+  rows are selected, otherwise exporting all records) and saves the returned
+  JSON array as `documents-export.json` / `users-export.json` via
+  `downloadJson` (`$lib/download-json.ts`), toasting the exported count.
+- Admin imports attribute documents to the requester IP (`created_by` /
+  `updated_by`), leave them unowned (`owner_user_id null`), honor an optional
+  `isPublic` (defaulting to `true`), normalize tags through the same
+  `parseTags`/`serializeTags` path as normal saves, and record an initial
+  content-version snapshot per document. User imports hash passwords with the
+  shared `hashPassword` before the transaction.
 - The Documents table (`DataTable.svelte`) sorts via the shared two-arrow
   header pattern: `handleSortClick(column, direction)` passes the explicit
   direction through `onSort`. Column sizing prefers the `width`/`minWidth`
@@ -212,7 +284,10 @@ synchronizes through a small fetch-based JSON API.
   `admin_login_rate_limited`, `admin_logout`, `admin_setting_update`,
   `admin_setting_reset`, `admin_document_rename`,
   `admin_document_update_updated_by`, `admin_document_update_created_by`,
-  `admin_document_update_key`, `admin_document_delete`).
+  `admin_document_update_key`, `admin_document_update_content`,
+  `admin_document_update_type`, `admin_document_delete`, `admin_document_create`,
+  `admin_document_import`, `admin_user_import`, `admin_document_export`,
+  `admin_user_export`).
 
 ## Limits
 
@@ -316,7 +391,13 @@ to close the mobile drawer (so the button is absent on the mobile list route
 where there is nothing to collapse). `DocumentList` sizes itself full-width on
 mobile via `w-full` (the inline `width` style is only set on desktop). The left
 pane header shows a Login button after the Refresh button that navigates to
-`/login`, so admin sign-in is reachable from the document browser.
+`/login`, so admin sign-in is reachable from the document browser. A signed-in
+registered user sees Profile and Sign out buttons instead (Profile opens
+`ProfileDialog`); a signed-in admin session sees an Admin console button that
+navigates to `/admin` plus Sign out. `/api/auth/session` reports the signed-in
+`user` and, when an admin session is present, an `admin: { username }` identity
+so the browser app can render the admin entry point; `/api/auth/logout` clears
+both the user and admin session cookies.
 
 ## Editor
 

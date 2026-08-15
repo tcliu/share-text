@@ -4,12 +4,15 @@ process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
+import { hashPassword } from '$lib/server/password'
 import {
   createUser,
   deleteUser,
+  exportUsersForAdmin,
   findAdminUserById,
   findUserByCredentials,
   findUserById,
+  importUsersForAdmin,
   listUsers,
   normalizeEmail,
   normalizeStatus,
@@ -169,5 +172,163 @@ describe('users against the SQLite backend (dev profile)', () => {
     expect(normalizeStatus('active')).toBe('active')
     expect(normalizeStatus('inactive')).toBe('inactive')
     expect(() => normalizeStatus('banned')).toThrow('status must be active or inactive')
+  })
+})
+
+describe('importUsersForAdmin against the SQLite backend (dev profile)', () => {
+  it('imports multiple users and verifies their credentials', async () => {
+    const users = await importUsersForAdmin([
+      { username: 'alice', email: 'alice@example.com', password: 's3cret' },
+      { username: 'bob', email: 'bob@example.com', password: 's3cret', status: 'inactive' },
+    ])
+
+    expect(users).toHaveLength(2)
+    expect(users[0]).toMatchObject({ username: 'alice', email: 'alice@example.com', status: 'active' })
+    expect(users[1]).toMatchObject({ username: 'bob', email: 'bob@example.com', status: 'inactive' })
+
+    expect(await findUserByCredentials('alice', 's3cret')).toMatchObject({ username: 'alice' })
+    expect(await findUserByCredentials('bob', 's3cret')).toBeNull()
+  })
+
+  it('aborts the whole import when one record is invalid (all-or-nothing)', async () => {
+    await expect(
+      importUsersForAdmin([
+        { username: 'alice', email: 'alice@example.com', password: 'x' },
+        { username: '', email: 'bob@example.com', password: 'x' },
+      ]),
+    ).rejects.toThrow('record 2: username is required')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from users')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(0)
+  })
+
+  it('aborts when a username or email is already taken', async () => {
+    await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+
+    await expect(
+      importUsersForAdmin([
+        { username: 'bob', email: 'bob@example.com', password: 'x' },
+        { username: 'alice', email: 'other@example.com', password: 'x' },
+      ]),
+    ).rejects.toThrow('record 2: username or email is already taken')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from users')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(1)
+  })
+
+  it('rejects a missing password', async () => {
+    await expect(
+      importUsersForAdmin([{ username: 'alice', email: 'alice@example.com', password: '' }]),
+    ).rejects.toThrow('record 1: password or passwordHash is required')
+  })
+
+  it('imports a user from a pre-hashed passwordHash and preserves the credential', async () => {
+    const hash = await hashPassword('s3cret')
+    const users = await importUsersForAdmin([{ username: 'alice', email: 'alice@example.com', passwordHash: hash }])
+
+    expect(users).toHaveLength(1)
+    expect(await findUserByCredentials('alice', 's3cret')).toMatchObject({ username: 'alice' })
+    expect(await findUserByCredentials('alice', 'wrong')).toBeNull()
+  })
+
+  it('rejects an invalid passwordHash', async () => {
+    await expect(
+      importUsersForAdmin([{ username: 'alice', email: 'alice@example.com', passwordHash: 'not-a-hash' }]),
+    ).rejects.toThrow('record 1: invalid passwordHash')
+  })
+
+  it('rejects a record that provides both password and passwordHash', async () => {
+    await expect(
+      importUsersForAdmin([
+        { username: 'alice', email: 'alice@example.com', password: 'x', passwordHash: 'scrypt$c2FsdA==$aGFzaA==' },
+      ]),
+    ).rejects.toThrow('record 1: provide only one of password or passwordHash')
+  })
+
+  it('aborts when two records in the batch share a username', async () => {
+    await expect(
+      importUsersForAdmin([
+        { username: 'alice', email: 'alice@example.com', password: 'x' },
+        { username: 'alice', email: 'alice2@example.com', password: 'x' },
+      ]),
+    ).rejects.toThrow('record 2: username or email is already taken')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from users')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(0)
+  })
+
+  it('aborts when two records in the batch share an email', async () => {
+    await expect(
+      importUsersForAdmin([
+        { username: 'alice', email: 'alice@example.com', password: 'x' },
+        { username: 'bob', email: 'alice@example.com', password: 'x' },
+      ]),
+    ).rejects.toThrow('record 2: username or email is already taken')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from users')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(0)
+  })
+})
+
+describe('exportUsersForAdmin against the SQLite backend (dev profile)', () => {
+  it('exports every user shaped like an import record with the password hash', async () => {
+    await createUser({ username: 'alice', email: 'alice@example.com', password: 's3cret' })
+    const bob = await createUser({ username: 'bob', email: 'bob@example.com', password: 's3cret' })
+    await updateUser(bob.id, { status: 'inactive' })
+
+    const records = await exportUsersForAdmin()
+
+    expect(records).toHaveLength(2)
+    expect(records).toEqual(
+      expect.arrayContaining([
+        {
+          username: 'alice',
+          email: 'alice@example.com',
+          status: 'active',
+          passwordHash: expect.stringMatching(/^scrypt\$/),
+        },
+        {
+          username: 'bob',
+          email: 'bob@example.com',
+          status: 'inactive',
+          passwordHash: expect.stringMatching(/^scrypt\$/),
+        },
+      ]),
+    )
+    expect(records.every(record => !('password' in record))).toBe(true)
+  })
+
+  it('exports only the selected user ids', async () => {
+    const alice = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+    await createUser({ username: 'carol', email: 'carol@example.com', password: 'x' })
+
+    const records = await exportUsersForAdmin([alice.id, bob.id])
+
+    expect(records.map(record => record.username).sort()).toEqual(['alice', 'bob'])
+  })
+
+  it('returns an empty array for unknown ids and for an empty selection', async () => {
+    await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+
+    expect(await exportUsersForAdmin([9999])).toEqual([])
+    expect(await exportUsersForAdmin([])).toHaveLength(1)
+  })
+
+  it('round-trips a user export through import preserving credentials', async () => {
+    const user = await createUser({ username: 'alice', email: 'alice@example.com', password: 's3cret' })
+
+    const exported = await exportUsersForAdmin([user.id])
+    await deleteUser(user.id)
+
+    const reimported = await importUsersForAdmin(exported)
+
+    expect(reimported).toHaveLength(1)
+    expect(reimported[0]).toMatchObject({ username: 'alice', email: 'alice@example.com', status: 'active' })
+    expect(await findUserByCredentials('alice', 's3cret')).toMatchObject({ username: 'alice' })
   })
 })

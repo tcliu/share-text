@@ -4,6 +4,7 @@
   import DataTable, { type DataTableColumn } from './DataTable.svelte'
   import EditableText from './EditableText.svelte'
   import EditDocumentDialog from './EditDocumentDialog.svelte'
+  import ImportDialog from './ImportDialog.svelte'
   import Button from './Button.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
@@ -125,12 +126,12 @@
   {columns}
   loading={documentsState.loading}
   emptyMessage={documentsState.searchQuery ? 'No documents match your filter.' : 'No documents yet.'}
-  bind:searchValue={documentsState.searchInput}
+  bind:searchValue={() => documentsState.searchInput, value => (documentsState.searchInput = value)}
   onSearchInput={() => documentsState.handleSearchInput()}
   onSearchKeydown={event => documentsState.handleSearchKeydown(event)}
   searchAriaLabel="Search all documents"
   searchPlaceholder="Search documents..."
-  bind:searchKeys={documentsState.searchKeys}
+  bind:searchKeys={() => documentsState.searchKeys, keys => (documentsState.searchKeys = keys)}
   selectable
   selectedIds={documentsState.selectedIds}
   onToggleSelection={(id, checked) => documentsState.toggleSelection(id, checked)}
@@ -227,7 +228,11 @@
 
 {#snippet actionsCell(document: AdminDocumentSummary)}
   <div class="flex items-center gap-1">
-    <Button size="sm" ariaLabel={`Edit document ${document.name}`} tooltip="Edit" onClick={() => documentsState.openEdit(document)}>
+    <Button
+      size="sm"
+      ariaLabel={`Edit document ${document.name}`}
+      tooltip="Edit"
+      onClick={() => documentsState.openEdit(document)}>
       {#snippet icon()}
         <EditIcon />
       {/snippet}
@@ -245,12 +250,23 @@
   </div>
 {/snippet}
 
-{#if documentsState.editTarget}
+{#if documentsState.dialogOpen}
   <EditDocumentDialog
+    mode={documentsState.dialogMode}
     document={documentsState.editTarget}
+    content={documentsState.editContent}
+    contentLoading={documentsState.editContentLoading}
     pending={documentsState.saving}
     onSave={input => void documentsState.saveDocument(input)}
     onClose={() => documentsState.closeEdit()} />
+{/if}
+
+{#if documentsState.importOpen}
+  <ImportDialog
+    kind="documents"
+    pending={documentsState.importPending}
+    onImport={records => void documentsState.submitImport(records)}
+    onClose={() => documentsState.closeImport()} />
 {/if}
 
 {#if documentsState.deleteTarget}

@@ -7,9 +7,11 @@ import { getDb } from '$lib/server/db'
 import {
   deleteDocument,
   DocumentLimitError,
+  exportDocumentsForAdmin,
   fetchDocument,
   fetchDocumentForAdmin,
   fetchDocumentSummaries,
+  importDocumentsForAdmin,
   insertDocument,
   listDocumentsForAdmin,
   normalizeDocumentKey,
@@ -182,10 +184,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const db = await getDb()
 
     await updateDocument(created.id, { name: 'Renamed', by: '203.0.113.7', updatedBy: 'admin@example.com' })
-    const afterUpdate = await db.query<{ updated_by: string }>(
-      'select updated_by from documents where key = $1',
-      [created.id],
-    )
+    const afterUpdate = await db.query<{ updated_by: string }>('select updated_by from documents where key = $1', [
+      created.id,
+    ])
     expect(afterUpdate.rows[0]).toMatchObject({ updated_by: 'admin@example.com' })
   })
 
@@ -195,10 +196,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
 
     const updated = await updateDocument(created.id, { by: '203.0.113.7', updatedBy: 'admin@example.com' })
     expect(updated).not.toBeNull()
-    const afterUpdate = await db.query<{ updated_by: string }>(
-      'select updated_by from documents where key = $1',
-      [created.id],
-    )
+    const afterUpdate = await db.query<{ updated_by: string }>('select updated_by from documents where key = $1', [
+      created.id,
+    ])
     expect(afterUpdate.rows[0]).toMatchObject({ updated_by: 'admin@example.com' })
   })
 
@@ -207,10 +207,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     const db = await getDb()
 
     await updateDocument(created.id, { by: '203.0.113.7', createdBy: 'admin@example.com' })
-    const afterUpdate = await db.query<{ created_by: string }>(
-      'select created_by from documents where key = $1',
-      [created.id],
-    )
+    const afterUpdate = await db.query<{ created_by: string }>('select created_by from documents where key = $1', [
+      created.id,
+    ])
     expect(afterUpdate.rows[0]).toMatchObject({ created_by: 'admin@example.com' })
   })
 
@@ -262,9 +261,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
       await insertDocument({ name: `doc ${i}`, content: '', by: '10.0.0.99' })
     }
 
-    await expect(
-      insertDocument({ name: 'over limit', content: '', by: '10.0.0.99' }),
-    ).rejects.toBeInstanceOf(DocumentLimitError)
+    await expect(insertDocument({ name: 'over limit', content: '', by: '10.0.0.99' })).rejects.toBeInstanceOf(
+      DocumentLimitError,
+    )
 
     const other = await insertDocument({ name: 'other ip', content: '', by: '10.0.0.98' })
     expect(other.id).toMatch(/^[0-9a-z]{6}$/)
@@ -274,9 +273,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     await setSettingValue('max_documents_per_ip', 1)
     try {
       await insertDocument({ name: 'only', content: '', by: '10.0.0.50' })
-      await expect(
-        insertDocument({ name: 'over limit', content: '', by: '10.0.0.50' }),
-      ).rejects.toBeInstanceOf(DocumentLimitError)
+      await expect(insertDocument({ name: 'over limit', content: '', by: '10.0.0.50' })).rejects.toBeInstanceOf(
+        DocumentLimitError,
+      )
     } finally {
       await setSettingValue('max_documents_per_ip', 10)
     }
@@ -308,7 +307,9 @@ describe('documents against the SQLite backend (dev profile)', () => {
     expect(byCreator.documents[0].name).toBe('Beta doc')
 
     const adminDoc = await fetchDocumentForAdmin(created.id)
-    expect(adminDoc).toEqual(expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7', tags: [] }))
+    expect(adminDoc).toEqual(
+      expect.objectContaining({ id: created.id, content: 'hello', createdBy: '10.0.0.7', tags: [] }),
+    )
   })
 
   it('sorts admin documents by the requested column and direction', async () => {
@@ -368,5 +369,207 @@ describe('documents against the SQLite backend (dev profile)', () => {
     await insertDocument({ name: 'Only', content: '', by: '10.0.0.1' })
     const result = await listDocumentsForAdmin({ search: 'only', searchKeys: ['not-a-column'] })
     expect(result.total).toBe(0)
+  })
+})
+
+describe('importDocumentsForAdmin against the SQLite backend (dev profile)', () => {
+  it('imports a single record and records an initial version snapshot', async () => {
+    const created = await importDocumentsForAdmin(
+      [{ name: 'Notes', content: 'hello', documentType: 'text', tags: [{ name: 'urgent', color: '#FF6680' }] }],
+      '203.0.113.7',
+    )
+
+    expect(created).toHaveLength(1)
+    expect(created[0]).toMatchObject({
+      id: expect.stringMatching(/^[0-9a-z]{6}$/),
+      name: 'Notes',
+      content: 'hello',
+      documentType: 'text',
+      tags: [{ name: 'urgent', color: '#FF6680' }],
+    })
+
+    const db = await getDb()
+    const versions = await db.query<{ count: number | string }>(
+      'select count(*) as count from document_versions where document_id = (select id from documents where key = $1)',
+      [created[0].id],
+    )
+    expect(Number(versions.rows[0]?.count ?? 0)).toBe(1)
+  })
+
+  it('imports multiple records with auto-generated unique keys and optional fields', async () => {
+    const created = await importDocumentsForAdmin(
+      [
+        { name: 'A', content: 'one' },
+        { name: 'B', content: 'two', documentType: 'json', isPublic: false },
+      ],
+      '10.0.0.7',
+    )
+
+    expect(created).toHaveLength(2)
+    expect(new Set(created.map(document => document.id)).size).toBe(2)
+    expect(created[1]).toMatchObject({ name: 'B', documentType: 'json', content: 'two' })
+
+    const db = await getDb()
+    const rows = await db.query<{ name: string; is_public: number; document_type: string }>(
+      'select name, is_public, document_type from documents',
+    )
+    const byName = new Map(rows.rows.map(row => [row.name, row]))
+    expect(byName.get('A')).toMatchObject({ is_public: 1, document_type: 'text' })
+    expect(byName.get('B')).toMatchObject({ is_public: 0, document_type: 'json' })
+  })
+
+  it('uses a provided key instead of auto-generating one', async () => {
+    const created = await importDocumentsForAdmin([{ name: 'Notes', content: 'hello', key: 'abc123' }], '10.0.0.7')
+
+    expect(created).toHaveLength(1)
+    expect(created[0].id).toBe('abc123')
+    expect(await fetchDocument('abc123')).toMatchObject({ name: 'Notes', content: 'hello' })
+  })
+
+  it('rejects duplicate keys within the same import batch', async () => {
+    await expect(
+      importDocumentsForAdmin(
+        [
+          { name: 'A', content: 'one', key: 'abc123' },
+          { name: 'B', content: 'two', key: 'abc123' },
+        ],
+        '10.0.0.7',
+      ),
+    ).rejects.toThrow('record 2: duplicate document key')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from documents')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(0)
+  })
+
+  it('merges (upserts) into an existing document with the same key', async () => {
+    const existing = await insertDocument({ name: 'Original', content: 'old', by: '10.0.0.7' })
+
+    const imported = await importDocumentsForAdmin(
+      [{ name: 'Updated', content: 'new body', key: existing.id, isPublic: false }],
+      '10.0.0.8',
+    )
+
+    expect(imported).toHaveLength(1)
+    expect(imported[0]).toMatchObject({ id: existing.id, name: 'Updated', content: 'new body' })
+
+    const db = await getDb()
+    const rows = await db.query<{ count: number | string; is_public: number }>(
+      'select count(*) as count, (select is_public from documents where key = $1) as is_public from documents',
+      [existing.id],
+    )
+    expect(Number(rows.rows[0]?.count ?? 0)).toBe(1)
+    expect(rows.rows[0]?.is_public).toBe(0)
+
+    const versions = await db.query<{ count: number | string }>(
+      'select count(*) as count from document_versions where document_id = (select id from documents where key = $1)',
+      [existing.id],
+    )
+    expect(Number(versions.rows[0]?.count ?? 0)).toBe(2)
+  })
+
+  it('rejects a malformed provided key', async () => {
+    await expect(
+      importDocumentsForAdmin([{ name: 'A', content: 'one', key: 'NOT_VALID' }], '10.0.0.7'),
+    ).rejects.toThrow('record 1: document key must be 6 lowercase alphanumeric characters')
+  })
+
+  it('aborts the whole import when one record is invalid (all-or-nothing)', async () => {
+    await importDocumentsForAdmin([{ name: 'A', content: 'one' }], '10.0.0.7')
+
+    await expect(
+      importDocumentsForAdmin(
+        [
+          { name: 'B', content: 'two' },
+          { name: '', content: 'bad' },
+        ],
+        '10.0.0.7',
+      ),
+    ).rejects.toThrow('record 2: name is required')
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from documents')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(1)
+  })
+
+  it('rejects an invalid document type', async () => {
+    await expect(
+      importDocumentsForAdmin([{ name: 'A', content: 'one', documentType: 'nope' }], '10.0.0.7'),
+    ).rejects.toThrow('record 1: invalid document type')
+  })
+
+  it('rejects a record without string content', async () => {
+    await expect(importDocumentsForAdmin([{ name: 'A', content: undefined }], '10.0.0.7')).rejects.toThrow(
+      'record 1: content is required',
+    )
+
+    const db = await getDb()
+    const count = await db.query<{ count: number | string }>('select count(*) as count from documents')
+    expect(Number(count.rows[0]?.count ?? 0)).toBe(0)
+  })
+
+  it('bypasses the per-IP document limit', async () => {
+    const maxDocuments = await getMaxDocumentsPerUser()
+    for (let i = 0; i < maxDocuments; i++) {
+      await insertDocument({ name: `doc ${i}`, content: '', by: '10.0.0.99' })
+    }
+
+    const created = await importDocumentsForAdmin([{ name: 'imported', content: '' }], '10.0.0.99')
+    expect(created).toHaveLength(1)
+  })
+})
+
+describe('exportDocumentsForAdmin against the SQLite backend (dev profile)', () => {
+  it('exports every document shaped like an import record with its key', async () => {
+    const notes = await insertDocument({ name: 'Notes', content: 'hello', by: '10.0.0.7' })
+    const tagged = await insertDocument({ name: 'Tagged', content: 'body', by: '10.0.0.8' })
+    await updateDocument(tagged.id, { tags: [{ name: 'urgent', color: '#FF6680' }], isPublic: false, by: '10.0.0.8' })
+
+    const records = await exportDocumentsForAdmin()
+
+    expect(records).toHaveLength(2)
+    expect(records).toEqual(
+      expect.arrayContaining([
+        { key: notes.id, name: 'Notes', content: 'hello', documentType: 'text', tags: [], isPublic: true },
+        {
+          key: tagged.id,
+          name: 'Tagged',
+          content: 'body',
+          documentType: 'text',
+          tags: [{ name: 'urgent', color: '#FF6680' }],
+          isPublic: false,
+        },
+      ]),
+    )
+  })
+
+  it('exports only the selected keys in the given order of keys', async () => {
+    const first = await insertDocument({ name: 'First', content: 'one', by: '10.0.0.7' })
+    await insertDocument({ name: 'Second', content: 'two', by: '10.0.0.7' })
+    const third = await insertDocument({ name: 'Third', content: 'three', by: '10.0.0.7' })
+
+    const records = await exportDocumentsForAdmin([first.id, third.id])
+
+    expect(records.map(record => record.name).sort()).toEqual(['First', 'Third'])
+    expect(records.find(record => record.name === 'Third')?.content).toBe('three')
+  })
+
+  it('returns an empty array for unknown keys and for an empty selection', async () => {
+    await insertDocument({ name: 'Only', content: '', by: '10.0.0.7' })
+
+    expect(await exportDocumentsForAdmin(['zzzzzz'])).toEqual([])
+    expect(await exportDocumentsForAdmin([])).toHaveLength(1)
+  })
+
+  it('round-trips through the import by preserving keys', async () => {
+    const notes = await insertDocument({ name: 'Notes', content: 'hello', by: '10.0.0.7' })
+
+    const exported = await exportDocumentsForAdmin([notes.id])
+    await deleteDocument(notes.id)
+
+    const reimported = await importDocumentsForAdmin(exported, '10.0.0.9')
+
+    expect(reimported).toHaveLength(1)
+    expect(reimported[0]).toMatchObject({ id: notes.id, name: 'Notes', content: 'hello' })
   })
 })

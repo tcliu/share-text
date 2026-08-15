@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, type Snippet } from 'svelte'
   import { page } from '$app/state'
   import { beforeNavigate, goto } from '$app/navigation'
   import Button from '$lib/components/Button.svelte'
@@ -19,6 +19,8 @@
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
+  import UploadIcon from '$lib/icons/UploadIcon.svelte'
+  import ExportIcon from '$lib/icons/ExportIcon.svelte'
 
   const PROPERTIES_PATH = '/admin/properties'
   const DOCUMENTS_PATH = '/admin/documents'
@@ -28,6 +30,8 @@
     documentsState: ReturnType<typeof useAdminDocuments>
     usersState: ReturnType<typeof useAdminUsers>
   }
+
+  let { children }: { children?: Snippet } = $props()
 
   let discardPromptOpen = $state(false)
   let pendingNavigateUrl = $state<string | null>(null)
@@ -102,21 +106,21 @@
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
   {#if authState.state === 'authenticated'}
-  <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
-    <h1 class="text-md font-semibold text-slate-200">Admin</h1>
-    <div class="flex items-center gap-2">
-      <Button size="sm" ariaLabel="Go to Documents" tooltip="Go to Documents" onClick={() => goto('/')}>
-        {#snippet icon()}
-          <DocumentIcon />
-        {/snippet}
-      </Button>
-      <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void authState.handleLogout()}>
+    <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
+      <h1 class="text-md font-semibold text-slate-200">Admin</h1>
+      <div class="flex items-center gap-2">
+        <Button size="sm" ariaLabel="Go to Documents" tooltip="Go to Documents" onClick={() => goto('/')}>
+          {#snippet icon()}
+            <DocumentIcon />
+          {/snippet}
+        </Button>
+        <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void authState.handleLogout()}>
           {#snippet icon()}
             <SignOutIcon />
           {/snippet}
         </Button>
-    </div>
-  </header>
+      </div>
+    </header>
   {/if}
   <main class="min-h-0 flex-1">
     {#if authState.state === 'checking'}
@@ -156,6 +160,34 @@
       {#snippet documentsToolbar(state: AdminState)}
         <Button
           size="sm"
+          ariaLabel="Add document"
+          tooltip="Add document"
+          onClick={() => state.documentsState.openAdd()}>
+          {#snippet icon()}
+            <PlusIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Import documents"
+          tooltip="Import documents"
+          onClick={() => state.documentsState.openImport()}>
+          {#snippet icon()}
+            <UploadIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Export documents"
+          tooltip="Export documents"
+          pending={state.documentsState.exportPending}
+          onClick={() => void state.documentsState.exportRecords()}>
+          {#snippet icon()}
+            <ExportIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
           ariaLabel="Delete selected"
           tooltip="Delete selected"
           disabled={state.documentsState.selectedCount === 0}
@@ -181,13 +213,24 @@
         <AdminDocumentsView documentsState={state.documentsState} />
       {/snippet}
       {#snippet usersToolbar(state: AdminState)}
-        <Button
-          size="sm"
-          ariaLabel="Add user"
-          tooltip="Add user"
-          onClick={() => state.usersState.openAdd()}>
+        <Button size="sm" ariaLabel="Add user" tooltip="Add user" onClick={() => state.usersState.openAdd()}>
           {#snippet icon()}
             <PlusIcon />
+          {/snippet}
+        </Button>
+        <Button size="sm" ariaLabel="Import users" tooltip="Import users" onClick={() => state.usersState.openImport()}>
+          {#snippet icon()}
+            <UploadIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
+          ariaLabel="Export users"
+          tooltip="Export users"
+          pending={state.usersState.exportPending}
+          onClick={() => void state.usersState.exportRecords()}>
+          {#snippet icon()}
+            <ExportIcon />
           {/snippet}
         </Button>
         <Button
@@ -235,9 +278,14 @@
         },
       ] satisfies Tab<AdminState>[]}
       <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
-        <Tabs tabs={adminTabs} state={{ settingsState, documentsState, usersState }} pathname={page.url.pathname} ariaLabel="Admin sections" />
+        <Tabs
+          tabs={adminTabs}
+          state={{ settingsState, documentsState, usersState }}
+          pathname={page.url.pathname}
+          ariaLabel="Admin sections" />
       </div>
     {/if}
+    {#if children}{@render children()}{/if}
   </main>
 </div>
 

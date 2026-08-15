@@ -3,11 +3,14 @@ import {
   AdminAuthError,
   createAdminUser,
   deleteAdminUser,
+  exportAdminUsers,
   fetchAdminUsers,
+  importAdminUsers,
   updateAdminUser,
   type AdminUser,
   type AdminUserStatus,
 } from '$lib/admin'
+import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
 
 export type UserDialogMode = 'add' | 'edit'
@@ -36,6 +39,9 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   let saving = $state(false)
   let bulkStatusOpen = $state(false)
   let bulkStatusPending = $state(false)
+  let importOpen = $state(false)
+  let importPending = $state(false)
+  let exportPending = $state(false)
   let selectedIds = $state<Set<string>>(new Set())
 
   const searchState = useAdminDocumentsSearch({
@@ -50,9 +56,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   })
 
   const selectedCount = $derived(selectedIds.size)
-  const currentPageAllSelected = $derived(
-    users.length > 0 && users.every(user => selectedIds.has(String(user.id))),
-  )
+  const currentPageAllSelected = $derived(users.length > 0 && users.every(user => selectedIds.has(String(user.id))))
   const currentPageSomeSelected = $derived(users.some(user => selectedIds.has(String(user.id))))
 
   function reset() {
@@ -68,6 +72,9 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     saving = false
     bulkStatusOpen = false
     bulkStatusPending = false
+    importOpen = false
+    importPending = false
+    exportPending = false
     selectedIds = new Set()
     searchState.reset()
   }
@@ -123,6 +130,48 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     dialogMode = 'add'
     dialogUser = null
     dialogOpen = true
+  }
+
+  function openImport() {
+    importOpen = true
+  }
+
+  function closeImport() {
+    if (importPending) {
+      return
+    }
+    importOpen = false
+  }
+
+  async function submitImport(records: unknown[]) {
+    importPending = true
+    try {
+      const imported = await importAdminUsers(records)
+      toast.success(`${imported.length} user${imported.length === 1 ? '' : 's'} imported`)
+      importOpen = false
+      void load()
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to import users')
+      }
+    } finally {
+      importPending = false
+    }
+  }
+
+  async function exportRecords() {
+    exportPending = true
+    try {
+      const records = await exportAdminUsers(selectedIds.size > 0 ? [...selectedIds].map(Number) : undefined)
+      downloadJson('users-export.json', records)
+      toast.success(`${records.length} user${records.length === 1 ? '' : 's'} exported`)
+    } catch (error) {
+      if (!handleAuthError(error)) {
+        toast.error(error instanceof Error ? error.message : 'Failed to export users')
+      }
+    } finally {
+      exportPending = false
+    }
   }
 
   function openEdit(user: AdminUser) {
@@ -347,6 +396,15 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     get bulkStatusPending() {
       return bulkStatusPending
     },
+    get importOpen() {
+      return importOpen
+    },
+    get importPending() {
+      return importPending
+    },
+    get exportPending() {
+      return exportPending
+    },
     get selectedIds() {
       return selectedIds
     },
@@ -367,6 +425,10 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     handleSort: searchState.handleSort,
     reset,
     openAdd,
+    openImport,
+    closeImport,
+    submitImport,
+    exportRecords,
     openEdit,
     closeDialog,
     saveUser,
