@@ -17,7 +17,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   const before = await listSettings()
   const beforeValues = new Map(before.map(setting => [setting.key, setting.value]))
   const ip = getClientAddress()
-  const updates: Array<{ key: string; value: number | null }> = []
+  const updates: Array<{ key: string; value: number | string | null }> = []
 
   for (const item of body.settings) {
     if (!isBodyRecord(item) || typeof item.key !== 'string') {

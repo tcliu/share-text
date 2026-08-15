@@ -11,6 +11,7 @@ import {
   getMaxContentLength,
   getMaxDocumentVersions,
   getMaxDocumentsPerUser,
+  getSettingStringValue,
   getSettingValue,
   listSettings,
   setSettingValue,
@@ -25,6 +26,7 @@ beforeEach(async () => {
   delete process.env.MAX_CONTENT_LENGTH
   delete process.env.DOCUMENT_KEY_LENGTH
   delete process.env.MAX_DOCUMENT_VERSIONS
+  delete process.env.TTS_SERVICE_URL
 })
 
 describe('setting resolution', () => {
@@ -113,6 +115,54 @@ describe('setting resolution', () => {
     expect(await getSettingValue('max_content_length')).toBe(2048)
     await deleteSettingValue('max_content_length')
     expect(await getSettingValue('max_content_length')).toBe(1024 * 1024)
+  })
+})
+
+describe('string settings', () => {
+  it('falls back to the empty default when neither env nor database has a value', async () => {
+    expect(await getSettingStringValue('tts_service_url')).toBe('')
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'tts_service_url')).toMatchObject({
+      value: '',
+      source: 'default',
+      kind: 'string',
+    })
+  })
+
+  it('uses the environment value when no database override exists', async () => {
+    process.env.TTS_SERVICE_URL = 'http://127.0.0.1:8000'
+    expect(await getSettingStringValue('tts_service_url')).toBe('http://127.0.0.1:8000')
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'tts_service_url')).toMatchObject({
+      value: 'http://127.0.0.1:8000',
+      source: 'environment',
+    })
+  })
+
+  it('lets a database override win over the environment', async () => {
+    process.env.TTS_SERVICE_URL = 'http://127.0.0.1:8000'
+    await setSettingValue('tts_service_url', 'http://tts.internal:9000')
+    expect(await getSettingStringValue('tts_service_url')).toBe('http://tts.internal:9000')
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'tts_service_url')).toMatchObject({
+      value: 'http://tts.internal:9000',
+      source: 'database',
+    })
+  })
+
+  it('can be cleared back to the environment or default by deleting the override', async () => {
+    await setSettingValue('tts_service_url', 'http://tts.internal:9000')
+    await deleteSettingValue('tts_service_url')
+    expect(await getSettingStringValue('tts_service_url')).toBe('')
+  })
+
+  it('validates and trims string values', () => {
+    expect(validateSettingValue('tts_service_url', '  http://tts:8000  ')).toBe('http://tts:8000')
+    expect(validateSettingValue('tts_service_url', '')).toBe('')
+  })
+
+  it('rejects non-string values for string settings', () => {
+    expect(() => validateSettingValue('tts_service_url', 42)).toThrow('must be a string')
   })
 })
 

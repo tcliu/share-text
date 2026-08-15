@@ -36,7 +36,10 @@ export function useAdminSettings(onSignedOut: () => void) {
     if (!Number.isInteger(parsed)) {
       return { ok: false, error: `${setting.label} must be an integer` }
     }
-    if (parsed < setting.min || parsed > setting.max) {
+    if (
+      parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
+      parsed > (setting.max ?? Number.POSITIVE_INFINITY)
+    ) {
       return { ok: false, error: `${setting.label} must be between ${setting.min} and ${setting.max}` }
     }
     return { ok: true, value: parsed }
@@ -84,6 +87,7 @@ export function useAdminSettings(onSignedOut: () => void) {
         problems.push(`Unknown setting: ${key}`)
         continue
       }
+      if (setting.kind !== 'number') continue
       const validated = validateSettingNumber(setting, value)
       if (!validated.ok) {
         problems.push(validated.error)
@@ -115,14 +119,24 @@ export function useAdminSettings(onSignedOut: () => void) {
     }
     for (const setting of changed) {
       const raw = draftValues[setting.key]?.trim() ?? ''
-      const validated = validateSettingNumber(setting, raw)
-      if (!validated.ok) {
-        toast.error(validated.error)
-        return
+      if (setting.kind === 'number') {
+        const validated = validateSettingNumber(setting, raw)
+        if (!validated.ok) {
+          toast.error(validated.error)
+          return
+        }
       }
     }
     pending = true
-    void updateAdminSettings(changed.map(setting => ({ key: setting.key, value: Number(draftValues[setting.key]) })))
+    void updateAdminSettings(
+      changed.map(setting => ({
+        key: setting.key,
+        value:
+          setting.kind === 'string'
+            ? (draftValues[setting.key]?.trim() ?? '')
+            : Number(draftValues[setting.key]),
+      })),
+    )
       .then(updated => {
         settings = updated
         draftValues = Object.fromEntries(updated.map(setting => [setting.key, String(setting.value)]))

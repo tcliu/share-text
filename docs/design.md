@@ -49,8 +49,8 @@ The page is split into two vertical panes.
       with icon buttons (all with tooltips): an **Editor view** toggle and a
       **Preview view** toggle, type-specific **Format**/convert actions,
       **History** (when the document has multiple versions), **Copy**,
-      **Clone**, **Upload**, **Export**, **Tags**, **Copy link**, **Share** (for
-      the document's owner), **Reset**, and **Save**,
+      **Read aloud**, **Clone**, **Upload**, **Export**, **Tags**, **Copy link**,
+      **Share** (for the document's owner), **Reset**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
@@ -73,8 +73,9 @@ navigating to a document. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
 and the action row opens with a three-dot (kebab) menu holding **Upload**,
 **Export**, **History**, and **Format**, followed by the **Editor view** /
-**Preview view** toggles and the **Copy**, **Clone**, **Tags**, **Copy link**,
-**Share** (for the document's owner), **Reset**, and **Save** buttons.
+**Preview view** toggles and the **Copy**, **Read aloud**, **Clone**, **Tags**,
+**Copy link**, **Share** (for the document's owner), **Reset**, and **Save**
+buttons.
 
 ## Navigation
 
@@ -94,6 +95,26 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
   snapshot (the server content, or an empty string when the document was never
   saved). It is disabled while the document is clean.
 - **Copy** copies the editor content to the clipboard (disabled when empty).
+- **Read aloud** speaks the editor content through the external local
+  text-to-speech service (Piper/gTTS) reached via a same-origin proxy. It reads
+  the currently selected text when there is a selection, otherwise the whole
+  document; the text is grouped by language runs across line breaks and even
+  within unspaced latin/CJK runs (so each segment is synthesized with its own
+  language model — Han → zh, kana → ja, otherwise en — with short runs folded
+  into the dominant language and CJK newlines stripped for a continuous read)
+  and played back in sequence. The
+  button switches to a highlighted **Stop** toggle immediately on click (no
+  loading spinner), and clicking it again cancels in-flight synthesis and stops
+  playback, so the user can interrupt while audio is still being generated. The
+  button is disabled when the document is empty. Repeatedly
+  reading the same text skips synthesis: the client caches the audio blob per
+  segment (text + language) in memory, so unchanged lines play instantly from
+  object URLs (revoked on stop/unmount). The feature is disabled unless a
+  `tts_service_url` setting is set — configured
+  in the admin **Properties** tab in real time (with `TTS_SERVICE_URL` as the
+  environment fallback); when it is empty the button is hidden entirely, and
+  when the service is unreachable it shows a
+  toast explaining the failure.
 - **Export** downloads the content as a `{name}.{extension}` file, where the
   extension is determined by the selected document type (disabled when empty).
 

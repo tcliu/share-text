@@ -491,10 +491,11 @@ its own row when the screen is too narrow for both. On mobile the action row
 opens with a `KebabMenu` (three-dot) holding the Upload, Export, History, and
 Format actions in that order (History only when the document has 2+ versions;
 the menu owns the `FormatDialog`), followed by the Editor view / Preview view
-toggle pair and the Copy, Clone, Tags, Copy link, Reset, and Save toolbar
-buttons (Clone only when available; Copy link and Tags only for saved
+toggle pair and the Copy, Read aloud, Clone, Tags, Copy link, Reset, and Save
+toolbar buttons (Clone only when available; Copy link and Tags only for saved
 documents). On desktop the toolbar shows the TypeActions plus the
-Copy, Clone, History, Upload, Export, Format, Tags, Copy link, Reset, and Save
+Copy, Read aloud, Clone, History, Upload, Export, Format, Tags, Copy link,
+Reset, and Save
 buttons (History between Clone and Upload, Format between Export and Tags,
 Copy link directly after Tags, Reset directly before Save). On desktop the
 header lays the name/tags group, the type
@@ -538,6 +539,65 @@ identity so the browser app can render the admin entry point;
   preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
   per-type language extensions from the type registry.
+- Read aloud proxies the external tts service through two same-origin
+  endpoints: `GET /api/tts/capabilities` (reports `configured` from the
+  runtime `tts_service_url` setting plus the service's supported languages,
+  both empty when the feature is unconfigured) and `POST /api/tts/synthesize`
+  (forwards `{ text, lang }` to the service's `/api/synthesize` with
+  `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
+  **bytes** back with the service's Content-Type). Both endpoints resolve the
+  language list via `getSupportedTtsLanguages` (`$lib/server/tts.ts`: fetched
+  from the service's `/api/capabilities` and cached 60s, falling back to a
+  default set cached 10s when the service is unreachable), so the gate and the
+  client report the same languages. `$lib/server/tts.ts` reads
+  the setting via
+  `getSettingStringValue('tts_service_url')` (DB override, else
+  `TTS_SERVICE_URL` env, else empty) and gates every endpoint with
+  `isTtsConfigured()`, returning 503 when it is empty — the feature is
+  disabled   without it. Admin can set/clear the URL in the Properties tab in
+  real time (the settings value cache is invalidated on write). The editor
+  button (`DocumentEditorPane`) loads capabilities once
+  on mount (cached in `$lib/tts-client.ts`), reads the current CodeMirror
+  selection when non-empty (`CodeEditor` exposes `getSelectionText()`,
+  forwarded through `LazyCodeEditor`) else the whole document, splits the text
+  into language segments via `splitTtsSegments` (`$lib/tts-language.ts`):
+  the text is scanned character by character into latin/CJK runs — a run
+  touching kana is ja, pure Han is zh, else en — so unspaced text like
+  `Hello你好世界` splits into `en` + `zh` while `こんにちは世界` stays one
+  `ja` segment; digits inherit the surrounding script (a number after Han is
+  read in zh, after English in en); adjacent same-language runs merge across
+  line breaks, short runs (English < 4 chars, CJK < 2) fold into the
+  dominant surrounding language so stray words don't create spurious segments,
+  and newlines inside CJK segments are stripped so Chinese/Japanese read as one
+  continuous sentence (English keeps its newlines as natural pauses);
+  each segment
+  synthesizes with its own language model, then plays
+  the audio segments in sequence from the proxy in a hidden `<audio>` element
+  (advancing on the element's `ended`/`error` events). The button switches to a
+  Stop toggle immediately on click and synthesis is cancellable — `stopReading`
+  aborts in-flight synthesis via an `AbortController` (passed as the fetch
+  signal in `$lib/tts-client.ts`) and pauses playback. Playback is a play/stop
+  toggle reset by the element's
+  `ended`/`error`/`pause` events and paused on unmount. Repeat reads of the
+  same segment skip synthesis: `synthesizeTtsCached` in `$lib/tts-client.ts`
+  keeps a bounded in-memory map (LRU-style eviction at 100 entries) keyed by
+  `text + lang` storing the returned `Blob`; object URLs created from the
+  blobs are revoked on stop/unmount. Synthesis is stateless: the backend
+  returns audio bytes in memory (`backend/app/engines.py` writes Piper to a
+  `BytesIO`, gTTS to a temp file it deletes) and writes nothing to disk, so
+  there is no `output_path`/`/api/audio` round trip and no scratch dir — this
+  is what makes the service multi-instance/serverless-safe. The backend caches
+  engines at the process level
+  (`backend/app/engines.py`): one `PiperEngine` per model dir reused across
+  requests with voices kept in memory, so parallel segment synthesis loads each
+  model once. Piper is only chosen for a language when its model files (`.onnx`
+  + `.onnx.json`) exist on disk (`piper_lang_available`); `zh` prefers gTTS
+  because Piper's zh voice reads Mandarin in short choppy groups, and other
+  languages prefer Piper when available, otherwise `auto` falls back to gTTS —
+  a missing voice degrades gracefully instead of 503ing.
+  The client caps segment synthesis at 4 concurrent requests
+  (`SYNTHESIS_CONCURRENCY` in `$lib/tts-client.ts`) and preserves input order.
+  Empty documents disable the button.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
   `usePreviewMode` holds the editor/split/preview tri-state and reads/writes it
   to the URL (`?preview=true`, `?editor=false`) via two toggle setters

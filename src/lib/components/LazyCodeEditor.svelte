@@ -28,7 +28,7 @@
   }: Props = $props()
 
   let EditorComponent = $state<any>(null)
-  let editorInstance = $state<{ focus: () => void } | null>(null)
+  let editorInstance = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
   let loadError = $state('')
 
   function handleContentChange(nextContent: string) {
@@ -38,6 +38,10 @@
 
   export function focus() {
     editorInstance?.focus()
+  }
+
+  export function getSelectionText(): string {
+    return editorInstance?.getSelectionText() ?? ''
   }
 
   $effect(() => {

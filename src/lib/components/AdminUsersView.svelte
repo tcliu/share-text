@@ -193,9 +193,6 @@
             onClick={() => void usersState.setBulkStatus('inactive')}>
             Set Inactive
           </Button>
-          <Button onClick={() => (usersState.bulkStatusOpen = false)} disabled={usersState.bulkStatusPending}>
-            Cancel
-          </Button>
         {/snippet}
       </Buttons>
     </div>

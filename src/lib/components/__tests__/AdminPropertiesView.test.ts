@@ -18,6 +18,7 @@ const settings = [
     key: 'max_documents_per_ip',
     label: 'Max documents per IP',
     description: 'Maximum number of documents a single client IP can create.',
+    kind: 'number' as const,
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
     min: 1,
@@ -29,6 +30,7 @@ const settings = [
     key: 'max_content_length',
     label: 'Max content length (chars)',
     description: 'Maximum number of characters allowed in document content.',
+    kind: 'number' as const,
     defaultValue: 1024 * 1024,
     envKey: 'MAX_CONTENT_LENGTH',
     min: 1,
@@ -36,15 +38,28 @@ const settings = [
     value: 1024 * 1024,
     source: 'default' as const,
   },
+  {
+    key: 'tts_service_url',
+    label: 'TTS service URL',
+    description: 'Base URL of the text-to-speech service.',
+    kind: 'string' as const,
+    defaultValue: '',
+    envKey: 'TTS_SERVICE_URL',
+    value: 'http://127.0.0.1:8000',
+    source: 'environment' as const,
+  },
 ]
 
-const INITIAL_PROPERTIES = 'max_documents_per_ip=10\nmax_content_length=1048576'
+const INITIAL_PROPERTIES =
+  'max_documents_per_ip=10\nmax_content_length=1048576\ntts_service_url=http\\://127.0.0.1\\:8000'
 
 function makeSettingsFetch() {
   return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
     if (String(url).includes('/api/admin/settings')) {
       if (init?.method === 'PUT') {
-        const body = JSON.parse(String(init.body)) as { settings: Array<{ key: string; value: number | null }> }
+        const body = JSON.parse(String(init.body)) as {
+          settings: Array<{ key: string; value: number | string }>
+        }
         const updated = settings.map(setting => {
           const change = body.settings.find(item => item.key === setting.key)
           return change ? { ...setting, value: change.value ?? setting.value, source: 'database' as const } : setting
@@ -105,7 +120,9 @@ describe('AdminPropertiesView', () => {
 
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
-    await waitFor(() => expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'))
+    await waitFor(() =>
+      expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http\\://127.0.0.1\\:8000'),
+    )
   })
 
   it('reflects an editor edit back in the form', async () => {
@@ -116,9 +133,15 @@ describe('AdminPropertiesView', () => {
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
     await waitFor(() => expect(editor.value).toBe(INITIAL_PROPERTIES))
 
-    fireEvent.input(editor, { target: { value: 'max_documents_per_ip=50\nmax_content_length=2048' } })
+    fireEvent.input(editor, {
+      target: {
+        value: 'max_documents_per_ip=50\nmax_content_length=2048\ntts_service_url=http://tts.internal:9000',
+      },
+    })
     switchToFormTab(getByText)
     await waitFor(() => expect((getByLabelText('Max documents per IP') as HTMLInputElement).value).toBe('50'))
+    expect((getByLabelText('Max content length (chars)') as HTMLInputElement).value).toBe('2048')
+    expect((getByLabelText('TTS service URL') as HTMLInputElement).value).toBe('http://tts.internal:9000')
   })
 
   it('shows a validation banner for unknown settings in the editor', async () => {
@@ -128,7 +151,9 @@ describe('AdminPropertiesView', () => {
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
     fireEvent.input(editor, {
-      target: { value: 'max_documents_per_ip=50\nmax_content_length=1048576\nnot_a_setting=5' },
+      target: {
+        value: 'max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http://x:1\nnot_a_setting=5',
+      },
     })
 
     await waitFor(() => expect(getByText(/Unknown setting: not_a_setting/)).toBeTruthy())
@@ -139,13 +164,19 @@ describe('AdminPropertiesView', () => {
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
 
     fireEvent.input(getByLabelText('Max documents per IP'), { target: { value: '50' } })
+    fireEvent.input(getByLabelText('TTS service URL'), { target: { value: 'http://tts.internal:9000' } })
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
-    await waitFor(() => expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'))
+    await waitFor(() =>
+      expect(editor.value).toBe(
+        'max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http\\://tts.internal\\:9000',
+      ),
+    )
 
     switchToFormTab(getByText)
     fireEvent.click(getByText('Reset'))
     await waitFor(() => expect((getByLabelText('Max documents per IP') as HTMLInputElement).value).toBe('10'))
+    expect((getByLabelText('TTS service URL') as HTMLInputElement).value).toBe('http://127.0.0.1:8000')
 
     switchToPropertiesTab(getByText)
     await waitFor(() =>

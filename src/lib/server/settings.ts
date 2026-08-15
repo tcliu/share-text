@@ -1,13 +1,16 @@
 import { getDb } from './db'
 
+export type SettingKind = 'number' | 'string'
+
 export interface SettingDefinition {
   key: string
   label: string
   description: string
-  defaultValue: number
+  kind: SettingKind
+  defaultValue: number | string
   envKey: string
-  min: number
-  max: number
+  min?: number
+  max?: number
 }
 
 export const SETTING_DEFINITIONS: SettingDefinition[] = [
@@ -15,6 +18,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     key: 'max_documents_per_ip',
     label: 'Max documents per IP',
     description: 'Maximum number of documents a single client IP can create.',
+    kind: 'number',
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
     min: 1,
@@ -25,6 +29,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     label: 'Max content length (chars)',
     description:
       'Maximum number of characters allowed in document content. Also subject to the hard 1 MiB UTF-8 byte cap.',
+    kind: 'number',
     defaultValue: 1024 * 1024,
     envKey: 'MAX_CONTENT_LENGTH',
     min: 1,
@@ -35,6 +40,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     label: 'Document key length (chars)',
     description:
       'Number of characters in generated document ids. New documents are named after their id. Existing documents keep their original ids.',
+    kind: 'number',
     defaultValue: 6,
     envKey: 'DOCUMENT_KEY_LENGTH',
     min: 4,
@@ -45,17 +51,27 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     label: 'Max document versions',
     description:
       'Maximum number of content versions kept per document. Older versions beyond this count are pruned on save.',
+    kind: 'number',
     defaultValue: 20,
     envKey: 'MAX_DOCUMENT_VERSIONS',
     min: 1,
     max: 100,
+  },
+  {
+    key: 'tts_service_url',
+    label: 'TTS service URL',
+    description:
+      'Base URL of the external text-to-speech service used by the Read aloud feature. Empty disables the feature.',
+    kind: 'string',
+    defaultValue: '',
+    envKey: 'TTS_SERVICE_URL',
   },
 ]
 
 export type SettingSource = 'database' | 'environment' | 'default'
 
 export interface ResolvedSetting extends SettingDefinition {
-  value: number
+  value: number | string
   source: SettingSource
 }
 
@@ -77,10 +93,24 @@ function readNumber(value: string | undefined): number | null {
 }
 
 function isWithinRange(value: number, definition: SettingDefinition) {
-  return value >= definition.min && value <= definition.max
+  return (
+    definition.min !== undefined &&
+    definition.max !== undefined &&
+    value >= definition.min &&
+    value <= definition.max
+  )
 }
 
 export function resolveSettingSource(definition: SettingDefinition, dbValue: string | null): SettingSource {
+  if (definition.kind === 'string') {
+    if (dbValue !== null) {
+      return 'database'
+    }
+    if ((process.env[definition.envKey] ?? '').trim() !== '') {
+      return 'environment'
+    }
+    return 'default'
+  }
   if (dbValue !== null && isWithinRange(readNumber(dbValue) ?? Number.NaN, definition)) {
     return 'database'
   }
@@ -91,6 +121,13 @@ export function resolveSettingSource(definition: SettingDefinition, dbValue: str
 }
 
 export function getEffectiveSettingValue(definition: SettingDefinition, dbValue: string | null) {
+  if (definition.kind === 'string') {
+    if (dbValue !== null) {
+      return dbValue
+    }
+    const envValue = (process.env[definition.envKey] ?? '').trim()
+    return envValue !== '' ? envValue : definition.defaultValue
+  }
   const envValue = readNumber(process.env[definition.envKey])
   if (dbValue !== null) {
     const stored = readNumber(dbValue)
@@ -102,17 +139,16 @@ export function getEffectiveSettingValue(definition: SettingDefinition, dbValue:
 }
 
 export async function getSettingValue(key: string): Promise<number> {
-  const definition = getSettingDefinition(key)
-  if (!definition) {
-    throw new Error(`Unknown setting: ${key}`)
+  const value = await getResolvedSettingValue(key)
+  if (typeof value !== 'number') {
+    throw new Error(`Setting ${key} is not numeric`)
   }
-  const cached = valueCache.get(key)
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value
-  }
-  const value = await readSettingValue(key)
-  valueCache.set(key, { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS })
   return value
+}
+
+export async function getSettingStringValue(key: string): Promise<string> {
+  const value = await getResolvedSettingValue(key)
+  return typeof value === 'string' ? value : String(value)
 }
 
 export async function getMaxDocumentsPerUser() {
@@ -132,16 +168,22 @@ export async function getMaxDocumentVersions() {
 }
 
 const SETTINGS_CACHE_TTL_MS = 5000
-const valueCache = new Map<string, { value: number; expiresAt: number }>()
+const valueCache = new Map<string, { value: number | string; expiresAt: number }>()
 
-async function readSettingValue(key: string) {
+async function getResolvedSettingValue(key: string): Promise<number | string> {
   const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
   }
+  const cached = valueCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value
+  }
   const db = await getDb()
   const result = await db.query<SettingRow>('select key, value from app_config where key = $1', [key])
-  return getEffectiveSettingValue(definition, result.rows[0]?.value ?? null)
+  const value = getEffectiveSettingValue(definition, result.rows[0]?.value ?? null)
+  valueCache.set(key, { value, expiresAt: Date.now() + SETTINGS_CACHE_TTL_MS })
+  return value
 }
 
 function invalidateSettingCache(key: string) {
@@ -167,16 +209,22 @@ export async function listSettings(): Promise<ResolvedSetting[]> {
   })
 }
 
-export function validateSettingValue(key: string, value: unknown): number {
+export function validateSettingValue(key: string, value: unknown): number | string {
   const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
+  }
+  if (definition.kind === 'string') {
+    if (typeof value !== 'string') {
+      throw new Error(`${definition.label} must be a string`)
+    }
+    return value.trim()
   }
   const parsed = Number(value)
   if (!Number.isInteger(parsed)) {
     throw new Error(`${definition.label} must be an integer`)
   }
-  if (parsed < definition.min || parsed > definition.max) {
+  if (parsed < (definition.min ?? Number.NEGATIVE_INFINITY) || parsed > (definition.max ?? Number.POSITIVE_INFINITY)) {
     throw new Error(`${definition.label} must be between ${definition.min} and ${definition.max}`)
   }
   return parsed
