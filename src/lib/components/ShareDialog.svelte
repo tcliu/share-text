@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import type { User } from '$lib/documents'
   import { searchUsers } from '$lib/user-auth'
   import BaseDialog from './BaseDialog.svelte'
@@ -26,6 +27,12 @@
   let draftSharees = $state<string[]>([])
   let userSuggestions = $state<ComboboxOption[]>([])
   let searchTimer: ReturnType<typeof setTimeout> | null = null
+  let comboboxRef = $state<ReturnType<typeof Combobox> | null>(null)
+
+  $effect(() => {
+    if (!open) return
+    tick().then(() => comboboxRef?.focus())
+  })
 
   const shareeOptions = $derived(draftSharees.map(username => ({ value: username, label: username })))
 
@@ -106,6 +113,7 @@
 
       <FormField label="Shared with" htmlFor="share-user-input">
         <Combobox
+          bind:this={comboboxRef}
           id="share-user-input"
           selected={shareeOptions}
           suggestions={userSuggestions}

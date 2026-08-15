@@ -252,6 +252,10 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
   open.
 - The confirm button uses the primary variant with an accent color that matches
   the intent: amber for discard prompts, rose for destructive deletes.
+- Dialogs with inputs focus the first empty input on open — the Share dialog's
+  add-user field, the Tags dialog's tag field, and the admin add-user/add-
+  document name field. When the first field is pre-filled (as when editing an
+  existing user or document), no focus is moved into the dialog.
 
 ## Discard Guard
 

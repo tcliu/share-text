@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte'
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
@@ -44,6 +45,15 @@
   let documentType = $state('text')
   let content = $state('')
   let discardPromptOpen = $state(false)
+  let nameInput = $state<HTMLInputElement | null>(null)
+
+  onMount(() => {
+    tick().then(() => {
+      if (nameInput && !name.trim()) {
+        nameInput.focus()
+      }
+    })
+  })
 
   $effect(() => {
     key = document?.id ?? ''
@@ -138,6 +148,7 @@
     <FormField label="Name" htmlFor="document-name">
       <input
         id="document-name"
+        bind:this={nameInput}
         bind:value={name}
         type="text"
         autocomplete="off"

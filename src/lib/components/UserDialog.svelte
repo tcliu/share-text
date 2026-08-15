@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte'
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
@@ -24,6 +25,15 @@
   let password = $state('')
   let active = $state(true)
   let discardPromptOpen = $state(false)
+  let usernameInput = $state<HTMLInputElement | null>(null)
+
+  onMount(() => {
+    tick().then(() => {
+      if (usernameInput && !username.trim()) {
+        usernameInput.focus()
+      }
+    })
+  })
 
   $effect(() => {
     username = user?.username ?? ''
@@ -89,6 +99,7 @@
     <FormField label="Username" htmlFor="user-username">
       <input
         id="user-username"
+        bind:this={usernameInput}
         bind:value={username}
         type="text"
         autocomplete="off"

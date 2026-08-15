@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
@@ -26,6 +27,12 @@
 
   let draftTags = $state<Tag[]>([])
   let discardPromptOpen = $state(false)
+  let tagInputRef = $state<ReturnType<typeof TagInput> | null>(null)
+
+  $effect(() => {
+    if (!open) return
+    tick().then(() => tagInputRef?.focus())
+  })
 
   $effect(() => {
     if (open) {
@@ -73,7 +80,7 @@
   <BaseDialog title="Edit Tags" maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
     <div class="flex flex-col gap-4">
       <FormField label="Tags" htmlFor="document-tags-input">
-        <TagInput id="document-tags-input" bind:value={draftTags} {availableTags} />
+        <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>
 
       <Buttons>

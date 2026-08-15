@@ -25,6 +25,12 @@
 
   let inputQuery = $state('')
 
+  let comboboxRef = $state<ReturnType<typeof Combobox> | null>(null)
+
+  export function focus() {
+    comboboxRef?.focus()
+  }
+
   const tagOptions = $derived(value.map(tag => ({ value: tag.name, label: tag.name })))
 
   const filteredTags = $derived.by(() => {
@@ -77,6 +83,7 @@
 </script>
 
 <Combobox
+  bind:this={comboboxRef}
   {id}
   {placeholder}
   selected={tagOptions}

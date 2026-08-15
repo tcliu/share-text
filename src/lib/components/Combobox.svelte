@@ -42,6 +42,10 @@
   let inputRef = $state<HTMLInputElement | null>(null)
   let internalUpdate = false
 
+  export function focus() {
+    inputRef?.focus()
+  }
+
   $effect(() => {
     void selected
     if (internalUpdate) {
