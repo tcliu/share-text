@@ -536,13 +536,17 @@ identity so the browser app can render the admin entry point;
   preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
   per-type language extensions from the type registry.
-- Read aloud proxies the external tts service through three same-origin
+- Read aloud proxies the external tts service through two same-origin
   endpoints: `GET /api/tts/capabilities` (reports `configured` from the
   runtime `tts_service_url` setting plus the service's supported languages,
-  both empty when the service is unreachable) and `POST /api/tts/synthesize`
+  both empty when the feature is unconfigured) and `POST /api/tts/synthesize`
   (forwards `{ text, lang }` to the service's `/api/synthesize` with
   `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
-  **bytes** back with the service's Content-Type). `$lib/server/tts.ts` reads
+  **bytes** back with the service's Content-Type). Both endpoints resolve the
+  language list via `getSupportedTtsLanguages` (`$lib/server/tts.ts`: fetched
+  from the service's `/api/capabilities` and cached 60s, falling back to a
+  default set cached 10s when the service is unreachable), so the gate and the
+  client report the same languages. `$lib/server/tts.ts` reads
   the setting via
   `getSettingStringValue('tts_service_url')` (DB override, else
   `TTS_SERVICE_URL` env, else empty) and gates every endpoint with
