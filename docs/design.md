@@ -6,9 +6,10 @@ deploy the system.
 
 ## Purpose
 
-A public scratchpad: anyone who opens the app can read every saved document,
-edit its content, save changes back to the shared store, or delete the document
-for everyone. There is no authentication and no per-user ownership.
+A public scratchpad: anyone who opens the app can read public documents, edit
+their content, save changes back to the shared store, or delete documents they
+own. Visitors can register an account to own documents, control a document's
+visibility (public or private), and share documents with specific users.
 
 ## Layout
 
@@ -19,18 +20,19 @@ The page is split into two vertical panes.
     document**, **Refresh**, and — depending on sign-in state — **Login**,
     **Profile** + **Sign out** (signed-in user), or **Admin console** + **Sign
     out** (signed-in admin) icon buttons (all with tooltips).
-  - The pane lists all shared documents, most recently edited first. New
-    documents are added to the list automatically.
-  - A search box below the header (with a clear button) searches the whole
+  - The pane lists the documents the visitor can view — public documents, their
+    own documents, and documents shared with them — most recently edited first.
+    New documents are added to the list automatically.
+  - A search box below the header (with a clear button) searches the visible
     document store server-side with a short debounce (400 ms), matching document
     name, tags, or id with a case-insensitive substring; with an empty query the
     full list is shown.
   - A scrollable list of documents, each row a link to `/{doc-id}`. The row
     matching the current URL is highlighted. Rows show the document name (with
-    a copy-on-hover button), a non-text type chip, and — only on rows created by
-    the current client IP — a **Delete** icon button (with tooltip). The delete
-    guard is a UI convenience only: the underlying API remains open to any
-    visitor, and the admin **Documents** tab can delete any document.
+    a copy-on-hover button), a non-text type chip, a **Private** lock badge on
+    non-public documents, and — only on rows you own (created anonymously from
+    your client IP, or claimed by your account) — a **Delete** icon button (with
+    tooltip). The admin **Documents** tab can delete any document.
   - Rows use a small font.
   - Single-click navigates to the document.
   - The list loads more documents via infinite scroll when scrolling near the
@@ -46,8 +48,8 @@ The page is split into two vertical panes.
       with icon buttons (all with tooltips): an **Editor view** toggle and a
       **Preview view** toggle, type-specific **Format**/convert actions,
       **History** (when the document has multiple versions), **Copy**,
-      **Clone**, **Upload**, **Export**, **Tags**, **Copy link**, **Reset**, and
-      **Save**,
+      **Clone**, **Upload**, **Export**, **Tags**, **Copy link**, **Share** (for
+      the document's owner), **Reset**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
@@ -71,7 +73,7 @@ document name and type selector, then the tag chips, then the action buttons —
 and the action row opens with a three-dot (kebab) menu holding **Upload**,
 **Export**, **History**, and **Format**, followed by the **Editor view** /
 **Preview view** toggles and the **Copy**, **Clone**, **Tags**, **Copy link**,
-**Reset**, and **Save** buttons.
+**Share** (for the document's owner), **Reset**, and **Save** buttons.
 
 ## Navigation
 
@@ -214,8 +216,8 @@ and the action row opens with a three-dot (kebab) menu holding **Upload**,
 - **Clone** in the editor toolbar creates a copy of the current document with a
   new id. The clone is named `{original-name} (copy)` (or **Untitled** when the
   original has no name), inherits the content and type of the source, and the
-  browser navigates to the new document automatically. The clone is owned by
-  the current client IP.
+  browser navigates to the new document automatically. The clone is owned by the
+  current user (their account when signed in, otherwise their client IP).
 
 ## Copy link
 
@@ -274,33 +276,59 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 ## Shared Editing Model
 
-- The left pane lists all shared documents, most recently edited first.
-- **Refresh** re-fetches the full document set and the selected document so the
-  search box and editor reflect changes made by other users. Documents removed
-  by others disappear from the list automatically.
+- The left pane lists the documents the visitor can view, most recently edited
+  first.
+- **Refresh** re-fetches the visible document set and the selected document so
+  the search box and editor reflect changes made by other users. Documents
+  removed by others disappear from the list automatically.
+
+## Accounts And Sharing
+
+- A **Login** button in the list header opens `/login`, where visitors sign in
+  or create an account (username, email, password). Signing in or registering
+  claims the documents the visitor created anonymously from that client IP. A
+  **Remember me** checkbox issues a 30-day session cookie; the password is
+  never stored client-side.
+- A signed-in user sees **Profile** (their username and email) and **Sign out**
+  buttons in the list header instead of **Login**; an admin session additionally
+  shows an **Admin console** button.
+- Signing in accepts either a user account or the configured admin credentials;
+  the dedicated admin sign-in page lives at `/login/admin`.
+- Anonymous visitors can create, edit, and delete only the documents they own
+  (created from their client IP). Registered users can additionally edit any
+  public or shared document, and can delete and manage only the documents they
+  own.
+- A **Share** toolbar button opens the **Sharing dialog** on documents you own:
+  a checkbox toggles **Anyone with the link can view** (public/private), and a
+  searchable combobox adds or removes users shared with the document. Applying
+  the dialog updates the document immediately. Documents default to public;
+  making one private hides it from everyone except you and the users you share
+  it with.
+- Private documents carry a **Private** lock badge in the list and cannot be
+  opened by anonymous visitors or by users who are not shared with them.
 
 ## Admin
 
 The admin console is a dedicated area under `/admin`, reached by direct
 navigation. A server-side layout guard redirects unauthenticated visitors to
-the `/login` page, which shows the sign-in form; if no admin password source is
-configured, the login page reports that admin is disabled instead. A
+`/login/admin`, which shows the sign-in form; if no admin password source is
+configured, that page reports that admin is disabled instead. A
 **Remember me** checkbox persists the username to `localStorage` (pre-filling
 it on the next visit) and issues a 30-day session cookie; the password is
 never stored client-side. The page header offers **Go to Documents** and
-**Sign out** once signed in. The two tabs live at the real routes
-`/admin/properties` and `/admin/documents` (`/admin` redirects to the
-Properties route), so each view has a stable, shareable URL and survives
+**Sign out** once signed in. The three tabs live at the real routes
+`/admin/properties`, `/admin/documents`, and `/admin/users` (`/admin` redirects
+to the Properties route), so each view has a stable, shareable URL and survives
 refresh and back/forward; the generic `Tabs` component renders the tab bar and
 the active tab's toolbar and content from a per-tab `Tab` entry (label, path,
 toolbar snippet, content snippet) defined in the shared admin layout, which
-keeps the settings draft and documents data alive across tab switches.
+keeps the settings draft and documents/users data alive across tab switches.
 
 - Successful sign-in sets an HTTP-only, `SameSite=strict` signed session cookie
   (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per
   IP (5 per 15 minutes). All `/api/admin/*` routes except `login` and `session`
   require a valid session.
-- The page has two tabs:
+- The page has three tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
     `max_content_length`, `document_key_length`, `max_document_versions`). Each
     row shows its effective
@@ -310,7 +338,8 @@ keeps the settings draft and documents data alive across tab switches.
     values.
   - **Documents** — every document across all IPs with search, sortable columns,
     pagination, row-selection with bulk delete, inline editing of the ID, name,
-    created-by, and updated-by cells (copyable editable text), and single-row
+    created-by, and updated-by cells (copyable editable text), a
+    **Public/Private** visibility column, and single-row
     delete (behind a confirm dialog). Editing the ID renames the document key.
     An **Edit** button opens a dialog split into **Details** and **Content**
     tabs: the details tab edits the key, name, created-by, and updated-by
