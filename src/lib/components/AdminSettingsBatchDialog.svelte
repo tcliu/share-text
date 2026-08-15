@@ -82,9 +82,9 @@
     <div class="flex min-h-0 flex-col gap-1">
       <div class="flex items-start justify-between gap-3">
         <p class="text-sm text-slate-400">
-          Enter settings as key=value lines, one per line. Each value is validated against its setting's own rule
-          (whole number within the allowed range); the update is all-or-nothing and any invalid value rejects the
-          whole update. Keys you omit keep their current value.
+          Enter settings as key=value lines, one per line. Numeric values are validated against their setting's own
+          rule (whole number within the allowed range); string settings accept any value. The update is all-or-nothing
+          and any invalid value rejects the whole update. Keys you omit keep their current value.
         </p>
         <div class="flex items-center gap-1.5">
           <Button

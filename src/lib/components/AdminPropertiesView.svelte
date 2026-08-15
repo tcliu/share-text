@@ -23,7 +23,9 @@
   <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
     {#each settingsState.settings as setting, i}
       <div
-        class="grid items-center gap-2 p-3 md:grid-cols-[minmax(0,1fr)_11rem] {i > 0 ? 'border-t border-slate-800' : ''}">
+        class="grid items-center gap-2 p-3 {setting.kind === 'string'
+          ? 'md:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.25fr)]'
+          : 'md:grid-cols-[minmax(0,1fr)_11rem]'} {i > 0 ? 'border-t border-slate-800' : ''}">
         <div>
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-slate-100">{setting.label}</span>
@@ -41,12 +43,22 @@
           <p class="mt-0.5 text-xs text-slate-600">{setting.key} (env {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
+          {#if setting.kind === 'string'}
+          <input
+            type="text"
+            bind:value={settingsState.draftValues[setting.key]}
+            disabled={settingsState.pending}
+            aria-label={setting.label}
+            spellcheck="false"
+            class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40" />
+          {:else}
           <NumberInput
             bind:value={settingsState.draftValues[setting.key]}
             min={setting.min}
             max={setting.max}
             disabled={settingsState.pending}
             ariaLabel={setting.label} />
+          {/if}
           {#if setting.source === 'database'}
           <Button
             size="sm"

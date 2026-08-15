@@ -10,6 +10,7 @@ const settings = [
     key: 'max_documents_per_ip',
     label: 'Max documents per IP',
     description: 'Maximum number of documents a single client IP can create.',
+    kind: 'number',
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
     min: 1,

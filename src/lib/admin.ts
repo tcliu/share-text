@@ -7,15 +7,18 @@ export class AdminAuthError extends Error {
   }
 }
 
+export type SettingKind = 'number' | 'string'
+
 export interface AdminSetting {
   key: string
   label: string
   description: string
-  defaultValue: number
+  kind: SettingKind
+  defaultValue: number | string
   envKey: string
-  min: number
-  max: number
-  value: number
+  min?: number
+  max?: number
+  value: number | string
   source: 'database' | 'environment' | 'default'
 }
 
@@ -118,7 +121,7 @@ export async function fetchAdminSettings(): Promise<AdminSetting[]> {
 }
 
 export async function updateAdminSettings(
-  settings: Array<{ key: string; value: number | null }>,
+  settings: Array<{ key: string; value: number | string | null }>,
 ): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`, {
     method: 'PUT',

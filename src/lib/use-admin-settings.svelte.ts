@@ -29,7 +29,10 @@ export function useAdminSettings(onSignedOut: () => void) {
     if (!Number.isInteger(parsed)) {
       return { ok: false, error: `${setting.label} must be an integer` }
     }
-    if (parsed < setting.min || parsed > setting.max) {
+    if (
+      parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
+      parsed > (setting.max ?? Number.POSITIVE_INFINITY)
+    ) {
       return { ok: false, error: `${setting.label} must be between ${setting.min} and ${setting.max}` }
     }
     return { ok: true, value: parsed }
@@ -58,14 +61,24 @@ export function useAdminSettings(onSignedOut: () => void) {
     }
     for (const setting of changed) {
       const raw = draftValues[setting.key]?.trim() ?? ''
-      const validated = validateSettingNumber(setting, raw)
-      if (!validated.ok) {
-        toast.error(validated.error)
-        return
+      if (setting.kind === 'number') {
+        const validated = validateSettingNumber(setting, raw)
+        if (!validated.ok) {
+          toast.error(validated.error)
+          return
+        }
       }
     }
     pending = true
-    void updateAdminSettings(changed.map(setting => ({ key: setting.key, value: Number(draftValues[setting.key]) })))
+    void updateAdminSettings(
+      changed.map(setting => ({
+        key: setting.key,
+        value:
+          setting.kind === 'string'
+            ? (draftValues[setting.key]?.trim() ?? '')
+            : Number(draftValues[setting.key]),
+      })),
+    )
       .then(updated => {
         settings = updated
         draftValues = Object.fromEntries(updated.map(setting => [setting.key, String(setting.value)]))
@@ -143,10 +156,16 @@ export function useAdminSettings(onSignedOut: () => void) {
         return
       }
     }
-    const changes: Array<{ key: string; value: number | null }> = []
+    const changes: Array<{ key: string; value: number | string }> = []
     for (const setting of settings) {
       if (!byKey.has(setting.key)) continue
       const raw = (byKey.get(setting.key) ?? '').trim()
+      if (setting.kind === 'string') {
+        if (raw !== String(setting.value)) {
+          changes.push({ key: setting.key, value: raw })
+        }
+        continue
+      }
       const validated = validateSettingNumber(setting, raw)
       if (!validated.ok) {
         toast.error(validated.error)

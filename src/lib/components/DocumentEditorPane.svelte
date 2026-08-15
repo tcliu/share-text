@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
   import { toast } from 'svelte-sonner'
   import type { Document } from '$lib/documents'
   import ConfirmDialog from './ConfirmDialog.svelte'
@@ -8,6 +9,8 @@
   import PencilIcon from '$lib/icons/PencilIcon.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
+  import SpeakerIcon from '$lib/icons/SpeakerIcon.svelte'
+  import StopIcon from '$lib/icons/StopIcon.svelte'
   import LinkIcon from '$lib/icons/LinkIcon.svelte'
   import TagsIcon from '$lib/icons/TagsIcon.svelte'
   import SaveIcon from '$lib/icons/SaveIcon.svelte'
@@ -35,6 +38,8 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
+  import { loadTtsCapabilities, synthesizeTtsCached } from '$lib/tts-client'
+  import { splitTtsSegments } from '$lib/tts-language'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -90,8 +95,27 @@
       document.name !== (savedName ?? document.name),
   )
 
-  let editorRef = $state<{ focus: () => void } | null>(null)
+  let editorRef = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
   let refocusEditor = $state(false)
+  let ttsConfigured = $state(false)
+  let speaking = $state(false)
+  let audioRef = $state<HTMLAudioElement | null>(null)
+  let ttsQueue = $state<string[]>([])
+  let ttsQueueIndex = $state(0)
+  let ttsObjectUrls: string[] = []
+  let ttsAbortController: AbortController | null = null
+
+  $effect(() => {
+    let cancelled = false
+    loadTtsCapabilities().then(capabilities => {
+      if (!cancelled) {
+        ttsConfigured = capabilities.configured
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  })
 
   $effect(() => {
     if (focusOnMount) {
@@ -212,6 +236,95 @@
     anchor.remove()
     URL.revokeObjectURL(url)
   }
+
+  function releaseTtsObjectUrls() {
+    for (const url of ttsObjectUrls) {
+      URL.revokeObjectURL(url)
+    }
+    ttsObjectUrls = []
+  }
+
+  function stopReading() {
+    ttsAbortController?.abort()
+    ttsAbortController = null
+    audioRef?.pause()
+    ttsQueue = []
+    ttsQueueIndex = 0
+    releaseTtsObjectUrls()
+    speaking = false
+  }
+
+  function playNextSegment() {
+    const nextIndex = ttsQueueIndex + 1
+    const nextUrl = ttsQueue[nextIndex]
+    if (!nextUrl || !audioRef) {
+      ttsQueue = []
+      ttsQueueIndex = 0
+      releaseTtsObjectUrls()
+      speaking = false
+      return
+    }
+    ttsQueueIndex = nextIndex
+    audioRef.src = nextUrl
+    audioRef.play().catch(() => {
+      toast.error('Failed to play audio')
+      stopReading()
+    })
+  }
+
+  async function handleReadAloud() {
+    if (speaking) {
+      stopReading()
+      return
+    }
+    if (!ttsConfigured) {
+      toast.error('Text-to-speech is not configured')
+      return
+    }
+    const selection = editorRef?.getSelectionText() ?? ''
+    const text = selection.trim() ? selection : content
+    const segments = splitTtsSegments(text)
+    if (segments.length === 0) {
+      toast.error('Nothing to read')
+      return
+    }
+    speaking = true
+    ttsAbortController = new AbortController()
+    try {
+      const blobs = await synthesizeTtsCached(
+        segments,
+        ttsAbortController?.signal,
+      )
+      if (ttsAbortController?.signal.aborted) {
+        return
+      }
+      if (!audioRef) return
+      releaseTtsObjectUrls()
+      ttsObjectUrls = blobs.map(blob => URL.createObjectURL(blob))
+      ttsQueue = ttsObjectUrls
+      ttsQueueIndex = 0
+      audioRef.src = ttsQueue[0]
+      audioRef.play().catch(() => {
+        toast.error('Failed to play audio')
+        stopReading()
+      })
+    } catch (error) {
+      if (ttsAbortController?.signal.aborted) {
+        return
+      }
+      toast.error(error instanceof Error ? error.message : 'Failed to synthesize speech')
+      stopReading()
+    }
+  }
+
+  onDestroy(() => {
+    ttsAbortController?.abort()
+    ttsAbortController = null
+    if (audioRef?.currentSrc) {
+      audioRef.pause()
+    }
+    releaseTtsObjectUrls()
+  })
 
   async function handleTypeSelect(value: string) {
     if (value === docType) return
@@ -336,6 +449,22 @@
       disabled={content.length === 0}>
       {#snippet icon()}
         <CopyIcon />
+      {/snippet}
+    </Button>
+    <Button
+      size="sm"
+      ariaLabel={speaking ? 'Stop reading' : ttsConfigured ? 'Read aloud' : 'Text-to-speech not configured'}
+      tooltip={speaking ? 'Stop reading' : ttsConfigured ? 'Read aloud' : 'Text-to-speech not configured'}
+      variant={speaking ? 'outline' : 'secondary'}
+      ariaPressed={speaking}
+      onClick={handleReadAloud}
+      disabled={!ttsConfigured || (!speaking && content.length === 0)}>
+      {#snippet icon()}
+        {#if speaking}
+          <StopIcon />
+        {:else}
+          <SpeakerIcon />
+        {/if}
       {/snippet}
     </Button>
     {#if onClone || cloneDisabled}
@@ -589,6 +718,20 @@
     accept="text/plain,.txt,.md,.json,.csv,.html,.js,.xml,.yml,.yaml,application/json,text/markdown,text/html,text/xml,text/javascript"
     class="hidden"
     onchange={handleFileChange} />
+
+  <audio
+    bind:this={audioRef}
+    class="hidden"
+    onended={() => playNextSegment()}
+    onerror={() => {
+      toast.error('Failed to play a segment')
+      playNextSegment()
+    }}
+    onpause={() => {
+      if (ttsQueue.length === 0) {
+        speaking = false
+      }
+    }}></audio>
 
   <div class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
     {#if document.updatedAt}
