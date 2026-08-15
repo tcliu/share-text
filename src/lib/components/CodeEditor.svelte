@@ -171,6 +171,13 @@
     editorView?.focus()
   }
 
+  export function getSelectionText(): string {
+    if (!editorView) return ''
+    const { from, to } = editorView.state.selection.main
+    if (from === to) return ''
+    return editorView.state.sliceDoc(from, to)
+  }
+
   $effect(() => {
     if (!editorView) return
     void content

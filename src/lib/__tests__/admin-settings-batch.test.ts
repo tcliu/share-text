@@ -13,6 +13,7 @@ const settings = [
     key: 'max_documents_per_ip',
     label: 'Max documents per IP',
     description: 'Maximum number of documents a single client IP can create.',
+    kind: 'number',
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
     min: 1,
@@ -24,12 +25,23 @@ const settings = [
     key: 'max_content_length',
     label: 'Max content length (chars)',
     description: 'Maximum number of characters allowed in document content.',
+    kind: 'number',
     defaultValue: 1024 * 1024,
     envKey: 'MAX_CONTENT_LENGTH',
     min: 1,
     max: 1024 * 1024,
     value: 1024 * 1024,
     source: 'default' as const,
+  },
+  {
+    key: 'tts_service_url',
+    label: 'TTS service URL',
+    description: 'Base URL of the text-to-speech service.',
+    kind: 'string',
+    defaultValue: '',
+    envKey: 'TTS_SERVICE_URL',
+    value: 'http://127.0.0.1:8000',
+    source: 'environment' as const,
   },
 ]
 
@@ -73,7 +85,7 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     expect(state().batchOpen).toBe(false)
 
     state().openBatch()
@@ -88,7 +100,7 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', settingsFetch)
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     state().openBatch()
     await state().submitBatch('max_documents_per_ip=50\nmax_content_length=1048576')
 
@@ -109,7 +121,7 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', settingsFetch)
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     state().openBatch()
     await state().submitBatch('not_a_setting=5')
 
@@ -122,7 +134,7 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', settingsFetch)
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     state().openBatch()
     await state().submitBatch('max_documents_per_ip=abc')
 
@@ -135,7 +147,7 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', settingsFetch)
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     state().openBatch()
     await state().submitBatch('max_documents_per_ip=0')
 
@@ -148,9 +160,46 @@ describe('useAdminSettings batch update', () => {
     vi.stubGlobal('fetch', settingsFetch)
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(2))
+    await waitFor(() => expect(state().settings.length).toBe(3))
     state().openBatch()
     await state().submitBatch('max_documents_per_ip=10\nmax_content_length=1048576')
+
+    expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+    expect(state().batchOpen).toBe(true)
+  })
+
+  it('applies string settings alongside numeric settings in one batch', async () => {
+    const settingsFetch = makeSettingsFetch()
+    vi.stubGlobal('fetch', settingsFetch)
+    const state = renderHost()
+
+    await waitFor(() => expect(state().settings.length).toBe(3))
+    state().openBatch()
+    await state().submitBatch('max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http://tts.internal:9000')
+
+    const putCalls = settingsFetch.mock.calls.filter(([, init]) => init?.method === 'PUT')
+    expect(putCalls).toHaveLength(1)
+    expect(JSON.parse(String(putCalls[0][1]?.body))).toEqual({
+      settings: [
+        { key: 'max_documents_per_ip', value: 50 },
+        { key: 'tts_service_url', value: 'http://tts.internal:9000' },
+      ],
+    })
+    expect(state().batchOpen).toBe(false)
+    expect(state().settings.find(item => item.key === 'tts_service_url')).toMatchObject({
+      value: 'http://tts.internal:9000',
+      source: 'database',
+    })
+  })
+
+  it('rejects the whole batch when any numeric value is invalid, even if string settings are fine', async () => {
+    const settingsFetch = makeSettingsFetch()
+    vi.stubGlobal('fetch', settingsFetch)
+    const state = renderHost()
+
+    await waitFor(() => expect(state().settings.length).toBe(3))
+    state().openBatch()
+    await state().submitBatch('max_documents_per_ip=abc\ntts_service_url=http://tts.internal:9000')
 
     expect(settingsFetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
     expect(state().batchOpen).toBe(true)
