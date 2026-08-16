@@ -29,7 +29,7 @@ export function valueText(value: unknown): string {
 }
 
 export function valueClass(value: unknown): string {
-  if (value === null) return 'italic text-slate-500'
+  if (value === null) return 'italic text-slate-400'
   if (typeof value === 'string') return 'text-emerald-300'
   if (typeof value === 'number') return 'text-amber-300'
   if (typeof value === 'boolean') return 'text-sky-300'

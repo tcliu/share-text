@@ -2,7 +2,7 @@
   import { tick } from 'svelte'
   import { EditorState, type Extension } from '@codemirror/state'
   import { EditorView, keymap, lineNumbers } from '@codemirror/view'
-  import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+  import { defaultKeymap, history, historyKeymap, indentLess } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
   import { search, searchKeymap } from '@codemirror/search'
@@ -43,7 +43,32 @@
 
   function insertTwoSpaces(): boolean {
     if (!editorView) return false
-    editorView.dispatch(editorView.state.replaceSelection('  '))
+    editorView.dispatch(editorView.state.replaceSelection('  '), { userEvent: 'input', scrollIntoView: true })
+    return true
+  }
+
+  function removeTwoSpaces(): boolean {
+    if (!editorView) return false
+    const state = editorView.state
+    const main = state.selection.main
+    if (!main.empty) {
+      return indentLess({ state, dispatch: editorView.dispatch })
+    }
+    const line = state.doc.lineAt(main.from)
+    let from: number
+    let to: number
+    const before = state.doc.sliceString(Math.max(line.from, main.from - 2), main.from)
+    if (before.length > 0 && /^[ \t]+$/.test(before)) {
+      from = main.from - before.length
+      to = main.from
+    } else {
+      const leading = /^[ \t]*/.exec(line.text)?.[0] ?? ''
+      const removeCount = Math.min(leading.length, 2)
+      if (removeCount === 0) return false
+      from = line.from
+      to = line.from + removeCount
+    }
+    editorView.dispatch({ changes: { from, to }, userEvent: 'delete.dedent', scrollIntoView: true })
     return true
   }
 
@@ -110,6 +135,7 @@
       }),
       keymap.of([
         { key: 'Tab', run: insertTwoSpaces, preventDefault: true },
+        { key: 'Shift-Tab', run: removeTwoSpaces, preventDefault: true },
         ...closeBracketsKeymap,
         ...defaultKeymap,
         ...historyKeymap,

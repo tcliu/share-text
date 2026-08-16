@@ -30,6 +30,7 @@
     openMobileDrawer: () => {},
     isMobile: false,
     user: null,
+    admin: null,
     signOut: () => {},
   })
 

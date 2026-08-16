@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import type { User } from '$lib/documents'
-  import { searchUsers } from '$lib/user-auth'
+  import { searchUsers, fetchRecentSharees } from '$lib/user-auth'
   import BaseDialog from './BaseDialog.svelte'
   import Buttons from './Buttons.svelte'
   import Button from './Button.svelte'
@@ -10,23 +10,27 @@
   import Combobox, { type ComboboxOption } from './Combobox.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
-  import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
+  import { tagChipClass, tagChipStyle, tagRemoveBtnClass, tagRemoveBtnStyle, getDefaultTagColor } from '$lib/tag-colors'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
 
   interface Props {
     open: boolean
     isPublic: boolean
     sharedWith: User[]
     currentUser?: User
+    isAdmin?: boolean
     pending?: boolean
     onClose: () => void
     onApply: (input: { isPublic: boolean; sharedWith: string[] }) => void
   }
 
-  let { open, isPublic, sharedWith, currentUser, pending = false, onClose, onApply }: Props = $props()
+  let { open, isPublic, sharedWith, currentUser, isAdmin = false, pending = false, onClose, onApply }: Props = $props()
 
   let draftIsPublic = $state(false)
   let draftSharees = $state<string[]>([])
   let userSuggestions = $state<ComboboxOption[]>([])
+  let recentSharees = $state<ComboboxOption[]>([])
+  let inputQuery = $state('')
   let searchTimer: ReturnType<typeof setTimeout> | null = null
   let comboboxRef = $state<ReturnType<typeof Combobox> | null>(null)
   let discardPromptOpen = $state(false)
@@ -42,8 +46,45 @@
     if (open) {
       draftIsPublic = isPublic
       draftSharees = sharedWith.map(user => user.username)
+      inputQuery = ''
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+        searchTimer = null
+      }
+      if (!isAdmin) {
+        void loadRecentSharees()
+      }
     }
   })
+
+  async function loadRecentSharees() {
+    try {
+      const users = await fetchRecentSharees()
+      recentSharees = users
+        .filter(user => user.username !== currentUser?.username && !draftSharees.includes(user.username))
+        .map(user => ({ value: user.username, label: user.username, detail: user.email }))
+      userSuggestions = filterRecentSharees(inputQuery)
+    } catch {
+      recentSharees = []
+      userSuggestions = []
+    }
+  }
+
+  function filterRecentSharees(query: string) {
+    const normalized = query.trim().toLowerCase()
+    return recentSharees.filter(option => {
+      if (draftSharees.includes(option.value)) {
+        return false
+      }
+      if (!normalized) {
+        return true
+      }
+      return (
+        option.label.toLowerCase().startsWith(normalized) ||
+        (option.detail ?? '').toLowerCase().includes(normalized)
+      )
+    })
+  }
 
   function shareesEqual(a: string[], b: string[]) {
     if (a.length !== b.length) return false
@@ -66,29 +107,31 @@
   }
 
   function handleQueryChange(query: string) {
-    if (searchTimer) {
-      clearTimeout(searchTimer)
-    }
-    if (!query.trim()) {
-      userSuggestions = []
-      searchTimer = null
+    inputQuery = query
+    if (isAdmin) {
+      if (searchTimer) {
+        clearTimeout(searchTimer)
+      }
+      if (!query.trim()) {
+        userSuggestions = []
+        searchTimer = null
+        return
+      }
+      searchTimer = setTimeout(() => {
+        searchTimer = null
+        void searchUsers(query.trim())
+          .then(users => {
+            userSuggestions = users
+              .filter(user => !draftSharees.includes(user.username))
+              .map(user => ({ value: user.username, label: user.username, detail: user.email }))
+          })
+          .catch(() => {
+            userSuggestions = []
+          })
+      }, 250)
       return
     }
-    searchTimer = setTimeout(() => {
-      searchTimer = null
-      void searchUsers(query.trim())
-        .then(users => {
-          userSuggestions = users
-            .filter(
-              user =>
-                user.username !== currentUser?.username && !draftSharees.includes(user.username),
-            )
-            .map(user => ({ value: user.username, label: user.username, detail: user.email }))
-        })
-        .catch(() => {
-          userSuggestions = []
-        })
-    }, 250)
+    userSuggestions = filterRecentSharees(query)
   }
 
   function addSharee(username: string) {
@@ -100,7 +143,9 @@
       return
     }
     draftSharees = [...draftSharees, normalized]
-    userSuggestions = []
+    if (isAdmin) {
+      userSuggestions = []
+    }
   }
 
   function removeSharee(username: string) {
@@ -131,7 +176,7 @@
     onCancel={handleCancelRequest}
     dismissKeydownCapture={!discardPromptOpen}
     pending={pending}>
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label="Anyone with the link can view" />
 
       <FormField label="Shared with" htmlFor="share-user-input">
@@ -145,10 +190,13 @@
           onAdd={item => addSharee(item.value)}
           onRemove={removeSharee}>
           {#snippet chip(item: ComboboxOption, remove: (username: string) => void)}
+            {@const color = getDefaultTagColor(item.value)}
             <Chip
               label={item.label}
               chipClass={tagChipClass()}
-              style={tagChipStyle(item.value)}
+              style={tagChipStyle(color)}
+              removeButtonClass={tagRemoveBtnClass()}
+              removeButtonStyle={tagRemoveBtnStyle(color)}
               ariaLabel={`Remove ${item.label}`}
               onRemove={() => remove(item.value)} />
           {/snippet}

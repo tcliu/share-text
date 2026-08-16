@@ -5,6 +5,7 @@ node_modules/
 .data/
 .env.*
 !.env.example
+!backend/.env
 .vercel/
 .tmp/
 .worktrees/

@@ -63,3 +63,9 @@ export async function searchUsers(query: string): Promise<User[]> {
   const body = await parseResponse<{ users: User[] }>(response, 'Failed to search users')
   return Array.isArray(body.users) ? body.users : []
 }
+
+export async function fetchRecentSharees(): Promise<User[]> {
+  const response = await fetch('/api/users/recent-sharees')
+  const body = await parseResponse<{ users: User[] }>(response, 'Failed to load recent shares')
+  return Array.isArray(body.users) ? body.users : []
+}

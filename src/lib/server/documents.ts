@@ -474,6 +474,7 @@ interface UserRow {
 export async function setDocumentAccess(
   id: string,
   input: { isPublic?: boolean; sharedWith?: string[] },
+  options: { includeInactive?: boolean } = {},
 ): Promise<DocumentAccessState | null> {
   const row = await fetchDocumentAccessRow(id)
   if (!row) {
@@ -483,7 +484,7 @@ export async function setDocumentAccess(
 
   let shareeIds: number[] | undefined
   if (input.sharedWith !== undefined) {
-    const users = await findUsersByUsernameOrEmail(input.sharedWith)
+    const users = await findUsersByUsernameOrEmail(input.sharedWith, options.includeInactive)
     shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
   }
 

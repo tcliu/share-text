@@ -6,6 +6,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
   import TagInput from './TagInput.svelte'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
 
   interface Props {
@@ -78,7 +79,7 @@
 
 {#if open}
   <BaseDialog title="Edit Tags" maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <FormField label="Tags" htmlFor="document-tags-input">
         <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>

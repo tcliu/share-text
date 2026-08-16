@@ -34,9 +34,9 @@
     variant="ghost"
     ariaLabel={copyAriaLabel}
     tooltip={copyTooltip}
-    onClick={(e) => { e.stopPropagation(); void handleCopy() }}
+    onClick={(e) => { e.preventDefault(); e.stopPropagation(); void handleCopy() }}
     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-    className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300">
+    className="bg-transparent text-slate-400 hover:text-cyan-300">
     {#snippet icon()}
       <CopyIcon />
     {/snippet}

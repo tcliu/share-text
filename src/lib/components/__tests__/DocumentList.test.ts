@@ -14,9 +14,7 @@ function renderList(props: Record<string, unknown> = {}) {
     onNew: vi.fn(),
     onRefresh: vi.fn(),
     onLogin: vi.fn(),
-    onDelete: vi.fn(),
     onLoadMore: vi.fn(),
-    deletePending: false,
     ...props,
   })
 }
@@ -60,5 +58,26 @@ describe('DocumentList', () => {
     expect(getByLabelText('Login')).toBeTruthy()
     expect(queryByLabelText('Profile')).toBeNull()
     expect(queryByLabelText('Admin console')).toBeNull()
+  })
+
+  it('renders document names as plain labels without a copy button', async () => {
+    const { getByText, queryByLabelText } = renderList({
+      documents: [
+        {
+          id: 'aaaaaa',
+          name: 'My Doc',
+          documentType: 'text',
+          tags: [],
+          updatedAt: '2026-08-01T00:00:00.000Z',
+          updatedBy: '203.0.113.7',
+          owned: true,
+          editable: true,
+          isPublic: true,
+        },
+      ],
+    })
+
+    expect(getByText('My Doc')).toBeTruthy()
+    expect(queryByLabelText(/Copy document name/)).toBeNull()
   })
 })

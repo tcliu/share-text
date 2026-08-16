@@ -54,6 +54,7 @@
   const isAdminIdentity = $derived(userAuthState.admin !== null)
 
   let isMobile = $state(false)
+  let mainRef = $state<HTMLElement | null>(null)
 
   $effect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
@@ -157,8 +158,13 @@
     void userAuthState.checkSession()
   })
 
-  afterNavigate(() => {
+  afterNavigate((navigation) => {
     closeMobileDrawer()
+    if (navigation.type === 'enter') return
+    const main = mainRef
+    if (main && !main.contains(document.activeElement)) {
+      main.focus()
+    }
   })
 
   $effect(() => {
@@ -214,6 +220,9 @@
     get user() {
       return userAuthState.user
     },
+    get admin() {
+      return userAuthState.admin
+    },
     signOut: handleSignOut,
   })
 
@@ -244,17 +253,20 @@
     user={profileIdentity}
     isAdmin={isAdminIdentity}
     onSignOut={handleSignOut}
-    onDelete={handleDelete}
     onLoadMore={documentsState.loadMore}
     onToggleCollapse={handleListCollapse}
-    onMinWidthChange={handleMinWidthChange}
-    deletePending={deleteTarget !== null} />
+    onMinWidthChange={handleMinWidthChange} />
 {/snippet}
+
+<h1 class="sr-only">ShareText</h1>
+<a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950">Skip to content</a>
 
 <div class="flex h-dvh overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
-      <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" onClick={toggleLeftPane}>
+      <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" ariaExpanded={!leftPaneCollapsed} onClick={toggleLeftPane}>
         {#snippet icon()}
           <ChevronsRightIcon />
         {/snippet}
@@ -314,7 +326,10 @@
     </div>
   {/if}
   <main
-    class={`min-w-0 flex-1 ${showingEditor ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
+    bind:this={mainRef}
+    id="main-content"
+    tabindex="-1"
+    class={`min-w-0 flex-1 outline-none ${showingEditor ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
     {@render children()}
   </main>
 </div>

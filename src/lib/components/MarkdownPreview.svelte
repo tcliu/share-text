@@ -100,7 +100,7 @@
     font-weight: 600;
   }
   img { max-width: 100%; border-radius: 0.375rem; }
-  .placeholder { color: #475569; font-style: italic; }
+  .placeholder { color: #94a3b8; font-style: italic; }
 </style>
 </head>
 <body>${bodyHtml}</body>

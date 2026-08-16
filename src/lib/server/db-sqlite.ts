@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { SQLInputValue } from 'node:sqlite'
+import type { Database } from 'better-sqlite3'
 import type { Db, DbQuery, DbResult } from './db-types'
 
 export const DEFAULT_SQLITE_PATH = '.data/share-text-dev.sqlite'
@@ -18,11 +18,13 @@ export function toSqliteSql(sql: string) {
     .replaceAll('current_timestamp', "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
 }
 
-function toSqliteParam(value: unknown): SQLInputValue {
+type SqliteValue = null | number | bigint | string | Uint8Array
+
+function toSqliteParam(value: unknown): SqliteValue {
   if (typeof value === 'boolean') {
     return value ? 1 : 0
   }
-  return value as SQLInputValue
+  return value as SqliteValue
 }
 
 export async function readSchemaSql() {
@@ -31,19 +33,18 @@ export async function readSchemaSql() {
 }
 
 export async function createSqliteDb(path = process.env.SQLITE_PATH || DEFAULT_SQLITE_PATH): Promise<Db> {
-  const { DatabaseSync } = await import('node:sqlite')
-
+  const { default: Database } = await import('better-sqlite3')
   if (path !== ':memory:') {
     mkdirSync(dirname(path), { recursive: true })
   }
 
-  const database = new DatabaseSync(path)
+  const database = new Database(path)
   const schema = await readSchemaSql()
   database.exec(toSqliteSql(schema))
 
   // Serializes every statement through a promise chain so a transaction's
   // BEGIN/COMMIT cannot be interleaved by other statements on the same
-  // connection (node:sqlite is synchronous but our API is async).
+  // connection (better-sqlite3 is synchronous but our API is async).
   let tail: Promise<unknown> = Promise.resolve()
 
   function enqueue<T>(task: () => Promise<T>): Promise<T> {

@@ -1,4 +1,5 @@
 import { getContext, setContext } from 'svelte'
+import type { AdminIdentity } from './user-auth'
 import type { DocumentSummary, OwnedDocumentSummary, User } from './documents'
 
 export interface EditorGuard {
@@ -25,6 +26,7 @@ export interface ShareTextContext {
   openMobileDrawer: () => void
   isMobile: boolean
   user: User | null
+  admin: AdminIdentity | null
   signOut: () => void
 }
 

@@ -11,7 +11,7 @@ Vercel with a Neon PostgreSQL store.
 
 ## Requirements
 
-- Node.js 24+ (dev uses the built-in `node:sqlite` module)
+- Node.js 22+ (dev uses `better-sqlite3`, which requires Node 22+)
 - `prod` requires a PostgreSQL database (Neon); `dev` needs none
 
 ## Install
@@ -44,7 +44,7 @@ an explicit `PROFILE=dev|prod` wins; otherwise `NODE_ENV=production` resolves to
 
 | Profile | Backend | Database |
 |---|---|---|
-| `dev` | SQLite (`node:sqlite`) | `.data/share-text-dev.sqlite`, auto-created |
+| `dev` | SQLite (`better-sqlite3`) | `.data/share-text-dev.sqlite`, auto-created |
 | `prod` | PostgreSQL (`@neondatabase/serverless`) | `DATABASE_URL` (Neon) |
 
 `PROFILE=prod npm run dev` runs the prod profile locally against Postgres, and

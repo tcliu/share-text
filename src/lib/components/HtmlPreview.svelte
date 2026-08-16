@@ -6,7 +6,7 @@
   const srcdoc = $derived(
     content.trim()
       ? content
-      : `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head><body><div class="placeholder">No content to preview</div></body></html>`,
+      : `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div class="placeholder">No content to preview</div></body></html>`,
   )
 </script>
 

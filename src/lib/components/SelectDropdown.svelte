@@ -51,7 +51,7 @@
 
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
+      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
   )
 
   const resolvedControlClass = $derived(
@@ -61,7 +61,7 @@
 
   const optionRowClass = $derived(
     optionClass ??
-      `flex w-full items-center justify-between rounded-md px-3 text-left transition ${SIZE_CLASS[size].pad} text-${size}`,
+      `flex w-full items-center justify-between rounded-md px-3 text-left outline-none transition ${SIZE_CLASS[size].pad} text-${size}`,
   )
 
   const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} text-${size} text-slate-500`)
@@ -93,9 +93,11 @@
     }
   })
 
+  let lastFilteredOptions: Option[] | null = null
   $effect(() => {
-    void filteredOptions
-    if (open && highlightIndex !== 0) {
+    if (!open) return
+    if (lastFilteredOptions !== filteredOptions) {
+      lastFilteredOptions = filteredOptions
       highlightIndex = 0
     }
   })
@@ -192,9 +194,14 @@
     <button
       type="button"
       bind:this={controlRef}
+      role="combobox"
       aria-label={ariaLabel}
       aria-haspopup="listbox"
       aria-expanded={open}
+      aria-controls={open ? panelId : undefined}
+      aria-activedescendant={open && filteredOptions[highlightIndex]
+        ? `${panelId}-option-${highlightIndex}`
+        : undefined}
       onclick={toggle}
       class={resolvedButtonClass}>
       <span>{buttonLabel}</span>
@@ -217,7 +224,8 @@
           type="button"
           id={`${panelId}-option-${index}`}
           role="option"
-          aria-selected={option.value === activeValue || index === highlightIndex}
+          tabindex="-1"
+          aria-selected={option.value === activeValue}
           onclick={() => select(option.value)}
           onmouseenter={() => (highlightIndex = index)}
           class={`${optionRowClass} ${

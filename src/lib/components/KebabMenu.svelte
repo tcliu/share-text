@@ -138,7 +138,7 @@
     aria-expanded={open}
     aria-controls={open ? menuId : undefined}
     onclick={toggle}
-    class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 transition hover:border-cyan-500 hover:text-cyan-300">
+    class="inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 p-2 text-slate-200 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300">
     <KebabIcon className="h-4 w-4" />
   </button>
   {#if open}
@@ -159,10 +159,10 @@
           tabindex={index === activeIndex ? 0 : -1}
           onclick={() => run(item)}
           disabled={item.disabled}
-          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
+          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition ${
             item.disabled
               ? 'cursor-not-allowed text-slate-600'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'
           }`}>
           {#if item.icon}
             <span class="h-4 w-4 shrink-0 [&_svg]:h-full [&_svg]:w-full">{@render item.icon()}</span>

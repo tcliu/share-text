@@ -23,7 +23,7 @@ synchronizes through a small fetch-based JSON API.
   `hasMore`) of every document the viewer can see (public, owned, or shared),
   with an optional server-side search (`search`, scoped to `search-keys`);
   each summary carries `owned`/`editable`/`isPublic` flags (used by the UI to
-  gate the row delete button and the private lock badge). `POST` creates a
+  gate the editor delete button and the private lock badge). `POST` creates a
   document (201) attributed to the resolved viewer (`owner_user_id` when
   signed in) and enforces the per-IP create limit.
 - `/api/documents/[id]` — `GET` returns one document; `PUT` updates `name`,
@@ -39,8 +39,14 @@ synchronizes through a small fetch-based JSON API.
 - `/api/documents/[id]/access` — `GET` returns the document's
   `{ isPublic, sharedWith }` state; `PUT` accepts `{ isPublic?, sharedWith? }`
   and persists it in one `db.transaction`. Both require `canManageAccess`
-  (the owner), and `sharedWith` is capped at `MAX_SHAREES` (100) users resolved
-  by username or email.
+  (a signed-in owner or admin — anonymous viewers can never manage access),
+  and `sharedWith` is capped at `MAX_SHAREES` (100) users resolved by username
+  or email. The `PUT` is all-or-nothing: it resolves the whole share list
+  first (active users only by default, all registered users including inactive
+  for an admin viewer via `setDocumentAccess`'s `includeInactive` option), and
+  if any entry resolves to no user — matched case-insensitively against
+  usernames and emails — it returns 400 with `{ error, missing }` and writes
+  nothing, so a partially-valid share list is never persisted.
 - `/api/auth/login` — `POST` verifies credentials against a registered user
   (by username or email) or the configured admin (when the identifier matches
   `ADMIN_USERNAME`), sets the matching HTTP-only session cookie, claims
@@ -101,9 +107,14 @@ synchronizes through a small fetch-based JSON API.
 - `/api/tags` — `GET` returns every distinct tag across the documents the
   viewer can see, with deduplication on case-insensitive name so each unique
   tag name appears once.
-- `/api/users/search` — `GET` searches active users by username/email prefix
-  (`q`), returning at most 10 matches for the share dialog's suggestion
-  combobox; requires a valid user session.
+- `/api/users/search` — `GET` searches users by username/email prefix (`q`),
+  returning at most 10 matches; admin-only (requires an admin session) and
+  includes inactive users, so the share dialog can suggest anyone a document
+  can be shared with.
+- `/api/users/recent-sharees` — `GET` requires a user session and returns the
+  distinct active users the current user has previously shared with across
+  their owned documents; the share dialog seeds its suggestion list from this
+  so a normal user is never shown the full user directory.
 
 ## Document Types
 
@@ -137,7 +148,7 @@ synchronizes through a small fetch-based JSON API.
   engine-agnostic SQL using `$n` placeholders and `current_timestamp`.
 - `db.ts` resolves the `PROFILE` and returns the matching `Db` adapter (the
   small `query`/`close` interface in `db-types.ts`):
-  - `db-sqlite.ts` uses Node's built-in `node:sqlite` (`DatabaseSync`) and
+  - `db-sqlite.ts` uses the `better-sqlite3` package and
     rewrites `$n` → `?`, `bigserial` → `integer`, and `current_timestamp` → a
     UTC ISO `strftime` expression. The dev database file is auto-created and the
     schema applied on first start.
@@ -196,8 +207,14 @@ synchronizes through a small fetch-based JSON API.
   search, and tag suggestions never leak private documents.
 - `setDocumentAccess` writes `is_public` and the `document_shares` rows for a
   document in one `db.transaction`, resolving sharee usernames/emails to user
-  ids via `findUsersByUsernameOrEmail`. `claimAnonymousDocuments` reparents
+  ids via `findUsersByUsernameOrEmail` (active users by default; an
+  `includeInactive` option — passed by the access route for admin viewers —
+  also resolves inactive users). `claimAnonymousDocuments` reparents
   same-IP anonymous documents to a user on registration and login.
+- `listRecentSharees` (`src/lib/server/users.ts`) returns the distinct active
+  users the current user has shared with across their owned documents, backing
+  the share dialog's seeded suggestions; `searchUsers` and
+  `findUsersByUsernameOrEmail` accept the same `includeInactive` flag.
 
 ## Admin
 
@@ -420,7 +437,10 @@ synchronizes through a small fetch-based JSON API.
   `initialDocuments`/`initialHasMore`, so the list renders without a client
   fetch or a "Loading documents..." flash; the layout only falls back to a
   client `refreshList()` when no seed was provided (e.g. component tests).
-  Deleting the currently selected document navigates to `/`.
+  Deleting the currently selected document navigates to `/`. The Delete button
+  lives in the editor toolbar (shown when the document is owned) and routes
+  through the shared `deleteDocument` handler, so deleting a dirty document
+  first prompts to discard before the delete confirmation.
 - `(browser)/new/+page.svelte` drives the new-document draft page: it keeps
   name/content/type in `$state`, persists a `share-text:draft:new` draft, and
   creates the document through the API client on save.

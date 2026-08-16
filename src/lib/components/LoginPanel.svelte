@@ -8,6 +8,7 @@
   import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import { login } from '$lib/admin'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
 
   const REMEMBER_ME_STORAGE_KEY = 'share-text-admin-remembered-login'
 
@@ -82,7 +83,7 @@
 
 <div class="flex min-h-full items-center justify-center px-4 py-10">
   <div class="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60">
-    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">Login</h2>
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-100">Login</h1>
     <div class="mt-4">
       {#if configured}
         {#if message}
@@ -90,6 +91,7 @@
         {/if}
         <form
           class="flex flex-col gap-4"
+          use:useCaretAtEndOnKeyboardFocus
           onsubmit={e => {
             e.preventDefault()
             void handleLogin()
@@ -111,7 +113,7 @@
           <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">Sign in</Button>
           <a
             href="/"
-            class="text-center text-sm text-slate-400 transition hover:text-cyan-400"
+            class="text-center text-sm text-slate-400 outline-none transition hover:text-cyan-400 focus:text-cyan-400"
             onclick={e => {
               e.preventDefault()
               void goto('/')

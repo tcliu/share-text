@@ -287,7 +287,7 @@
         </colgroup>
       {/if}
       <thead>
-        <tr class="text-left text-sm font-medium text-slate-500">
+        <tr class="text-left text-sm font-medium text-slate-400">
           {#if selectable}
             <th
               class="sticky top-0 z-10 w-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur">
@@ -312,17 +312,17 @@
                 <span class="flex w-full items-center gap-2 text-left">
                   <span>{column.header}</span>
                   <span
-                    class="flex flex-col text-slate-400 transition-opacity {isActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100">
+                    class="flex flex-col text-slate-400 transition-opacity {isActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 group-focus-within:opacity-100">
                     <button
                       type="button"
-                      class="leading-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      class="leading-none outline-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                       aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} ascending`}
                       onclick={() => handleSortClick(column, 'asc')}>
                       <SortAscIcon className="h-2.5 w-2.5" />
                     </button>
                     <button
                       type="button"
-                      class="-mt-1 leading-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                      class="-mt-1 leading-none outline-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                       aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} descending`}
                       onclick={() => handleSortClick(column, 'desc')}>
                       <SortDescIcon className="h-2.5 w-2.5" />
@@ -335,7 +335,7 @@
               {#if resizable}
                 <button
                   type="button"
-                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                   style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
                   aria-label={`Resize ${column.header} column`}
                   onmousedown={event => resize.startColumnResize(event, i)}
@@ -356,7 +356,7 @@
           </tr>
         {:else if rows.length === 0}
           <tr>
-            <td colspan={columnCount} class="px-3 py-10 text-center text-sm text-slate-500">{emptyMessage}</td>
+            <td colspan={columnCount} class="px-3 py-10 text-center text-sm text-slate-400">{emptyMessage}</td>
           </tr>
         {:else}
           {#each rows as row (rowId(row))}

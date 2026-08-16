@@ -238,6 +238,10 @@
     docType = type
   }
 
+  function handleDelete(id: string) {
+    context.deleteDocument(id)
+  }
+
   async function handleClone() {
     if (!currentId || cloning) return
     cloning = true
@@ -306,13 +310,7 @@
       accessIsPublic = state.isPublic
       accessSharedWith = state.sharedWith
       context.updateDocumentSummary(currentId, { isPublic: state.isPublic })
-      const resolved = new Set(state.sharedWith.map(user => user.username.toLowerCase()))
-      const missing = input.sharedWith.filter(username => !resolved.has(username.trim().toLowerCase()))
-      if (missing.length > 0) {
-        toast.warning(`Not shared (user not found): ${missing.join(', ')}`)
-      } else {
-        toast.success('Sharing updated')
-      }
+      toast.success('Sharing updated')
       shareOpen = false
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update sharing settings')
@@ -341,7 +339,8 @@
     onTypeChange={handleTypeChange}
     onClone={handleClone}
     onTagsSave={handleTagsSave}
-    onShare={data.canManageAccess ? openShare : undefined} />
+    onShare={data.canManageAccess ? openShare : undefined}
+    onDelete={data.owned ? handleDelete : undefined} />
 {/if}
 
 {#if shareOpen}
@@ -350,6 +349,7 @@
     isPublic={accessIsPublic}
     sharedWith={accessSharedWith}
     currentUser={context.user ?? undefined}
+    isAdmin={context.admin !== null}
     pending={shareSaving}
     onClose={() => (shareOpen = false)}
     onApply={handleShareApply} />

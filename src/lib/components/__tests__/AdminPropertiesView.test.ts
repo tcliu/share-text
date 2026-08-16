@@ -159,6 +159,31 @@ describe('AdminPropertiesView', () => {
     await waitFor(() => expect(getByText(/Unknown setting: not_a_setting/)).toBeTruthy())
   })
 
+  it('places the caret at the end of a value when keyboard focus moves into an input', async () => {
+    const { getByLabelText } = renderHost()
+    await waitFor(() => expect(getByLabelText('Max documents per IP')).toBeTruthy())
+
+    const urlInput = getByLabelText('TTS service URL') as HTMLInputElement
+    urlInput.focus()
+    fireEvent.focusIn(urlInput)
+
+    expect(urlInput.selectionStart).toBe(urlInput.value.length)
+    expect(urlInput.selectionEnd).toBe(urlInput.value.length)
+  })
+
+  it('keeps the natural caret placement when an input is focused by mouse', async () => {
+    const { getByLabelText } = renderHost()
+    await waitFor(() => expect(getByLabelText('Max documents per IP')).toBeTruthy())
+
+    const urlInput = getByLabelText('TTS service URL') as HTMLInputElement
+    urlInput.setSelectionRange(0, 0)
+    fireEvent.mouseDown(urlInput)
+    fireEvent.focusIn(urlInput)
+
+    expect(urlInput.selectionStart).toBe(0)
+    expect(urlInput.selectionEnd).toBe(0)
+  })
+
   it('resets both the form and the editor text', async () => {
     const { getByText, getByLabelText } = renderHost()
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())

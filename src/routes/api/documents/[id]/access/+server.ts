@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types'
 import { getDocumentAccess, resolveDocumentAccess, setDocumentAccess } from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
+import { findUsersByUsernameOrEmail } from '$lib/server/users'
 import { resolveViewer } from '$lib/server/viewer'
 
 const MAX_SHAREES = 100
@@ -61,7 +62,24 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
     return json({ error: 'Document not found' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
   }
 
-  const state = await setDocumentAccess(id, { isPublic, sharedWith })
+  const includeInactive = viewer.type === 'admin'
+  let missing: string[] = []
+  if (sharedWith !== undefined) {
+    const users = await findUsersByUsernameOrEmail(sharedWith, includeInactive)
+    const resolvedIdentifiers = new Set<string>()
+    for (const user of users) {
+      resolvedIdentifiers.add(user.username.toLowerCase())
+      if (user.email) {
+        resolvedIdentifiers.add(user.email.toLowerCase())
+      }
+    }
+    missing = sharedWith.filter(value => !resolvedIdentifiers.has(value.trim().toLowerCase()))
+    if (missing.length > 0) {
+      return json({ error: `Not shared: ${missing.join(', ')}`, missing }, { status: 400 })
+    }
+  }
+
+  const state = await setDocumentAccess(id, { isPublic, sharedWith }, { includeInactive })
   if (!state) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

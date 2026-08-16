@@ -12,7 +12,7 @@ import {
   resolveDocumentAccess,
   setDocumentAccess,
 } from '$lib/server/documents'
-import { createUser, type User } from '$lib/server/users'
+import { createUser, updateUser, type User } from '$lib/server/users'
 import type { Viewer } from '$lib/server/viewer'
 
 const anonymous = (ip: string): Viewer => ({ type: 'anonymous', userId: null, username: null, ip, name: ip })
@@ -171,6 +171,29 @@ describe('document access state', () => {
 
     const state = await getDocumentAccess(doc.id)
     expect(state?.sharedWith).toEqual([])
+  })
+
+  it('only shares with active users by default', async () => {
+    const owner = await createUser({ username: 'alice', email: 'a@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'b@example.com', password: 'x' })
+    await updateUser(bob.id, { status: 'inactive' })
+    const doc = await insertDocument({ content: 'body', by: 'alice', ownerUserId: owner.id })
+
+    await setDocumentAccess(doc.id, { sharedWith: ['bob'] })
+
+    expect((await getDocumentAccess(doc.id))?.sharedWith).toEqual([])
+  })
+
+  it('shares with inactive users when includeInactive is set (admin)', async () => {
+    const owner = await createUser({ username: 'alice', email: 'a@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'b@example.com', password: 'x' })
+    await updateUser(bob.id, { status: 'inactive' })
+    const doc = await insertDocument({ content: 'body', by: 'alice', ownerUserId: owner.id })
+
+    await setDocumentAccess(doc.id, { sharedWith: ['bob'] }, { includeInactive: true })
+
+    const state = await getDocumentAccess(doc.id)
+    expect(state?.sharedWith.map(user => user.username)).toEqual(['bob'])
   })
 })
 

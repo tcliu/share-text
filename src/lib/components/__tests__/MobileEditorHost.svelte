@@ -42,6 +42,7 @@
     openMobileDrawer: onOpenDrawer ?? (() => {}),
     isMobile: true,
     user: null,
+    admin: null,
     signOut: () => {},
   })
 

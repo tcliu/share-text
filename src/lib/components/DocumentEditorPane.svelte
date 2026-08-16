@@ -21,6 +21,7 @@
   import FormatIcon from '$lib/icons/FormatIcon.svelte'
   import MenuIcon from '$lib/icons/MenuIcon.svelte'
   import ShareIcon from '$lib/icons/ShareIcon.svelte'
+  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import TagsDialog from './TagsDialog.svelte'
   import KebabMenu from './KebabMenu.svelte'
@@ -30,6 +31,7 @@
   import Splitter from './Splitter.svelte'
   import PreviewPane from './PreviewPane.svelte'
   import Chip from './Chip.svelte'
+  import Copyable from './Copyable.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
   import { usePreviewMode } from './use-preview-mode.svelte'
@@ -64,6 +66,7 @@
     focusOnMount?: boolean
     onTagsSave?: (tags: Tag[]) => void
     onShare?: () => void
+    onDelete?: (id: string) => void
   }
 
   let {
@@ -87,6 +90,7 @@
     focusOnMount = false,
     onTagsSave,
     onShare,
+    onDelete,
   }: Props = $props()
 
   const dirty = $derived(
@@ -348,7 +352,7 @@
   const documentTags = $derived(document.tags ?? [])
 </script>
 
-<section class="flex h-full min-w-0 flex-1 flex-col p-4">
+<section aria-label={document.name} class="flex h-full min-w-0 flex-1 flex-col p-4">
   {#snippet nameField()}
     {#if onRename && editable}
       <EditableText
@@ -356,7 +360,12 @@
         className="font-semibold text-slate-200"
         onChange={onRename} />
     {:else}
-      <span class="truncate font-semibold text-slate-200">{document.name}</span>
+      <Copyable
+        text={document.name}
+        copyText={document.name}
+        copyAriaLabel={`Copy document name ${document.name}`}
+        copyTooltip="Copy"
+        className="truncate font-semibold text-slate-200" />
     {/if}
   {/snippet}
 
@@ -542,6 +551,18 @@
       <Button size="sm" ariaLabel="Share" tooltip="Share" onClick={onShare}>
         {#snippet icon()}
           <ShareIcon />
+        {/snippet}
+      </Button>
+    {/if}
+    {#if onDelete}
+      <Button
+        size="sm"
+        ariaLabel="Delete document"
+        tooltip="Delete"
+        onClick={() => onDelete(document.id)}
+        className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
+        {#snippet icon()}
+          <DeleteIcon />
         {/snippet}
       </Button>
     {/if}
@@ -735,9 +756,9 @@
       }
     }}></audio>
 
-  <div class="mt-2 flex items-center justify-between gap-3 text-xs text-slate-500">
+  <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}
-      <span>
+      <span class="min-w-0">
         Last updated at
         <span class="text-slate-300">{formattedTimestamp}</span>
         {#if document.updatedBy}
@@ -752,7 +773,7 @@
         <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">Read only</span>
       {/if}
       {#if refreshing}
-        <span class="text-slate-500">Refreshing...</span>
+        <span class="text-slate-400">Refreshing...</span>
       {/if}
       <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} chars</span>
     </span>

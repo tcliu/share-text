@@ -54,12 +54,18 @@ console.log(`\nWorktree created: ${worktreeDir}`)
 console.log(`DEV_TAG=${branch} set in ${path.join(worktreeDir, '.env.dev')}`)
 
 function copyDevFiles(sourceRoot, targetRoot) {
-  const sourceEnv = path.join(sourceRoot, '.env.dev')
-  const targetEnv = path.join(targetRoot, '.env.dev')
+  copyEnvDev(path.join(sourceRoot, '.env.dev'), path.join(targetRoot, '.env.dev'))
+  copyEnvDev(
+    path.join(sourceRoot, 'backend', '.env.dev'),
+    path.join(targetRoot, 'backend', '.env.dev'),
+  )
+  copyDirectoryContents(path.join(sourceRoot, '.data'), path.join(targetRoot, '.data'))
+}
+
+function copyEnvDev(sourceEnv, targetEnv) {
   if (existsSync(sourceEnv) && !existsSync(targetEnv)) {
     copyFileSync(sourceEnv, targetEnv)
   }
-  copyDirectoryContents(path.join(sourceRoot, '.data'), path.join(targetRoot, '.data'))
 }
 
 function copyDirectoryContents(sourceDir, targetDir) {
