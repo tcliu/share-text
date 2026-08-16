@@ -1,15 +1,12 @@
 <script lang="ts">
-  import { goto } from '$app/navigation'
   import type { OwnedDocumentSummary, ProfileIdentity } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
-  import Copyable from './Copyable.svelte'
   import Button from './Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
   import AdminIcon from '$lib/icons/AdminIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
-  import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
   import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
   import LockIcon from '$lib/icons/LockIcon.svelte'
   import SearchInput from './SearchInput.svelte'
@@ -35,10 +32,8 @@
     onSignOut?: () => void
     user?: ProfileIdentity | null
     isAdmin?: boolean
-    onDelete: (id: string) => void
     onLoadMore: () => void
     onToggleCollapse?: () => void
-    deletePending: boolean
     width?: number
     onMinWidthChange?: (minWidth: number) => void
   }
@@ -61,10 +56,8 @@
     onSignOut,
     user = null,
     isAdmin = false,
-    onDelete,
     onLoadMore,
     onToggleCollapse,
-    deletePending,
     width,
     onMinWidthChange,
   }: Props = $props()
@@ -96,30 +89,6 @@
     return () => observer.disconnect()
   })
 
-  function handleRowClick(id: string) {
-    const url = new URL(window.location.href)
-    url.pathname = `/${id}`
-    goto(url)
-  }
-
-  function handleRowKeydown(event: KeyboardEvent, id: string) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault()
-      handleRowClick(id)
-    }
-  }
-
-  function handleDeleteClick(event: MouseEvent, id: string) {
-    event.stopPropagation()
-    onDelete(id)
-  }
-
-  function handleDeleteKeydown(event: KeyboardEvent) {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.stopPropagation()
-    }
-  }
-
   $effect(() => {
     const sentinel = loadMoreSentinel
     if (!sentinel || loading || !hasMore) return
@@ -137,6 +106,7 @@
 </script>
 
 <aside
+  aria-label="Document list"
   class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 md:w-[var(--aside-w,100%)]"
   style={width !== undefined ? `--aside-w: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
@@ -149,6 +119,7 @@
           size="sm"
           ariaLabel="Collapse document list"
           tooltip="Collapse document list"
+          ariaExpanded={true}
           preventFocusSteal
           onClick={onToggleCollapse}>
           {#snippet icon()}
@@ -205,25 +176,21 @@
 
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
     {#if loading && documents.length === 0}
-      <p class="p-2 text-sm text-slate-500">Loading documents...</p>
+      <p class="p-2 text-sm text-slate-400">Loading documents...</p>
     {:else if documents.length === 0}
-      <p class="p-2 text-sm text-slate-500">
+      <p class="p-2 text-sm text-slate-400">
         {searchActive ? 'No documents match your search.' : 'No documents yet. Use New to create one.'}
       </p>
     {:else}
       <div class="flex flex-col">
         {#each documents as document (document.id)}
           <div
-            class={`group flex cursor-pointer items-start gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}
-            role="button"
-            tabindex="0"
-            onclick={() => handleRowClick(document.id)}
-            onkeydown={event => handleRowKeydown(event, document.id)}>
-            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <Copyable
-                text={document.name}
-                className="text-sm text-slate-300"
-                copyAriaLabel={`Copy document name ${document.name}`} />
+            class={`group flex items-start gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}>
+            <a
+              href={`/${document.id}`}
+              aria-current={document.id === selectedId ? 'true' : undefined}
+              class="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md text-sm text-slate-300 transition outline-none hover:text-slate-100 focus:text-slate-100">
+              <span class="min-w-0 truncate">{document.name}</span>
               {#if document.documentType !== 'text'}
                 <Chip
                   label={getDocumentType(document.documentType).label}
@@ -238,29 +205,13 @@
                   Private
                 </span>
               {/if}
-            </div>
-            {#if document.owned}
-              <span class="flex shrink-0">
-                <Button
-                  size="sm"
-                  ariaLabel="Delete document"
-                  tooltip="Delete"
-                  tooltipAlign="right"
-                  onClick={event => handleDeleteClick(event, document.id)}
-                  onKeyDown={handleDeleteKeydown}
-                  className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
-                  {#snippet icon()}
-                    <DeleteIcon />
-                  {/snippet}
-                </Button>
-              </span>
-            {/if}
+            </a>
           </div>
         {/each}
         {#if hasMore}
           <div
             bind:this={loadMoreSentinel}
-            class="flex min-h-10 items-center justify-center py-2 text-sm text-slate-500">
+            class="flex min-h-10 items-center justify-center py-2 text-sm text-slate-400">
             {loading ? 'Loading more...' : ''}
           </div>
         {/if}

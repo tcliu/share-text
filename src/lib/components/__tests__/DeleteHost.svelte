@@ -4,13 +4,13 @@
   import DocumentEditorPane from '../DocumentEditorPane.svelte'
 
   interface Props {
-    versionCount?: number
+    onDelete?: (id: string) => void
   }
 
-  let { versionCount = 2 }: Props = $props()
+  let { onDelete }: Props = $props()
 
   let content = $state('hello')
-  let docType = $state('markdown')
+  let docType = $state('text')
 
   setShareTextContext({
     documents: [],
@@ -37,7 +37,7 @@
   const document: Document = {
     id: 'aaaaaa',
     name: 'My Document',
-    documentType: 'markdown',
+    documentType: 'text',
     tags: [],
     content: 'hello',
     updatedAt: '2026-08-01T00:00:00.000Z',
@@ -50,9 +50,8 @@
   bind:content
   bind:docType
   saving={false}
-  {versionCount}
   onSave={() => {}}
   onReset={() => {}}
   onRename={() => {}}
   onTypeChange={() => {}}
-  onTagsSave={() => {}} />
+  {onDelete} />

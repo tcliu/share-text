@@ -265,7 +265,7 @@ export async function findUserByCredentials(identifier: string, password: string
   return toUser(row)
 }
 
-export async function findUsersByUsernameOrEmail(values: string[]): Promise<User[]> {
+export async function findUsersByUsernameOrEmail(values: string[], includeInactive = false): Promise<User[]> {
   if (values.length === 0) {
     return []
   }
@@ -277,24 +277,40 @@ export async function findUsersByUsernameOrEmail(values: string[]): Promise<User
     params.push(normalized)
     return `(username = $${params.length - 1} or email = $${params.length})`
   })
+  const statusFilter = includeInactive ? '' : " and status = 'active'"
   const result = await db.query<UserRow>(
-    `select id, username, email, status from users where (${conditions.join(' or ')}) and status = 'active'`,
+    `select id, username, email, status from users where (${conditions.join(' or ')})${statusFilter}`,
     params,
   )
   return result.rows.map(toUser)
 }
 
-export async function searchUsers(query: string, limit = 10): Promise<User[]> {
+export async function searchUsers(query: string, limit = 10, includeInactive = false): Promise<User[]> {
   const value = query.trim().toLowerCase()
   if (!value) {
     return []
   }
   const db = await getDb()
+  const statusFilter = includeInactive ? '' : " and status = 'active'"
   const result = await db.query<UserRow>(
     `select id, username, email, status from users
-     where (lower(username) like $1 or lower(email) like $2) and status = 'active'
+     where (lower(username) like $1 or lower(email) like $2)${statusFilter}
      order by username asc limit $3`,
     [`${value}%`, `${value}%`, limit],
+  )
+  return result.rows.map(toUser)
+}
+
+export async function listRecentSharees(userId: number, limit = 50): Promise<User[]> {
+  const db = await getDb()
+  const result = await db.query<UserRow>(
+    `select distinct u.id, u.username, u.email, u.status
+     from document_shares s
+     join documents d on d.id = s.document_id
+     join users u on u.id = s.user_id
+     where d.owner_user_id = $1 and u.status = 'active'
+     order by u.username asc limit $2`,
+    [userId, limit],
   )
   return result.rows.map(toUser)
 }

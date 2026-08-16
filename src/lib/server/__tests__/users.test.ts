@@ -5,6 +5,7 @@ process.env.SQLITE_PATH = ':memory:'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
 import { hashPassword } from '$lib/server/password'
+import { insertDocument, setDocumentAccess } from '$lib/server/documents'
 import {
   createUser,
   deleteUser,
@@ -12,7 +13,9 @@ import {
   findAdminUserById,
   findUserByCredentials,
   findUserById,
+  findUsersByUsernameOrEmail,
   importUsersForAdmin,
+  listRecentSharees,
   listUsers,
   normalizeEmail,
   normalizeStatus,
@@ -118,8 +121,40 @@ describe('users against the SQLite backend (dev profile)', () => {
     await updateUser(alice.id, { status: 'inactive' })
 
     expect((await searchUsers('ali')).map(user => user.username)).toEqual([])
-    const resolved = await (await import('$lib/server/users')).findUsersByUsernameOrEmail(['alice', 'bob'])
+    const resolved = await findUsersByUsernameOrEmail(['alice', 'bob'])
     expect(resolved.map(user => user.username)).toEqual(['bob'])
+  })
+
+  it('includes inactive users in search when requested', async () => {
+    const alice = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    await updateUser(alice.id, { status: 'inactive' })
+
+    expect((await searchUsers('ali')).map(user => user.username)).toEqual([])
+    expect((await searchUsers('ali', 10, true)).map(user => user.username)).toEqual(['alice'])
+  })
+
+  it('resolves inactive users when requested', async () => {
+    const alice = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    await updateUser(alice.id, { status: 'inactive' })
+
+    expect((await findUsersByUsernameOrEmail(['alice'])).map(user => user.username)).toEqual([])
+    expect((await findUsersByUsernameOrEmail(['alice'], true)).map(user => user.username)).toEqual(['alice'])
+  })
+
+  it('lists only active users the user has previously shared with across their documents', async () => {
+    const owner = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    const other = await createUser({ username: 'dave', email: 'dave@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+    const carol = await createUser({ username: 'carol', email: 'carol@example.com', password: 'x' })
+    await updateUser(carol.id, { status: 'inactive' })
+
+    const owned = await insertDocument({ content: 'body', by: 'alice', ownerUserId: owner.id })
+    const sharedDoc = await insertDocument({ content: 'body', by: 'dave', ownerUserId: other.id })
+    await setDocumentAccess(owned.id, { sharedWith: ['bob', 'carol', 'alice'] })
+    await setDocumentAccess(sharedDoc.id, { sharedWith: ['bob'] })
+
+    const sharees = await listRecentSharees(owner.id)
+    expect(sharees.map(user => user.username)).toEqual(['bob'])
   })
 
   it('updates username, email, and password', async () => {
