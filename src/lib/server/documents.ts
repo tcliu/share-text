@@ -471,6 +471,24 @@ interface UserRow {
   status: string | null
 }
 
+// Resolves sharee values (usernames or emails) and returns the subset that do
+// not match any user, so access updates can reject unresolvable sharees
+// up-front rather than silently dropping them. Shared by the document access
+// route and the admin edit-document route.
+export async function missingSharees(values: string[], includeInactive = false): Promise<string[]> {
+  const users = await findUsersByUsernameOrEmail(values, includeInactive)
+  const resolvedIdentifiers = new Set<string>()
+  for (const user of users) {
+    resolvedIdentifiers.add(user.username.toLowerCase())
+    if (user.email) {
+      resolvedIdentifiers.add(user.email.toLowerCase())
+    }
+  }
+  return values.filter(value => !resolvedIdentifiers.has(value.trim().toLowerCase()))
+}
+
+export const MAX_SHAREES = 100
+
 export async function setDocumentAccess(
   id: string,
   input: { isPublic?: boolean; sharedWith?: string[] },

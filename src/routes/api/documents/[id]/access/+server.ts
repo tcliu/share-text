@@ -1,12 +1,15 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { getDocumentAccess, resolveDocumentAccess, setDocumentAccess } from '$lib/server/documents'
+import {
+  getDocumentAccess,
+  MAX_SHAREES,
+  missingSharees,
+  resolveDocumentAccess,
+  setDocumentAccess,
+} from '$lib/server/documents'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
-import { findUsersByUsernameOrEmail } from '$lib/server/users'
 import { resolveViewer } from '$lib/server/viewer'
-
-const MAX_SHAREES = 100
 
 export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
   const id = await parseDocumentId(params.id)
@@ -65,15 +68,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
   const includeInactive = viewer.type === 'admin'
   let missing: string[] = []
   if (sharedWith !== undefined) {
-    const users = await findUsersByUsernameOrEmail(sharedWith, includeInactive)
-    const resolvedIdentifiers = new Set<string>()
-    for (const user of users) {
-      resolvedIdentifiers.add(user.username.toLowerCase())
-      if (user.email) {
-        resolvedIdentifiers.add(user.email.toLowerCase())
-      }
-    }
-    missing = sharedWith.filter(value => !resolvedIdentifiers.has(value.trim().toLowerCase()))
+    missing = await missingSharees(sharedWith, includeInactive)
     if (missing.length > 0) {
       return json({ error: `Not shared: ${missing.join(', ')}`, missing }, { status: 400 })
     }

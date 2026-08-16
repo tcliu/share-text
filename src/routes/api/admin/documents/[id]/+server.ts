@@ -6,12 +6,16 @@ import {
   deleteDocument,
   fetchDocument,
   fetchDocumentForAdmin,
+  getDocumentAccess,
   isUniqueKeyViolation,
   isValidDocumentType,
+  MAX_SHAREES,
+  missingSharees,
   normalizeCreatedBy,
   normalizeDocumentKey,
   normalizeName,
   normalizeUpdatedBy,
+  setDocumentAccess,
   updateDocument,
   type DocumentType,
 } from '$lib/server/documents'
@@ -30,7 +34,13 @@ export const GET: RequestHandler = async ({ params }) => {
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
-  return json({ document })
+  const access = await getDocumentAccess(id)
+  return json({
+    document: {
+      ...document,
+      sharedWith: access?.sharedWith ?? [],
+    },
+  })
 }
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
@@ -52,6 +62,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     isPublic?: boolean
     content?: string
     documentType?: DocumentType
+    sharedWith?: string[]
   } = {}
   if (typeof body.name === 'string') {
     try {
@@ -98,6 +109,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
       return json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
     }
   }
+  if (body.sharedWith !== undefined) {
+    if (!Array.isArray(body.sharedWith) || body.sharedWith.some(value => typeof value !== 'string')) {
+      return json({ error: 'sharedWith must be an array of usernames or emails' }, { status: 400 })
+    }
+    changes.sharedWith = body.sharedWith.map(value => value.trim()).filter(value => value.length > 0)
+  }
   if (
     changes.name === undefined &&
     changes.updatedBy === undefined &&
@@ -105,10 +122,14 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     changes.key === undefined &&
     changes.isPublic === undefined &&
     changes.content === undefined &&
-    changes.documentType === undefined
+    changes.documentType === undefined &&
+    changes.sharedWith === undefined
   ) {
     return json(
-      { error: 'Request body must include a name, updatedBy, createdBy, key, isPublic, content, or documentType' },
+      {
+        error:
+          'Request body must include a name, updatedBy, createdBy, key, isPublic, content, documentType, or sharedWith',
+      },
       { status: 400 },
     )
   }
@@ -118,11 +139,22 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
+  if (changes.sharedWith !== undefined) {
+    if (changes.sharedWith.length > MAX_SHAREES) {
+      return json({ error: `A document can be shared with at most ${MAX_SHAREES} users` }, { status: 400 })
+    }
+    const missing = await missingSharees(changes.sharedWith, true)
+    if (missing.length > 0) {
+      return json({ error: `Not shared: ${missing.join(', ')}`, missing }, { status: 400 })
+    }
+  }
+
   const ip = getClientAddress()
   const startedAt = Date.now()
+  const { sharedWith, ...documentChanges } = changes
   let updated
   try {
-    updated = await updateDocument(id, { ...changes, by: ip })
+    updated = await updateDocument(id, { ...documentChanges, by: ip })
   } catch (error) {
     if (isUniqueKeyViolation(error)) {
       return json({ error: 'Document key already exists' }, { status: 409 })
@@ -131,6 +163,15 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
   if (!updated) {
     return json({ error: 'Document not found' }, { status: 404 })
+  }
+
+  const accessId = updated.id
+  const accessBefore = sharedWith !== undefined ? await getDocumentAccess(accessId) : null
+  if (sharedWith !== undefined) {
+    const access = await setDocumentAccess(accessId, { sharedWith }, { includeInactive: true })
+    if (!access) {
+      return json({ error: 'Document not found' }, { status: 404 })
+    }
   }
 
   const details: Record<string, string | number | boolean> = {
@@ -158,6 +199,10 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     details.old_is_public = existing.isPublic
     details.new_is_public = changes.isPublic
   }
+  if (sharedWith !== undefined) {
+    details.old_sharees = accessBefore?.sharedWith.map(user => user.username).join(', ') ?? ''
+    details.new_sharees = sharedWith.join(', ')
+  }
   if (changes.content !== undefined) {
     details.old_content_size = contentByteSize(existing.content)
     details.new_content_size = contentByteSize(changes.content)
@@ -173,9 +218,11 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
             ? 'admin_document_update_created_by'
             : changes.isPublic !== undefined
               ? 'admin_document_update_access'
-              : changes.documentType !== undefined
-                ? 'admin_document_update_type'
-                : 'admin_document_rename'
+              : sharedWith !== undefined
+                ? 'admin_document_update_shares'
+                : changes.documentType !== undefined
+                  ? 'admin_document_update_type'
+                  : 'admin_document_rename'
   logEvent({
     ip,
     action,
