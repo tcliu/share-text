@@ -5,6 +5,7 @@
   import Button from './Button.svelte'
   import FormField from './FormField.svelte'
   import NumberInput from './NumberInput.svelte'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
 
   interface Props {
     show: boolean
@@ -55,7 +56,7 @@
 
 {#if show}
   <BaseDialog {title} {className} {maxWidth} {onCancel}>
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       {#if hasIndent}
         <FormField label="Indentation (spaces)" htmlFor="format-indent-input">
           <NumberInput

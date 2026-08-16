@@ -66,7 +66,7 @@
       header: 'Created',
       width: '18%',
       minWidth: 144,
-      cellClass: 'text-slate-500',
+      cellClass: 'text-slate-400',
       sortable: true,
       cell: createdAtCell,
     },
@@ -106,7 +106,7 @@
   storageKey="admin-users" />
 
 {#snippet idCell(user: AdminUser)}
-  <span class="font-mono text-slate-500">{user.id}</span>
+  <span class="font-mono text-slate-400">{user.id}</span>
 {/snippet}
 
 {#snippet usernameCell(user: AdminUser)}

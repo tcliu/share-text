@@ -185,11 +185,12 @@
   <div class="flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40">
     <button
       type="button"
-      class="inline-flex h-3.5 w-3 shrink-0 items-center justify-center"
+      class="relative inline-flex shrink-0 items-center justify-center rounded outline-none before:absolute before:-inset-1 before:content-[''] focus:text-cyan-300"
       aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+      aria-expanded={open}
       onclick={() => (open = !open)}
     >
-      <ChevronRightSmallIcon className="h-3 w-3 text-slate-500 transition-transform {open ? 'rotate-90' : ''}" />
+      <ChevronRightSmallIcon className="h-3 w-3 text-slate-400 transition-transform {open ? 'rotate-90' : ''}" />
     </button>
     <Copyable
       copyText={copyValue(value)}
@@ -200,7 +201,7 @@
         <span class="text-slate-300">{label}</span>
         <span class="text-slate-600">:</span>
       {/if}
-      <span class="text-slate-500">{containerSummary(value)}</span>
+      <span class="text-slate-400">{containerSummary(value)}</span>
     </Copyable>
   </div>
 
@@ -256,9 +257,9 @@
             {#if onRenameKey}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
-                class="text-slate-300 shrink-0 cursor-pointer hover:underline"
+                class="text-slate-300 shrink-0 cursor-pointer rounded outline-none hover:underline focus:underline"
                 ondblclick={(e) => { e.stopPropagation(); startEditName(entry) }}
-                onkeydown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); startEditName(entry) } }}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); startEditName(entry) } }}
                 title="Double-click to rename"
                 role="button"
                 tabindex="0"
@@ -271,7 +272,7 @@
               <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
             </span>
             {#if onChange}
-              <span bind:this={editBtnEl} class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100">
+              <span bind:this={editBtnEl} class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -287,7 +288,7 @@
                 </Button>
               </span>
             {/if}
-            <span class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100">
+            <span class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
               <Button
                 size="sm"
                 variant="ghost"

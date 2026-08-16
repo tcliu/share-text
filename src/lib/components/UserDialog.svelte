@@ -7,6 +7,7 @@
   import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import type { AdminUser } from '$lib/admin'
   import type { UserDialogInput } from '$lib/use-admin-users.svelte'
 
@@ -95,7 +96,7 @@
   onCancel={handleCancelRequest}
   dismissKeydownCapture={!discardPromptOpen}
   pending={pending}>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     <FormField label="Username" htmlFor="user-username">
       <input
         id="user-username"
@@ -116,7 +117,7 @@
     <FormField label="Password" htmlFor="user-password">
       <PasswordInput id="user-password" bind:value={password} disabled={pending} />
       {#if mode === 'edit'}
-        <p class="mt-1 text-xs text-slate-500">Leave blank to keep the current password.</p>
+        <p class="mt-1 text-xs text-slate-400">Leave blank to keep the current password.</p>
       {/if}
     </FormField>
     <FormField label="Status">

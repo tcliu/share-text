@@ -7,4 +7,4 @@
   let { value, className = '' }: Props = $props()
 </script>
 
-<span class="block min-w-0 truncate text-sm {className}">{value}</span>
+<span title={value} class="block min-w-0 truncate text-sm {className}">{value}</span>

@@ -80,11 +80,11 @@
   const showEndEllipsis = $derived(pageNumbers[pageNumbers.length - 1] < totalPages)
 
   const iconButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[size].iconButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 transition hover:border-cyan-500 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
+    `relative inline-flex ${SIZE_CLASS[size].iconButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
   )
 
   const pageButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 transition hover:border-cyan-500 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
+    `relative inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
   )
 
   let pageJumpInputValue = $state('')
@@ -135,7 +135,7 @@
   }
 </script>
 
-<div class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
+<nav aria-label="Pagination" class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
   <button
     type="button"
     aria-label="Previous page"
@@ -192,4 +192,4 @@
         onSelect={handlePageSizeChange} />
     </div>
   </div>
-</div>
+</nav>

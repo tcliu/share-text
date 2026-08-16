@@ -57,7 +57,7 @@
     aria-label={visible ? 'Hide password' : 'Show password'}
     type="button"
     {disabled}
-    class="absolute inset-y-0 right-1 my-1 inline-flex w-9 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-800 hover:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
+    class="absolute inset-y-0 right-1 my-1 inline-flex w-9 items-center justify-center rounded-md text-slate-400 outline-none transition hover:bg-slate-800 hover:text-cyan-300 focus:bg-slate-800 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
     {#if visible}
       <EyeSlashIcon className="h-5 w-5" />
     {:else}

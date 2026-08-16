@@ -112,7 +112,7 @@
       header: 'Updated time',
       width: '12%',
       minWidth: 144,
-      cellClass: 'text-slate-500',
+      cellClass: 'text-slate-400',
       sortable: true,
       cell: updatedAtCell,
     },
@@ -163,12 +163,12 @@
     <EditableText
       text={document.id}
       size="sm"
-      className="font-mono text-slate-500 transition-colors hover:text-cyan-300"
+      className="font-mono text-slate-400 transition-colors hover:text-cyan-300"
       copyable
       onActivate={() => window.open(`/${document.id}`, '_blank', 'noopener')}
       onChange={key => void documentsState.updateKey(document.id, key)} />
   {:else}
-    <PlainCell value={document.id} className="font-mono text-slate-500" />
+    <PlainCell value={document.id} className="font-mono text-slate-400" />
   {/if}
 {/snippet}
 

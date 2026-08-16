@@ -35,14 +35,28 @@
   }: Props = $props()
 
   let dialogIndex = 0
+  let dialogRef = $state<HTMLElement | null>(null)
+  let titleId = $state('')
+  let previouslyFocused: Element | null = null
 
   onMount(() => {
     openDialogCount += 1
     dialogIndex = openDialogCount
+    titleId = `share-text-dialog-title-${dialogIndex}`
+
+    previouslyFocused = document.activeElement
+    requestAnimationFrame(() => {
+      if (dialogRef && !dialogRef.contains(document.activeElement)) {
+        dialogRef.focus()
+      }
+    })
   })
 
   onDestroy(() => {
     openDialogCount -= 1
+    if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+      previouslyFocused.focus()
+    }
   })
 
   const cancelDisabled = $derived(pending && !allowPendingCancel)
@@ -55,6 +69,27 @@
 
   function isTopmostDialog() {
     return dialogIndex === openDialogCount
+  }
+
+  function trapFocus(event: KeyboardEvent) {
+    if (!dialogRef) return
+    const focusable = dialogRef.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+    )
+    if (focusable.length === 0) return
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    const active = document.activeElement
+    if (!dialogRef.contains(active)) {
+      event.preventDefault()
+      first.focus()
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault()
+      first.focus()
+    }
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
@@ -70,7 +105,11 @@
       return
     }
 
-    if (event.key === 'Escape' && !cancelDisabled && isTopmostDialog()) {
+    if (!isTopmostDialog()) {
+      return
+    }
+
+    if (event.key === 'Escape' && !cancelDisabled) {
       const target = event.target
       if (target instanceof Element && target.closest('[data-escape-capture]')) {
         return
@@ -79,6 +118,8 @@
       event.stopImmediatePropagation()
       event.preventDefault()
       onCancel()
+    } else if (event.key === 'Tab') {
+      trapFocus(event)
     }
   }
 
@@ -119,8 +160,13 @@
   <div
     class={fullscreen ? 'h-full' : 'flex min-h-full items-center justify-center'}
     onclick={e => e.stopPropagation()}>
-    <section
-        class="relative flex flex-col overflow-y-auto {fullscreen
+    <div
+        bind:this={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={!header && title ? titleId : undefined}
+        tabindex="-1"
+        class="relative flex flex-col overflow-y-auto outline-none {fullscreen
           ? 'h-full w-full bg-slate-900 p-5.5'
           : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
       <button
@@ -128,19 +174,19 @@
         aria-label="Close dialog"
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
-        class="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40">
+        class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none hover:text-slate-200 focus:text-slate-200 before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">
         <CloseIcon className="h-4 w-4" />
       </button>
       {#if header}
         {@render header()}
       {:else if title}
-        <h2 class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
+        <h2 id={titleId} class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
           {title}
         </h2>
       {/if}
       <div class="mt-4 flex min-h-0 flex-col">
         {@render children?.()}
       </div>
-    </section>
+    </div>
   </div>
 </div>

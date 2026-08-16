@@ -8,6 +8,7 @@
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
   import Tabs from './Tabs.svelte'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { DOCUMENT_TYPE_VALUES, getDocumentType } from '$lib/document-types'
   import type { AdminDocumentSummary } from '$lib/admin'
 
@@ -134,7 +135,7 @@
 </script>
 
 {#snippet detailsContent()}
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     {#if mode === 'edit'}
       <FormField label="Key" htmlFor="document-key">
         <input

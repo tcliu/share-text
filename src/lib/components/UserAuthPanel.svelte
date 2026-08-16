@@ -5,6 +5,7 @@
   import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import { login, register } from '$lib/user-auth'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
 
   type Mode = 'signin' | 'register'
 
@@ -72,21 +73,21 @@
 
 <div class="flex min-h-full items-center justify-center px-4 py-10">
   <div class="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60">
-    <h2 class="text-2xl font-semibold tracking-tight text-slate-100">{mode === 'signin' ? 'Login' : 'Create account'}</h2>
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-100">{mode === 'signin' ? 'Login' : 'Create account'}</h1>
     <div class="mt-4">
       <div class="mb-4 flex rounded-lg border border-slate-700 p-0.5" role="group" aria-label="Account options">
         <button
           type="button"
           aria-pressed={mode === 'signin'}
           onclick={() => switchMode('signin')}
-          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${mode === 'signin' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}>
+          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold outline-none transition ${mode === 'signin' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
           Login
         </button>
         <button
           type="button"
           aria-pressed={mode === 'register'}
           onclick={() => switchMode('register')}
-          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition ${mode === 'register' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200'}`}>
+          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold outline-none transition ${mode === 'register' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
           Create account
         </button>
       </div>
@@ -94,6 +95,7 @@
       {#if mode === 'signin'}
         <form
           class="flex flex-col gap-4"
+          use:useCaretAtEndOnKeyboardFocus
           onsubmit={e => {
             e.preventDefault()
             void handleSignIn()
@@ -117,6 +119,7 @@
       {:else}
         <form
           class="flex flex-col gap-4"
+          use:useCaretAtEndOnKeyboardFocus
           onsubmit={e => {
             e.preventDefault()
             void handleRegister()
@@ -147,7 +150,7 @@
       {/if}
 
       <div class="mt-4 text-center">
-        <a href="/" class="text-sm text-slate-400 transition hover:text-cyan-400">Go to Documents</a>
+        <a href="/" class="text-sm text-slate-400 outline-none transition hover:text-cyan-400 focus:text-cyan-400">Go to Documents</a>
       </div>
     </div>
   </div>

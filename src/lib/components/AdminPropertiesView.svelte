@@ -5,6 +5,7 @@
   import NumberInput from './NumberInput.svelte'
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
+  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
   interface Props {
@@ -21,7 +22,7 @@
 </script>
 
 {#snippet formContent()}
-  <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
+  <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
     {#each settingsState.settings as setting, i}
       <div
         class="grid items-center gap-2 p-3 {setting.kind === 'string'
@@ -40,8 +41,8 @@
               {sourceLabels[setting.source]}
             </span>
           </div>
-          <p class="mt-0.5 text-xs text-slate-500">{setting.description}</p>
-          <p class="mt-0.5 text-xs text-slate-600">{setting.key} (env {setting.envKey})</p>
+          <p class="mt-0.5 text-xs text-slate-400">{setting.description}</p>
+          <p class="mt-0.5 text-xs text-slate-500">{setting.key} (env {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
           {#if setting.kind === 'string'}

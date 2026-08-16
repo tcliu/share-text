@@ -109,7 +109,7 @@
   aria-valuemin={min}
   aria-valuemax={max}
   tabindex="0"
-  class={`relative shrink-0 touch-none select-none outline-none ${orientation === 'vertical' ? '-mx-1.5 w-3' : '-my-1.5 h-3'} ${dragging ? (orientation === 'vertical' ? 'cursor-col-resize' : 'cursor-row-resize') : 'cursor-default'} ${className}`}
+  class={`relative shrink-0 touch-none select-none outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${orientation === 'vertical' ? '-mx-1.5 w-3' : '-my-1.5 h-3'} ${dragging ? (orientation === 'vertical' ? 'cursor-col-resize' : 'cursor-row-resize') : 'cursor-default'} ${className}`}
   onpointerdown={handlePointerDown}
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}

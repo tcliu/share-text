@@ -42,6 +42,18 @@
   let inputRef = $state<HTMLInputElement | null>(null)
   let internalUpdate = false
 
+  const listboxId = $derived(`${id ? `${id}-` : 'share-text-combobox-'}listbox`)
+  const optionId = (index: number) => `${listboxId}-option-${index}`
+  const activeOptionId = $derived(
+    dropdownOpen && suggestions.length > 0 ? optionId(activeIndex) : undefined,
+  )
+
+  $effect(() => {
+    if (!dropdownOpen) return
+    const el = activeOptionId ? document.getElementById(activeOptionId) : null
+    el?.scrollIntoView({ block: 'nearest' })
+  })
+
   export function focus() {
     inputRef?.focus()
   }
@@ -171,6 +183,11 @@
         {id}
         bind:value={inputValue}
         type="text"
+        role="combobox"
+        aria-expanded={dropdownOpen}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={activeOptionId}
         class="min-w-0 flex-1 bg-transparent py-1 text-sm text-slate-100 outline-none placeholder:text-slate-500"
         placeholder={selected.length === 0 ? placeholder : ''}
         autocomplete="off"
@@ -183,16 +200,20 @@
   </div>
   {#if dropdownOpen && suggestions.length > 0}
     <div
+      id={listboxId}
       role="listbox"
+      aria-label={placeholder}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => dropdownOpen })}
       data-escape-capture
       class="fixed left-0 top-0 z-50 w-64 will-change-transform max-h-52 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur">
       {#each suggestions as suggestion, index}
         <button
           type="button"
+          id={optionId(index)}
           role="option"
-          aria-selected={index === activeIndex}
-          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${index === activeIndex ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'}`}
+          tabindex="-1"
+          aria-selected="false"
+          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition ${index === activeIndex ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'}`}
           onpointerdown={e => e.preventDefault()}
           onmouseenter={() => {
             activeIndex = index
@@ -205,7 +226,7 @@
             <span class="flex w-full items-center justify-between gap-2">
               <span>{suggestion.label}</span>
               {#if suggestion.detail}
-                <span class="text-xs text-slate-500">{suggestion.detail}</span>
+                <span class="text-xs text-slate-400">{suggestion.detail}</span>
               {/if}
             </span>
           {/if}

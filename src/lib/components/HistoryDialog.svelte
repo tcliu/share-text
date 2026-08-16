@@ -167,7 +167,7 @@
     onCancel={onClose}
     dismissKeydownCapture={!restorePromptOpen}>
     <div class="flex min-h-0 flex-col gap-3">
-      <p class="text-xs text-slate-500">
+      <p class="text-xs text-slate-400">
         Saved versions of this document, newest first. Restoring copies the selected version back into the editor for
         review.
       </p>
@@ -214,12 +214,12 @@
               <button
                 type="button"
                 aria-pressed={selected?.id === version.id}
-                class="rounded-lg border px-3 py-2 text-left transition {selected?.id === version.id
+                class="rounded-lg border px-3 py-2 text-left outline-none transition {selected?.id === version.id
                   ? 'border-cyan-500/60 bg-cyan-500/10'
-                  : 'border-slate-700 bg-slate-950 hover:border-slate-500'}"
+                  : 'border-slate-700 bg-slate-950 hover:border-slate-500 focus:border-slate-500'}"
                 onclick={() => selectVersion(version)}>
                 <div class="text-xs font-medium text-slate-200">{formatTimestamp(version.createdAt)}</div>
-                <div class="mt-0.5 truncate text-xs text-slate-500">
+                <div class="mt-0.5 truncate text-xs text-slate-400">
                   {version.updatedBy} · {version.contentSize} chars
                 </div>
               </button>
@@ -244,7 +244,7 @@
                 <div class="flex min-h-0 flex-1 flex-col gap-1.5">
                   <div class="grid grid-cols-2 gap-2">
                     <div class="flex min-w-0 items-center gap-2">
-                      <span class="truncate text-xs font-medium text-slate-500">
+                      <span class="truncate text-xs font-medium text-slate-400">
                         Selected · {formatTimestamp(selected.createdAt)}
                       </span>
                       <span
@@ -253,7 +253,7 @@
                       </span>
                     </div>
                     <div class="flex min-w-0 items-center gap-2">
-                      <span class="text-xs font-medium text-slate-500">Current</span>
+                      <span class="text-xs font-medium text-slate-400">Current</span>
                       <span
                         class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
                         {currentType}
@@ -297,7 +297,7 @@
                     '(empty)'}</pre>
               {/if}
             {:else}
-              <div class="flex flex-1 items-center justify-center text-sm text-slate-500">
+              <div class="flex flex-1 items-center justify-center text-sm text-slate-400">
                 Select a version to view it
               </div>
             {/if}

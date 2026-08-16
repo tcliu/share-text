@@ -20,7 +20,7 @@
 
 <div data-testid={testId} class="text-slate-300">
   {#if value === undefined}
-    <div class="text-sm italic text-slate-500">No content to preview</div>
+    <div class="text-sm italic text-slate-400">No content to preview</div>
   {:else if !isContainer(value)}
     <pre class={valueClass(value)}>{valueText(value)}</pre>
   {:else}

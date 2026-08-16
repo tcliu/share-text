@@ -82,6 +82,7 @@
 {:else}
   <div class={containerClass}>
     <div
+      role="status"
       class={`${editorClass} flex min-h-[12rem] items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400`}>
       {loadError || 'Loading editor...'}
     </div>

@@ -527,7 +527,7 @@
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-1">
       {#if !hideHeaderToggle}
-        <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" onClick={() => (showHeaders = !showHeaders)}>
+        <Button size="sm" ariaLabel="Toggle header" tooltip="Toggle header" ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)}>
           {#snippet icon()}
             <TableIcon />
           {/snippet}
@@ -632,7 +632,7 @@
         {/snippet}
       </Button>
     </div>
-    <span class="text-xs text-slate-500">{model.rowCount} rows · {model.columnCount} columns</span>
+    <span class="text-xs text-slate-400">{model.rowCount} rows · {model.columnCount} columns</span>
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md" bind:this={rootEl}>
@@ -684,10 +684,10 @@
                   <span class="flex w-full items-center justify-center gap-1.5 text-center">
                     <span>{columnLabels?.[ci] ?? columnLetter(ci)}</span>
                     <span
-                      class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100">
+                      class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 focus-within:opacity-100">
                       <button
                         type="button"
-                        class="leading-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                        class="leading-none outline-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} ascending`}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => handleSortClick(ci, 'asc')}>
@@ -695,7 +695,7 @@
                       </button>
                       <button
                         type="button"
-                        class="-mt-1 leading-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300'}"
+                        class="-mt-1 leading-none outline-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={`Sort ${columnLabels?.[ci] ?? columnLetter(ci)} descending`}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => handleSortClick(ci, 'desc')}>
@@ -705,7 +705,7 @@
                   </span>
                   <button
                     type="button"
-                    class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+                    class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                     style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
                     aria-label="Resize column {ci + 1}"
                     onmousedown={event => resize.startColumnResize(event, ci)}
@@ -839,9 +839,9 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
         </table>
 
         {#if model.rowCount === 0}
-          <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-500">
+          <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
             <span>No content to preview</span>
-            <button class="rounded border border-slate-700 px-3 py-1 text-slate-300 hover:bg-slate-800" onclick={() => sel.addRow()}>
+            <button class="rounded border border-slate-700 px-3 py-1 text-slate-300 outline-none transition hover:bg-slate-800 focus:bg-slate-800" onclick={() => sel.addRow()}>
               Add row
             </button>
           </div>
