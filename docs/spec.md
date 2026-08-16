@@ -281,8 +281,9 @@ synchronizes through a small fetch-based JSON API.
   session to `/admin/properties` and a user session to `/`).
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
-  `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`, and
-  `content`. A `documentType` change validates against the closed type set and
+  `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`,
+  `content`, and `sharedWith` (an array of usernames/emails). A
+  `documentType` change validates against the closed type set and
   records a version snapshot like a content change (via `updateDocument`).
   Attribution fields are bounded
   by `MAX_ATTRIBUTION_LENGTH` (defaulting `updated_by` to the requester IP
@@ -290,24 +291,44 @@ synchronizes through a small fetch-based JSON API.
   configured `document_key_length` charset, returning 409 on collision.
   `content` is validated against `MAX_CONTENT_BYTES` and the configured
   `MAX_CONTENT_LENGTH` and flows through `updateDocument`, so a content change
-  records a version snapshot like any other content save. `GET
+  records a version snapshot like any other content save. A `sharedWith` value
+  resolves sharees including inactive users and applies them via
+  `setDocumentAccess` (all-or-nothing: unresolvable sharees reject the whole
+  update with 400 listing the missing values, sharing the access route's
+  `missingSharees` helper). `GET
   /api/admin/documents/[id]` returns the full `AdminDocument` (with `content`)
-  for the edit dialog, which loads it once when the dialog opens.
+  plus `sharedWith` (the document's share list from `getDocumentAccess`) for the
+  edit dialog, which loads it once when the dialog opens.
 - The Documents toolbar also offers an **Add** button that opens the same dialog
   in add mode; saving a new document POSTs a single `{ name, content,
   documentType? }` body to `/api/admin/documents`, which dispatches on the body
   shape (a `records` array imports, otherwise it creates one document attributed
   to the requester IP with an auto-generated key and an initial version
   snapshot).
-- The edit dialog renders a `Tabs` component in its state mode (button tabs
-  with `aria-pressed`, no routing) with a **Details** tab for the header fields
-  (key, name, created by, updated by — plus a document-type dropdown, with the
-  key/attribution fields hidden in add mode) and a **Content** tab holding a
-  lazily loaded `CodeEditor` bound to the document body whose language mode
-  follows the selected type; OK/Apply and Reset follow the
+- The edit dialog lays the **Details** fields (key, name, created by, updated
+  by — plus a document-type dropdown, with the key/attribution fields hidden in
+  add mode) and the **Content** editor (a lazily loaded `CodeEditor` bound to
+  the document body whose language mode follows the selected type) out as two
+  responsive panes: side by side when the dialog is wide enough, with the
+  Content pane flowing below Details when the dialog is too narrow for both
+  (a `flex-wrap` with a per-pane `min-w` floor). The dialog panel itself never
+  scrolls: `BaseDialog` holds the title fixed while its body scrolls, and the
+  dialog keeps its OK/Create and Reset button row outside the scroll container,
+  so the title and action buttons stay visible while only the panes scroll
+  vertically on overflow. OK/Apply and Reset follow the
   shared editable-form pattern with `content` included in the dirty check, and
   OK stays disabled until the content fetch settles so the body can never be
-  saved as empty mid-load.
+  saved as empty mid-load. In edit mode the Details pane also shows an editable
+  **Shared with** input via the shared `ShareeCombobox` component (colored
+  removable username chips with an add-by-username/email search — the same
+  control the Share dialog uses, with a `search` provider per source: the
+  admin-only directory search here, previously-shared users in the Share
+  dialog), seeded from the document's sharees, and an **Anyone with the link
+  can view** checkbox
+  mirroring the document's `isPublic` visibility, both loaded alongside the
+  content from the `GET` detail response; they participate in the dirty check
+  and reset, and saving sends `isPublic`/`sharedWith` only when they actually
+  changed.
 - The Documents and Users toolbars each offer an **Import** button that opens
   `ImportDialog.svelte`: a JSON-type lazily loaded `CodeEditor` plus an Upload,
   OK, and Reset button panel. **Upload** opens a `.json` file picker and loads
@@ -331,20 +352,23 @@ synchronizes through a small fetch-based JSON API.
   it, with `useAdminUsers` mirroring the documents' `bulkDeleteOpen`/
   `bulkDeletePending`/`confirmBulkDelete` shape (the old per-row
   `deleteTarget`/`confirmDelete` state was removed from both hooks).
-- The Users tab has no row action column. Its toolbar **Edit** button is
-  context-sensitive via `handleToolbarEdit`: with exactly one row selected it
-  resolves that user from the current page's list and opens the `UserDialog`
-  in edit mode; with multiple rows selected (or a single stale cross-page
-  selection that no longer resolves) it opens the batch status dialog
-  (`bulkStatusOpen`); it is disabled with no selection. Per-row editing was
-  removed, so single-user edits always flow through selection + toolbar Edit.
+- Neither admin tab has a row action column. Their toolbar **Edit** buttons
+  are context-sensitive via `handleToolbarEdit`: on the Users tab a single
+  selection opens that user's `UserDialog` in edit mode, while multiple
+  selections (or a single stale cross-page selection that no longer resolves)
+  open the batch status dialog (`bulkStatusOpen`) — the button is disabled
+  with no selection. On the Documents tab the button is enabled only when
+  exactly one row is selected, resolving that document from the current page's
+  list and opening the `EditDocumentDialog` in edit mode — there is no batch
+  edit for multiple selections. Per-row editing was removed, so single-record
+  edits always flow through selection + toolbar Edit.
 - The Documents and Users tables render their copyable/editable cells as plain
   values on touch-only devices, where the `(hover: hover)`-gated icons would be
   permanently visible and noisy. `useSupportsHover` (`src/lib/use-supports-hover.svelte.ts`)
   exposes the `(hover: hover)` matchMedia result as a derived value, and each
   view conditionally renders either the interactive cell
   (`EditableText`/`Copyable`) or a `PlainCell` truncating span on touch;
-  editing stays available through the row **Edit** button. The plain-value
+  editing stays available through the toolbar **Edit** button. The plain-value
   rendering is done at the view level; the shared components' reveal controls
   are gated separately via `(hover: hover)`.
 - Admin imports attribute documents to the requester IP (`created_by` /
