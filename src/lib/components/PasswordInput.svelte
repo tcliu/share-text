@@ -3,6 +3,7 @@
   import Tooltip from './Tooltip.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import EyeSlashIcon from '$lib/icons/EyeSlashIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     value: string
@@ -54,7 +55,7 @@
     class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pr-12 pl-3 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 {className}" />
   <button
     onclick={toggleVisibility}
-    aria-label={visible ? 'Hide password' : 'Show password'}
+    aria-label={visible ? t('password.hide') : t('password.show')}
     type="button"
     {disabled}
     class="absolute inset-y-0 right-1 my-1 inline-flex w-9 items-center justify-center rounded-md text-slate-400 outline-none transition hover:bg-slate-800 hover:text-cyan-300 focus:bg-slate-800 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
@@ -63,6 +64,6 @@
     {:else}
       <EyeIcon className="h-5 w-5" />
     {/if}
-    <Tooltip>{visible ? 'Hide password' : 'Show password'}</Tooltip>
+    <Tooltip>{visible ? t('password.hide') : t('password.show')}</Tooltip>
   </button>
 </div>

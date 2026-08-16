@@ -9,6 +9,7 @@
   import PasswordInput from './PasswordInput.svelte'
   import { login } from '$lib/admin'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   const REMEMBER_ME_STORAGE_KEY = 'share-text-admin-remembered-login'
 
@@ -53,7 +54,7 @@
 
   async function handleLogin() {
     if (!username.trim() || !password) {
-      toast.error('Please fill in both fields.')
+      toast.error(t('auth.toast.fillBoth'))
       return
     }
     loginPending = true
@@ -74,7 +75,7 @@
       }
       onAuthenticated()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to sign in')
+      toast.error(error instanceof Error ? error.message : t('auth.toast.signInFailed'))
     } finally {
       loginPending = false
     }
@@ -83,7 +84,7 @@
 
 <div class="flex min-h-full items-center justify-center px-4 py-10">
   <div class="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900/95 p-6 shadow-2xl shadow-slate-950/60">
-    <h1 class="text-2xl font-semibold tracking-tight text-slate-100">Login</h1>
+    <h1 class="text-2xl font-semibold tracking-tight text-slate-100">{t('auth.login')}</h1>
     <div class="mt-4">
       {#if configured}
         {#if message}
@@ -97,7 +98,7 @@
             void handleLogin()
           }}
           novalidate>
-          <FormField label="Username" htmlFor="admin-username">
+          <FormField label={t('auth.username')} htmlFor="admin-username">
             <input
               id="admin-username"
               bind:this={usernameInput}
@@ -106,11 +107,11 @@
               autocomplete="username"
               class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
           </FormField>
-          <FormField label="Password" htmlFor="admin-password">
+          <FormField label={t('auth.password')} htmlFor="admin-password">
             <PasswordInput id="admin-password" bind:value={password} disabled={loginPending} />
           </FormField>
-          <Checkbox bind:checked={rememberMe} name="rememberMe" label="Remember me" />
-          <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">Sign in</Button>
+          <Checkbox bind:checked={rememberMe} name="rememberMe" label={t('auth.rememberMe')} />
+          <Button variant="primary" accent="cyan" type="submit" pending={loginPending} className="w-full">{t('auth.signIn')}</Button>
           <a
             href="/"
             class="text-center text-sm text-slate-400 outline-none transition hover:text-cyan-400 focus:text-cyan-400"
@@ -118,18 +119,18 @@
               e.preventDefault()
               void goto('/')
             }}>
-            Go to Documents
+            {t('auth.goToDocuments')}
           </a>
         </form>
       {:else}
         <p class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm text-slate-300">
-          Admin authentication is not configured. Set <span class="font-semibold text-slate-100">ADMIN_PASSWORD</span>
-          or{' '}
-          <span class="font-semibold text-slate-100">ADMIN_PASSWORD_HASH</span> in the server environment to enable it.
+          {t('admin.notConfiguredPrefix')}<span class="font-semibold text-slate-100">ADMIN_PASSWORD</span
+          >{t('admin.notConfiguredSep')}<span class="font-semibold text-slate-100">ADMIN_PASSWORD_HASH</span
+          >{t('admin.notConfiguredSuffix')}
         </p>
         <Buttons>
           {#snippet children()}
-            <Button onClick={onClose}>Close</Button>
+            <Button onClick={onClose}>{t('common.close')}</Button>
           {/snippet}
         </Buttons>
       {/if}

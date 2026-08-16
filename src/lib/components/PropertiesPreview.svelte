@@ -2,13 +2,14 @@
   import DataGrid from './DataGrid.svelte'
   import type { PreviewProps } from '$lib/document-types'
   import { parseProperties, serializeProperties } from '$lib/document-type-utils'
+  import { t } from '$lib/i18n.svelte'
 
   let { content, onContentChange }: PreviewProps = $props()
 
   function parseRows(text: string): { rows: string[][]; error: string | null } {
     const parsed = parseProperties(text)
     if (!parsed.ok) {
-      return { rows: [], error: parsed.error ?? 'Invalid properties' }
+      return { rows: [], error: parsed.error ?? t('properties.invalid') }
     }
     return {
       rows: Object.entries(parsed.value ?? {}).map(([key, value]) => [key, value]),
@@ -61,14 +62,14 @@
 
 {#if parseError}
   <div data-testid="properties-preview" class="h-full overflow-auto p-4 text-slate-300">
-    <div class="text-sm text-red-400">Unable to parse: {parseError}</div>
+    <div class="text-sm text-red-400">{t('structure.unableToParse', { error: parseError })}</div>
   </div>
 {:else}
   <DataGrid
     value={parsedRows}
     onChange={handleChange}
     maxColumns={2}
-    columnLabels={['Key', 'Value']}
+    columnLabels={[t('properties.key'), t('properties.value')]}
     showHeaders={false}
     hideHeaderToggle
     initialColumnWidths={['35%', '65%']}

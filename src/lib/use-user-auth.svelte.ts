@@ -1,6 +1,7 @@
 import { toast } from 'svelte-sonner'
 import { fetchUserSession, login, logout, register, type AdminIdentity } from '$lib/user-auth'
 import type { User } from '$lib/documents'
+import { t } from '$lib/i18n.svelte'
 
 export type UserAuthState = 'checking' | 'signedOut' | 'signedIn'
 
@@ -46,7 +47,7 @@ export function useUserAuth() {
     try {
       await logout()
     } catch {
-      toast.error('Failed to sign out')
+      toast.error(t('auth.toast.signOutFailed'))
     }
     user = null
     admin = null

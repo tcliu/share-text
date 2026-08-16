@@ -3,6 +3,7 @@
   import SelectDropdown from './SelectDropdown.svelte'
   import ChevronLeftIcon from '$lib/icons/ChevronLeftIcon.svelte'
   import ChevronRightIcon from '$lib/icons/ChevronRightIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     total: number
@@ -135,10 +136,10 @@
   }
 </script>
 
-<nav aria-label="Pagination" class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
+<nav aria-label={t('admin.pagination.label')} class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
   <button
     type="button"
-    aria-label="Previous page"
+    aria-label={t('admin.pagination.previous')}
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
@@ -158,7 +159,7 @@
         max={totalPages}
         onblur={clampPageInput}
         onkeydown={handlePageInputKeydown}
-        ariaLabel="Current page"
+        ariaLabel={t('admin.pagination.current')}
         showControls={false}
         className={`inline-flex ${SIZE_CLASS[size].pageInput} items-center justify-center rounded-md border border-cyan-500 bg-slate-950 text-center ${SIZE_CLASS[size].text} font-semibold text-cyan-300 outline-none focus:border-2`} />
     {:else}
@@ -173,7 +174,7 @@
 
   <button
     type="button"
-    aria-label="Next page"
+    aria-label={t('admin.pagination.next')}
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
@@ -181,12 +182,12 @@
   </button>
 
   <div class="flex items-center gap-1.5">
-    <span>Page size</span>
+    <span>{t('admin.pagination.pageSize')}</span>
     <div class="relative">
       <SelectDropdown
         buttonLabel={String(pageSize)}
         activeValue={String(pageSize)}
-        ariaLabel="Page size"
+        ariaLabel={t('admin.pagination.pageSize')}
         size={size}
         options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
         onSelect={handlePageSizeChange} />

@@ -42,6 +42,7 @@
   import { formatTimestamp } from '$lib/date-format'
   import { loadTtsCapabilities, synthesizeTtsCached } from '$lib/tts-client'
   import { splitTtsSegments } from '$lib/tts-language'
+  import { t } from '$lib/i18n.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -183,17 +184,17 @@
       const text = await file.text()
       const byteSize = new TextEncoder().encode(text).byteLength
       if (byteSize > 1024 * 1024) {
-        toast.error('File exceeds the 1 MB limit')
+        toast.error(t('editor.toast.fileTooLarge'))
         return
       }
       if (maxContentLength > 0 && text.length > maxContentLength) {
-        toast.error(`File exceeds the ${maxContentLength}-character limit`)
+        toast.error(t('editor.toast.fileTooLong', { limit: maxContentLength }))
         return
       }
       content = text
-      toast.success('File uploaded')
+      toast.success(t('editor.toast.fileUploaded'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to read file')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.fileReadFailed'))
     } finally {
       if (fileInputRef) {
         fileInputRef.value = ''
@@ -209,9 +210,9 @@
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(content)
-      toast.success('Copied to clipboard')
+      toast.success(t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
     }
   }
 
@@ -222,9 +223,9 @@
       url.search = ''
       url.hash = ''
       await navigator.clipboard.writeText(url.toString())
-      toast.success('Link copied to clipboard')
+      toast.success(t('editor.toast.linkCopied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy link')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
     }
   }
 
@@ -271,7 +272,7 @@
     ttsQueueIndex = nextIndex
     audioRef.src = nextUrl
     audioRef.play().catch(() => {
-      toast.error('Failed to play audio')
+      toast.error(t('editor.toast.playFailed'))
       stopReading()
     })
   }
@@ -282,14 +283,14 @@
       return
     }
     if (!ttsConfigured) {
-      toast.error('Text-to-speech is not configured')
+      toast.error(t('editor.toast.ttsNotConfigured'))
       return
     }
     const selection = editorRef?.getSelectionText() ?? ''
     const text = selection.trim() ? selection : content
     const segments = splitTtsSegments(text)
     if (segments.length === 0) {
-      toast.error('Nothing to read')
+      toast.error(t('editor.toast.nothingToRead'))
       return
     }
     speaking = true
@@ -309,14 +310,14 @@
       ttsQueueIndex = 0
       audioRef.src = ttsQueue[0]
       audioRef.play().catch(() => {
-        toast.error('Failed to play audio')
+        toast.error(t('editor.toast.playFailed'))
         stopReading()
       })
     } catch (error) {
       if (ttsAbortController?.signal.aborted) {
         return
       }
-      toast.error(error instanceof Error ? error.message : 'Failed to synthesize speech')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.synthesizeFailed'))
       stopReading()
     }
   }
@@ -337,7 +338,7 @@
     if (fromType.convertTo?.target === value) {
       const result = await fromType.convertTo.convert(content)
       if (!result.ok) {
-        toast.error('Cannot convert: ' + (result.error ?? 'Invalid content'))
+        toast.error(t('editor.toast.cannotConvert', { error: result.error ?? t('editor.toast.invalidContent') }))
         return
       }
       content = result.value ?? ''
@@ -376,7 +377,7 @@
           buttonLabel={activeTypeLabel}
           options={DOCUMENT_TYPE_OPTIONS}
           activeValue={docType}
-          ariaLabel="Document type"
+          ariaLabel={t('editor.documentType')}
           filterable={true}
           size="sm"
           onSelect={handleTypeSelect}
@@ -404,8 +405,8 @@
   {#snippet previewToggles()}
     <Button
       size="sm"
-      ariaLabel="Editor view"
-      tooltip="Editor view"
+      ariaLabel={t('editor.editorView')}
+      tooltip={t('editor.editorView')}
       variant={previewState.editorActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.editorActive}
       disabled={previewState.editorDisabled}
@@ -421,8 +422,8 @@
     </Button>
     <Button
       size="sm"
-      ariaLabel="Preview view"
-      tooltip="Preview view"
+      ariaLabel={t('editor.previewView')}
+      tooltip={t('editor.previewView')}
       variant={previewState.previewActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.previewActive}
       disabled={previewState.previewDisabled}
@@ -452,8 +453,8 @@
     {/if}
     <Button
       size="sm"
-      ariaLabel="Copy"
-      tooltip="Copy"
+      ariaLabel={t('common.copy')}
+      tooltip={t('common.copy')}
       onClick={handleCopy}
       disabled={content.length === 0}>
       {#snippet icon()}
@@ -463,8 +464,8 @@
     {#if ttsConfigured}
     <Button
       size="sm"
-      ariaLabel={speaking ? 'Stop reading' : 'Read aloud'}
-      tooltip={speaking ? 'Stop reading' : 'Read aloud'}
+      ariaLabel={speaking ? t('editor.stopReading') : t('editor.readAloud')}
+      tooltip={speaking ? t('editor.stopReading') : t('editor.readAloud')}
       variant={speaking ? 'outline' : 'secondary'}
       ariaPressed={speaking}
       onClick={handleReadAloud}
@@ -481,8 +482,8 @@
     {#if onClone || cloneDisabled}
       <Button
         size="sm"
-        ariaLabel="Clone document"
-        tooltip="Clone"
+        ariaLabel={t('editor.cloneDocument')}
+        tooltip={t('editor.clone')}
         onClick={onClone}
         disabled={cloneDisabled || content.length === 0}>
         {#snippet icon()}
@@ -493,8 +494,8 @@
     {#if versionCount >= 2 && !context.isMobile}
       <Button
         size="sm"
-        ariaLabel="Version history"
-        tooltip="History"
+        ariaLabel={t('editor.versionHistory')}
+        tooltip={t('editor.history')}
         onClick={() => (historyOpen = true)}>
         {#snippet icon()}
           {@render historyIcon()}
@@ -504,8 +505,8 @@
     {#if !context.isMobile}
       <Button
         size="sm"
-        ariaLabel="Upload"
-        tooltip="Upload"
+        ariaLabel={t('editor.upload')}
+        tooltip={t('editor.upload')}
         onClick={handleUploadClick}
         disabled={!editable}>
         {#snippet icon()}
@@ -514,8 +515,8 @@
       </Button>
       <Button
         size="sm"
-        ariaLabel="Export"
-        tooltip="Export"
+        ariaLabel={t('editor.export')}
+        tooltip={t('editor.export')}
         onClick={handleExport}
         disabled={content.length === 0}>
         {#snippet icon()}
@@ -526,7 +527,7 @@
         <Button
           size="sm"
           ariaLabel={currentType.format.title}
-          tooltip="Format"
+          tooltip={t('editor.format')}
           onClick={formatState.openDialog}
           disabled={!editable}>
           {#snippet icon()}
@@ -536,19 +537,19 @@
       {/if}
     {/if}
     {#if onTagsSave && editable}
-      <Button size="sm" ariaLabel="Edit tags" tooltip="Tags" onClick={() => (tagsOpen = true)}>
+      <Button size="sm" ariaLabel={t('editor.editTags')} tooltip={t('editor.tags')} onClick={() => (tagsOpen = true)}>
         {#snippet icon()}
           <TagsIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="Copy sharable link" tooltip="Copy link" onClick={handleCopyLink}>
+      <Button size="sm" ariaLabel={t('editor.copySharableLink')} tooltip={t('editor.copyLink')} onClick={handleCopyLink}>
         {#snippet icon()}
           <LinkIcon />
         {/snippet}
       </Button>
     {/if}
     {#if onShare}
-      <Button size="sm" ariaLabel="Share" tooltip="Share" onClick={onShare}>
+      <Button size="sm" ariaLabel={t('editor.share')} tooltip={t('editor.share')} onClick={onShare}>
         {#snippet icon()}
           <ShareIcon />
         {/snippet}
@@ -557,8 +558,8 @@
     {#if onDelete}
       <Button
         size="sm"
-        ariaLabel="Delete document"
-        tooltip="Delete"
+        ariaLabel={t('list.deleteDocument')}
+        tooltip={t('common.delete')}
         onClick={() => onDelete(document.id)}
         className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
         {#snippet icon()}
@@ -566,15 +567,15 @@
         {/snippet}
       </Button>
     {/if}
-    <Button size="sm" ariaLabel="Reset" tooltip="Reset" onClick={handleResetClick} disabled={!editable || !dirty || saving}>
+    <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!editable || !dirty || saving}>
       {#snippet icon()}
         <RefreshIcon />
       {/snippet}
     </Button>
     <Button
       size="sm"
-      ariaLabel="Save"
-      tooltip="Save"
+      ariaLabel={t('editor.save')}
+      tooltip={t('editor.save')}
       onClick={handleSave}
       disabled={!editable || !dirty || saving}
       variant="primary"
@@ -615,8 +616,8 @@
         <div class="flex min-w-[min(12rem,60%)] flex-1 items-center gap-2">
           <Button
             size="sm"
-            ariaLabel="Open document list"
-            tooltip="Document list"
+            ariaLabel={t('editor.openDocumentList')}
+            tooltip={t('editor.documentList')}
             className="shrink-0"
             preventFocusSteal
             onClick={context.openMobileDrawer}>
@@ -635,13 +636,13 @@
       {/if}
       <div class="flex flex-wrap items-center gap-1" data-testid="editor-actions">
         <KebabMenu
-          ariaLabel="More actions"
+          ariaLabel={t('editor.moreActions')}
           items={[
             ...(editable
               ? [
                   {
                     id: 'upload',
-                    label: 'Upload',
+                    label: t('editor.upload'),
                     onClick: handleUploadClick,
                     icon: uploadIcon,
                   },
@@ -649,7 +650,7 @@
               : []),
             {
               id: 'export',
-              label: 'Export',
+              label: t('editor.export'),
               onClick: handleExport,
               disabled: content.length === 0,
               icon: exportIcon,
@@ -658,7 +659,7 @@
               ? [
                   {
                     id: 'history',
-                    label: 'History',
+                    label: t('editor.history'),
                     onClick: () => (historyOpen = true),
                     icon: historyIcon,
                   },
@@ -722,7 +723,7 @@
         orientation={context.isMobile ? 'horizontal' : 'vertical'}
         lineClass={context.isMobile ? 'border-t border-slate-700' : 'border-l border-slate-700'}
         onChange={(value: number) => (previewState.editorWidthPct = value)}
-        ariaLabel="Resize editor and preview panes" />
+        ariaLabel={t('editor.resizePanes')} />
     {/if}
     {#if previewState.showPreview && currentType.preview}
       <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -747,7 +748,7 @@
     class="hidden"
     onended={() => playNextSegment()}
     onerror={() => {
-      toast.error('Failed to play a segment')
+      toast.error(t('editor.toast.segmentPlayFailed'))
       playNextSegment()
     }}
     onpause={() => {
@@ -759,32 +760,32 @@
   <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}
       <span class="min-w-0">
-        Last updated at
+        {t('editor.lastUpdated')}
         <span class="text-slate-300">{formattedTimestamp}</span>
         {#if document.updatedBy}
           <span>
-            by <span class="text-slate-300">{document.updatedBy}</span>
+            {t('editor.by')} <span class="text-slate-300">{document.updatedBy}</span>
           </span>
         {/if}
       </span>
     {/if}
     <span class="flex items-center gap-3">
       {#if !editable}
-        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">Read only</span>
+        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">{t('editor.readOnly')}</span>
       {/if}
       {#if refreshing}
-        <span class="text-slate-400">Refreshing...</span>
+        <span class="text-slate-400">{t('editor.refreshing')}</span>
       {/if}
-      <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} chars</span>
+      <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} {t('editor.chars')}</span>
     </span>
   </div>
 </section>
 
 {#if uploadConfirmOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="You have unsaved changes. Uploading a file will discard them and replace the editor content."
-    confirmLabel="OK"
+    title={t('editor.uploadConfirmTitle')}
+    message={t('editor.uploadConfirmMessage')}
+    confirmLabel={t('common.ok')}
     confirmColor="amber"
     onConfirm={handleUploadConfirm}
     onCancel={() => (uploadConfirmOpen = false)} />
@@ -822,7 +823,7 @@
       docType = version.documentType
       historyOpen = false
       if (content !== document.content || docType !== document.documentType) {
-        toast.success('Version restored — review and save')
+        toast.success(t('editor.toast.versionRestored'))
       }
     }} />
 {/if}

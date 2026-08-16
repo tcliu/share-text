@@ -8,6 +8,7 @@ import {
   type AdminSetting,
 } from '$lib/admin'
 import { parseProperties, serializeProperties } from '$lib/document-type-utils'
+import { t } from '$lib/i18n.svelte'
 
 export function useAdminSettings(onSignedOut: () => void) {
   let settings = $state<AdminSetting[]>([])
@@ -34,13 +35,20 @@ export function useAdminSettings(onSignedOut: () => void) {
   ): { ok: true; value: number } | { ok: false; error: string } {
     const parsed = Number(raw)
     if (!Number.isInteger(parsed)) {
-      return { ok: false, error: `${setting.label} must be an integer` }
+      return { ok: false, error: t('admin.settingMustBeInteger', { name: setting.label }) }
     }
     if (
       parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
       parsed > (setting.max ?? Number.POSITIVE_INFINITY)
     ) {
-      return { ok: false, error: `${setting.label} must be between ${setting.min} and ${setting.max}` }
+      return {
+        ok: false,
+        error: t('admin.settingMustBeBetween', {
+          name: setting.label,
+          min: setting.min ?? 0,
+          max: setting.max ?? Number.MAX_SAFE_INTEGER,
+        }),
+      }
     }
     return { ok: true, value: parsed }
   }
@@ -84,7 +92,7 @@ export function useAdminSettings(onSignedOut: () => void) {
     for (const [key, value] of Object.entries(parsed.value ?? {})) {
       const setting = settings.find(item => item.key === key)
       if (!setting) {
-        problems.push(`Unknown setting: ${key}`)
+        problems.push(t('admin.unknownSetting', { key }))
         continue
       }
       if (setting.kind !== 'number') continue
@@ -104,7 +112,7 @@ export function useAdminSettings(onSignedOut: () => void) {
       return true
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load settings')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadSettings'))
       }
       return false
     }
@@ -140,11 +148,11 @@ export function useAdminSettings(onSignedOut: () => void) {
       .then(updated => {
         settings = updated
         draftValues = Object.fromEntries(updated.map(setting => [setting.key, String(setting.value)]))
-        toast.success('Settings updated')
+        toast.success(t('admin.settingsUpdated'))
       })
       .catch(error => {
         if (!handleAuthError(error)) {
-          toast.error(error instanceof Error ? error.message : 'Failed to save settings')
+          toast.error(error instanceof Error ? error.message : t('admin.auth.toast.saveSettings'))
         }
       })
       .finally(() => {
@@ -179,10 +187,10 @@ export function useAdminSettings(onSignedOut: () => void) {
       const updated = await resetAdminSetting(setting.key)
       settings = updated
       draftValues = Object.fromEntries(updated.map(item => [item.key, String(item.value)]))
-      toast.success(`${setting.label} reverted to environment/default`)
+      toast.success(t('admin.settingReverted', { name: setting.label }))
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to reset setting')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.resetSetting'))
       }
     } finally {
       pending = false

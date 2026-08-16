@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '$lib/i18n.svelte'
+
   interface Props {
     content: string
     editable?: boolean
@@ -19,13 +21,15 @@
     docType = 'text',
     containerClass = '',
     editorClass = '',
-    editorAriaLabel = 'Content',
+    editorAriaLabel,
     autoFocus = false,
     recreateKey = '',
     maxContentLength = 0,
     onAutoFocused,
     onContentChange,
   }: Props = $props()
+
+  const resolvedAriaLabel = $derived(editorAriaLabel ?? t('editor.content'))
 
   let EditorComponent = $state<any>(null)
   let editorInstance = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
@@ -54,7 +58,7 @@
       })
       .catch(error => {
         if (!cancelled) {
-          loadError = error instanceof Error ? error.message : 'Failed to load editor'
+          loadError = error instanceof Error ? error.message : t('editor.loadFailed')
         }
       })
 
@@ -73,7 +77,7 @@
     {docType}
     {containerClass}
     {editorClass}
-    {editorAriaLabel}
+    editorAriaLabel={resolvedAriaLabel}
     {autoFocus}
     {recreateKey}
     {maxContentLength}
@@ -84,7 +88,7 @@
     <div
       role="status"
       class={`${editorClass} flex min-h-[12rem] items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400`}>
-      {loadError || 'Loading editor...'}
+      {loadError || t('editor.loading')}
     </div>
   </div>
 {/if}

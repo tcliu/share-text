@@ -14,6 +14,7 @@
   import { buildSideBySideRows } from '$lib/version-diff'
   import CompareIcon from '$lib/icons/CompareIcon.svelte'
   import RestoreIcon from '$lib/icons/RestoreIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     open: boolean
@@ -102,7 +103,7 @@
         void selectVersion(versions[0])
       }
     } catch (error) {
-      loadError = error instanceof Error ? error.message : 'Failed to load version history'
+      loadError = error instanceof Error ? error.message : t('history.toast.loadFailed')
     } finally {
       loading = false
     }
@@ -122,7 +123,7 @@
       }
     } catch (error) {
       if (seq !== selectSeq) return
-      toast.error(error instanceof Error ? error.message : 'Failed to load version')
+      toast.error(error instanceof Error ? error.message : t('history.toast.versionFailed'))
     } finally {
       if (seq === selectSeq) {
         selectedLoading = false
@@ -161,22 +162,21 @@
 
 {#if open}
   <BaseDialog
-    title="Version History"
+    title={t('history.title')}
     maxWidth="3xl"
     fullscreen={isMobile}
     onCancel={onClose}
     dismissKeydownCapture={!restorePromptOpen}>
     <div class="flex min-h-0 flex-col gap-3">
       <p class="text-xs text-slate-400">
-        Saved versions of this document, newest first. Restoring copies the selected version back into the editor for
-        review.
+        {t('history.description')}
       </p>
 
       <div class="flex items-center gap-1">
         <Button
           size="sm"
-          ariaLabel="Compare with current"
-          tooltip={actionsDisabled ? undefined : 'Compare with current'}
+          ariaLabel={t('history.compareWithCurrent')}
+          tooltip={actionsDisabled ? undefined : t('history.compareWithCurrent')}
           tooltipAlign="right"
           variant={compare ? 'outline' : 'secondary'}
           ariaPressed={compare}
@@ -188,8 +188,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Restore version"
-          tooltip={actionsDisabled ? undefined : 'Restore'}
+          ariaLabel={t('history.restoreVersion')}
+          tooltip={actionsDisabled ? undefined : t('history.restore')}
           tooltipAlign="right"
           variant="primary"
           accent="cyan"
@@ -220,7 +220,7 @@
                 onclick={() => selectVersion(version)}>
                 <div class="text-xs font-medium text-slate-200">{formatTimestamp(version.createdAt)}</div>
                 <div class="mt-0.5 truncate text-xs text-slate-400">
-                  {version.updatedBy} · {version.contentSize} chars
+                  {version.updatedBy} · {t('history.chars', { count: version.contentSize })}
                 </div>
               </button>
             {/each}
@@ -245,7 +245,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <div class="flex min-w-0 items-center gap-2">
                       <span class="truncate text-xs font-medium text-slate-400">
-                        Selected · {formatTimestamp(selected.createdAt)}
+                        {t('history.selected')} · {formatTimestamp(selected.createdAt)}
                       </span>
                       <span
                         class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
@@ -253,7 +253,7 @@
                       </span>
                     </div>
                     <div class="flex min-w-0 items-center gap-2">
-                      <span class="text-xs font-medium text-slate-400">Current</span>
+                      <span class="text-xs font-medium text-slate-400">{t('history.current')}</span>
                       <span
                         class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
                         {currentType}
@@ -294,11 +294,11 @@
               {:else}
                 <pre
                   class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5">{selected.content ||
-                    '(empty)'}</pre>
+                    t('history.empty')}</pre>
               {/if}
             {:else}
               <div class="flex flex-1 items-center justify-center text-sm text-slate-400">
-                Select a version to view it
+                {t('history.selectVersion')}
               </div>
             {/if}
           </div>
@@ -310,9 +310,9 @@
 
 {#if restorePromptOpen}
   <ConfirmDialog
-    title="Restore this version?"
-    message="Restoring will replace the current editor content with this version's content. Any unsaved changes will be lost."
-    confirmLabel="Restore"
+    title={t('history.restoreTitle')}
+    message={t('history.restoreMessage')}
+    confirmLabel={t('history.restore')}
     confirmColor="cyan"
     onConfirm={confirmRestore}
     onCancel={cancelRestore} />

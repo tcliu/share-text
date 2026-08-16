@@ -8,6 +8,7 @@
   import TagInput from './TagInput.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     open: boolean
@@ -78,16 +79,16 @@
 </script>
 
 {#if open}
-  <BaseDialog title="Edit Tags" maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
+  <BaseDialog title={t('tags.title')} maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-      <FormField label="Tags" htmlFor="document-tags-input">
+      <FormField label={t('tags.label')} htmlFor="document-tags-input">
         <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>
 
       <Buttons>
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>OK</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>Reset</Button>
+          <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{t('common.ok')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{t('common.reset')}</Button>
         {/snippet}
       </Buttons>
     </div>
@@ -96,9 +97,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="You have unsaved tag changes that will be lost."
-    confirmLabel="Discard"
+    title={t('tags.discardTitle')}
+    message={t('tags.discardMessage')}
+    confirmLabel={t('tags.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

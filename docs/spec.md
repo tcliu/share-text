@@ -480,6 +480,53 @@ icon? }`) plus an optional `ariaLabel`/`align`/`autoPlace`, keeps its own open
 state and arrow-key focus (`activeIndex` with a `firstEnabledIndex` guard),
 and closes on item click, Escape, outside pointer-down, and scroll.
 
+`LanguageMenu` (`src/lib/components/LanguageMenu.svelte`) follows the same
+pattern for the language picker: a globe-icon trigger opens a
+`positionPanel` menu of the supported locales (labeled in their own language)
+with the active one marked by a `menuitemradio` role and a dot; selecting a
+locale calls `setLocale`. It renders in the document-list header (so also in
+the mobile drawer, which reuses the `documentList` snippet) and in the
+collapsed left rail.
+
+### UI Localization (i18n)
+
+Both the browser app and the admin console are localized through
+`$lib/i18n.svelte`; the admin console has its own `admin.*` key namespace and
+uses `t()` throughout (tabs, toolbars, DataTable headers, dialogs, login
+panel, admin hooks).
+
+- `LOCALES` is the closed set `en`, `zh-CN` (Simplified Chinese), `zh-TW`
+  (Traditional Chinese), each with a native label for the picker. The `en`
+  dictionary is the source (`as const`); `zh-CN`/`zh-TW` are typed
+  `Record<MessageKey, string>` so every key must be translated or the build
+  fails. `t(key, params?)` reads the module-level `$state` locale and
+  interpolates `{name}` placeholders, so template/`$derived` calls re-render on
+  locale change.
+- The locale is a pure client-side preference: `setLocale` persists it to
+  `localStorage` (`share-text:locale`) and sets `document.documentElement.lang`;
+  `initLocale()` applies a saved non-default locale and is called from the root
+  `+layout.svelte` `$effect`. SSR always renders English, so the server HTML and
+  the first client render match (a one-frame English flash occurs when a saved
+  locale is applied after mount) and there is no hydration mismatch.
+- `t()` is called in templates and `$derived`; never in a `$props()` default
+  (prop defaults evaluate once and would not react to a locale change). Shared
+  components with default labels (`CopyButton`, `Copyable`, `Chip`, `Splitter`,
+  `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`, `TagInput`, `Combobox`,
+  `SelectDropdown`, `DataTable`) keep the prop optional and resolve the fallback
+  via `$derived(prop ?? t('key'))` or an inline `??` at the call site. Toast
+  text in event handlers and async code uses the current locale at call time.
+- English count-based pluralization (e.g. "{n} document(s)") is expressed as
+  singular/plural key pairs (`admin.documents.deleted`/`...Plural`); the caller
+  picks the key on `count === 1`. Chinese has no plural forms, so both keys map
+  to the same string there.
+- Data-driven labels rendered from reactive arrays (admin DataTable column
+  headers, `AdminPropertiesView` source labels) are built in `$derived.by` so
+  they follow a locale switch.
+- Messages produced by the server (API `error` fields, setting labels and
+  descriptions) remain English; only client-side UI text is translated.
+- Document type labels and format titles (e.g. "JSON", "Format JSON") are
+  technical format names and stay untranslated.
+
 ### Responsive Layout
 
 Below the `md` breakpoint (767px, driven by a `matchMedia`-backed `isMobile`

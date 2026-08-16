@@ -21,6 +21,7 @@
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import UploadIcon from '$lib/icons/UploadIcon.svelte'
   import ExportIcon from '$lib/icons/ExportIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   const PROPERTIES_PATH = '/admin/properties'
   const DOCUMENTS_PATH = '/admin/documents'
@@ -101,20 +102,20 @@
 </script>
 
 <svelte:head>
-  <title>Admin</title>
+  <title>{t('admin.title')}</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
   {#if authState.state === 'authenticated'}
     <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
-      <h1 class="text-md font-semibold text-slate-200">Admin</h1>
+      <h1 class="text-md font-semibold text-slate-200">{t('admin.title')}</h1>
       <div class="flex items-center gap-2">
-        <Button size="sm" ariaLabel="Go to Documents" tooltip="Go to Documents" onClick={() => goto('/')}>
+        <Button size="sm" ariaLabel={t('auth.goToDocuments')} tooltip={t('auth.goToDocuments')} onClick={() => goto('/')}>
           {#snippet icon()}
             <DocumentIcon />
           {/snippet}
         </Button>
-        <Button size="sm" ariaLabel="Sign out" tooltip="Sign out" onClick={() => void authState.handleLogout()}>
+        <Button size="sm" ariaLabel={t('list.signOut')} tooltip={t('list.signOut')} onClick={() => void authState.handleLogout()}>
           {#snippet icon()}
             <SignOutIcon />
           {/snippet}
@@ -131,8 +132,8 @@
       <div class="flex h-full flex-col items-center justify-center gap-3 px-4">
         <p class="text-sm text-rose-400">{authState.sessionError}</p>
         <Button
-          ariaLabel="Retry"
-          tooltip="Retry"
+          ariaLabel={t('common.retry')}
+          tooltip={t('common.retry')}
           onClick={() => {
             authState.retry()
           }}>
@@ -148,8 +149,8 @@
       {#snippet documentsToolbar(state: AdminState)}
         <Button
           size="sm"
-          ariaLabel="Add document"
-          tooltip="Add document"
+          ariaLabel={t('admin.documents.add')}
+          tooltip={t('admin.documents.add')}
           onClick={() => state.documentsState.openAdd()}>
           {#snippet icon()}
             <PlusIcon />
@@ -157,8 +158,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Import documents"
-          tooltip="Import documents"
+          ariaLabel={t('admin.documents.import')}
+          tooltip={t('admin.documents.import')}
           onClick={() => state.documentsState.openImport()}>
           {#snippet icon()}
             <UploadIcon />
@@ -166,8 +167,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Export documents"
-          tooltip="Export documents"
+          ariaLabel={t('admin.documents.export')}
+          tooltip={t('admin.documents.export')}
           pending={state.documentsState.exportPending}
           onClick={() => void state.documentsState.exportRecords()}>
           {#snippet icon()}
@@ -176,8 +177,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Delete selected"
-          tooltip="Delete selected"
+          ariaLabel={t('admin.deleteSelected')}
+          tooltip={t('admin.deleteSelected')}
           disabled={state.documentsState.selectedCount === 0}
           pending={state.documentsState.bulkDeletePending}
           onClick={() => (state.documentsState.bulkDeleteOpen = true)}
@@ -188,8 +189,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Reload"
-          tooltip="Reload"
+          ariaLabel={t('common.reload')}
+          tooltip={t('common.reload')}
           disabled={state.documentsState.loading}
           onClick={() => void state.documentsState.load()}>
           {#snippet icon()}
@@ -201,20 +202,20 @@
         <AdminDocumentsView documentsState={state.documentsState} />
       {/snippet}
       {#snippet usersToolbar(state: AdminState)}
-        <Button size="sm" ariaLabel="Add user" tooltip="Add user" onClick={() => state.usersState.openAdd()}>
+        <Button size="sm" ariaLabel={t('admin.users.add')} tooltip={t('admin.users.add')} onClick={() => state.usersState.openAdd()}>
           {#snippet icon()}
             <PlusIcon />
           {/snippet}
         </Button>
-        <Button size="sm" ariaLabel="Import users" tooltip="Import users" onClick={() => state.usersState.openImport()}>
+        <Button size="sm" ariaLabel={t('admin.users.import')} tooltip={t('admin.users.import')} onClick={() => state.usersState.openImport()}>
           {#snippet icon()}
             <UploadIcon />
           {/snippet}
         </Button>
         <Button
           size="sm"
-          ariaLabel="Export users"
-          tooltip="Export users"
+          ariaLabel={t('admin.users.export')}
+          tooltip={t('admin.users.export')}
           pending={state.usersState.exportPending}
           onClick={() => void state.usersState.exportRecords()}>
           {#snippet icon()}
@@ -223,8 +224,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={state.usersState.selectedCount === 1 ? 'Edit selected user' : 'Set status'}
-          tooltip={state.usersState.selectedCount === 1 ? 'Edit selected user' : 'Set status for selected users'}
+          ariaLabel={state.usersState.selectedCount === 1 ? t('admin.users.editSelected') : t('admin.users.setStatus')}
+          tooltip={state.usersState.selectedCount === 1 ? t('admin.users.editSelected') : t('admin.users.setStatusFor')}
           disabled={state.usersState.selectedCount === 0}
           onClick={() => state.usersState.handleToolbarEdit()}>
           {#snippet icon()}
@@ -233,8 +234,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Delete selected"
-          tooltip="Delete selected"
+          ariaLabel={t('admin.deleteSelected')}
+          tooltip={t('admin.deleteSelected')}
           disabled={state.usersState.selectedCount === 0}
           pending={state.usersState.bulkDeletePending}
           onClick={() => (state.usersState.bulkDeleteOpen = true)}
@@ -245,8 +246,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel="Reload"
-          tooltip="Reload"
+          ariaLabel={t('common.reload')}
+          tooltip={t('common.reload')}
           disabled={state.usersState.loading}
           onClick={() => void state.usersState.load()}>
           {#snippet icon()}
@@ -259,18 +260,18 @@
       {/snippet}
       {@const adminTabs = [
         {
-          label: 'Properties',
+          label: t('admin.tab.properties'),
           path: PROPERTIES_PATH,
           content: propertiesContent,
         },
         {
-          label: 'Documents',
+          label: t('admin.tab.documents'),
           path: DOCUMENTS_PATH,
           toolbar: documentsToolbar,
           content: documentsContent,
         },
         {
-          label: 'Users',
+          label: t('admin.tab.users'),
           path: USERS_PATH,
           toolbar: usersToolbar,
           content: usersContent,
@@ -281,7 +282,7 @@
           tabs={adminTabs}
           state={{ settingsState, documentsState, usersState }}
           pathname={page.url.pathname}
-          ariaLabel="Admin sections" />
+          ariaLabel={t('admin.sections')} />
       </div>
     {/if}
     {#if children}{@render children()}{/if}
@@ -290,9 +291,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title="Discard unsaved settings changes?"
-    message="Your unsaved changes to application properties will be lost."
-    confirmLabel="Discard"
+    title={t('admin.discardSettingsTitle')}
+    message={t('admin.discardSettingsMessage')}
+    confirmLabel={t('admin.discard')}
     confirmColor="amber"
     onConfirm={handleDiscardAndNavigate}
     onCancel={handleCancelDiscard} />

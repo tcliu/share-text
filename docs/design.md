@@ -17,9 +17,11 @@ The page is split into two vertical panes.
 
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
-    document**, **Refresh**, and — depending on sign-in state — **Login**,
-    **Profile** + **Sign out** (signed-in user), or **Admin console** + **Sign
-    out** (signed-in admin) icon buttons (all with tooltips).
+    document**, **Refresh**, a **Language** (globe) button that opens the
+    language picker, and — depending on sign-in state — **Login**, **Profile**
+    + **Sign out** (signed-in user), or **Admin console** + **Sign out**
+    (signed-in admin) icon buttons (all with tooltips). The language picker also
+    appears on the collapsed rail.
   - The pane lists the documents the visitor can view — public documents, their
     own documents, and documents shared with them — most recently edited first.
     New documents are added to the list automatically.
@@ -77,6 +79,18 @@ document name and type selector, then the tag chips, then the action buttons —
   **Preview view** toggles and the **Copy**, **Read aloud**, **Clone**, **Tags**,
   **Copy link**, **Share** (for the document's owner), **Delete** (only on
   documents you own), **Reset**, and **Save** buttons.
+
+## Language
+
+- The interface can be shown in English (default), Simplified Chinese, or
+  Traditional Chinese. The **Language** (globe) button in the document-list
+  header (also on the collapsed rail) opens a menu listing the three languages
+  in their own script; the active one is marked.
+- The choice is remembered on the device: the next visit opens in the selected
+  language. Both the browser app and the admin console are translated, so
+  switching the language also switches the admin tabs, toolbars, dialogs, and
+  login page. Messages returned by the server (validation errors, setting
+  descriptions) remain English.
 
 ## Navigation
 

@@ -11,6 +11,7 @@
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { DOCUMENT_TYPE_VALUES, getDocumentType } from '$lib/document-types'
   import type { AdminDocumentSummary } from '$lib/admin'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     mode?: 'add' | 'edit'
@@ -137,7 +138,7 @@
 {#snippet detailsContent()}
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     {#if mode === 'edit'}
-      <FormField label="Key" htmlFor="document-key">
+      <FormField label={t('admin.documents.key')} htmlFor="document-key">
         <input
           id="document-key"
           bind:value={key}
@@ -146,7 +147,7 @@
           class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
       </FormField>
     {/if}
-    <FormField label="Name" htmlFor="document-name">
+    <FormField label={t('admin.documents.name')} htmlFor="document-name">
       <input
         id="document-name"
         bind:this={nameInput}
@@ -155,17 +156,17 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label="Document Type">
+    <FormField label={t('editor.documentType')}>
       <SelectDropdown
         buttonLabel={getDocumentType(documentType).label}
         options={typeOptions}
         activeValue={documentType}
-        ariaLabel="Document type"
+        ariaLabel={t('editor.documentType')}
         filterable={true}
         onSelect={value => (documentType = value)} />
     </FormField>
     {#if mode === 'edit'}
-      <FormField label="Created by" htmlFor="document-created-by">
+      <FormField label={t('admin.documents.createdBy')} htmlFor="document-created-by">
         <input
           id="document-created-by"
           bind:value={createdBy}
@@ -173,7 +174,7 @@
           autocomplete="off"
           class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
       </FormField>
-      <FormField label="Updated by" htmlFor="document-updated-by">
+      <FormField label={t('admin.documents.updatedBy')} htmlFor="document-updated-by">
         <input
           id="document-updated-by"
           bind:value={updatedBy}
@@ -190,7 +191,7 @@
     {#if contentLoading}
       <div
         class="flex h-full items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400">
-        Loading content...
+        {t('admin.dialog.loadingContent')}
       </div>
     {:else}
       <LazyCodeEditor
@@ -200,13 +201,13 @@
         recreateKey={mode === 'edit' && document ? document.id : 'add'}
         containerClass="h-full"
         editorClass="h-full rounded-lg border border-slate-700 bg-slate-950"
-        editorAriaLabel="Document content" />
+        editorAriaLabel={t('admin.dialog.documentContent')} />
     {/if}
   </div>
 {/snippet}
 
 <BaseDialog
-  title={mode === 'add' ? 'Add Document' : 'Edit Document'}
+  title={mode === 'add' ? t('admin.dialog.addDocument') : t('admin.dialog.editDocument')}
   maxWidth="3xl"
   onCancel={handleCancelRequest}
   dismissKeydownCapture={!discardPromptOpen}
@@ -214,18 +215,18 @@
   <div class="flex min-h-0 flex-col gap-4">
     <Tabs
       tabs={[
-        { label: 'Details', path: 'details', content: detailsContent },
-        { label: 'Content', path: 'content', content: contentTab },
+        { label: t('admin.dialog.details'), path: 'details', content: detailsContent },
+        { label: t('admin.dialog.content'), path: 'content', content: contentTab },
       ]}
       state={{}}
-      ariaLabel="Edit document sections" />
+      ariaLabel={t('admin.dialog.documentSections')} />
     <Buttons>
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
-          {mode === 'add' ? 'Create' : 'OK'}
+          {mode === 'add' ? t('admin.dialog.create') : t('common.ok')}
         </Button>
         {#if mode === 'edit'}
-          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>Reset</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{t('common.reset')}</Button>
         {/if}
       {/snippet}
     </Buttons>
@@ -234,9 +235,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="You have unsaved changes to this document that will be lost."
-    confirmLabel="Discard"
+    title={t('admin.dialog.discardTitle')}
+    message={t('admin.dialog.discardDocument')}
+    confirmLabel={t('admin.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

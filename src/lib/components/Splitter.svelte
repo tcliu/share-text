@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { t } from '$lib/i18n.svelte'
+
   interface Props {
     value: number
     min: number
@@ -18,12 +20,14 @@
     max,
     onChange,
     onDragEnd,
-    ariaLabel = 'Resize split panes',
+    ariaLabel,
     className = '',
     lineClass = '',
     unit = 'px',
     orientation = 'vertical',
   }: Props = $props()
+
+  const resolvedAriaLabel = $derived(ariaLabel ?? t('splitter.resize'))
 
   let handleRef = $state<HTMLElement | null>(null)
   let dragging = $state(false)
@@ -104,7 +108,7 @@
   bind:this={handleRef}
   role="separator"
   aria-orientation={orientation}
-  aria-label={ariaLabel}
+  aria-label={resolvedAriaLabel}
   aria-valuenow={value}
   aria-valuemin={min}
   aria-valuemax={max}

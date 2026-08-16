@@ -12,6 +12,7 @@
   import FormField from './FormField.svelte'
   import { tagChipClass, tagChipStyle, tagRemoveBtnClass, tagRemoveBtnStyle, getDefaultTagColor } from '$lib/tag-colors'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     open: boolean
@@ -171,21 +172,21 @@
 
 {#if open}
   <BaseDialog
-    title="Sharing"
+    title={t('share.title')}
     maxWidth="lg"
     onCancel={handleCancelRequest}
     dismissKeydownCapture={!discardPromptOpen}
     pending={pending}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-      <Checkbox bind:checked={draftIsPublic} name="isPublic" label="Anyone with the link can view" />
+      <Checkbox bind:checked={draftIsPublic} name="isPublic" label={t('share.anyoneWithLink')} />
 
-      <FormField label="Shared with" htmlFor="share-user-input">
+      <FormField label={t('share.sharedWith')} htmlFor="share-user-input">
         <Combobox
           bind:this={comboboxRef}
           id="share-user-input"
           selected={shareeOptions}
           suggestions={userSuggestions}
-          placeholder="Add by username or email"
+          placeholder={t('share.addByUsernameOrEmail')}
           onQueryChange={handleQueryChange}
           onAdd={item => addSharee(item.value)}
           onRemove={removeSharee}>
@@ -197,7 +198,7 @@
               style={tagChipStyle(color)}
               removeButtonClass={tagRemoveBtnClass()}
               removeButtonStyle={tagRemoveBtnStyle(color)}
-              ariaLabel={`Remove ${item.label}`}
+              ariaLabel={t('share.remove', { name: item.label })}
               onRemove={() => remove(item.value)} />
           {/snippet}
         </Combobox>
@@ -205,8 +206,8 @@
 
       <Buttons>
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} pending={pending}>OK</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>Reset</Button>
+          <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} pending={pending}>{t('common.ok')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{t('common.reset')}</Button>
         {/snippet}
       </Buttons>
     </div>
@@ -215,9 +216,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="You have unsaved sharing changes that will be lost."
-    confirmLabel="Discard"
+    title={t('share.discardTitle')}
+    message={t('share.discardMessage')}
+    confirmLabel={t('share.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

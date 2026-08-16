@@ -1,6 +1,7 @@
 <script lang="ts">
   import Tooltip from './Tooltip.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     label: string
@@ -18,7 +19,7 @@
     label,
     chipClass,
     style = '',
-    ariaLabel = `Remove ${label}`,
+    ariaLabel,
     removeButtonClass = '',
     removeButtonStyle = '',
     tooltip,
@@ -31,7 +32,7 @@
   <span {style} class={`${chipClass} inline-flex items-center gap-1`}>
     {label}
     {#if onRemove}
-      <button type="button" aria-label={ariaLabel} onclick={onRemove} {disabled} style={removeButtonStyle} class={removeButtonClass}>
+      <button type="button" aria-label={ariaLabel ?? t('combobox.remove', { name: label })} onclick={onRemove} {disabled} style={removeButtonStyle} class={removeButtonClass}>
         <CloseIcon className="h-2.5 w-2.5" />
       </button>
     {/if}

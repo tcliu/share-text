@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Component } from 'svelte'
   import type { PreviewProps } from '$lib/document-types'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     preview: () => Promise<Component<PreviewProps>>
@@ -24,7 +25,7 @@
       })
       .catch(error => {
         if (!cancelled) {
-          loadError = error instanceof Error ? error.message : 'Failed to load preview'
+          loadError = error instanceof Error ? error.message : t('preview.loadFailed')
         }
       })
 
@@ -38,6 +39,6 @@
   <PreviewComponent {content} {docType} {onContentChange} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
-    {loadError || 'Loading preview...'}
+    {loadError || t('preview.loading')}
   </div>
 {/if}

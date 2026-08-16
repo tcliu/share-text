@@ -1,6 +1,7 @@
 <script lang="ts">
   import { marked } from 'marked'
   import type { PreviewProps } from '$lib/document-types'
+  import { t } from '$lib/i18n.svelte'
 
   let { content }: PreviewProps = $props()
 
@@ -109,7 +110,7 @@
 </script>
 
 <iframe
-  title="Markdown preview"
+  title={t('preview.markdown')}
   sandbox="allow-same-origin"
   srcdoc={srcdoc}
   class="h-full w-full bg-slate-950"></iframe>

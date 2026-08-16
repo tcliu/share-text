@@ -17,6 +17,7 @@
   import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
   import ShareDialog from '$lib/components/ShareDialog.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   let { data }: PageProps = $props()
 
@@ -116,7 +117,7 @@
       content = document.content
       docType = document.documentType
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load document')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.loadFailed'))
     } finally {
       refreshing = false
     }
@@ -182,7 +183,7 @@
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
-      toast.error('Cannot save: ' + (validation.error ?? `Invalid ${currentType.label}`))
+      toast.error(t('doc.toast.cannotSave', { error: validation.error ?? t('doc.toast.invalidType', { label: currentType.label }) }))
       return
     }
     saving = true
@@ -199,11 +200,11 @@
       documentUpdatedBy = updated.updatedBy
       content = updated.content
       docType = updated.documentType
-      toast.success('Document saved')
+      toast.success(t('doc.toast.saved'))
       await context.refreshList()
       await refreshVersions()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save document')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.saveFailed'))
     } finally {
       saving = false
     }
@@ -225,10 +226,10 @@
       documentUpdatedAt = updated.updatedAt
       documentUpdatedBy = updated.updatedBy
       documentTags = updated.tags ?? []
-      toast.success('Document renamed')
+      toast.success(t('doc.toast.renamed'))
       await context.refreshList()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.renameFailed'))
     } finally {
       renaming = false
     }
@@ -245,15 +246,15 @@
   async function handleClone() {
     if (!currentId || cloning) return
     cloning = true
-    const cloneName = documentName ? `${documentName} (copy)` : 'Untitled'
+    const cloneName = documentName ? t('doc.copySuffix', { name: documentName }) : t('doc.untitled')
     try {
       saveDraft(NEW_DOCUMENT_DRAFT_ID, content, docType, cloneName)
       if (context.canLeaveCurrentDocument()) {
-        toast.success('Cloned to new document')
+        toast.success(t('doc.toast.cloned'))
       }
       await goto(`/${NEW_DOCUMENT_DRAFT_ID}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to clone document')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.cloneFailed'))
     } finally {
       cloning = false
     }
@@ -273,10 +274,10 @@
       savedContent = updated.content
       content = updated.content
       docType = updated.documentType
-      toast.success('Tags updated')
+      toast.success(t('doc.toast.tagsUpdated'))
       await context.refreshList()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save tags')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.tagsSaveFailed'))
     } finally {
       savingTags = false
     }
@@ -298,7 +299,7 @@
       accessSharedWith = state.sharedWith
       shareOpen = true
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load sharing settings')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.shareLoadFailed'))
     }
   }
 
@@ -310,10 +311,10 @@
       accessIsPublic = state.isPublic
       accessSharedWith = state.sharedWith
       context.updateDocumentSummary(currentId, { isPublic: state.isPublic })
-      toast.success('Sharing updated')
+      toast.success(t('doc.toast.shareUpdated'))
       shareOpen = false
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update sharing settings')
+      toast.error(error instanceof Error ? error.message : t('doc.toast.shareUpdateFailed'))
     } finally {
       shareSaving = false
     }

@@ -13,6 +13,7 @@
     tagRemoveBtnStyle,
     type Tag,
   } from '$lib/tag-colors'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     value: Tag[]
@@ -21,7 +22,7 @@
     placeholder?: string
   }
 
-  let { value = $bindable([] as Tag[]), availableTags, id, placeholder = 'Select or type tags...' }: Props = $props()
+  let { value = $bindable([] as Tag[]), availableTags, id, placeholder }: Props = $props()
 
   let inputQuery = $state('')
 
@@ -85,7 +86,7 @@
 <Combobox
   bind:this={comboboxRef}
   {id}
-  {placeholder}
+  placeholder={placeholder ?? t('tags.placeholder')}
   selected={tagOptions}
   suggestions={filteredTags}
   onQueryChange={query => (inputQuery = query)}
@@ -98,7 +99,7 @@
       style={tagChipStyle(colorFor(item.value))}
       removeButtonClass={tagRemoveBtnClass()}
       removeButtonStyle={tagRemoveBtnStyle(colorFor(item.value))}
-      ariaLabel={`Remove ${item.label}`}
+      ariaLabel={t('combobox.remove', { name: item.label })}
       onRemove={() => remove(item.value)} />
   {/snippet}
   {#snippet option(tag: ComboboxOption)}

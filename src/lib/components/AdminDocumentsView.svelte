@@ -15,6 +15,7 @@
   import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
@@ -35,10 +36,10 @@
     return tags?.map(tag => tag.name).join(', ') ?? ''
   }
 
-  const columns: DataTableColumn<AdminDocumentSummary>[] = [
+  const columns = $derived.by<DataTableColumn<AdminDocumentSummary>[]>(() => [
     {
       key: 'id',
-      header: 'Key',
+      header: t('admin.documents.key'),
       width: '10%',
       minWidth: 160,
       cellClass: 'max-w-0',
@@ -48,7 +49,7 @@
     },
     {
       key: 'name',
-      header: 'Name',
+      header: t('admin.documents.name'),
       width: '17%',
       minWidth: 160,
       cellClass: 'max-w-0',
@@ -58,7 +59,7 @@
     },
     {
       key: 'documentType',
-      header: 'Type',
+      header: t('admin.documents.type'),
       width: '9%',
       sortable: true,
       searchable: true,
@@ -66,7 +67,7 @@
     },
     {
       key: 'tags',
-      header: 'Tags',
+      header: t('editor.tags'),
       width: '14%',
       cellClass: 'max-w-0',
       searchable: true,
@@ -74,7 +75,7 @@
     },
     {
       key: 'length',
-      header: 'Length',
+      header: t('admin.documents.length'),
       width: '8%',
       cellClass: 'text-slate-400',
       sortable: true,
@@ -82,7 +83,7 @@
     },
     {
       key: 'createdBy',
-      header: 'Created by',
+      header: t('admin.documents.createdBy'),
       width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -92,7 +93,7 @@
     },
     {
       key: 'updatedBy',
-      header: 'Updated by',
+      header: t('admin.documents.updatedBy'),
       width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -102,14 +103,14 @@
     },
     {
       key: 'access',
-      header: 'Access',
+      header: t('admin.documents.access'),
       width: '8%',
       minWidth: 96,
       cell: accessCell,
     },
     {
       key: 'updatedAt',
-      header: 'Updated time',
+      header: t('admin.documents.updatedTime'),
       width: '12%',
       minWidth: 144,
       cellClass: 'text-slate-400',
@@ -118,12 +119,12 @@
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('admin.documents.actions'),
       width: '8%',
       minWidth: 96,
       cell: actionsCell,
     },
-  ]
+  ])
 </script>
 
 <DataTable
@@ -131,12 +132,12 @@
   rowId={document => document.id}
   {columns}
   loading={documentsState.loading}
-  emptyMessage={documentsState.searchQuery ? 'No documents match your filter.' : 'No documents yet.'}
+  emptyMessage={documentsState.searchQuery ? t('admin.documents.noMatches') : t('admin.documents.empty')}
   bind:searchValue={() => documentsState.searchInput, value => (documentsState.searchInput = value)}
   onSearchInput={() => documentsState.handleSearchInput()}
   onSearchKeydown={event => documentsState.handleSearchKeydown(event)}
-  searchAriaLabel="Search all documents"
-  searchPlaceholder="Search documents..."
+  searchAriaLabel={t('admin.documents.searchAria')}
+  searchPlaceholder={t('list.searchDocumentsPlaceholder')}
   bind:searchKeys={() => documentsState.searchKeys, keys => (documentsState.searchKeys = keys)}
   selectable
   selectedIds={documentsState.selectedIds}
@@ -144,8 +145,8 @@
   onToggleAll={() => documentsState.toggleAllOnCurrentPage()}
   allSelected={documentsState.currentPageAllSelected}
   someSelected={documentsState.currentPageSomeSelected}
-  rowSelectAriaLabel={document => `Select document ${document.name}`}
-  selectAllAriaLabel="Select all documents"
+  rowSelectAriaLabel={document => t('admin.selectDocument', { name: document.name })}
+  selectAllAriaLabel={t('admin.documents.selectAll')}
   total={documentsState.total}
   pageSize={documentsState.pageSize}
   currentPage={documentsState.page}
@@ -190,7 +191,7 @@
     <Copyable
       text={document.documentType}
       className="text-slate-400 capitalize"
-      copyAriaLabel={`Copy document type ${document.documentType}`} />
+      copyAriaLabel={t('admin.copyDocumentType', { name: document.documentType })} />
   {:else}
     <PlainCell value={document.documentType} className="capitalize text-slate-400" />
   {/if}
@@ -210,7 +211,7 @@
       <Copyable
         text={formatTags(document.tags)}
         className="block text-slate-400"
-        copyAriaLabel={`Copy tags for ${document.name}`}>
+        copyAriaLabel={t('admin.copyTagsFor', { name: document.name })}>
         {@render tagsChips(document)}
       </Copyable>
     {:else}
@@ -228,7 +229,7 @@
     <Copyable
       text={document.createdBy}
       className="block truncate text-slate-400"
-      copyAriaLabel={`Copy created by ${document.createdBy}`} />
+      copyAriaLabel={t('admin.copyCreatedBy', { name: document.createdBy })} />
   {:else}
     <PlainCell value={document.createdBy} className="text-slate-400" />
   {/if}
@@ -239,7 +240,7 @@
     <Copyable
       text={document.updatedBy}
       className="block truncate text-slate-400"
-      copyAriaLabel={`Copy updated by ${document.updatedBy}`} />
+      copyAriaLabel={t('admin.copyUpdatedBy', { name: document.updatedBy })} />
   {:else}
     <PlainCell value={document.updatedBy} className="text-slate-400" />
   {/if}
@@ -252,7 +253,7 @@
         ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
         : 'border-slate-700 bg-slate-950 text-slate-400'
     }`}>
-    {document.isPublic ? 'Public' : 'Private'}
+    {document.isPublic ? t('common.public') : t('list.private')}
   </span>
 {/snippet}
 
@@ -264,8 +265,8 @@
   <div class="flex items-center gap-1">
     <Button
       size="sm"
-      ariaLabel={`Edit document ${document.name}`}
-      tooltip="Edit"
+      ariaLabel={t('admin.editDocument', { name: document.name })}
+      tooltip={t('common.edit')}
       onClick={() => documentsState.openEdit(document)}>
       {#snippet icon()}
         <EditIcon />
@@ -295,9 +296,11 @@
 
 {#if documentsState.bulkDeleteOpen}
   <ConfirmDialog
-    title={`Delete ${documentsState.selectedCount} document${documentsState.selectedCount === 1 ? '' : 's'}?`}
-    message="The selected documents will be permanently deleted for everyone."
-    confirmLabel="Delete"
+    title={documentsState.selectedCount === 1
+      ? t('admin.deleteDocumentsTitle', { count: documentsState.selectedCount })
+      : t('admin.deleteDocumentsTitlePlural', { count: documentsState.selectedCount })}
+    message={t('admin.deleteDocumentsMessage')}
+    confirmLabel={t('common.delete')}
     confirmColor="rose"
     onConfirm={() => void documentsState.confirmBulkDelete()}
     onCancel={() => (documentsState.bulkDeleteOpen = false)} />
