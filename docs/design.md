@@ -28,11 +28,9 @@ The page is split into two vertical panes.
     name, tags, or id with a case-insensitive substring; with an empty query the
     full list is shown.
   - A scrollable list of documents, each row a link to `/{doc-id}`. The row
-    matching the current URL is highlighted. Rows show the document name (with
-    a copy-on-hover button), a non-text type chip, a **Private** lock badge on
-    non-public documents, and — only on rows you own (created anonymously from
-    your client IP, or claimed by your account) — a **Delete** icon button (with
-    tooltip). The admin **Documents** tab can delete any document.
+    matching the current URL is highlighted. Rows show the plain document name
+    label, a non-text type chip, and a **Private** lock badge on non-public
+    documents. The admin **Documents** tab can delete any document.
   - Rows use a small font.
   - Single-click navigates to the document.
   - The list loads more documents via infinite scroll when scrolling near the
@@ -44,13 +42,16 @@ The page is split into two vertical panes.
   - When nothing is selected (`/`), an empty-state message prompts the user to
     select or create a document.
   - When a document is selected (`/{doc-id}`), it shows:
-    - a header row with the editable document name, a document type selector
+    - a header row with the document name — editable for users with edit
+      access, otherwise a copy-on-hover label — a document type selector
       dropdown, and visible tag chips on the left, and a toolbar on the right
       with icon buttons (all with tooltips): an **Editor view** toggle and a
       **Preview view** toggle, type-specific **Format**/convert actions,
       **History** (when the document has multiple versions), **Copy**,
       **Read aloud**, **Clone**, **Upload**, **Export**, **Tags**, **Copy link**,
-      **Share** (for the document's owner), **Reset**, and **Save**,
+      **Share** (for the document's owner), **Delete** (only on documents you
+      own — created anonymously from your client IP, or claimed by your
+      account), **Reset**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
@@ -71,11 +72,11 @@ name opens a left slide-out drawer with the document list; the drawer closes on
 its collapse button, on Escape, on tapping the dark backdrop, and after
 navigating to a document. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
-and the action row opens with a three-dot (kebab) menu holding **Upload**,
-**Export**, **History**, and **Format**, followed by the **Editor view** /
-**Preview view** toggles and the **Copy**, **Read aloud**, **Clone**, **Tags**,
-**Copy link**, **Share** (for the document's owner), **Reset**, and **Save**
-buttons.
+  and the action row opens with a three-dot (kebab) menu holding **Upload**,
+  **Export**, **History**, and **Format**, followed by the **Editor view** /
+  **Preview view** toggles and the **Copy**, **Read aloud**, **Clone**, **Tags**,
+  **Copy link**, **Share** (for the document's owner), **Delete** (only on
+  documents you own), **Reset**, and **Save** buttons.
 
 ## Navigation
 
@@ -88,6 +89,7 @@ buttons.
 ## Editing And Saving
 
 - Typing in the editor marks the document dirty.
+- `Tab` inserts two spaces; `Shift+Tab` reverts it by removing the whitespace right before the cursor (up to two characters), or by un-indenting the line's leading indent when the cursor has no trailing whitespace, so indentation edits round-trip with the keyboard.
 - **Save** persists `{ content }` with a `PUT`, updates the list order (most
   recently edited first), shows a toast, and clears any stored draft. `Ctrl+S`
   (or `Cmd+S` on macOS) triggers the same save when the document is dirty.
@@ -327,13 +329,21 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   (created from their client IP). Registered users can additionally edit any
   public or shared document, and can delete and manage only the documents they
   own.
-- A **Share** toolbar button opens the **Sharing dialog** on documents you own:
-  a checkbox toggles **Anyone with the link can view** (public/private), and a
-  searchable combobox adds or removes users shared with the document. Applying
-  the dialog updates the document immediately; dismissing it with unsaved edits
-  asks for confirmation before discarding them. Documents default to public;
-  making one private hides it from everyone except you and the users you share
-  it with.
+- A **Share** toolbar button opens the **Sharing dialog** on documents you
+  manage access to — only signed-in owners and admins (anonymous creators
+  cannot manage access). A checkbox toggles **Anyone with the link can view**
+  (public/private), and a combobox adds or removes users shared with the
+  document. For normal users the combobox suggests only the active users they
+  have previously shared with (never the full user directory) and filters them
+  as you type; to share with someone new, type their exact username or email.
+  Clicking **OK** applies everything at once or nothing at all: if any entry
+  cannot be resolved, an error message lists the offending entries, nothing is
+  saved, and the dialog stays open until you correct them. An admin can search
+  any registered user (including inactive accounts) and share with them.
+  Applying the dialog updates the document immediately; dismissing it with
+  unsaved edits asks for confirmation before discarding them. Documents
+  default to public; making one private hides it from everyone except you and
+  the users you share it with.
 - Private documents carry a **Private** lock badge in the list and cannot be
   opened by anonymous visitors or by users who are not shared with them.
 
