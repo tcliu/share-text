@@ -12,14 +12,14 @@ const profile = resolveScriptProfile()
 const sql = await readFile(new URL('../sql/schema.sql', import.meta.url), 'utf8')
 
 if (profile === 'dev') {
-  const { DatabaseSync } = await import('node:sqlite')
+  const { default: Database } = await import('better-sqlite3')
   const path = getSqlitePath()
 
   if (path !== ':memory:') {
     mkdirSync(dirname(path), { recursive: true })
   }
 
-  const database = new DatabaseSync(path)
+  const database = new Database(path)
   database.exec(toSqliteSql(sql))
   database.close()
 
