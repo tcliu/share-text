@@ -111,6 +111,8 @@ describe('admin layout route tabs', () => {
     expect(propertiesLink.getAttribute('aria-current')).toBeNull()
     expect(documentsLink.getAttribute('aria-current')).toBe('page')
 
+    expect(getByLabelText('Edit selected document')).toBeTruthy()
+    expect((getByLabelText('Edit selected document') as HTMLButtonElement).disabled).toBe(true)
     expect(getByLabelText('Delete selected')).toBeTruthy()
     await waitFor(() => {
       expect(getByText('Doc A')).toBeTruthy()

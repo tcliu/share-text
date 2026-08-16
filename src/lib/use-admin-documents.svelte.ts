@@ -9,9 +9,11 @@ import {
   importAdminDocuments,
   updateAdminDocument,
   type AdminDocumentSummary,
+  type AdminSharee,
 } from '$lib/admin'
 import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
+import { arraysEqualUnordered } from '$lib/array-utils'
 import { t } from '$lib/i18n.svelte'
 
 export function useAdminDocuments(params: {
@@ -35,6 +37,8 @@ export function useAdminDocuments(params: {
   let editTarget = $state<AdminDocumentSummary | null>(null)
   let editContent = $state('')
   let editContentLoading = $state(false)
+  let editContentFailed = $state(false)
+  let editSharedWith = $state<AdminSharee[]>([])
   let editLoadToken = 0
   let saving = $state(false)
   let importOpen = $state(false)
@@ -72,6 +76,8 @@ export function useAdminDocuments(params: {
     editTarget = null
     editContent = ''
     editContentLoading = false
+    editContentFailed = false
+    editSharedWith = []
     editLoadToken += 1
     saving = false
     importOpen = false
@@ -241,6 +247,8 @@ export function useAdminDocuments(params: {
     editTarget = null
     editContent = ''
     editContentLoading = false
+    editContentFailed = false
+    editSharedWith = []
     dialogOpen = true
   }
 
@@ -250,6 +258,8 @@ export function useAdminDocuments(params: {
     editTarget = document
     editContent = ''
     editContentLoading = true
+    editContentFailed = false
+    editSharedWith = []
     dialogOpen = true
     void loadEditContent(document.id, editLoadToken)
   }
@@ -261,10 +271,13 @@ export function useAdminDocuments(params: {
         return
       }
       editContent = full.content
+      editSharedWith = full.sharedWith ?? []
+      editContentFailed = false
     } catch (error) {
       if (token !== editLoadToken) {
         return
       }
+      editContentFailed = true
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadDocumentContent'))
       }
@@ -275,6 +288,21 @@ export function useAdminDocuments(params: {
     }
   }
 
+  // The toolbar Edit button is context-sensitive: with exactly one row
+  // selected it resolves that document from the current page's list and opens
+  // the edit dialog. There is no batch edit for multiple selections, so the
+  // button stays disabled unless exactly one row is selected.
+  function handleToolbarEdit() {
+    if (selectedCount !== 1) {
+      return
+    }
+    const id = [...selectedIds][0]
+    const document = documents.find(document => document.id === id)
+    if (document) {
+      openEdit(document)
+    }
+  }
+
   function closeEdit() {
     if (saving) {
       return
@@ -282,6 +310,7 @@ export function useAdminDocuments(params: {
     dialogOpen = false
     editTarget = null
     editContent = ''
+    editSharedWith = []
   }
 
   async function saveDocument(input: {
@@ -291,6 +320,8 @@ export function useAdminDocuments(params: {
     key?: string
     createdBy?: string
     updatedBy?: string
+    isPublic?: boolean
+    sharedWith?: string[]
   }) {
     saving = true
     try {
@@ -306,6 +337,13 @@ export function useAdminDocuments(params: {
         if (!target) {
           return
         }
+        const sharesChanged =
+          input.sharedWith !== undefined &&
+          !arraysEqualUnordered(
+            input.sharedWith,
+            editSharedWith.map(user => user.username),
+          )
+        const visibilityChanged = input.isPublic !== undefined && input.isPublic !== target.isPublic
         await updateAdminDocument(target.id, {
           name: input.name,
           key: input.key,
@@ -313,12 +351,15 @@ export function useAdminDocuments(params: {
           updatedBy: input.updatedBy,
           content: input.content,
           documentType: input.documentType,
+          ...(visibilityChanged ? { isPublic: input.isPublic } : {}),
+          ...(sharesChanged ? { sharedWith: input.sharedWith } : {}),
         })
         toast.success(t('admin.documents.updated'))
       }
       dialogOpen = false
       editTarget = null
       editContent = ''
+      editSharedWith = []
       void load()
       onAdminChange()
     } catch (error) {
@@ -434,6 +475,12 @@ export function useAdminDocuments(params: {
     get editContentLoading() {
       return editContentLoading
     },
+    get editContentFailed() {
+      return editContentFailed
+    },
+    get editSharedWith() {
+      return editSharedWith
+    },
     get saving() {
       return saving
     },
@@ -474,6 +521,7 @@ export function useAdminDocuments(params: {
     exportRecords,
     openAdd,
     openEdit,
+    handleToolbarEdit,
     closeEdit,
     saveDocument,
     updateKey,

@@ -177,6 +177,16 @@
         </Button>
         <Button
           size="sm"
+          ariaLabel={t('admin.documents.editSelected')}
+          tooltip={t('admin.documents.editSelected')}
+          disabled={state.documentsState.selectedCount !== 1}
+          onClick={() => state.documentsState.handleToolbarEdit()}>
+          {#snippet icon()}
+            <EditIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
           ariaLabel={t('admin.deleteSelected')}
           tooltip={t('admin.deleteSelected')}
           disabled={state.documentsState.selectedCount === 0}

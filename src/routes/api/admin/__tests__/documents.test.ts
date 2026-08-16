@@ -7,6 +7,9 @@ const documentsMocks = vi.hoisted(() => ({
   deleteDocument: vi.fn(),
   updateDocument: vi.fn(),
   normalizeDocumentKey: vi.fn(),
+  getDocumentAccess: vi.fn(),
+  setDocumentAccess: vi.fn(),
+  missingSharees: vi.fn(),
 }))
 
 vi.mock('$lib/server/documents', async () => {
@@ -19,6 +22,9 @@ vi.mock('$lib/server/documents', async () => {
     deleteDocument: documentsMocks.deleteDocument,
     updateDocument: documentsMocks.updateDocument,
     normalizeDocumentKey: documentsMocks.normalizeDocumentKey,
+    getDocumentAccess: documentsMocks.getDocumentAccess,
+    setDocumentAccess: documentsMocks.setDocumentAccess,
+    missingSharees: documentsMocks.missingSharees,
   }
 })
 
@@ -85,7 +91,9 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('forwards sortBy and order parameters', async () => {
-    const response = await listGET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=asc') } as never)
+    const response = await listGET({
+      url: new URL('http://localhost/api/admin/documents?sortBy=name&order=asc'),
+    } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
@@ -94,7 +102,9 @@ describe('GET /api/admin/documents', () => {
   })
 
   it('ignores an invalid order parameter', async () => {
-    const response = await listGET({ url: new URL('http://localhost/api/admin/documents?sortBy=name&order=sideways') } as never)
+    const response = await listGET({
+      url: new URL('http://localhost/api/admin/documents?sortBy=name&order=sideways'),
+    } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.listDocumentsForAdmin).toHaveBeenCalledWith(
@@ -112,15 +122,40 @@ describe('GET /api/admin/documents/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     documentsMocks.fetchDocumentForAdmin.mockResolvedValue({ ...summary, content: 'hello world' })
+    documentsMocks.getDocumentAccess.mockResolvedValue({
+      isPublic: true,
+      sharedWith: [
+        { id: 1, username: 'alice', email: 'alice@example.com', status: 'active' },
+        { id: 2, username: 'bob', email: 'bob@example.com', status: 'inactive' },
+      ],
+    })
   })
 
-  it('returns the document with its content', async () => {
+  it('returns the document with its content and shared-with list', async () => {
     const response = await GET({ params: { id: 'a1b2c3' } } as never)
 
     expect(response.status).toBe(200)
     expect(documentsMocks.fetchDocumentForAdmin).toHaveBeenCalledWith('a1b2c3')
+    expect(documentsMocks.getDocumentAccess).toHaveBeenCalledWith('a1b2c3')
     await expect(response.json()).resolves.toEqual({
-      document: { ...summary, content: 'hello world' },
+      document: {
+        ...summary,
+        content: 'hello world',
+        sharedWith: [
+          { id: 1, username: 'alice', email: 'alice@example.com', status: 'active' },
+          { id: 2, username: 'bob', email: 'bob@example.com', status: 'inactive' },
+        ],
+      },
+    })
+  })
+
+  it('returns an empty shared-with list when the document has no access row', async () => {
+    documentsMocks.getDocumentAccess.mockResolvedValueOnce(null)
+    const response = await GET({ params: { id: 'a1b2c3' } } as never)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({
+      document: { ...summary, content: 'hello world', sharedWith: [] },
     })
   })
 
@@ -146,6 +181,9 @@ describe('PUT /api/admin/documents/[id]', () => {
       updatedAt: '2026-08-03T00:00:00.000Z',
       updatedBy: '203.0.113.9',
     })
+    documentsMocks.getDocumentAccess.mockResolvedValue({ isPublic: true, sharedWith: [] })
+    documentsMocks.setDocumentAccess.mockResolvedValue({ isPublic: true, sharedWith: [] })
+    documentsMocks.missingSharees.mockResolvedValue([])
   })
 
   it('renames a document and returns the refreshed admin view', async () => {
@@ -166,7 +204,7 @@ describe('PUT /api/admin/documents/[id]', () => {
       document: {
         id: 'a1b2c3',
         name: 'Renamed',
-  tags: [{ name: 'alpha', color: '#00F0FF' }],
+        tags: [{ name: 'alpha', color: '#00F0FF' }],
         documentType: 'text',
         createdBy: '10.0.0.1',
         updatedBy: '203.0.113.9',
@@ -217,6 +255,124 @@ describe('PUT /api/admin/documents/[id]', () => {
       getClientAddress: () => '203.0.113.9',
     } as never)
     expect(response.status).toBe(400)
+  })
+
+  it('replaces the share list via setDocumentAccess when sharedWith is provided', async () => {
+    documentsMocks.getDocumentAccess.mockResolvedValueOnce({
+      isPublic: true,
+      sharedWith: [{ id: 1, username: 'bob', email: 'bob@example.com', status: 'active' }],
+    })
+    documentsMocks.setDocumentAccess.mockResolvedValueOnce({
+      isPublic: true,
+      sharedWith: [
+        { id: 1, username: 'bob', email: 'bob@example.com', status: 'active' },
+        { id: 2, username: 'carol', email: 'carol@example.com', status: 'active' },
+      ],
+    })
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sharedWith: ['bob', 'carol'] }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.missingSharees).toHaveBeenCalledWith(['bob', 'carol'], true)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { by: '203.0.113.9' })
+    expect(documentsMocks.setDocumentAccess).toHaveBeenCalledWith(
+      'a1b2c3',
+      { sharedWith: ['bob', 'carol'] },
+      { includeInactive: true },
+    )
+  })
+
+  it('applies shares against the renamed key when key and sharedWith change together', async () => {
+    documentsMocks.updateDocument.mockResolvedValueOnce({
+      id: 'newname',
+      name: 'Notes',
+      content: 'hello world',
+      documentType: 'text',
+      tags: [],
+      updatedAt: '2026-08-03T00:00:00.000Z',
+      updatedBy: '203.0.113.9',
+    })
+    documentsMocks.getDocumentAccess.mockResolvedValueOnce({ isPublic: true, sharedWith: [] })
+    documentsMocks.setDocumentAccess.mockResolvedValueOnce({ isPublic: true, sharedWith: [] })
+
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key: 'newname', sharedWith: ['bob'] }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(200)
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { key: 'newname', by: '203.0.113.9' })
+    expect(documentsMocks.getDocumentAccess).toHaveBeenCalledWith('newname')
+    expect(documentsMocks.setDocumentAccess).toHaveBeenCalledWith(
+      'newname',
+      { sharedWith: ['bob'] },
+      { includeInactive: true },
+    )
+  })
+
+  it('rejects a sharedWith list exceeding the sharee cap with 400', async () => {
+    const many = Array.from({ length: 101 }, (_, i) => `user${i}`)
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sharedWith: many }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'A document can be shared with at most 100 users',
+    })
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
+    expect(documentsMocks.setDocumentAccess).not.toHaveBeenCalled()
+  })
+
+  it('rejects unresolvable sharees with 400 before updating', async () => {
+    documentsMocks.missingSharees.mockResolvedValueOnce(['nobody'])
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sharedWith: ['bob', 'nobody'] }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'Not shared: nobody', missing: ['nobody'] })
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
+    expect(documentsMocks.setDocumentAccess).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-array sharedWith with 400', async () => {
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sharedWith: 'bob' }),
+      }),
+      getClientAddress: () => '203.0.113.9',
+    } as never)
+
+    expect(response.status).toBe(400)
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
   })
 
   it('returns 400 when updatedBy is blank', async () => {

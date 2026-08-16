@@ -33,7 +33,25 @@ const documents = [
 
 function mockFetch() {
   return vi.fn().mockImplementation((url: string) => {
-    if (String(url).includes('/api/admin/documents')) {
+    const path = String(url)
+    if (path.includes('/api/admin/documents/')) {
+      const id = path.split('/').pop()
+      const summary = documents.find(d => d.id === id)
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          document: summary
+            ? {
+                ...summary,
+                content: '# hello',
+                sharedWith: [{ id: 1, username: 'alice', email: 'alice@example.com', status: 'active' }],
+              }
+            : undefined,
+        }),
+      })
+    }
+    if (path.includes('/api/admin/documents')) {
       return Promise.resolve({
         ok: true,
         status: 200,
@@ -73,5 +91,49 @@ describe('useAdminDocuments reset', () => {
     expect(state!.searchQuery).toBe('')
     expect(state!.sortBy).toBe('updatedAt')
     expect(state!.sortDir).toBe('desc')
+  })
+
+  it('opens the edit dialog for the single selected document via handleToolbarEdit', async () => {
+    let state: AdminDocumentsState | null = null
+    render(AdminDocumentsStateHost, { props: { onReady: s => (state = s) } })
+
+    await waitFor(() => expect(state!.loaded).toBe(true))
+
+    state!.toggleSelection(documents[0].id, true)
+    expect(state!.selectedCount).toBe(1)
+
+    state!.handleToolbarEdit()
+
+    expect(state!.dialogOpen).toBe(true)
+    expect(state!.dialogMode).toBe('edit')
+    expect(state!.editTarget?.id).toBe(documents[0].id)
+    await waitFor(() => expect(state!.editSharedWith).toHaveLength(1))
+    expect(state!.editSharedWith[0].username).toBe('alice')
+  })
+
+  it('does nothing when multiple documents are selected', async () => {
+    let state: AdminDocumentsState | null = null
+    render(AdminDocumentsStateHost, { props: { onReady: s => (state = s) } })
+
+    await waitFor(() => expect(state!.loaded).toBe(true))
+
+    state!.toggleSelection(documents[0].id, true)
+    state!.toggleSelection(documents[1].id, true)
+    expect(state!.selectedCount).toBe(2)
+
+    state!.handleToolbarEdit()
+
+    expect(state!.dialogOpen).toBe(false)
+  })
+
+  it('does nothing when no documents are selected', async () => {
+    let state: AdminDocumentsState | null = null
+    render(AdminDocumentsStateHost, { props: { onReady: s => (state = s) } })
+
+    await waitFor(() => expect(state!.loaded).toBe(true))
+
+    state!.handleToolbarEdit()
+
+    expect(state!.dialogOpen).toBe(false)
   })
 })
