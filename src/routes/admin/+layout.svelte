@@ -176,6 +176,16 @@
         </Button>
         <Button
           size="sm"
+          ariaLabel="Edit selected document"
+          tooltip="Edit selected document"
+          disabled={state.documentsState.selectedCount !== 1}
+          onClick={() => state.documentsState.handleToolbarEdit()}>
+          {#snippet icon()}
+            <EditIcon />
+          {/snippet}
+        </Button>
+        <Button
+          size="sm"
           ariaLabel="Delete selected"
           tooltip="Delete selected"
           disabled={state.documentsState.selectedCount === 0}

@@ -133,9 +133,7 @@
   }
 
   const sizeClass = $derived(
-    maxWidth === 'fit'
-      ? 'w-fit max-w-[90vw]'
-      : `w-full max-w-[90vw] ${maxWidthClasses[maxWidth] ?? 'max-w-md'}`,
+    maxWidth === 'fit' ? 'w-fit max-w-[90vw]' : `w-full max-w-[90vw] ${maxWidthClasses[maxWidth] ?? 'max-w-md'}`,
   )
   $effect(() => {
     if (!dismissKeydownCapture) {
@@ -157,18 +155,16 @@
   onclick={handleCancelRequest}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class={fullscreen ? 'h-full' : 'flex min-h-full items-center justify-center'}
-    onclick={e => e.stopPropagation()}>
+  <div class={fullscreen ? 'h-full' : 'flex min-h-full items-center justify-center'} onclick={e => e.stopPropagation()}>
     <div
-        bind:this={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={!header && title ? titleId : undefined}
-        tabindex="-1"
-        class="relative flex flex-col overflow-y-auto outline-none {fullscreen
-          ? 'h-full w-full bg-slate-900 p-5.5'
-          : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
+      bind:this={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={!header && title ? titleId : undefined}
+      tabindex="-1"
+      class="relative flex flex-col overflow-hidden outline-none {fullscreen
+        ? 'h-full w-full bg-slate-900 p-5.5'
+        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
       <button
         type="button"
         aria-label="Close dialog"
@@ -184,7 +180,7 @@
           {title}
         </h2>
       {/if}
-      <div class="mt-4 flex min-h-0 flex-col">
+      <div class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {@render children?.()}
       </div>
     </div>

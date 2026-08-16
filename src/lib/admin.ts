@@ -39,6 +39,17 @@ export interface AdminDocument extends AdminDocumentSummary {
   content: string
 }
 
+export interface AdminSharee {
+  id: number
+  username: string
+  email: string
+  status: AdminUserStatus
+}
+
+export interface AdminDocumentDetail extends AdminDocument {
+  sharedWith: AdminSharee[]
+}
+
 export interface AdminDocumentListResponse {
   documents: AdminDocumentSummary[]
   total: number
@@ -185,6 +196,7 @@ export async function updateAdminDocument(
     isPublic?: boolean
     content?: string
     documentType?: string
+    sharedWith?: string[]
   },
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
@@ -210,9 +222,9 @@ export async function createAdminDocument(input: {
   return body.document
 }
 
-export async function fetchAdminDocument(id: string): Promise<AdminDocument> {
+export async function fetchAdminDocument(id: string): Promise<AdminDocumentDetail> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`)
-  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to load document')
+  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, 'Failed to load document')
   return body.document
 }
 

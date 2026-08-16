@@ -5,8 +5,6 @@
   import EditableText from './EditableText.svelte'
   import EditDocumentDialog from './EditDocumentDialog.svelte'
   import ImportDialog from './ImportDialog.svelte'
-  import Button from './Button.svelte'
-  import EditIcon from '$lib/icons/EditIcon.svelte'
   import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import type { AdminDocumentSummary } from '$lib/admin'
   import Chip from './Chip.svelte'
@@ -24,7 +22,7 @@
 
   // Touch devices have no hover, so the inline copy/edit icons would be
   // permanently visible and noisy; show plain values instead (editing stays
-  // available via the row Edit button).
+  // available via the toolbar Edit button).
   const supportsHover = useSupportsHover()
 
   function formatSize(value: number) {
@@ -115,13 +113,6 @@
       cellClass: 'text-slate-400',
       sortable: true,
       cell: updatedAtCell,
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      width: '8%',
-      minWidth: 96,
-      cell: actionsCell,
     },
   ]
 </script>
@@ -260,26 +251,14 @@
   {formatTimestamp(document.updatedAt)}
 {/snippet}
 
-{#snippet actionsCell(document: AdminDocumentSummary)}
-  <div class="flex items-center gap-1">
-    <Button
-      size="sm"
-      ariaLabel={`Edit document ${document.name}`}
-      tooltip="Edit"
-      onClick={() => documentsState.openEdit(document)}>
-      {#snippet icon()}
-        <EditIcon />
-      {/snippet}
-    </Button>
-  </div>
-{/snippet}
-
 {#if documentsState.dialogOpen}
   <EditDocumentDialog
     mode={documentsState.dialogMode}
     document={documentsState.editTarget}
     content={documentsState.editContent}
     contentLoading={documentsState.editContentLoading}
+    contentFailed={documentsState.editContentFailed}
+    sharedWith={documentsState.editSharedWith}
     pending={documentsState.saving}
     onSave={input => void documentsState.saveDocument(input)}
     onClose={() => documentsState.closeEdit()} />
