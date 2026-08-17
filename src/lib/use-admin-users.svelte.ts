@@ -12,6 +12,7 @@ import {
 } from '$lib/admin'
 import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
+import { t } from '$lib/i18n.svelte'
 
 export type UserDialogMode = 'add' | 'edit'
 
@@ -108,7 +109,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
       }
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load users')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadUsers'))
       }
     } finally {
       loading = false
@@ -147,12 +148,16 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     importPending = true
     try {
       const imported = await importAdminUsers(records)
-      toast.success(`${imported.length} user${imported.length === 1 ? '' : 's'} imported`)
+      toast.success(
+        imported.length === 1
+          ? t('admin.users.imported', { count: imported.length })
+          : t('admin.users.importedPlural', { count: imported.length }),
+      )
       importOpen = false
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to import users')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.importUsers'))
       }
     } finally {
       importPending = false
@@ -164,10 +169,14 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     try {
       const records = await exportAdminUsers(selectedIds.size > 0 ? [...selectedIds].map(Number) : undefined)
       downloadJson('users-export.json', records)
-      toast.success(`${records.length} user${records.length === 1 ? '' : 's'} exported`)
+      toast.success(
+        records.length === 1
+          ? t('admin.users.exported', { count: records.length })
+          : t('admin.users.exportedPlural', { count: records.length }),
+      )
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to export users')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.exportUsers'))
       }
     } finally {
       exportPending = false
@@ -198,7 +207,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
           password: input.password,
           status: input.status,
         })
-        toast.success('User created')
+        toast.success(t('admin.users.userCreated'))
       } else {
         const id = dialogUser?.id
         if (id === undefined) {
@@ -210,14 +219,14 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
           password: input.password || undefined,
           status: input.status,
         })
-        toast.success('User updated')
+        toast.success(t('admin.users.updated'))
       }
       dialogOpen = false
       dialogUser = null
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to save user')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.saveUser'))
       }
     } finally {
       saving = false
@@ -259,12 +268,17 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     bulkStatusPending = true
     try {
       await Promise.all(ids.map(id => updateAdminUser(Number(id), { status })))
-      toast.success(`${ids.length} user${ids.length === 1 ? '' : 's'} ${status === 'active' ? 'enabled' : 'disabled'}`)
+      toast.success(
+        t(ids.length === 1 ? 'admin.users.statusUpdated' : 'admin.users.statusUpdatedPlural', {
+          count: ids.length,
+          state: status === 'active' ? t('admin.enabled') : t('admin.disabled'),
+        }),
+      )
       selectedIds = new Set()
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update users')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.updateUsers'))
       }
     } finally {
       bulkStatusPending = false
@@ -296,11 +310,11 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     }
     try {
       await updateAdminUser(id, { username: value })
-      toast.success('Username updated')
+      toast.success(t('admin.users.usernameUpdated'))
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update user')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.updateUser'))
       }
     }
   }
@@ -312,11 +326,11 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     }
     try {
       await updateAdminUser(id, { email: value })
-      toast.success('Email updated')
+      toast.success(t('admin.users.emailUpdated'))
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update user')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.updateUser'))
       }
     }
   }
@@ -335,11 +349,15 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
         next.delete(id)
       }
       selectedIds = next
-      toast.success(`${ids.length} user${ids.length === 1 ? '' : 's'} deleted`)
+      toast.success(
+        ids.length === 1
+          ? t('admin.users.deleted', { count: ids.length })
+          : t('admin.users.deletedPlural', { count: ids.length }),
+      )
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete users')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.deleteUsers'))
       }
     } finally {
       bulkDeletePending = false

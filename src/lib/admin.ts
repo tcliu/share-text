@@ -1,7 +1,8 @@
 import type { Tag } from './tag-colors'
+import { t } from './i18n.svelte'
 
 export class AdminAuthError extends Error {
-  constructor(message = 'Admin authentication required') {
+  constructor(message = t('admin.auth.required')) {
     super(message)
     this.name = 'AdminAuthError'
   }
@@ -112,22 +113,22 @@ export async function login(username: string, password: string, rememberMe = fal
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password, rememberMe }),
   })
-  await parseResponse<{ ok: boolean }>(response, 'Failed to sign in')
+  await parseResponse<{ ok: boolean }>(response, t('auth.toast.signInFailed'))
 }
 
 export async function fetchAdminSession(): Promise<AdminSessionInfo> {
   const response = await fetch(`${BASE_PATH}/session`)
-  return parseResponse<AdminSessionInfo>(response, 'Failed to check session')
+  return parseResponse<AdminSessionInfo>(response, t('admin.auth.toast.checkFailed'))
 }
 
 export async function logout(): Promise<void> {
   const response = await fetch(`${BASE_PATH}/logout`, { method: 'POST' })
-  await parseResponse<{ ok: boolean }>(response, 'Failed to sign out')
+  await parseResponse<{ ok: boolean }>(response, t('auth.toast.signOutFailed'))
 }
 
 export async function fetchAdminSettings(): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`)
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, 'Failed to load settings')
+  const body = await parseResponse<{ settings: AdminSetting[] }>(response, t('admin.auth.toast.loadSettings'))
   return body.settings
 }
 
@@ -139,7 +140,7 @@ export async function updateAdminSettings(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ settings }),
   })
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, 'Failed to save settings')
+  const body = await parseResponse<{ settings: AdminSetting[] }>(response, t('admin.auth.toast.saveSettings'))
   return body.settings
 }
 
@@ -182,7 +183,7 @@ export async function fetchAdminDocuments(
   const url = queryString ? `${BASE_PATH}/documents?${queryString}` : `${BASE_PATH}/documents`
 
   const response = await fetch(url)
-  const body = await parseResponse<AdminDocumentListResponse>(response, 'Failed to load documents')
+  const body = await parseResponse<AdminDocumentListResponse>(response, t('admin.auth.toast.loadDocuments'))
   return body
 }
 
@@ -204,7 +205,7 @@ export async function updateAdminDocument(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to update document')
+  const body = await parseResponse<{ document: AdminDocument }>(response, t('admin.auth.toast.updateDocument'))
   return body.document
 }
 
@@ -218,19 +219,19 @@ export async function createAdminDocument(input: {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, 'Failed to create document')
+  const body = await parseResponse<{ document: AdminDocument }>(response, t('admin.auth.toast.createDocument'))
   return body.document
 }
 
 export async function fetchAdminDocument(id: string): Promise<AdminDocumentDetail> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`)
-  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, 'Failed to load document')
+  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, t('admin.auth.toast.loadDocument'))
   return body.document
 }
 
 export async function deleteAdminDocument(id: string): Promise<void> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, { method: 'DELETE' })
-  await parseResponse(response, 'Failed to delete document')
+  await parseResponse(response, t('admin.auth.toast.deleteDocument'))
 }
 
 export async function importAdminDocuments(records: unknown[]): Promise<AdminDocumentSummary[]> {
@@ -239,7 +240,7 @@ export async function importAdminDocuments(records: unknown[]): Promise<AdminDoc
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ records }),
   })
-  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, 'Failed to import documents')
+  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, t('admin.auth.toast.importDocuments'))
   return body.documents
 }
 
@@ -278,7 +279,7 @@ export async function fetchAdminUsers(
   const url = queryString ? `${BASE_PATH}/users?${queryString}` : `${BASE_PATH}/users`
 
   const response = await fetch(url)
-  const body = await parseResponse<AdminUserListResponse>(response, 'Failed to load users')
+  const body = await parseResponse<AdminUserListResponse>(response, t('admin.auth.toast.loadUsers'))
   return body
 }
 
@@ -293,7 +294,7 @@ export async function createAdminUser(input: {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
   })
-  const body = await parseResponse<{ user: AdminUser }>(response, 'Failed to create user')
+  const body = await parseResponse<{ user: AdminUser }>(response, t('admin.auth.toast.createUser'))
   return body.user
 }
 
@@ -306,13 +307,13 @@ export async function updateAdminUser(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ user: AdminUser }>(response, 'Failed to update user')
+  const body = await parseResponse<{ user: AdminUser }>(response, t('admin.auth.toast.updateUser'))
   return body.user
 }
 
 export async function deleteAdminUser(id: number): Promise<void> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, { method: 'DELETE' })
-  await parseResponse(response, 'Failed to delete user')
+  await parseResponse(response, t('admin.auth.toast.deleteUser'))
 }
 
 export async function importAdminUsers(records: unknown[]): Promise<AdminUser[]> {
@@ -321,7 +322,7 @@ export async function importAdminUsers(records: unknown[]): Promise<AdminUser[]>
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ records }),
   })
-  const body = await parseResponse<{ users: AdminUser[] }>(response, 'Failed to import users')
+  const body = await parseResponse<{ users: AdminUser[] }>(response, t('admin.auth.toast.importUsers'))
   return body.users
 }
 
@@ -334,7 +335,7 @@ export async function exportAdminDocuments(ids?: string[]): Promise<AdminDocumen
   const url = queryString ? `${BASE_PATH}/documents/export?${queryString}` : `${BASE_PATH}/documents/export`
 
   const response = await fetch(url)
-  return parseResponse<AdminDocumentExportRecord[]>(response, 'Failed to export documents')
+  return parseResponse<AdminDocumentExportRecord[]>(response, t('admin.auth.toast.exportDocuments'))
 }
 
 export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportRecord[]> {
@@ -346,5 +347,5 @@ export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportR
   const url = queryString ? `${BASE_PATH}/users/export?${queryString}` : `${BASE_PATH}/users/export`
 
   const response = await fetch(url)
-  return parseResponse<AdminUserExportRecord[]>(response, 'Failed to export users')
+  return parseResponse<AdminUserExportRecord[]>(response, t('admin.auth.toast.exportUsers'))
 }

@@ -10,6 +10,7 @@
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import type { AdminUser } from '$lib/admin'
   import type { UserDialogInput } from '$lib/use-admin-users.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     mode: 'add' | 'edit'
@@ -91,13 +92,13 @@
 </script>
 
 <BaseDialog
-  title={mode === 'add' ? 'Add User' : 'Edit User'}
+  title={mode === 'add' ? t('admin.dialog.addUser') : t('admin.dialog.editUser')}
   maxWidth="md"
   onCancel={handleCancelRequest}
   dismissKeydownCapture={!discardPromptOpen}
   pending={pending}>
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-    <FormField label="Username" htmlFor="user-username">
+    <FormField label={t('admin.users.username')} htmlFor="user-username">
       <input
         id="user-username"
         bind:this={usernameInput}
@@ -106,7 +107,7 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label="Email" htmlFor="user-email">
+    <FormField label={t('admin.users.email')} htmlFor="user-email">
       <input
         id="user-email"
         bind:value={email}
@@ -114,30 +115,30 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label="Password" htmlFor="user-password">
+    <FormField label={t('auth.password')} htmlFor="user-password">
       <PasswordInput id="user-password" bind:value={password} disabled={pending} />
       {#if mode === 'edit'}
-        <p class="mt-1 text-xs text-slate-400">Leave blank to keep the current password.</p>
+        <p class="mt-1 text-xs text-slate-400">{t('admin.users.passwordHint')}</p>
       {/if}
     </FormField>
-    <FormField label="Status">
+    <FormField label={t('admin.users.status')}>
       <SelectDropdown
-        buttonLabel={active ? 'Active' : 'Inactive'}
+        buttonLabel={active ? t('admin.active') : t('admin.inactive')}
         options={[
-          { value: 'active', label: 'Active' },
-          { value: 'inactive', label: 'Inactive' },
+          { value: 'active', label: t('admin.active') },
+          { value: 'inactive', label: t('admin.inactive') },
         ]}
         activeValue={active ? 'active' : 'inactive'}
-        ariaLabel="Status"
+        ariaLabel={t('admin.users.status')}
         onSelect={value => (active = value === 'active')} />
     </FormField>
     <Buttons>
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} pending={pending}>
-          {mode === 'add' ? 'Create' : 'OK'}
+          {mode === 'add' ? t('admin.dialog.create') : t('common.ok')}
         </Button>
         {#if mode === 'edit'}
-          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>Reset</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{t('common.reset')}</Button>
         {/if}
       {/snippet}
     </Buttons>
@@ -146,9 +147,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="You have unsaved changes to this user that will be lost."
-    confirmLabel="Discard"
+    title={t('admin.dialog.discardTitle')}
+    message={t('admin.dialog.discardUser')}
+    confirmLabel={t('admin.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { positionPanel } from '$lib/position-panel.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Option {
     value: string
@@ -217,7 +218,7 @@
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
       class={`fixed left-0 top-0 z-50 will-change-transform ${panelClass}`}>
       {#if filteredOptions.length === 0}
-        <div class={emptyClass}>No options</div>
+        <div class={emptyClass}>{t('dropdown.noOptions')}</div>
       {/if}
       {#each filteredOptions as option, index}
         <button

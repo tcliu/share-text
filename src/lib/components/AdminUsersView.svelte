@@ -12,6 +12,7 @@
   import { formatTimestamp } from '$lib/date-format'
   import PlainCell from './PlainCell.svelte'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     usersState: ReturnType<typeof useAdminUsers>
@@ -24,10 +25,10 @@
   // available via the toolbar Edit button).
   const supportsHover = useSupportsHover()
 
-  const columns: DataTableColumn<AdminUser>[] = [
+  const columns = $derived.by<DataTableColumn<AdminUser>[]>(() => [
     {
       key: 'id',
-      header: 'ID',
+      header: t('admin.users.id'),
       width: '8%',
       minWidth: 72,
       sortable: true,
@@ -35,7 +36,7 @@
     },
     {
       key: 'username',
-      header: 'Username',
+      header: t('admin.users.username'),
       width: '20%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -45,7 +46,7 @@
     },
     {
       key: 'email',
-      header: 'Email',
+      header: t('admin.users.email'),
       width: '28%',
       minWidth: 200,
       cellClass: 'max-w-0',
@@ -55,7 +56,7 @@
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('admin.users.status'),
       width: '14%',
       minWidth: 96,
       sortable: true,
@@ -63,14 +64,14 @@
     },
     {
       key: 'createdAt',
-      header: 'Created',
+      header: t('admin.users.created'),
       width: '18%',
       minWidth: 144,
       cellClass: 'text-slate-400',
       sortable: true,
       cell: createdAtCell,
     },
-  ]
+  ])
 </script>
 
 <DataTable
@@ -78,12 +79,12 @@
   rowId={user => String(user.id)}
   {columns}
   loading={usersState.loading}
-  emptyMessage={usersState.searchQuery ? 'No users match your filter.' : 'No users yet.'}
+  emptyMessage={usersState.searchQuery ? t('admin.users.noMatches') : t('admin.users.empty')}
   bind:searchValue={() => usersState.searchInput, value => (usersState.searchInput = value)}
   onSearchInput={() => usersState.handleSearchInput()}
   onSearchKeydown={event => usersState.handleSearchKeydown(event)}
-  searchAriaLabel="Search all users"
-  searchPlaceholder="Search users..."
+  searchAriaLabel={t('admin.users.searchAria')}
+  searchPlaceholder={t('admin.users.searchPlaceholder')}
   bind:searchKeys={() => usersState.searchKeys, keys => (usersState.searchKeys = keys)}
   selectable
   selectedIds={usersState.selectedIds}
@@ -91,8 +92,8 @@
   onToggleAll={() => usersState.toggleAllOnCurrentPage()}
   allSelected={usersState.currentPageAllSelected}
   someSelected={usersState.currentPageSomeSelected}
-  rowSelectAriaLabel={user => `Select user ${user.username}`}
-  selectAllAriaLabel="Select all users"
+  rowSelectAriaLabel={user => t('admin.selectUser', { name: user.username })}
+  selectAllAriaLabel={t('admin.users.selectAll')}
   total={usersState.total}
   pageSize={usersState.pageSize}
   currentPage={usersState.page}
@@ -142,7 +143,7 @@
         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
         : 'border-slate-700 bg-slate-950 text-slate-400'
     }`}>
-    {user.status === 'active' ? 'Active' : 'Inactive'}
+    {user.status === 'active' ? t('admin.active') : t('admin.inactive')}
   </span>
 {/snippet}
 
@@ -169,13 +170,15 @@
 
 {#if usersState.bulkStatusOpen}
   <BaseDialog
-    title="Set status"
+    title={t('admin.users.setStatus')}
     maxWidth="md"
     onCancel={() => (usersState.bulkStatusOpen = false)}
     pending={usersState.bulkStatusPending}>
     <div class="flex flex-col gap-4">
       <p class="text-sm text-slate-400">
-        Set status for {usersState.selectedCount} selected user{usersState.selectedCount === 1 ? '' : 's'}:
+        {usersState.selectedCount === 1
+          ? t('admin.users.setStatusFor', { count: usersState.selectedCount })
+          : t('admin.users.setStatusForPlural', { count: usersState.selectedCount })}
       </p>
       <Buttons>
         {#snippet children()}
@@ -184,14 +187,14 @@
             accent="emerald"
             pending={usersState.bulkStatusPending}
             onClick={() => void usersState.setBulkStatus('active')}>
-            Set Active
+            {t('admin.users.setActive')}
           </Button>
           <Button
             variant="outline"
             accent="amber"
             pending={usersState.bulkStatusPending}
             onClick={() => void usersState.setBulkStatus('inactive')}>
-            Set Inactive
+            {t('admin.users.setInactive')}
           </Button>
         {/snippet}
       </Buttons>
@@ -201,9 +204,11 @@
 
 {#if usersState.bulkDeleteOpen}
   <ConfirmDialog
-    title={`Delete ${usersState.selectedCount} user${usersState.selectedCount === 1 ? '' : 's'}?`}
-    message="The selected users will be deleted permanently. Their documents become anonymous and sharing entries are removed."
-    confirmLabel="Delete"
+    title={usersState.selectedCount === 1
+      ? t('admin.deleteUsersTitle', { count: usersState.selectedCount })
+      : t('admin.deleteUsersTitlePlural', { count: usersState.selectedCount })}
+    message={t('admin.deleteUsersMessage')}
+    confirmLabel={t('common.delete')}
     confirmColor="rose"
     onConfirm={() => void usersState.confirmBulkDelete()}
     onCancel={() => (usersState.bulkDeleteOpen = false)} />

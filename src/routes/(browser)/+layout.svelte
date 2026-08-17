@@ -17,6 +17,8 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import ProfileDialog from '$lib/components/ProfileDialog.svelte'
+  import LanguageMenu from '$lib/components/LanguageMenu.svelte'
+  import { t } from '$lib/i18n.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
@@ -266,29 +268,30 @@
 <div class="flex h-dvh overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
-      <Button size="sm" ariaLabel="Show document list" tooltip="Show document list" ariaExpanded={!leftPaneCollapsed} onClick={toggleLeftPane}>
+      <Button size="sm" ariaLabel={t('list.showDocumentList')} tooltip={t('list.showDocumentList')} ariaExpanded={!leftPaneCollapsed} onClick={toggleLeftPane}>
         {#snippet icon()}
           <ChevronsRightIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel="New document" tooltip="New document" onClick={handleNew}>
+      <Button size="sm" ariaLabel={t('list.newDocument')} tooltip={t('list.newDocument')} onClick={handleNew}>
         {#snippet icon()}
           <PlusIcon />
         {/snippet}
       </Button>
       <Button
         size="sm"
-        ariaLabel="Refresh"
-        tooltip="Refresh"
+        ariaLabel={t('list.refresh')}
+        tooltip={t('list.refresh')}
         onClick={handleRefresh}
         disabled={documentsState.loadingDocuments}>
         {#snippet icon()}
           <RefreshIcon />
         {/snippet}
       </Button>
+      <LanguageMenu />
       {#if profileIdentity}
         {#if isAdminIdentity}
-          <Button size="sm" ariaLabel="Admin console" tooltip="Admin console" onClick={() => goto('/admin')}>
+          <Button size="sm" ariaLabel={t('list.adminConsole')} tooltip={t('list.adminConsole')} onClick={() => goto('/admin')}>
             {#snippet icon()}
               <AdminIcon />
             {/snippet}
@@ -296,15 +299,15 @@
         {/if}
         <Button
           size="sm"
-          ariaLabel="Sign out"
-          tooltip={`Signed in as ${profileIdentity.username}`}
+          ariaLabel={t('list.signOut')}
+          tooltip={t('list.signedInAs', { name: profileIdentity.username })}
           onClick={() => void handleSignOut()}>
           {#snippet icon()}
             <SignOutIcon />
           {/snippet}
         </Button>
       {:else}
-        <Button size="sm" ariaLabel="Login" tooltip="Login" onClick={() => goto('/login')}>
+        <Button size="sm" ariaLabel={t('list.login')} tooltip={t('list.login')} onClick={() => goto('/login')}>
           {#snippet icon()}
             <PersonIcon />
           {/snippet}
@@ -342,9 +345,9 @@
 
 {#if editorGuardState.discardDialogOpen}
   <ConfirmDialog
-    title="Discard unsaved changes?"
-    message="This document has unsaved changes that will be lost."
-    confirmLabel="OK"
+    title={t('discard.title')}
+    message={t('discard.message')}
+    confirmLabel={t('common.ok')}
     confirmColor="amber"
     onConfirm={handleConfirmDiscard}
     onCancel={editorGuardState.handleCancelDiscard} />
@@ -352,9 +355,9 @@
 
 {#if deleteTarget !== null}
   <ConfirmDialog
-    title="Delete document?"
-    message="This document will be permanently deleted."
-    confirmLabel="Delete"
+    title={t('delete.title')}
+    message={t('delete.message')}
+    confirmLabel={t('common.delete')}
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />

@@ -4,6 +4,7 @@
   import CopyButton from './CopyButton.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import { SPLIT_PANE_MAX_WIDTH } from '$lib/split-pane'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     text: string
@@ -163,7 +164,7 @@
       onkeydown={(e) => { e.stopPropagation(); handleKeydown(e) }}
       onblur={commit}
       data-escape-capture
-      aria-label="Edit text"
+      aria-label={t('edit.editText')}
       style={inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'}
       class={`text-${size} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500`} />
   </div>
@@ -173,7 +174,7 @@
       bind:this={displayBtn}
       type="button"
       class={`text-${size} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
-      title="Double-click to edit"
+      title={t('edit.doubleClickToEdit')}
       onclick={(e) => { e.stopPropagation(); scheduleActivate() }}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
       ondblclick={handleTextDoubleClick}>
@@ -183,8 +184,8 @@
       <Button
         size="sm"
         variant="ghost"
-        ariaLabel="Edit"
-        tooltip="Edit"
+        ariaLabel={t('edit.edit')}
+        tooltip={t('edit.edit')}
         onClick={(e) => { e.stopPropagation(); startEdit() }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
         className="bg-transparent p-0 text-slate-400 hover:text-cyan-300">

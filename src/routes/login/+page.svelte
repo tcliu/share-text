@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import UserAuthPanel from '$lib/components/UserAuthPanel.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   function handleAuthenticated(admin = false) {
     void goto(admin ? '/admin/properties' : '/')
@@ -8,7 +9,7 @@
 </script>
 
 <svelte:head>
-  <title>Login</title>
+  <title>{t('auth.login')}</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">

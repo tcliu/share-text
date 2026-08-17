@@ -6,6 +6,7 @@
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { t } from '$lib/i18n.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
   interface Props {
@@ -14,11 +15,11 @@
 
   let { settingsState }: Props = $props()
 
-  const sourceLabels: Record<string, string> = {
-    database: 'Saved',
-    environment: 'Environment',
-    default: 'Default',
-  }
+  const sourceLabels = $derived<Record<string, string>>({
+    database: t('admin.source.saved'),
+    environment: t('admin.source.environment'),
+    default: t('admin.source.default'),
+  })
 </script>
 
 {#snippet formContent()}
@@ -42,7 +43,7 @@
             </span>
           </div>
           <p class="mt-0.5 text-xs text-slate-400">{setting.description}</p>
-          <p class="mt-0.5 text-xs text-slate-500">{setting.key} (env {setting.envKey})</p>
+          <p class="mt-0.5 text-xs text-slate-500">{setting.key} ({t('admin.env')} {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
           {#if setting.kind === 'string'}
@@ -64,8 +65,8 @@
           {#if setting.source === 'database'}
             <Button
               size="sm"
-              ariaLabel={`Revert ${setting.label} to environment/default`}
-              tooltip="Revert to environment/default"
+              ariaLabel={t('admin.revertLabelToDefault', { name: setting.label })}
+              tooltip={t('admin.revertToDefault')}
               tooltipAlign="right"
               disabled={settingsState.pending}
               onClick={() => void settingsState.resetSetting(setting)}
@@ -88,11 +89,11 @@
 <div class="flex min-h-0 flex-1 flex-col gap-4">
   <Tabs
     tabs={[
-      { label: 'Form', path: 'form', content: formContent },
-      { label: 'Properties', path: 'properties', content: codeContent },
+      { label: t('admin.properties.form'), path: 'form', content: formContent },
+      { label: t('admin.tab.properties'), path: 'properties', content: codeContent },
     ]}
     state={{}}
-    ariaLabel="Properties views" />
+    ariaLabel={t('admin.propertiesViews')} />
 
   <Buttons>
     {#snippet children()}
@@ -102,13 +103,13 @@
         disabled={!settingsState.hasUnsavedChanges || settingsState.pending}
         pending={settingsState.pending}
         onClick={() => void settingsState.apply()}>
-        Apply
+        {t('common.apply')}
       </Button>
-      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>Reload</Button>
+      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>{t('common.reload')}</Button>
       <Button
         disabled={settingsState.pending || !settingsState.hasUnsavedChanges}
         onClick={() => settingsState.resetDraft()}>
-        Reset
+        {t('common.reset')}
       </Button>
     {/snippet}
   </Buttons>

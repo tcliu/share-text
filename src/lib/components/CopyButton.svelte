@@ -2,6 +2,7 @@
   import { toast } from 'svelte-sonner'
   import Button from './Button.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     text: string
@@ -12,17 +13,20 @@
 
   let {
     text,
-    copyAriaLabel = 'Copy to clipboard',
-    copyTooltip = 'Copy',
+    copyAriaLabel,
+    copyTooltip,
     alwaysVisible = false,
   }: Props = $props()
+
+  const ariaLabel = $derived(copyAriaLabel ?? t('copy.toClipboard'))
+  const tooltip = $derived(copyTooltip ?? t('common.copy'))
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('Copied to clipboard')
+      toast.success(t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
     }
   }
 </script>
@@ -32,8 +36,8 @@
   <Button
     size="sm"
     variant="ghost"
-    ariaLabel={copyAriaLabel}
-    tooltip={copyTooltip}
+    ariaLabel={ariaLabel}
+    tooltip={tooltip}
     onClick={(e) => { e.preventDefault(); e.stopPropagation(); void handleCopy() }}
     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
     className="bg-transparent text-slate-400 hover:text-cyan-300">

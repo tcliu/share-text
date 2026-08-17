@@ -1,5 +1,6 @@
 import { toast } from 'svelte-sonner'
 import type { FormatSpec } from '$lib/document-types'
+import { t } from '$lib/i18n.svelte'
 
 export function useFormat(options: {
   format: () => FormatSpec | undefined
@@ -24,7 +25,7 @@ export function useFormat(options: {
     if (result.ok) {
       options.setContent(result.value ?? '')
     } else {
-      toast.error('Cannot format: ' + (result.error ?? `Invalid ${options.label()}`))
+      toast.error(t('editor.toast.cannotFormat', { error: result.error ?? t('doc.toast.invalidType', { label: options.label() }) }))
     }
     open = false
   }

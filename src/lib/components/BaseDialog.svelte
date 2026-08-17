@@ -5,6 +5,7 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     title?: string
@@ -167,7 +168,7 @@
         : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label={t('common.closeDialog')}
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
         class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none hover:text-slate-200 focus:text-slate-200 before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">

@@ -4,6 +4,7 @@
   import type { PreviewProps } from '$lib/document-types'
   import StructureTree from './StructureTree.svelte'
   import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from './structure-value'
+  import { t } from '$lib/i18n.svelte'
 
   let { content, onContentChange }: PreviewProps = $props()
 
@@ -23,14 +24,14 @@
       .then(result => {
         if (cancelled) return
         if (!result.ok) {
-          state = { status: 'error', error: result.error ?? 'Invalid content' }
+          state = { status: 'error', error: result.error ?? t('structure.invalidContent') }
           return
         }
         state = { status: 'ok', value: result.value }
       })
       .catch(error => {
         if (!cancelled) {
-          state = { status: 'error', error: error instanceof Error ? error.message : 'Invalid content' }
+          state = { status: 'error', error: error instanceof Error ? error.message : t('structure.invalidContent') }
         }
       })
     return () => {
@@ -44,7 +45,7 @@
     if (updated === state.value) return
     const serialized = await serialize(updated)
     if (serialized === null) {
-      toast.error('Failed to serialize changes')
+      toast.error(t('structure.serializeFailed'))
       return
     }
     state = { status: 'ok', value: canonicalValue(updated, serialized) }
@@ -57,7 +58,7 @@
     if (updated === state.value) return
     const serialized = await serialize(updated)
     if (serialized === null) {
-      toast.error('Failed to serialize changes')
+      toast.error(t('structure.serializeFailed'))
       return
     }
     state = { status: 'ok', value: canonicalValue(updated, serialized) }
@@ -95,9 +96,9 @@
 
 <div data-testid="structure-preview" class="h-full overflow-auto p-4 text-slate-300">
   {#if state.status === 'loading'}
-    <div class="text-sm text-slate-400">Loading preview…</div>
+    <div class="text-sm text-slate-400">{t('preview.loading')}</div>
   {:else if state.status === 'error'}
-    <div class="text-sm text-red-400">Unable to parse: {state.error}</div>
+    <div class="text-sm text-red-400">{t('structure.unableToParse', { error: state.error })}</div>
   {:else}
     <StructureTree
       value={state.value}

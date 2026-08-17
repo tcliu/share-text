@@ -2,6 +2,7 @@
   import BaseDialog from './BaseDialog.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
   import type { ProfileIdentity } from '$lib/documents'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     user: ProfileIdentity
@@ -11,7 +12,7 @@
   let { user, onClose }: Props = $props()
 </script>
 
-<BaseDialog title="Profile" maxWidth="md" onCancel={onClose}>
+<BaseDialog title={t('profile.title')} maxWidth="md" onCancel={onClose}>
   {#snippet children()}
     <div class="flex items-center gap-4">
       <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-slate-800 text-slate-300">

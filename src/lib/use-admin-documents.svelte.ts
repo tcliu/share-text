@@ -14,6 +14,7 @@ import {
 import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
 import { arraysEqualUnordered } from '$lib/array-utils'
+import { t } from '$lib/i18n.svelte'
 
 export function useAdminDocuments(params: {
   onSignedOut: () => void
@@ -114,7 +115,7 @@ export function useAdminDocuments(params: {
       }
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load documents')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadDocuments'))
       }
     } finally {
       loading = false
@@ -172,14 +173,18 @@ export function useAdminDocuments(params: {
         next.delete(id)
       }
       selectedIds = next
-      toast.success(`${ids.length} document${ids.length === 1 ? '' : 's'} deleted`)
+      toast.success(
+        ids.length === 1
+          ? t('admin.documents.deleted', { count: ids.length })
+          : t('admin.documents.deletedPlural', { count: ids.length }),
+      )
       void load()
       for (const id of ids) {
         onAdminDelete(id)
       }
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete documents')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.deleteDocuments'))
       }
     } finally {
       bulkDeletePending = false
@@ -201,13 +206,17 @@ export function useAdminDocuments(params: {
     importPending = true
     try {
       const imported = await importAdminDocuments(records)
-      toast.success(`${imported.length} document${imported.length === 1 ? '' : 's'} imported`)
+      toast.success(
+        imported.length === 1
+          ? t('admin.documents.imported', { count: imported.length })
+          : t('admin.documents.importedPlural', { count: imported.length }),
+      )
       importOpen = false
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to import documents')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.importDocuments'))
       }
     } finally {
       importPending = false
@@ -219,10 +228,14 @@ export function useAdminDocuments(params: {
     try {
       const records = await exportAdminDocuments(selectedIds.size > 0 ? [...selectedIds] : undefined)
       downloadJson('documents-export.json', records)
-      toast.success(`${records.length} document${records.length === 1 ? '' : 's'} exported`)
+      toast.success(
+        records.length === 1
+          ? t('admin.documents.exported', { count: records.length })
+          : t('admin.documents.exportedPlural', { count: records.length }),
+      )
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to export documents')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.exportDocuments'))
       }
     } finally {
       exportPending = false
@@ -266,7 +279,7 @@ export function useAdminDocuments(params: {
       }
       editContentFailed = true
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load document content')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadDocumentContent'))
       }
     } finally {
       if (token === editLoadToken) {
@@ -318,7 +331,7 @@ export function useAdminDocuments(params: {
           content: input.content,
           documentType: input.documentType,
         })
-        toast.success('Document created')
+        toast.success(t('admin.documents.created'))
       } else {
         const target = editTarget
         if (!target) {
@@ -341,7 +354,7 @@ export function useAdminDocuments(params: {
           ...(visibilityChanged ? { isPublic: input.isPublic } : {}),
           ...(sharesChanged ? { sharedWith: input.sharedWith } : {}),
         })
-        toast.success('Document updated')
+        toast.success(t('admin.documents.updated'))
       }
       dialogOpen = false
       editTarget = null
@@ -352,7 +365,11 @@ export function useAdminDocuments(params: {
     } catch (error) {
       if (!handleAuthError(error)) {
         toast.error(
-          error instanceof Error ? error.message : `Failed to ${dialogMode === 'add' ? 'create' : 'update'} document`,
+          error instanceof Error
+            ? error.message
+            : dialogMode === 'add'
+              ? t('admin.auth.toast.createDocument')
+              : t('admin.auth.toast.updateDocument'),
         )
       }
     } finally {
@@ -367,12 +384,12 @@ export function useAdminDocuments(params: {
     }
     try {
       await updateAdminDocument(id, { key: value })
-      toast.success('Document ID updated')
+      toast.success(t('admin.documents.idUpdated'))
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update document')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.updateDocument'))
       }
     }
   }
@@ -384,12 +401,12 @@ export function useAdminDocuments(params: {
     }
     try {
       await updateAdminDocument(id, { name: value })
-      toast.success('Document renamed')
+      toast.success(t('admin.documents.renamed'))
       void load()
       onAdminChange()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : 'Failed to rename document')
+        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.renameDocument'))
       }
     }
   }

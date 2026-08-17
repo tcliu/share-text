@@ -3,6 +3,7 @@ import { goto } from '$app/navigation'
 import type { OwnedDocumentSummary } from '$lib/documents'
 import { DEFAULT_DOCUMENTS_PAGE_SIZE, deleteDocument, fetchDocumentSummaries } from '$lib/documents'
 import { clearDraft } from '$lib/document-drafts'
+import { t } from '$lib/i18n.svelte'
 
 const DOCUMENT_SEARCH_KEYS = ['name', 'tags', 'id']
 
@@ -87,7 +88,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
       if (requestId !== listRequestId) {
         return
       }
-      documentsError = error instanceof Error ? error.message : 'Failed to load documents'
+      documentsError = error instanceof Error ? error.message : t('documents.toast.loadFailed')
     } finally {
       if (requestId === listRequestId) {
         loadingDocuments = false
@@ -124,12 +125,12 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     try {
       await deleteDocument(id)
       clearDraft(id)
-      toast.success('Document deleted')
+      toast.success(t('documents.toast.deleted'))
       await refreshList()
       options.onDocumentDeleted?.(id)
       return true
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete document')
+      toast.error(error instanceof Error ? error.message : t('documents.toast.deleteFailed'))
       return false
     }
   }

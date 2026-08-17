@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     open: boolean
@@ -8,7 +9,9 @@
     children?: import('svelte').Snippet
   }
 
-  let { open, onClose, ariaLabel = 'Document list', children }: Props = $props()
+  let { open, onClose, ariaLabel, children }: Props = $props()
+
+  const resolvedAriaLabel = $derived(ariaLabel ?? t('editor.documentList'))
 
   let panelRef = $state<HTMLElement | null>(null)
   let previouslyFocused: Element | null = null
@@ -80,7 +83,7 @@
       bind:this={panelRef}
       role="dialog"
       aria-modal="true"
-      aria-label={ariaLabel}
+      aria-label={resolvedAriaLabel}
       tabindex="-1"
       class="h-full w-full max-w-sm overflow-hidden border-r border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 outline-none"
       onclick={event => event.stopPropagation()}>

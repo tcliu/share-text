@@ -17,6 +17,7 @@
     valueClass,
     valueText,
   } from './structure-value'
+  import { t } from '$lib/i18n.svelte'
 
   interface Props {
     label: string
@@ -112,9 +113,9 @@
   async function handleCopy(text: string) {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success('Copied to clipboard')
+      toast.success(t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy')
+      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
     }
   }
 
@@ -186,7 +187,7 @@
     <button
       type="button"
       class="relative inline-flex shrink-0 items-center justify-center rounded outline-none before:absolute before:-inset-1 before:content-[''] focus:text-cyan-300"
-      aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
+      aria-label={open ? t('structure.collapse', { name: label }) : t('structure.expand', { name: label })}
       aria-expanded={open}
       onclick={() => (open = !open)}
     >
@@ -194,8 +195,8 @@
     </button>
     <Copyable
       copyText={copyValue(value)}
-      copyAriaLabel={label ? `Copy ${label}` : 'Copy node'}
-      copyTooltip={label ? `Copy ${label}` : 'Copy node'}
+      copyAriaLabel={label ? t('structure.copyValue', { name: label }) : t('structure.copyNode')}
+      copyTooltip={label ? t('structure.copyValue', { name: label }) : t('structure.copyNode')}
     >
       {#if label !== ''}
         <span class="text-slate-300">{label}</span>
@@ -260,7 +261,7 @@
                 class="text-slate-300 shrink-0 cursor-pointer rounded outline-none hover:underline focus:underline"
                 ondblclick={(e) => { e.stopPropagation(); startEditName(entry) }}
                 onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); startEditName(entry) } }}
-                title="Double-click to rename"
+                title={t('structure.renameHint')}
                 role="button"
                 tabindex="0"
               >{entry.key}</span>
@@ -276,8 +277,8 @@
                 <Button
                   size="sm"
                   variant="ghost"
-                  ariaLabel={`Edit ${entry.key}`}
-                  tooltip={`Edit ${entry.key}`}
+                  ariaLabel={t('structure.editKey', { name: entry.key })}
+                  tooltip={t('structure.editKey', { name: entry.key })}
                   onClick={(e) => { e.stopPropagation(); startEditValue(entry) }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
                   className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
@@ -292,8 +293,8 @@
               <Button
                 size="sm"
                 variant="ghost"
-                ariaLabel={`Copy ${entry.key}`}
-                tooltip={`Copy ${entry.key}`}
+                ariaLabel={t('structure.copyValue', { name: entry.key })}
+                tooltip={t('structure.copyValue', { name: entry.key })}
                 onClick={(e) => { e.stopPropagation(); void handleCopy(copyValue(entry.value)) }}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
                 className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"

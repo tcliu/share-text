@@ -2,6 +2,7 @@ import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { AdminAuthError, fetchAdminSession, logout } from '$lib/admin'
+import { t } from '$lib/i18n.svelte'
 
 export type AdminAuthState = 'checking' | 'unauthenticated' | 'authenticated' | 'error'
 
@@ -27,7 +28,7 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
     try {
       await logout()
     } catch {
-      toast.error('Failed to sign out')
+      toast.error(t('auth.toast.signOutFailed'))
     }
     handleSignedOut()
   }
@@ -49,7 +50,7 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
       // Transient failure (network, 5xx): don't bounce an authenticated user to
       // /login — show a retryable error instead. The server-side layout guard
       // already rejected genuinely unauthenticated sessions before render.
-      sessionError = error instanceof Error ? error.message : 'Failed to check admin session'
+      sessionError = error instanceof Error ? error.message : t('admin.auth.toast.checkFailed')
       state = 'error'
       return
     }

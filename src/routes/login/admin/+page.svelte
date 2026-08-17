@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import LoginPanel from '$lib/components/LoginPanel.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   let { data } = $props()
 
@@ -10,7 +11,7 @@
 </script>
 
 <svelte:head>
-  <title>Admin Login</title>
+  <title>{t('admin.loginTitle')}</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">

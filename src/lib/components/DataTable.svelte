@@ -7,6 +7,7 @@
   import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
   import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
   import { createColumnResize } from './use-column-resize.svelte'
+  import { t } from '$lib/i18n.svelte'
 
   export type SortDirection = 'asc' | 'desc'
 
@@ -72,10 +73,10 @@
     rowId,
     columns,
     loading = false,
-    emptyMessage = 'No rows yet.',
+    emptyMessage,
     searchValue = $bindable(''),
     searchAriaLabel,
-    searchPlaceholder = 'Search...',
+    searchPlaceholder,
     searchKeys = $bindable([] as string[]),
     onSearchInput,
     onSearchKeydown,
@@ -85,7 +86,7 @@
     onToggleAll,
     allSelected = false,
     someSelected = false,
-    selectAllAriaLabel = 'Select all',
+    selectAllAriaLabel,
     rowSelectAriaLabel,
     total,
     pageSize,
@@ -102,6 +103,10 @@
     resizable = false,
     storageKey,
   }: Props<T> = $props()
+
+  const resolvedEmptyMessage = $derived(emptyMessage ?? t('admin.dataTable.noRows'))
+  const resolvedSearchPlaceholder = $derived(searchPlaceholder ?? t('admin.dataTable.search'))
+  const resolvedSelectAllAriaLabel = $derived(selectAllAriaLabel ?? t('admin.dataTable.selectAll'))
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
 
@@ -269,7 +274,7 @@
     oninput={onSearchInput}
     onkeydown={onSearchKeydown}
     ariaLabel={searchAriaLabel}
-    placeholder={searchPlaceholder}
+    placeholder={resolvedSearchPlaceholder}
     wrapperClass={fillHeight ? 'shrink-0' : ''} />
 
   <div class={fillHeight ? FILL_CONTAINER_CLASS : containerClass} bind:this={tableContainer}>
@@ -294,7 +299,7 @@
               <Checkbox
                 checked={allSelected}
                 indeterminate={someSelected && !allSelected}
-                ariaLabel={selectAllAriaLabel}
+                ariaLabel={resolvedSelectAllAriaLabel}
                 disabled={rows.length === 0}
                 onChange={() => onToggleAll?.()} />
             </th>
@@ -316,14 +321,14 @@
                     <button
                       type="button"
                       class="leading-none outline-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} ascending`}
+                      aria-label={sortAriaLabel?.(column) ?? t('admin.dataTable.sortAsc', { name: column.header })}
                       onclick={() => handleSortClick(column, 'asc')}>
                       <SortAscIcon className="h-2.5 w-2.5" />
                     </button>
                     <button
                       type="button"
                       class="-mt-1 leading-none outline-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column) ?? `Sort ${column.header} descending`}
+                      aria-label={sortAriaLabel?.(column) ?? t('admin.dataTable.sortDesc', { name: column.header })}
                       onclick={() => handleSortClick(column, 'desc')}>
                       <SortDescIcon className="h-2.5 w-2.5" />
                     </button>
@@ -337,7 +342,7 @@
                   type="button"
                   class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                   style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
-                  aria-label={`Resize ${column.header} column`}
+                  aria-label={t('admin.dataTable.resize', { name: column.header })}
                   onmousedown={event => resize.startColumnResize(event, i)}
                   onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
               {/if}
@@ -356,7 +361,7 @@
           </tr>
         {:else if rows.length === 0}
           <tr>
-            <td colspan={columnCount} class="px-3 py-10 text-center text-sm text-slate-400">{emptyMessage}</td>
+            <td colspan={columnCount} class="px-3 py-10 text-center text-sm text-slate-400">{resolvedEmptyMessage}</td>
           </tr>
         {:else}
           {#each rows as row (rowId(row))}
@@ -365,7 +370,7 @@
                 <td class="border-b border-slate-800/50 px-3 py-2">
                   <Checkbox
                     checked={selectedIds?.has(rowId(row)) ?? false}
-                    ariaLabel={rowSelectAriaLabel?.(row) ?? 'Select row'}
+                    ariaLabel={rowSelectAriaLabel?.(row) ?? t('admin.dataTable.selectRow')}
                     onChange={checked => onToggleSelection?.(rowId(row), checked)} />
                 </td>
               {/if}
