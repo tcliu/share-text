@@ -10,5 +10,3 @@ node_modules/
 .tmp/
 .worktrees/
 .vercel
-__pycache__/
-*.pyc
