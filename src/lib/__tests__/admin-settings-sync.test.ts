@@ -150,6 +150,33 @@ describe('useAdminSettings properties text sync', () => {
     expect(state().propertiesProblems.some(problem => problem.includes('TTS service URL'))).toBe(false)
   })
 
+  it('accepts thousand-separated numbers in the properties editor and applies the normalized value', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
+    const state = renderHost()
+    await waitFor(() => expect(state().settings.length).toBe(3))
+
+    state().updatePropertiesText('max_documents_per_ip=1,000')
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('1,000'))
+    expect(state().propertiesProblems).toEqual([])
+
+    state().apply()
+    await waitFor(() => expect(state().settings.find(s => s.key === 'max_documents_per_ip')?.value).toBe(1000))
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('1000'))
+  })
+
+  it('reports thousand-separated numbers that exceed the range', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
+    const state = renderHost()
+    await waitFor(() => expect(state().settings.length).toBe(3))
+
+    state().updatePropertiesText('max_documents_per_ip=10,000')
+    await waitFor(() =>
+      expect(state().propertiesProblems).toEqual(
+        expect.arrayContaining(['Max documents per IP must be between 1 and 1000']),
+      ),
+    )
+  })
+
   it('resets both the form draft and the editor text', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
