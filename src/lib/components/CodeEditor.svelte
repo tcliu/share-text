@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { EditorState, type Extension } from '@codemirror/state'
+  import { EditorState, EditorSelection, type Extension } from '@codemirror/state'
   import { EditorView, keymap, lineNumbers } from '@codemirror/view'
   import { defaultKeymap, history, historyKeymap, indentLess } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
@@ -20,6 +20,7 @@
     autoFocus?: boolean
     recreateKey?: string
     maxContentLength?: number
+    onReady?: () => void
     onAutoFocused?: () => void
     onContentChange?: (content: string) => void
   }
@@ -34,6 +35,7 @@
     autoFocus = false,
     recreateKey = '',
     maxContentLength = 0,
+    onReady,
     onAutoFocused,
     onContentChange,
   }: Props = $props()
@@ -182,6 +184,8 @@
           editorView.focus()
           onAutoFocused?.()
         }
+        // Notify parent that the EditorView is ready so pending selections can be applied
+        onReady?.()
       })
       .catch(error => {
         if (!cancelled) {
@@ -202,6 +206,28 @@
     const { from, to } = editorView.state.selection.main
     if (from === to) return ''
     return editorView.state.sliceDoc(from, to)
+  }
+
+  export function getSelectionRange(): { from: number; to: number } | null {
+    if (!editorView) return null
+    const { from, to } = editorView.state.selection.main
+    if (from === to) return null
+    return { from, to }
+  }
+
+  export function setSelection(from: number, to: number): boolean {
+    if (!editorView) return false
+    editorView.focus()
+    const sel = EditorSelection.create([EditorSelection.range(from, to)])
+    editorView.dispatch({ selection: sel, scrollIntoView: true })
+    return true
+  }
+
+  export function clearSelection() {
+    if (!editorView) return
+    const pos = editorView.state.selection.main.anchor
+    const sel = EditorSelection.create([EditorSelection.range(pos, pos)])
+    editorView.dispatch({ selection: sel })
   }
 
   $effect(() => {
