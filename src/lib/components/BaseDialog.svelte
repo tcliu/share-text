@@ -163,7 +163,7 @@
       aria-modal="true"
       aria-labelledby={!header && title ? titleId : undefined}
       tabindex="-1"
-      class="relative flex flex-col overflow-hidden outline-none {fullscreen
+      class="relative flex flex-col overflow-y-auto outline-none {fullscreen
         ? 'h-full w-full bg-slate-900 p-5.5'
         : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
       <button
