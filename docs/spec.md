@@ -231,19 +231,19 @@ synchronizes through a small fetch-based JSON API.
   cached in memory for a short TTL and invalidated on write.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
-  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the three
+  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the four
   tabs as real routes (`/admin/properties`, `/admin/documents`,
-  `/admin/users`) backed by empty `+page.svelte` shells.
+  `/admin/users`, `/admin/text-to-speech`) backed by empty `+page.svelte` shells.
   A `+layout.server.ts` guards every `/admin/*` route server-side, redirecting
   unauthenticated sessions to `/login/admin` before the client shell renders;
   the layout then redirects there on the client only when the session is
   genuinely gone (unauthenticated, session timeout, or sign-out) and shows a
   retryable error state for transient session-check failures. The auth state
   machine lives in the `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`);
-  the layout defines the three `Tab` entries (label, path, toolbar snippet,
+  the layout defines the four `Tab` entries (label, path, toolbar snippet,
   content snippet) that render the shared `AdminPropertiesView`/
-  `AdminDocumentsView`/`AdminUsersView`, and keeps the settings/documents/users
-  state alive across tab switches. The old gear-icon dialog
+  `AdminDocumentsView`/`AdminUsersView`/`AdminTextToSpeechView`, and keeps the
+  settings/documents/users state alive across tab switches. The old gear-icon dialog
   (`AdminDialog.svelte`) has been removed.
   `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
   **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
@@ -258,6 +258,16 @@ synchronizes through a small fetch-based JSON API.
   settings through `PUT /api/admin/settings`; Reset restores both views from
   the saved settings. The old batch dialog (`AdminSettingsBatchDialog.svelte`)
   has been removed.
+  The admin Text To Speech tab (`AdminTextToSpeechView` + `useAdminSegments`) is a
+  client-side text→segment debug tool: `useAdminSegments` holds the pasted text
+  and the runtime max segment length (resolved once from `/api/tts/capabilities`),
+  and derives the segment list with `splitTtsSegments`, so switching tabs keeps
+  the input. Number settings accept thousand separators in every parsing layer —
+  the client `parseNumberWithSeparators` (`use-admin-settings.svelte.ts`),
+  `readNumber`/`validateSettingValue` (`src/lib/server/settings.ts`), and the
+  backend `_read_number` (`backend/app/settings.py`) all strip commas before
+  `Number`/`int` — so `7,000` is accepted in the form, the Properties editor,
+  the settings API, and the TTS backend's `app_config`/env resolution.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default
@@ -549,8 +559,13 @@ panel, admin hooks).
 - Data-driven labels rendered from reactive arrays (admin DataTable column
   headers, `AdminPropertiesView` source labels) are built in `$derived.by` so
   they follow a locale switch.
-- Messages produced by the server (API `error` fields, setting labels and
-  descriptions) remain English; only client-side UI text is translated.
+- Setting labels and descriptions come from `$lib/server/settings.ts` as the
+  English fallback and are translated client-side via the `settingLabel` /
+  `settingDescription` helpers (`$lib/i18n.svelte`, `setting.<key>` /
+  `setting.<key>Description` message pairs) — `AdminPropertiesView` and the
+  `useAdminSettings` validation/revert toasts resolve
+  `settingLabel(key) ?? setting.label`. Messages produced by the server (API
+  `error` fields) remain English; only client-side UI text is translated.
 - Document type labels and format titles (e.g. "JSON", "Format JSON") are
   technical format names and stay untranslated.
 
@@ -636,7 +651,9 @@ identity so the browser app can render the admin entry point;
 - Read aloud proxies the external tts service through two same-origin
   endpoints: `GET /api/tts/capabilities` (reports `configured` from the
   runtime `tts_service_url` setting plus the service's supported languages,
-  both empty when the feature is unconfigured) and `POST /api/tts/synthesize`
+  both empty when the feature is unconfigured; it also carries the runtime
+  `tts_max_segment_length` and `tts_synthesis_concurrency` values the client
+  applies when splitting and streaming) and `POST /api/tts/synthesize`
   (forwards `{ text, lang }` to the service's `/api/synthesize` with
   `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
   **bytes** back with the service's Content-Type). Both endpoints resolve the
@@ -656,7 +673,8 @@ identity so the browser app can render the admin entry point;
   forwarded through `LazyCodeEditor`) else the whole document, splits the text
   into language segments via `splitTtsSegments` (`$lib/tts-language.ts`):
   the text is scanned character by character into latin/CJK runs — a run
-  touching kana is ja, pure Han is zh, else en — so unspaced text like
+  touching kana is ja, pure Han or any CJK punctuation/fullwidth form
+  (`\u3000`–`\u303f`, `\uff00`–`\uffef`) is zh, else en — so unspaced text like
   `Hello你好世界` splits into `en` + `zh` while `こんにちは世界` stays one
   `ja` segment; digits inherit the surrounding script (a number after Han is
   read in zh, after English in en); adjacent same-language runs merge across
@@ -667,12 +685,19 @@ identity so the browser app can render the admin entry point;
   Chinese/Japanese read as one continuous sentence (English keeps its newlines
   as natural pauses), and any paragraph still over `MAX_SEGMENT_LENGTH` (500
   chars) is split on sentence boundaries so no single request is oversized;
+  the limit is the runtime `tts_max_segment_length` setting (DB override, else
+  `TTS_MAX_SEGMENT_LENGTH` env, else 500) exposed to the client by the
+  capabilities endpoint; each emitted segment carries `indexStart` and
+  `indexEnd` (inclusive, 0-based character offsets into the original document
+  text) so the backend can log exactly which part of the document is spoken;
   each segment
   synthesizes with its own language model, then plays
   the audio segments in sequence from the proxy in a hidden `<audio>` element
   (advancing on the element's `ended`/`error` events). Synthesis is streamed:
   `synthesizeTtsStreaming` in `$lib/tts-client.ts` is an async generator that
-  launches up to `SYNTHESIS_CONCURRENCY` (4) requests at once and yields each
+  launches up to `SYNTHESIS_CONCURRENCY` (4) requests at once (the runtime
+  `tts_synthesis_concurrency` setting, else `TTS_SYNTHESIS_CONCURRENCY` env)
+  and yields each
   segment's blob as soon as it completes, preserving input order, so playback
   of the first segment starts before the rest of the document is synthesized.
   The button shows a Preparing spinner while synthesis runs before any audio,
@@ -685,9 +710,22 @@ identity so the browser app can render the admin entry point;
   same segment skip synthesis: the per-segment cache in `$lib/tts-client.ts`
   keeps a bounded in-memory map (LRU-style eviction at 100 entries) keyed by
   `text + lang` storing the returned `Blob`; object URLs created from the
-  blobs are revoked on stop/unmount. Synthesis is stateless: the backend
+  blobs are revoked on stop/unmount. The client sends each synthesis request
+  with the segment's 0-based `segmentIndex` and its `indexStart`/`indexEnd`
+  ranges; the same-origin proxy
+  (`src/routes/api/tts/synthesize/+server.ts`) forwards them to the backend as
+  `segment_index`/`index_start`/`index_end`, which logs them and never fails a
+  request on them. The backend enforces the same `tts_max_segment_length`
+  runtime prop as a hard cap: it resolves it read-only from `app_config`
+  (SQLite when no `DATABASE_URL` is set, else Postgres; cached 5 s, then
+  `TTS_MAX_SEGMENT_LENGTH` env, else 500) and rejects over-limit requests with
+  422. Synthesis is stateless: the backend
   returns audio bytes in memory (`backend/app/engines.py` writes Piper to a
-  `BytesIO`) and writes nothing to disk, so
+  `BytesIO`, pre-setting the 16-bit mono WAV header at the model sample rate so
+  a request yielding no audio chunks — e.g. punctuation-only text — closes as a
+  valid empty WAV instead of raising `wave.Error`) and writes nothing to disk
+  (its only database access is that
+  read-only settings lookup), so
   there is no `output_path`/`/api/audio` round trip and no scratch dir — this
   is what makes the service multi-instance/serverless-safe. The backend caches
   the engine at the process level

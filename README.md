@@ -67,6 +67,9 @@ Keys:
 | `SCHEMA_NAME` | PostgreSQL schema name for table isolation in `prod` (default `public`) |
 | `DOCUMENT_KEY_LENGTH` | Generated document id character count (default 6, admin changes take effect for new keys immediately) |
 | `MAX_DOCUMENT_VERSIONS` | Max content versions kept per document (default 20, admin-adjustable) |
+| `TTS_SERVICE_URL` | Base URL of the external text-to-speech service used by the Read aloud feature (default empty, feature disabled) |
+| `TTS_MAX_SEGMENT_LENGTH` | Max chars per TTS segment before sentence-boundary splitting (default 500) |
+| `TTS_SYNTHESIS_CONCURRENCY` | Max TTS synthesis requests the browser issues at once while reading aloud (default 4) |
 
 ## Database Setup
 

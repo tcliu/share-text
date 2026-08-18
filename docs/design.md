@@ -89,8 +89,9 @@ document name and type selector, then the tag chips, then the action buttons —
 - The choice is remembered on the device: the next visit opens in the selected
   language. Both the browser app and the admin console are translated, so
   switching the language also switches the admin tabs, toolbars, dialogs, and
-  login page. Messages returned by the server (validation errors, setting
-  descriptions) remain English.
+  login page. Server-returned messages (validation errors) remain English, while
+  admin setting names and descriptions are translated alongside the rest of the
+  UI.
 
 ## Navigation
 
@@ -375,9 +376,9 @@ configured, that page reports that admin is disabled instead. A
 **Remember me** checkbox persists the username to `localStorage` (pre-filling
 it on the next visit) and issues a 30-day session cookie; the password is
 never stored client-side. The page header offers **Go to Documents** and
-**Sign out** once signed in. The three tabs live at the real routes
-`/admin/properties`, `/admin/documents`, and `/admin/users` (`/admin` redirects
-to the Properties route), so each view has a stable, shareable URL and survives
+**Sign out** once signed in. The four tabs live at the real routes
+`/admin/properties`, `/admin/documents`, `/admin/users`, and `/admin/text-to-speech`
+(`/admin` redirects to the Properties route), so each view has a stable, shareable URL and survives
 refresh and back/forward; the generic `Tabs` component renders the tab bar and
 the active tab's toolbar and content from a per-tab `Tab` entry (label, path,
 toolbar snippet, content snippet) defined in the shared admin layout, which
@@ -387,7 +388,7 @@ keeps the settings draft and documents/users data alive across tab switches.
   (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per
   IP (5 per 15 minutes). All `/api/admin/*` routes except `login` and `session`
   require a valid session.
-- The page has three tabs:
+- The page has four tabs:
   - **Properties** — application properties (`max_documents_per_ip`,
     `max_content_length`, `document_key_length`, `max_document_versions`). The
     tab splits into **Form** and **Properties** sub-tabs editing the same draft:
@@ -428,6 +429,16 @@ keeps the settings draft and documents/users data alive across tab switches.
     **Add user** dialog creates an account, and an **Import** button pastes or
     uploads user records as JSON in the same all-or-nothing batch style as the
     Documents import.
+  - **Text To Speech** — a debugging tool for the Read aloud segmenter, organized
+    as sub-tabs via the state-driven `Tabs` component (matching the Properties
+    Form/Properties sub-tab pattern). The **Segments** sub-tab lets you type or
+    paste any text and lists how it splits into TTS segments (each segment's
+    language, its inclusive character range into the original text, and its
+    text), using the runtime **TTS max segment length** setting; the input and
+    the breakdown survive switching to another tab and back.
+  - Numeric properties accept thousand separators (for example `7,000`) both in
+    the Properties form and the `key=value` editor, and the same parsing applies
+    server-side and in the TTS backend's resolution of `tts_max_segment_length`.
 
 ### Runtime properties
 
