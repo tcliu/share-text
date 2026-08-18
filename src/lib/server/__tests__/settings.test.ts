@@ -27,6 +27,8 @@ beforeEach(async () => {
   delete process.env.DOCUMENT_KEY_LENGTH
   delete process.env.MAX_DOCUMENT_VERSIONS
   delete process.env.TTS_SERVICE_URL
+  delete process.env.TTS_MAX_SEGMENT_LENGTH
+  delete process.env.TTS_SYNTHESIS_CONCURRENCY
 })
 
 describe('setting resolution', () => {
@@ -163,6 +165,45 @@ describe('string settings', () => {
 
   it('rejects non-string values for string settings', () => {
     expect(() => validateSettingValue('tts_service_url', 42)).toThrow('must be a string')
+  })
+})
+
+describe('TTS client settings', () => {
+  it('resolves the tts_max_segment_length setting from the default and environment', async () => {
+    expect(await getSettingValue('tts_max_segment_length')).toBe(500)
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'tts_max_segment_length')).toMatchObject({
+      value: 500,
+      source: 'default',
+      kind: 'number',
+    })
+
+    process.env.TTS_MAX_SEGMENT_LENGTH = '300'
+    clearSettingsCache()
+    expect(await getSettingValue('tts_max_segment_length')).toBe(300)
+  })
+
+  it('resolves the tts_synthesis_concurrency setting from the default and environment', async () => {
+    expect(await getSettingValue('tts_synthesis_concurrency')).toBe(4)
+    const settings = await listSettings()
+    expect(settings.find(setting => setting.key === 'tts_synthesis_concurrency')).toMatchObject({
+      value: 4,
+      source: 'default',
+      kind: 'number',
+    })
+
+    process.env.TTS_SYNTHESIS_CONCURRENCY = '2'
+    clearSettingsCache()
+    expect(await getSettingValue('tts_synthesis_concurrency')).toBe(2)
+  })
+
+  it('validates the bounds of the TTS client settings', () => {
+    expect(validateSettingValue('tts_max_segment_length', 50)).toBe(50)
+    expect(() => validateSettingValue('tts_max_segment_length', 49)).toThrow('must be between')
+    expect(() => validateSettingValue('tts_max_segment_length', 5001)).toThrow('must be between')
+    expect(validateSettingValue('tts_synthesis_concurrency', 1)).toBe(1)
+    expect(() => validateSettingValue('tts_synthesis_concurrency', 0)).toThrow('must be between')
+    expect(() => validateSettingValue('tts_synthesis_concurrency', 9)).toThrow('must be between')
   })
 })
 

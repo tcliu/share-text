@@ -250,6 +250,9 @@ const en = {
   'admin.tab.properties': 'Properties',
   'admin.tab.documents': 'Documents',
   'admin.tab.users': 'Users',
+  'admin.tab.tts': 'Text To Speech',
+  'admin.tts.views': 'Text To Speech views',
+  'admin.tts.segments': 'Segments',
   'admin.deleteSelected': 'Delete selected',
   'admin.discard': 'Discard',
   'admin.discardSettingsTitle': 'Discard unsaved settings changes?',
@@ -278,6 +281,36 @@ const en = {
   'admin.settingsContent': 'Settings properties content',
   'admin.settingsUpdated': 'Settings updated',
   'admin.settingReverted': '{name} reverted to environment/default',
+  'admin.segments.input': 'Input text',
+  'admin.segments.inputPlaceholder': 'Type or paste text to split it into read-aloud segments.',
+  'admin.segments.output': 'Segments',
+  'admin.segments.lang': 'Lang',
+  'admin.segments.range': 'Range',
+  'admin.segments.text': 'Text',
+  'admin.segments.summary': '{chars} chars · {segments} segments · max {max} chars',
+  'admin.segments.segmentCount': '{n} segments',
+  'admin.segments.empty': 'Enter text to see its read-aloud segment breakdown.',
+
+  'setting.document_key_length': 'Document key length (chars)',
+  'setting.document_key_lengthDescription':
+    'Number of characters in generated document ids. New documents are named after their id. Existing documents keep their original ids.',
+  'setting.max_content_length': 'Max content length (chars)',
+  'setting.max_content_lengthDescription':
+    'Maximum number of characters allowed in document content. Also subject to the hard 1 MiB UTF-8 byte cap.',
+  'setting.max_document_versions': 'Max document versions',
+  'setting.max_document_versionsDescription':
+    'Maximum number of content versions kept per document. Older versions beyond this count are pruned on save.',
+  'setting.max_documents_per_ip': 'Max documents per IP',
+  'setting.max_documents_per_ipDescription': 'Maximum number of documents a single client IP can create.',
+  'setting.tts_max_segment_length': 'TTS max segment length (chars)',
+  'setting.tts_max_segment_lengthDescription':
+    'Maximum length of a single text segment sent to the TTS service. Longer paragraphs are split on sentence boundaries.',
+  'setting.tts_service_url': 'TTS service URL',
+  'setting.tts_service_urlDescription':
+    'Base URL of the external text-to-speech service used by the Read aloud feature. Empty disables the feature.',
+  'setting.tts_synthesis_concurrency': 'TTS synthesis concurrency',
+  'setting.tts_synthesis_concurrencyDescription':
+    'Maximum number of TTS synthesis requests the browser issues at once while reading a document aloud.',
 
   'admin.documents.add': 'Add document',
   'admin.documents.import': 'Import documents',
@@ -673,6 +706,9 @@ const zhCN: Record<MessageKey, string> = {
   'admin.tab.properties': '属性',
   'admin.tab.documents': '文档',
   'admin.tab.users': '用户',
+  'admin.tab.tts': '语音合成',
+  'admin.tts.views': '语音合成视图',
+  'admin.tts.segments': '分段',
   'admin.deleteSelected': '删除选中项',
   'admin.discard': '放弃',
   'admin.discardSettingsTitle': '放弃未保存的设置更改？',
@@ -701,6 +737,36 @@ const zhCN: Record<MessageKey, string> = {
   'admin.settingsContent': '设置属性内容',
   'admin.settingsUpdated': '设置已更新',
   'admin.settingReverted': '{name} 已恢复为环境/默认值',
+  'admin.segments.input': '输入文本',
+  'admin.segments.inputPlaceholder': '输入或粘贴文本，将其拆分为朗读分段。',
+  'admin.segments.output': '分段结果',
+  'admin.segments.lang': '语言',
+  'admin.segments.range': '范围',
+  'admin.segments.text': '文本',
+  'admin.segments.summary': '{chars} 个字符 · {segments} 个分段 · 每段最多 {max} 个字符',
+  'admin.segments.segmentCount': '{n} 个分段',
+  'admin.segments.empty': '输入文本以查看其朗读分段信息。',
+
+  'setting.document_key_length': '文档键长度（字符）',
+  'setting.document_key_lengthDescription':
+    '生成的文档 ID 中的字符数。新文档以 ID 命名。现有文档保留其原始 ID。',
+  'setting.max_content_length': '最大内容长度（字符）',
+  'setting.max_content_lengthDescription':
+    '文档内容允许的最大字符数。同时受 1 MiB UTF-8 字节硬上限约束。',
+  'setting.max_document_versions': '最大文档版本数',
+  'setting.max_document_versionsDescription':
+    '每个文档保留的内容版本数量上限。超过此数量的旧版本会在保存时被清理。',
+  'setting.max_documents_per_ip': '单 IP 最大文档数',
+  'setting.max_documents_per_ipDescription': '单个客户端 IP 可以创建的文档数量上限。',
+  'setting.tts_max_segment_length': 'TTS 最大分段长度（字符）',
+  'setting.tts_max_segment_lengthDescription':
+    '发送到 TTS 服务的单个文本段的最大长度。较长的段落会在句号处拆分。',
+  'setting.tts_service_url': 'TTS 服务 URL',
+  'setting.tts_service_urlDescription':
+    '朗读功能使用的外部文本转语音服务的基本 URL。为空时该功能被禁用。',
+  'setting.tts_synthesis_concurrency': 'TTS 合成并发数',
+  'setting.tts_synthesis_concurrencyDescription':
+    '朗读文档时浏览器同时发起的 TTS 合成请求数量上限。',
 
   'admin.documents.add': '添加文档',
   'admin.documents.import': '导入文档',
@@ -1092,6 +1158,9 @@ const zhTW: Record<MessageKey, string> = {
   'admin.tab.properties': '屬性',
   'admin.tab.documents': '文件',
   'admin.tab.users': '使用者',
+  'admin.tab.tts': '語音合成',
+  'admin.tts.views': '語音合成檢視',
+  'admin.tts.segments': '分段',
   'admin.deleteSelected': '刪除選取項目',
   'admin.discard': '放棄',
   'admin.discardSettingsTitle': '放棄未儲存的設定變更？',
@@ -1120,6 +1189,36 @@ const zhTW: Record<MessageKey, string> = {
   'admin.settingsContent': '設定屬性內容',
   'admin.settingsUpdated': '設定已更新',
   'admin.settingReverted': '{name} 已還原為環境/預設值',
+  'admin.segments.input': '輸入文字',
+  'admin.segments.inputPlaceholder': '輸入或貼上文字，將其拆分為朗讀分段。',
+  'admin.segments.output': '分段結果',
+  'admin.segments.lang': '語言',
+  'admin.segments.range': '範圍',
+  'admin.segments.text': '文字',
+  'admin.segments.summary': '{chars} 個字元 · {segments} 個分段 · 每段最多 {max} 個字元',
+  'admin.segments.segmentCount': '{n} 個分段',
+  'admin.segments.empty': '輸入文字以查看其朗讀分段資訊。',
+
+  'setting.document_key_length': '文件鍵長度（字元）',
+  'setting.document_key_lengthDescription':
+    '產生的文件 ID 中的字元數。新文件以 ID 命名。現有文件保留其原始 ID。',
+  'setting.max_content_length': '最大內容長度（字元）',
+  'setting.max_content_lengthDescription':
+    '文件內容允許的最大字元數。同時受 1 MiB UTF-8 位元組硬上限約束。',
+  'setting.max_document_versions': '最大文件版本數',
+  'setting.max_document_versionsDescription':
+    '每個文件保留的內容版本數量上限。超過此數量的舊版本會在儲存時被清理。',
+  'setting.max_documents_per_ip': '單 IP 最大文件數',
+  'setting.max_documents_per_ipDescription': '單一用戶端 IP 可以建立的文件數量上限。',
+  'setting.tts_max_segment_length': 'TTS 最大分段長度（字元）',
+  'setting.tts_max_segment_lengthDescription':
+    '傳送到 TTS 服務的單一文字分段的最大長度。較長的段落會在句號處拆分。',
+  'setting.tts_service_url': 'TTS 服務 URL',
+  'setting.tts_service_urlDescription':
+    '朗讀功能使用的外部文字轉語音服務的基本 URL。為空時該功能會被停用。',
+  'setting.tts_synthesis_concurrency': 'TTS 合成並發數',
+  'setting.tts_synthesis_concurrencyDescription':
+    '朗讀文件時瀏覽器同時發起的 TTS 合成請求數量上限。',
 
   'admin.documents.add': '新增文件',
   'admin.documents.import': '匯入文件',
@@ -1324,4 +1423,45 @@ export function t(key: MessageKey, params?: Record<string, string | number>): st
     }
   }
   return message
+}
+
+const SETTING_KEYS = {
+  document_key_length: {
+    label: 'setting.document_key_length',
+    description: 'setting.document_key_lengthDescription',
+  },
+  max_content_length: {
+    label: 'setting.max_content_length',
+    description: 'setting.max_content_lengthDescription',
+  },
+  max_document_versions: {
+    label: 'setting.max_document_versions',
+    description: 'setting.max_document_versionsDescription',
+  },
+  max_documents_per_ip: {
+    label: 'setting.max_documents_per_ip',
+    description: 'setting.max_documents_per_ipDescription',
+  },
+  tts_max_segment_length: {
+    label: 'setting.tts_max_segment_length',
+    description: 'setting.tts_max_segment_lengthDescription',
+  },
+  tts_service_url: {
+    label: 'setting.tts_service_url',
+    description: 'setting.tts_service_urlDescription',
+  },
+  tts_synthesis_concurrency: {
+    label: 'setting.tts_synthesis_concurrency',
+    description: 'setting.tts_synthesis_concurrencyDescription',
+  },
+} as const
+
+export function settingLabel(key: string): string | null {
+  const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
+  return setting ? t(setting.label) : null
+}
+
+export function settingDescription(key: string): string | null {
+  const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
+  return setting ? t(setting.description) : null
 }

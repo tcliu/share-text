@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getLocale, initLocale, setLocale, t } from '$lib/i18n.svelte'
+import { getLocale, initLocale, setLocale, settingDescription, settingLabel, t } from '$lib/i18n.svelte'
 
 describe('i18n', () => {
   beforeEach(() => {
@@ -69,5 +69,20 @@ describe('i18n', () => {
     localStorage.setItem('share-text:locale', 'fr')
     initLocale()
     expect(getLocale()).toBe('en')
+  })
+
+  it('resolves setting labels and descriptions per locale', () => {
+    expect(settingLabel('tts_max_segment_length')).toBe('TTS max segment length (chars)')
+    expect(settingDescription('max_document_versions')).toContain('content versions')
+    setLocale('zh-CN')
+    expect(settingLabel('tts_max_segment_length')).toBe('TTS 最大分段长度（字符）')
+    expect(settingDescription('max_document_versions')).toContain('版本')
+    setLocale('zh-TW')
+    expect(settingLabel('tts_service_url')).toBe('TTS 服務 URL')
+  })
+
+  it('returns null for unknown settings so callers fall back to the server label', () => {
+    expect(settingLabel('unknown_setting')).toBeNull()
+    expect(settingDescription('unknown_setting')).toBeNull()
   })
 })

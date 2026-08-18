@@ -6,7 +6,7 @@
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { t, settingDescription, settingLabel } from '$lib/i18n.svelte'
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
   interface Props {
@@ -25,13 +25,15 @@
 {#snippet formContent()}
   <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
     {#each settingsState.settings as setting, i}
+      {@const label = settingLabel(setting.key) ?? setting.label}
+      {@const description = settingDescription(setting.key) ?? setting.description}
       <div
         class="grid items-center gap-2 p-3 {setting.kind === 'string'
           ? 'md:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.25fr)]'
           : 'md:grid-cols-[minmax(0,1fr)_11rem]'} {i > 0 ? 'border-t border-slate-800' : ''}">
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-100">{setting.label}</span>
+            <span class="text-sm font-medium text-slate-100">{label}</span>
             <span
               class="rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide {setting.source ===
               'database'
@@ -42,7 +44,7 @@
               {sourceLabels[setting.source]}
             </span>
           </div>
-          <p class="mt-0.5 text-xs text-slate-400">{setting.description}</p>
+          <p class="mt-0.5 text-xs text-slate-400">{description}</p>
           <p class="mt-0.5 text-xs text-slate-500">{setting.key} ({t('admin.env')} {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
@@ -51,7 +53,7 @@
             type="text"
             bind:value={settingsState.draftValues[setting.key]}
             disabled={settingsState.pending}
-            aria-label={setting.label}
+            aria-label={label}
             spellcheck="false"
             class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40" />
           {:else}
@@ -60,12 +62,12 @@
             min={setting.min}
             max={setting.max}
             disabled={settingsState.pending}
-            ariaLabel={setting.label} />
+            ariaLabel={label} />
           {/if}
           {#if setting.source === 'database'}
             <Button
               size="sm"
-              ariaLabel={t('admin.revertLabelToDefault', { name: setting.label })}
+              ariaLabel={t('admin.revertLabelToDefault', { name: label })}
               tooltip={t('admin.revertToDefault')}
               tooltipAlign="right"
               disabled={settingsState.pending}

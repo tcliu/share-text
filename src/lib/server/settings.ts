@@ -15,14 +15,15 @@ export interface SettingDefinition {
 
 export const SETTING_DEFINITIONS: SettingDefinition[] = [
   {
-    key: 'max_documents_per_ip',
-    label: 'Max documents per IP',
-    description: 'Maximum number of documents a single client IP can create.',
+    key: 'document_key_length',
+    label: 'Document key length (chars)',
+    description:
+      'Number of characters in generated document ids. New documents are named after their id. Existing documents keep their original ids.',
     kind: 'number',
-    defaultValue: 10,
-    envKey: 'MAX_DOCUMENTS_PER_IP',
-    min: 1,
-    max: 1000,
+    defaultValue: 6,
+    envKey: 'DOCUMENT_KEY_LENGTH',
+    min: 4,
+    max: 32,
   },
   {
     key: 'max_content_length',
@@ -36,17 +37,6 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     max: 1024 * 1024,
   },
   {
-    key: 'document_key_length',
-    label: 'Document key length (chars)',
-    description:
-      'Number of characters in generated document ids. New documents are named after their id. Existing documents keep their original ids.',
-    kind: 'number',
-    defaultValue: 6,
-    envKey: 'DOCUMENT_KEY_LENGTH',
-    min: 4,
-    max: 32,
-  },
-  {
     key: 'max_document_versions',
     label: 'Max document versions',
     description:
@@ -58,6 +48,27 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     max: 100,
   },
   {
+    key: 'max_documents_per_ip',
+    label: 'Max documents per IP',
+    description: 'Maximum number of documents a single client IP can create.',
+    kind: 'number',
+    defaultValue: 10,
+    envKey: 'MAX_DOCUMENTS_PER_IP',
+    min: 1,
+    max: 1000,
+  },
+  {
+    key: 'tts_max_segment_length',
+    label: 'TTS max segment length (chars)',
+    description:
+      'Maximum length of a single text segment sent to the TTS service. Longer paragraphs are split on sentence boundaries.',
+    kind: 'number',
+    defaultValue: 500,
+    envKey: 'TTS_MAX_SEGMENT_LENGTH',
+    min: 50,
+    max: 5000,
+  },
+  {
     key: 'tts_service_url',
     label: 'TTS service URL',
     description:
@@ -65,6 +76,17 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     kind: 'string',
     defaultValue: '',
     envKey: 'TTS_SERVICE_URL',
+  },
+  {
+    key: 'tts_synthesis_concurrency',
+    label: 'TTS synthesis concurrency',
+    description:
+      'Maximum number of TTS synthesis requests the browser issues at once while reading a document aloud.',
+    kind: 'number',
+    defaultValue: 4,
+    envKey: 'TTS_SYNTHESIS_CONCURRENCY',
+    min: 1,
+    max: 8,
   },
 ]
 
@@ -88,7 +110,7 @@ function readNumber(value: string | undefined): number | null {
   if (value === undefined) {
     return null
   }
-  const parsed = Number(value.trim())
+  const parsed = Number(value.trim().replace(/,/g, ''))
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
@@ -220,7 +242,7 @@ export function validateSettingValue(key: string, value: unknown): number | stri
     }
     return value.trim()
   }
-  const parsed = Number(value)
+  const parsed = Number(typeof value === 'string' ? value.replace(/,/g, '') : value)
   if (!Number.isInteger(parsed)) {
     throw new Error(`${definition.label} must be an integer`)
   }

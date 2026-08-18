@@ -8,7 +8,11 @@ import {
   type AdminSetting,
 } from '$lib/admin'
 import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-import { t } from '$lib/i18n.svelte'
+import { t, settingLabel } from '$lib/i18n.svelte'
+
+function parseNumberWithSeparators(raw: string): number {
+  return Number(raw.replace(/,/g, ''))
+}
 
 export function useAdminSettings(onSignedOut: () => void) {
   let settings = $state<AdminSetting[]>([])
@@ -33,9 +37,9 @@ export function useAdminSettings(onSignedOut: () => void) {
     setting: AdminSetting,
     raw: string,
   ): { ok: true; value: number } | { ok: false; error: string } {
-    const parsed = Number(raw)
+    const parsed = parseNumberWithSeparators(raw)
     if (!Number.isInteger(parsed)) {
-      return { ok: false, error: t('admin.settingMustBeInteger', { name: setting.label }) }
+      return { ok: false, error: t('admin.settingMustBeInteger', { name: settingLabel(setting.key) ?? setting.label }) }
     }
     if (
       parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
@@ -44,7 +48,7 @@ export function useAdminSettings(onSignedOut: () => void) {
       return {
         ok: false,
         error: t('admin.settingMustBeBetween', {
-          name: setting.label,
+          name: settingLabel(setting.key) ?? setting.label,
           min: setting.min ?? 0,
           max: setting.max ?? Number.MAX_SAFE_INTEGER,
         }),
@@ -142,7 +146,7 @@ export function useAdminSettings(onSignedOut: () => void) {
         value:
           setting.kind === 'string'
             ? (draftValues[setting.key]?.trim() ?? '')
-            : Number(draftValues[setting.key]),
+            : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
       })),
     )
       .then(updated => {
@@ -187,7 +191,7 @@ export function useAdminSettings(onSignedOut: () => void) {
       const updated = await resetAdminSetting(setting.key)
       settings = updated
       draftValues = Object.fromEntries(updated.map(item => [item.key, String(item.value)]))
-      toast.success(t('admin.settingReverted', { name: setting.label }))
+      toast.success(t('admin.settingReverted', { name: settingLabel(setting.key) ?? setting.label }))
     } catch (error) {
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : t('admin.auth.toast.resetSetting'))
