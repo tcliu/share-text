@@ -46,30 +46,61 @@ const SYNTHESIS_CACHE_LIMIT = 100
 const SYNTHESIS_CONCURRENCY = 4
 const synthesisCache = new Map<string, Blob>()
 
-async function runWithConcurrency<T>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T, index: number) => Promise<void>,
-): Promise<void> {
-  let index = 0
-  async function next() {
-    while (index < items.length) {
-      const current = index
-      index += 1
-      await worker(items[current], current)
+export async function* synthesizeTtsStreaming(
+  segments: Array<{ text: string; lang: string }>,
+  signal?: AbortSignal,
+): AsyncGenerator<Blob, void, undefined> {
+  const blobs: Array<Blob | undefined> = new Array(segments.length)
+  let nextToYield = 0
+  let launched = 0
+  let finished = 0
+  let failure: unknown = null
+  const waiters: Array<() => void> = []
+  const wake = () => {
+    for (const fn of waiters.splice(0)) fn()
+  }
+
+  function launchNext() {
+    while (!failure && launched < segments.length && launched - finished < SYNTHESIS_CONCURRENCY) {
+      const index = launched
+      launched += 1
+      const segment = segments[index]
+      synthesizeOneCached(segment.text, segment.lang, signal)
+        .then(blob => {
+          blobs[index] = blob
+        })
+        .catch(err => {
+          failure = err
+        })
+        .finally(() => {
+          finished += 1
+          launchNext()
+          wake()
+        })
     }
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => next()))
+
+  launchNext()
+  while (nextToYield < segments.length) {
+    if (failure) throw failure
+    const next = blobs[nextToYield]
+    if (next) {
+      yield next
+      nextToYield += 1
+      continue
+    }
+    await new Promise<void>(resolve => waiters.push(() => resolve()))
+  }
 }
 
 export async function synthesizeTtsCached(
   segments: Array<{ text: string; lang: string }>,
   signal?: AbortSignal,
 ): Promise<Blob[]> {
-  const results: Blob[] = new Array(segments.length)
-  await runWithConcurrency(segments, SYNTHESIS_CONCURRENCY, async ({ text, lang }, index) => {
-    results[index] = await synthesizeOneCached(text, lang, signal)
-  })
+  const results: Blob[] = []
+  for await (const blob of synthesizeTtsStreaming(segments, signal)) {
+    results.push(blob)
+  }
   return results
 }
 

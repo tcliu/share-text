@@ -101,12 +101,77 @@ function foldShortRuns(runs: TtsSegment[]): TtsSegment[] {
   return mergeAdjacentRuns(folded)
 }
 
+const MAX_SEGMENT_LENGTH = 500
+const BLANK_LINE_RE = /\n\s*\n/
+const SENTENCE_TERMINATOR_RE = /[.!?。！？]+\s*/g
+
+function splitParagraphs(text: string): string[] {
+  return text
+    .split(BLANK_LINE_RE)
+    .map(part => part.trim())
+    .filter(part => part !== '')
+}
+
+function splitIntoSentences(text: string): string[] {
+  const sentences: string[] = []
+  let last = 0
+  SENTENCE_TERMINATOR_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = SENTENCE_TERMINATOR_RE.exec(text)) !== null) {
+    sentences.push(text.slice(last, match.index + match[0].length))
+    last = match.index + match[0].length
+  }
+  if (last < text.length) {
+    sentences.push(text.slice(last))
+  }
+  return sentences
+}
+
+function hardSplit(text: string, maxLength: number): string[] {
+  const parts: string[] = []
+  let i = 0
+  while (i < text.length) {
+    parts.push(text.slice(i, i + maxLength))
+    i += maxLength
+  }
+  return parts
+}
+
+function splitLongText(text: string, maxLength: number): string[] {
+  const sentences = splitIntoSentences(text)
+  const chunks: string[] = []
+  let current = ''
+  for (const sentence of sentences) {
+    if (sentence.length > maxLength) {
+      if (current) {
+        chunks.push(current)
+        current = ''
+      }
+      chunks.push(...hardSplit(sentence, maxLength))
+      continue
+    }
+    if (current && current.length + sentence.length > maxLength) {
+      chunks.push(current)
+      current = sentence
+    } else {
+      current += sentence
+    }
+  }
+  if (current) {
+    chunks.push(current)
+  }
+  return chunks.filter(chunk => chunk.trim() !== '')
+}
+
 export function splitTtsSegments(text: string): TtsSegment[] {
   const runs = foldShortRuns(mergeAdjacentRuns(splitTtsRuns(text)))
-  return runs
-    .map(run => {
-      const trimmed = run.text.trim()
-      return { text: run.lang === 'en' ? trimmed : trimmed.replace(/\r?\n/g, ''), lang: run.lang }
-    })
-    .filter(run => run.text !== '')
+  return runs.flatMap(run =>
+    splitParagraphs(run.text).flatMap(paragraph => {
+      const clean = run.lang === 'en' ? paragraph : paragraph.replace(/\r?\n/g, '')
+      if (clean.length <= MAX_SEGMENT_LENGTH) {
+        return clean ? [{ text: clean, lang: run.lang }] : []
+      }
+      return splitLongText(clean, MAX_SEGMENT_LENGTH).map(text => ({ text, lang: run.lang }))
+    }),
+  )
 }

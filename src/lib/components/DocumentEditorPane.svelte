@@ -30,6 +30,7 @@
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import Splitter from './Splitter.svelte'
   import PreviewPane from './PreviewPane.svelte'
+  import Spinner from './Spinner.svelte'
   import Chip from './Chip.svelte'
   import Copyable from './Copyable.svelte'
   import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
@@ -40,7 +41,7 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
-  import { loadTtsCapabilities, synthesizeTtsCached } from '$lib/tts-client'
+  import { loadTtsCapabilities, synthesizeTtsStreaming } from '$lib/tts-client'
   import { splitTtsSegments } from '$lib/tts-language'
   import { t } from '$lib/i18n.svelte'
 
@@ -104,11 +105,13 @@
   let refocusEditor = $state(false)
   let ttsConfigured = $state(false)
   let speaking = $state(false)
+  let processing = $state(false)
   let audioRef = $state<HTMLAudioElement | null>(null)
   let ttsQueue = $state<string[]>([])
   let ttsQueueIndex = $state(0)
   let ttsObjectUrls: string[] = []
   let ttsAbortController: AbortController | null = null
+  let ttsSynthesizing = false
 
   $effect(() => {
     let cancelled = false
@@ -255,30 +258,53 @@
     audioRef?.pause()
     ttsQueue = []
     ttsQueueIndex = 0
+    ttsSynthesizing = false
     releaseTtsObjectUrls()
     speaking = false
+    processing = false
   }
 
-  function playNextSegment() {
-    const nextIndex = ttsQueueIndex + 1
-    const nextUrl = ttsQueue[nextIndex]
-    if (!nextUrl || !audioRef) {
-      ttsQueue = []
-      ttsQueueIndex = 0
-      releaseTtsObjectUrls()
-      speaking = false
-      return
-    }
-    ttsQueueIndex = nextIndex
-    audioRef.src = nextUrl
+  function playUrl(url: string) {
+    if (!audioRef) return
+    audioRef.src = url
     audioRef.play().catch(() => {
       toast.error(t('editor.toast.playFailed'))
       stopReading()
     })
   }
 
+  function playNextSegment() {
+    const nextIndex = ttsQueueIndex + 1
+    const nextUrl = ttsQueue[nextIndex]
+    if (!nextUrl || !audioRef) {
+      if (ttsSynthesizing) {
+        return
+      }
+      ttsQueue = []
+      ttsQueueIndex = 0
+      releaseTtsObjectUrls()
+      speaking = false
+      processing = false
+      return
+    }
+    ttsQueueIndex = nextIndex
+    playUrl(nextUrl)
+  }
+
+  function appendTtsUrl(url: string) {
+    ttsObjectUrls.push(url)
+    ttsQueue.push(url)
+    if (ttsQueue.length === 1) {
+      processing = false
+      speaking = true
+      playUrl(url)
+    } else if (audioRef?.paused && ttsQueueIndex + 1 < ttsQueue.length) {
+      playNextSegment()
+    }
+  }
+
   async function handleReadAloud() {
-    if (speaking) {
+    if (speaking || processing) {
       stopReading()
       return
     }
@@ -293,28 +319,39 @@
       toast.error(t('editor.toast.nothingToRead'))
       return
     }
-    speaking = true
+    processing = true
+    ttsSynthesizing = true
     ttsAbortController = new AbortController()
+    const signal = ttsAbortController.signal
     try {
-      const blobs = await synthesizeTtsCached(
-        segments,
-        ttsAbortController?.signal,
-      )
-      if (ttsAbortController?.signal.aborted) {
+      releaseTtsObjectUrls()
+      ttsQueue = []
+      ttsQueueIndex = 0
+      for await (const blob of synthesizeTtsStreaming(segments, signal)) {
+        if (signal.aborted) {
+          ttsSynthesizing = false
+          return
+        }
+        if (!audioRef) {
+          ttsSynthesizing = false
+          processing = false
+          return
+        }
+        appendTtsUrl(URL.createObjectURL(blob))
+      }
+      ttsSynthesizing = false
+      if (!speaking) {
+        ttsQueue = []
+        ttsQueueIndex = 0
+        releaseTtsObjectUrls()
+        processing = false
         return
       }
-      if (!audioRef) return
-      releaseTtsObjectUrls()
-      ttsObjectUrls = blobs.map(blob => URL.createObjectURL(blob))
-      ttsQueue = ttsObjectUrls
-      ttsQueueIndex = 0
-      audioRef.src = ttsQueue[0]
-      audioRef.play().catch(() => {
-        toast.error(t('editor.toast.playFailed'))
-        stopReading()
-      })
+      if (audioRef?.paused && ttsQueueIndex + 1 >= ttsQueue.length) {
+        playNextSegment()
+      }
     } catch (error) {
-      if (ttsAbortController?.signal.aborted) {
+      if (signal.aborted) {
         return
       }
       toast.error(error instanceof Error ? error.message : t('editor.toast.synthesizeFailed'))
@@ -464,14 +501,16 @@
     {#if ttsConfigured}
     <Button
       size="sm"
-      ariaLabel={speaking ? t('editor.stopReading') : t('editor.readAloud')}
-      tooltip={speaking ? t('editor.stopReading') : t('editor.readAloud')}
-      variant={speaking ? 'outline' : 'secondary'}
-      ariaPressed={speaking}
+      ariaLabel={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
+      tooltip={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
+      variant={speaking || processing ? 'outline' : 'secondary'}
+      ariaPressed={speaking || processing}
       onClick={handleReadAloud}
-      disabled={!speaking && content.length === 0}>
+      disabled={!speaking && !processing && content.length === 0}>
       {#snippet icon()}
-        {#if speaking}
+        {#if processing}
+          <Spinner className="h-4 w-4" />
+        {:else if speaking}
           <StopIcon />
         {:else}
           <SpeakerIcon />

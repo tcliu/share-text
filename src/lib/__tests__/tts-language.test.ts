@@ -44,8 +44,19 @@ describe('splitTtsSegments', () => {
     ])
   })
 
-  it('drops blank lines and strips cjk newlines', () => {
-    expect(splitTtsSegments('Hello\n\nWorld')).toEqual([{ text: 'Hello\n\nWorld', lang: 'en' }])
+  it('splits paragraphs on blank lines and strips cjk newlines', () => {
+    expect(splitTtsSegments('Hello\n\nWorld')).toEqual([
+      { text: 'Hello', lang: 'en' },
+      { text: 'World', lang: 'en' },
+    ])
+    expect(splitTtsSegments('你好世界\n\n明天见')).toEqual([
+      { text: '你好世界', lang: 'zh' },
+      { text: '明天见', lang: 'zh' },
+    ])
+    expect(splitTtsSegments('Hello\n  \nWorld')).toEqual([
+      { text: 'Hello', lang: 'en' },
+      { text: 'World', lang: 'en' },
+    ])
     expect(splitTtsSegments('')).toEqual([])
   })
 
@@ -114,5 +125,27 @@ describe('splitTtsSegments', () => {
   it('folds short runs into a neighboring longer run', () => {
     expect(splitTtsSegments('ABC 中 DEF')).toEqual([{ text: 'ABC 中 DEF', lang: 'zh' }])
     expect(splitTtsSegments('Hello 你 world')).toEqual([{ text: 'Hello 你 world', lang: 'en' }])
+  })
+
+  it('splits an oversized paragraph on sentence boundaries', () => {
+    const paragraph =
+      'This is a long paragraph meant to exceed the maximum segment length so that the backstop ' +
+      'splits it on sentence boundaries. '.repeat(30)
+    const segments = splitTtsSegments(paragraph)
+    expect(segments.length).toBeGreaterThan(1)
+    for (const segment of segments) {
+      expect(segment.lang).toBe('en')
+      expect(segment.text.length).toBeLessThanOrEqual(500)
+      expect(segment.text).not.toContain('\n\n')
+    }
+    expect(segments.map(s => s.text).join('').replace(/\s+/g, ' ').trim()).toBe(
+      paragraph.replace(/\s+/g, ' ').trim(),
+    )
+  })
+
+  it('keeps a paragraph under the limit as a single segment', () => {
+    const paragraph = 'A reasonably sized paragraph. '.repeat(10)
+    expect(paragraph.length).toBeLessThanOrEqual(500)
+    expect(splitTtsSegments(paragraph)).toEqual([{ text: paragraph.trim(), lang: 'en' }])
   })
 })
