@@ -11,6 +11,7 @@
     autoFocus?: boolean
     recreateKey?: string
     maxContentLength?: number
+    onReady?: () => void
     onAutoFocused?: () => void
     onContentChange?: (content: string) => void
   }
@@ -25,6 +26,7 @@
     autoFocus = false,
     recreateKey = '',
     maxContentLength = 0,
+    onReady,
     onAutoFocused,
     onContentChange,
   }: Props = $props()
@@ -32,7 +34,13 @@
   const resolvedAriaLabel = $derived(editorAriaLabel ?? t('editor.content'))
 
   let EditorComponent = $state<any>(null)
-  let editorInstance = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
+  let editorInstance = $state<{
+    focus: () => void
+    getSelectionText: () => string
+    getSelectionRange: () => { from: number; to: number } | null
+    setSelection: (from: number, to: number) => boolean
+    clearSelection: () => void
+  } | null>(null)
   let loadError = $state('')
 
   function handleContentChange(nextContent: string) {
@@ -46,6 +54,18 @@
 
   export function getSelectionText(): string {
     return editorInstance?.getSelectionText() ?? ''
+  }
+
+  export function getSelectionRange(): { from: number; to: number } | null {
+    return editorInstance?.getSelectionRange() ?? null
+  }
+
+  export function setSelection(from: number, to: number): boolean {
+    return editorInstance?.setSelection(from, to) ?? false
+  }
+
+  export function clearSelection() {
+    editorInstance?.clearSelection()
   }
 
   $effect(() => {
@@ -81,6 +101,7 @@
     {autoFocus}
     {recreateKey}
     {maxContentLength}
+    {onReady}
     onAutoFocused={onAutoFocused}
     onContentChange={handleContentChange}></EditorComponent>
 {:else}

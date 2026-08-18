@@ -42,7 +42,7 @@
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
   import { loadTtsCapabilities, synthesizeTtsStreaming, SYNTHESIS_CONCURRENCY } from '$lib/tts-client'
-  import { splitTtsSegments, MAX_SEGMENT_LENGTH } from '$lib/tts-language'
+  import { splitTtsSegments, MAX_SEGMENT_LENGTH, type TtsSegment } from '$lib/tts-language'
   import { t } from '$lib/i18n.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -101,7 +101,13 @@
       document.name !== (savedName ?? document.name),
   )
 
-  let editorRef = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
+  let editorRef = $state<{
+    focus: () => void
+    getSelectionText: () => string
+    getSelectionRange: () => { from: number; to: number } | null
+    setSelection: (from: number, to: number) => boolean
+    clearSelection: () => void
+  } | null>(null)
   let refocusEditor = $state(false)
   let ttsConfigured = $state(false)
   let ttsMaxSegmentLength = $state(MAX_SEGMENT_LENGTH)
@@ -114,6 +120,19 @@
   let ttsObjectUrls: string[] = []
   let ttsAbortController: AbortController | null = null
   let ttsSynthesizing = false
+  let ttsSegments = $state<TtsSegment[]>([])
+  let ttsHadSelection = false
+  let ttsSelectionOffset = 0
+  let pendingRange = $state<{ from: number; to: number } | null>(null)
+  let editorReady = $state(0)
+
+  $effect(() => {
+    void editorReady
+    if (!pendingRange || !editorRef) return
+    if (editorRef.setSelection(pendingRange.from, pendingRange.to)) {
+      pendingRange = null
+    }
+  })
 
   $effect(() => {
     let cancelled = false
@@ -263,9 +282,23 @@
     ttsQueue = []
     ttsQueueIndex = 0
     ttsSynthesizing = false
+    ttsSegments = []
+    ttsHadSelection = false
+    ttsSelectionOffset = 0
+    pendingRange = null
     releaseTtsObjectUrls()
     speaking = false
     processing = false
+  }
+
+  function setSelectionForCurrentSegment() {
+    if (ttsHadSelection) return
+    const segment = ttsSegments[ttsQueueIndex]
+    if (!segment || segment.indexStart == null || segment.indexEnd == null) return
+    const range = { from: ttsSelectionOffset + segment.indexStart, to: ttsSelectionOffset + segment.indexEnd + 1 }
+    if (!editorRef || !editorRef.setSelection(range.from, range.to)) {
+      pendingRange = range
+    }
   }
 
   function playUrl(url: string) {
@@ -284,14 +317,23 @@
       if (ttsSynthesizing) {
         return
       }
+      const shouldClearSelection = !ttsHadSelection
       ttsQueue = []
       ttsQueueIndex = 0
+      ttsSegments = []
+      ttsHadSelection = false
+      ttsSelectionOffset = 0
+      pendingRange = null
       releaseTtsObjectUrls()
       speaking = false
       processing = false
+      if (shouldClearSelection) {
+        editorRef?.clearSelection()
+      }
       return
     }
     ttsQueueIndex = nextIndex
+    setSelectionForCurrentSegment()
     playUrl(nextUrl)
   }
 
@@ -301,6 +343,7 @@
     if (ttsQueue.length === 1) {
       processing = false
       speaking = true
+      setSelectionForCurrentSegment()
       playUrl(url)
     } else if (audioRef?.paused && ttsQueueIndex + 1 < ttsQueue.length) {
       playNextSegment()
@@ -316,8 +359,10 @@
       toast.error(t('editor.toast.ttsNotConfigured'))
       return
     }
-    const selection = editorRef?.getSelectionText() ?? ''
-    const text = selection.trim() ? selection : content
+    const selectionRange = editorRef?.getSelectionRange()
+    const selection = selectionRange ? content.slice(selectionRange.from, selectionRange.to) : ''
+    const hasSelection = selection.trim().length > 0
+    const text = hasSelection ? selection : content
     const segments = splitTtsSegments(text, ttsMaxSegmentLength)
     if (segments.length === 0) {
       toast.error(t('editor.toast.nothingToRead'))
@@ -331,6 +376,9 @@
       releaseTtsObjectUrls()
       ttsQueue = []
       ttsQueueIndex = 0
+      ttsHadSelection = hasSelection
+      ttsSelectionOffset = hasSelection ? selectionRange?.from ?? 0 : 0
+      ttsSegments = segments
       for await (const blob of synthesizeTtsStreaming(segments, signal, ttsSynthesisConcurrency)) {
         if (signal.aborted) {
           ttsSynthesizing = false
@@ -347,8 +395,15 @@
       if (!speaking) {
         ttsQueue = []
         ttsQueueIndex = 0
+        ttsSegments = []
+        ttsSelectionOffset = 0
+        pendingRange = null
         releaseTtsObjectUrls()
         processing = false
+        if (!ttsHadSelection) {
+          editorRef?.clearSelection()
+        }
+        ttsHadSelection = false
         return
       }
       if (audioRef?.paused && ttsQueueIndex + 1 >= ttsQueue.length) {
@@ -509,6 +564,7 @@
       tooltip={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
       variant={speaking || processing ? 'outline' : 'secondary'}
       ariaPressed={speaking || processing}
+      preventFocusSteal
       onClick={handleReadAloud}
       disabled={!speaking && !processing && content.length === 0}>
       {#snippet icon()}
@@ -751,6 +807,7 @@
 {editable}
           autoFocus={focusOnMount || refocusEditor}
           onAutoFocused={() => (refocusEditor = false)}
+          onReady={() => (editorReady++)}
           recreateKey={document.id}
           {maxContentLength}
           containerClass="h-full"
