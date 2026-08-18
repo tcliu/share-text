@@ -13,10 +13,13 @@
   import AdminPropertiesView from '$lib/components/AdminPropertiesView.svelte'
   import AdminDocumentsView from '$lib/components/AdminDocumentsView.svelte'
   import AdminUsersView from '$lib/components/AdminUsersView.svelte'
+  import AdminTextToSpeechView from '$lib/components/AdminTextToSpeechView.svelte'
+  import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import { useAdminAuth } from '$lib/use-admin-auth.svelte'
   import { useAdminSettings } from '$lib/use-admin-settings.svelte'
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
+  import { useAdminSegments } from '$lib/use-admin-segments.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import UploadIcon from '$lib/icons/UploadIcon.svelte'
@@ -26,10 +29,12 @@
   const PROPERTIES_PATH = '/admin/properties'
   const DOCUMENTS_PATH = '/admin/documents'
   const USERS_PATH = '/admin/users'
+  const TTS_PATH = '/admin/text-to-speech'
   type AdminState = {
     settingsState: ReturnType<typeof useAdminSettings>
     documentsState: ReturnType<typeof useAdminDocuments>
     usersState: ReturnType<typeof useAdminUsers>
+    segmentsState: ReturnType<typeof useAdminSegments>
   }
 
   let { children }: { children?: Snippet } = $props()
@@ -40,11 +45,13 @@
   const settingsState = useAdminSettings(() => authState.handleSignedOut())
   const documentsState = useAdminDocuments({ onSignedOut: () => authState.handleSignedOut() })
   const usersState = useAdminUsers({ onSignedOut: () => authState.handleSignedOut() })
+  const segmentsState = useAdminSegments()
   const authState = useAdminAuth({
     onSignedOut() {
       settingsState.reset()
       documentsState.reset()
       usersState.reset()
+      segmentsState.reset()
     },
   })
 
@@ -65,6 +72,13 @@
     if (authState.state !== 'authenticated') return
     if (page.url.pathname === USERS_PATH && !usersState.loaded) {
       void usersState.load()
+    }
+  })
+
+  $effect(() => {
+    if (authState.state !== 'authenticated') return
+    if (page.url.pathname === TTS_PATH && !segmentsState.loaded) {
+      void segmentsState.reload()
     }
   })
 
@@ -110,6 +124,7 @@
     <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
       <h1 class="text-md font-semibold text-slate-200">{t('admin.title')}</h1>
       <div class="flex items-center gap-2">
+        <LanguageMenu />
         <Button size="sm" ariaLabel={t('auth.goToDocuments')} tooltip={t('auth.goToDocuments')} onClick={() => goto('/')}>
           {#snippet icon()}
             <DocumentIcon />
@@ -268,6 +283,9 @@
       {#snippet usersContent(state: AdminState)}
         <AdminUsersView usersState={state.usersState} />
       {/snippet}
+      {#snippet ttsContent(state: AdminState)}
+        <AdminTextToSpeechView segmentsState={state.segmentsState} />
+      {/snippet}
       {@const adminTabs = [
         {
           label: t('admin.tab.properties'),
@@ -286,11 +304,16 @@
           toolbar: usersToolbar,
           content: usersContent,
         },
+        {
+          label: t('admin.tab.tts'),
+          path: TTS_PATH,
+          content: ttsContent,
+        },
       ] satisfies Tab<AdminState>[]}
       <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
         <Tabs
           tabs={adminTabs}
-          state={{ settingsState, documentsState, usersState }}
+          state={{ settingsState, documentsState, usersState, segmentsState }}
           pathname={page.url.pathname}
           ariaLabel={t('admin.sections')} />
       </div>

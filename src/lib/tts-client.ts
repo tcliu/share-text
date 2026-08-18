@@ -1,10 +1,31 @@
+import { MAX_SEGMENT_LENGTH } from './tts-language'
+
 export interface TtsCapabilities {
   configured: boolean
   languages: string[]
+  maxSegmentLength: number
+  synthesisConcurrency: number
 }
 
 const CAPABILITIES_CACHE_TTL_MS = 60_000
 let cachedCapabilities: { value: Promise<TtsCapabilities>; expiresAt: number } | null = null
+
+function positiveInt(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback
+}
+
+function unconfiguredCapabilities(): TtsCapabilities {
+  return {
+    configured: false,
+    languages: [],
+    maxSegmentLength: MAX_SEGMENT_LENGTH,
+    synthesisConcurrency: SYNTHESIS_CONCURRENCY,
+  }
+}
+
+export function clearCapabilitiesCache() {
+  cachedCapabilities = null
+}
 
 export function loadTtsCapabilities(): Promise<TtsCapabilities> {
   const now = Date.now()
@@ -15,24 +36,42 @@ export function loadTtsCapabilities(): Promise<TtsCapabilities> {
     .then(() => fetch('/api/tts/capabilities'))
     .then(async response => {
       if (!response.ok) {
-        return { configured: false, languages: [] }
+        return unconfiguredCapabilities()
       }
       const data = (await response.json()) as Partial<TtsCapabilities>
       return {
         configured: Boolean(data.configured),
         languages: Array.isArray(data.languages) ? data.languages : [],
+        maxSegmentLength: positiveInt(data.maxSegmentLength, MAX_SEGMENT_LENGTH),
+        synthesisConcurrency: positiveInt(data.synthesisConcurrency, SYNTHESIS_CONCURRENCY),
       }
     })
-    .catch(() => ({ configured: false, languages: [] }))
+    .catch(unconfiguredCapabilities)
   cachedCapabilities = { value: promise, expiresAt: now + CAPABILITIES_CACHE_TTL_MS }
   return promise
 }
 
-export async function synthesizeTts(text: string, lang: string, signal?: AbortSignal): Promise<Blob> {
+export interface TtsSegmentMeta {
+  segmentIndex?: number
+  indexStart?: number
+  indexEnd?: number
+}
+
+export interface TtsSegmentInput extends TtsSegmentMeta {
+  text: string
+  lang: string
+}
+
+export async function synthesizeTts(
+  text: string,
+  lang: string,
+  signal?: AbortSignal,
+  meta?: TtsSegmentMeta,
+): Promise<Blob> {
   const response = await fetch('/api/tts/synthesize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, lang }),
+    body: JSON.stringify({ text, lang, ...meta }),
     signal,
   })
   if (!response.ok) {
@@ -43,12 +82,13 @@ export async function synthesizeTts(text: string, lang: string, signal?: AbortSi
 }
 
 const SYNTHESIS_CACHE_LIMIT = 100
-const SYNTHESIS_CONCURRENCY = 4
+export const SYNTHESIS_CONCURRENCY = 4
 const synthesisCache = new Map<string, Blob>()
 
 export async function* synthesizeTtsStreaming(
-  segments: Array<{ text: string; lang: string }>,
+  segments: TtsSegmentInput[],
   signal?: AbortSignal,
+  concurrency: number = SYNTHESIS_CONCURRENCY,
 ): AsyncGenerator<Blob, void, undefined> {
   const blobs: Array<Blob | undefined> = new Array(segments.length)
   let nextToYield = 0
@@ -61,11 +101,15 @@ export async function* synthesizeTtsStreaming(
   }
 
   function launchNext() {
-    while (!failure && launched < segments.length && launched - finished < SYNTHESIS_CONCURRENCY) {
+    while (!failure && launched < segments.length && launched - finished < concurrency) {
       const index = launched
       launched += 1
       const segment = segments[index]
-      synthesizeOneCached(segment.text, segment.lang, signal)
+      synthesizeOneCached(segment.text, segment.lang, signal, {
+        segmentIndex: index,
+        indexStart: segment.indexStart,
+        indexEnd: segment.indexEnd,
+      })
         .then(blob => {
           blobs[index] = blob
         })
@@ -94,23 +138,29 @@ export async function* synthesizeTtsStreaming(
 }
 
 export async function synthesizeTtsCached(
-  segments: Array<{ text: string; lang: string }>,
+  segments: TtsSegmentInput[],
   signal?: AbortSignal,
+  concurrency: number = SYNTHESIS_CONCURRENCY,
 ): Promise<Blob[]> {
   const results: Blob[] = []
-  for await (const blob of synthesizeTtsStreaming(segments, signal)) {
+  for await (const blob of synthesizeTtsStreaming(segments, signal, concurrency)) {
     results.push(blob)
   }
   return results
 }
 
-async function synthesizeOneCached(text: string, lang: string, signal?: AbortSignal): Promise<Blob> {
+async function synthesizeOneCached(
+  text: string,
+  lang: string,
+  signal?: AbortSignal,
+  meta?: TtsSegmentMeta,
+): Promise<Blob> {
   const key = `${lang}\u0000${text}`
   const cached = synthesisCache.get(key)
   if (cached) {
     return cached
   }
-  const blob = await synthesizeTts(text, lang, signal)
+  const blob = await synthesizeTts(text, lang, signal, meta)
   synthesisCache.set(key, blob)
   if (synthesisCache.size > SYNTHESIS_CACHE_LIMIT) {
     const oldestKey = synthesisCache.keys().next().value

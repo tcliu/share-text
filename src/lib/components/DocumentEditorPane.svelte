@@ -41,8 +41,8 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
-  import { loadTtsCapabilities, synthesizeTtsStreaming } from '$lib/tts-client'
-  import { splitTtsSegments } from '$lib/tts-language'
+  import { loadTtsCapabilities, synthesizeTtsStreaming, SYNTHESIS_CONCURRENCY } from '$lib/tts-client'
+  import { splitTtsSegments, MAX_SEGMENT_LENGTH } from '$lib/tts-language'
   import { t } from '$lib/i18n.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -104,6 +104,8 @@
   let editorRef = $state<{ focus: () => void; getSelectionText: () => string } | null>(null)
   let refocusEditor = $state(false)
   let ttsConfigured = $state(false)
+  let ttsMaxSegmentLength = $state(MAX_SEGMENT_LENGTH)
+  let ttsSynthesisConcurrency = $state(SYNTHESIS_CONCURRENCY)
   let speaking = $state(false)
   let processing = $state(false)
   let audioRef = $state<HTMLAudioElement | null>(null)
@@ -118,6 +120,8 @@
     loadTtsCapabilities().then(capabilities => {
       if (!cancelled) {
         ttsConfigured = capabilities.configured
+        ttsMaxSegmentLength = capabilities.maxSegmentLength
+        ttsSynthesisConcurrency = capabilities.synthesisConcurrency
       }
     })
     return () => {
@@ -314,7 +318,7 @@
     }
     const selection = editorRef?.getSelectionText() ?? ''
     const text = selection.trim() ? selection : content
-    const segments = splitTtsSegments(text)
+    const segments = splitTtsSegments(text, ttsMaxSegmentLength)
     if (segments.length === 0) {
       toast.error(t('editor.toast.nothingToRead'))
       return
@@ -327,7 +331,7 @@
       releaseTtsObjectUrls()
       ttsQueue = []
       ttsQueueIndex = 0
-      for await (const blob of synthesizeTtsStreaming(segments, signal)) {
+      for await (const blob of synthesizeTtsStreaming(segments, signal, ttsSynthesisConcurrency)) {
         if (signal.aborted) {
           ttsSynthesizing = false
           return

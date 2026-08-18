@@ -19,11 +19,21 @@ export const POST: RequestHandler = async ({ request }) => {
   if (!(await getSupportedTtsLanguages()).includes(lang)) {
     return json({ error: `Unsupported language '${lang}'` }, { status: 400 })
   }
+  const forwarded: Record<string, string | number> = { text, lang }
+  for (const [camel, snake] of [
+    ['segmentIndex', 'segment_index'],
+    ['indexStart', 'index_start'],
+    ['indexEnd', 'index_end'],
+  ] as const) {
+    if (typeof body[camel] === 'number') {
+      forwarded[snake] = body[camel]
+    }
+  }
   try {
     const response = await fetch(`${await getTtsServiceUrl()}/api/synthesize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, lang }),
+      body: JSON.stringify(forwarded),
     })
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))

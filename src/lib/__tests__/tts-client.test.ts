@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearSynthesisCache, synthesizeTtsCached, synthesizeTtsStreaming } from '../tts-client'
+import {
+  clearCapabilitiesCache,
+  clearSynthesisCache,
+  loadTtsCapabilities,
+  synthesizeTtsCached,
+  synthesizeTtsStreaming,
+} from '../tts-client'
 
 function audioBlob() {
   return new Blob(['audio-data'])
@@ -9,6 +15,44 @@ function audioBlob() {
 beforeEach(() => {
   vi.unstubAllGlobals()
   clearSynthesisCache()
+  clearCapabilitiesCache()
+})
+
+describe('loadTtsCapabilities', () => {
+  it('parses the runtime TTS settings from the response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        configured: true,
+        languages: ['en', 'zh'],
+        maxSegmentLength: 300,
+        synthesisConcurrency: 2,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await loadTtsCapabilities()).toEqual({
+      configured: true,
+      languages: ['en', 'zh'],
+      maxSegmentLength: 300,
+      synthesisConcurrency: 2,
+    })
+  })
+
+  it('falls back to the built-in defaults when the response omits the settings', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ configured: false, languages: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await loadTtsCapabilities()).toEqual({
+      configured: false,
+      languages: [],
+      maxSegmentLength: 500,
+      synthesisConcurrency: 4,
+    })
+  })
 })
 
 describe('synthesizeTtsCached', () => {
@@ -57,6 +101,22 @@ describe('synthesizeTtsCached', () => {
     expect(await results[0].text()).toBe('slow')
     expect(await results[1].text()).toBe('fast')
   })
+
+  it('sends segment index and text-range metadata in the request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: async () => audioBlob() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await synthesizeTtsCached([
+      { text: '你好世界', lang: 'zh', indexStart: 6, indexEnd: 9 },
+      { text: 'Hello', lang: 'en' },
+    ])
+
+    const firstBody = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(firstBody).toMatchObject({ text: '你好世界', lang: 'zh', segmentIndex: 0, indexStart: 6, indexEnd: 9 })
+
+    const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
+    expect(secondBody).toMatchObject({ text: 'Hello', lang: 'en', segmentIndex: 1 })
+  })
 })
 
 describe('synthesizeTtsStreaming', () => {
@@ -101,6 +161,48 @@ describe('synthesizeTtsStreaming', () => {
     releaseSecond()
     const secondResult = await iterator.next()
     expect(await secondResult.value!.text()).toBe('second')
+    expect(await iterator.next()).toEqual({ done: true, value: undefined })
+  })
+
+  it('caps in-flight synthesis requests at the given concurrency', async () => {
+    let inFlight = 0
+    let maxInFlight = 0
+    const releases: Array<() => void> = []
+    const fetchMock = vi.fn().mockImplementation(() => {
+      inFlight += 1
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      return new Promise(resolve => {
+        releases.push(() => {
+          inFlight -= 1
+          resolve({ ok: true, blob: async () => new Blob(['audio']) })
+        })
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const iterator = synthesizeTtsStreaming(
+      [
+        { text: 'a', lang: 'en' },
+        { text: 'b', lang: 'en' },
+        { text: 'c', lang: 'en' },
+      ],
+      undefined,
+      2,
+    )[Symbol.asyncIterator]()
+
+    const first = iterator.next()
+    await Promise.resolve()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(maxInFlight).toBe(2)
+
+    releases.splice(0).forEach(release => release())
+    await first
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(maxInFlight).toBe(2)
+
+    releases.splice(0).forEach(release => release())
+    await iterator.next()
+    await iterator.next()
     expect(await iterator.next()).toEqual({ done: true, value: undefined })
   })
 })
