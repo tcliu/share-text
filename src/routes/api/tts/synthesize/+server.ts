@@ -23,7 +23,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const response = await fetch(`${await getTtsServiceUrl()}/api/synthesize`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, lang, engine: 'auto', voice: null }),
+      body: JSON.stringify({ text, lang }),
     })
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))

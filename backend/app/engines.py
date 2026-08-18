@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-import tempfile
 import threading
 import wave
 from pathlib import Path
@@ -13,14 +12,6 @@ try:
 except Exception:
     PiperVoice = None  # type: ignore[assignment,misc]
     PIPER_AVAILABLE = False
-
-try:
-    from gtts import gTTS
-
-    GTTS_AVAILABLE = True
-except Exception:
-    gTTS = None  # type: ignore[assignment,misc]
-    GTTS_AVAILABLE = False
 
 PIPER_VOICES: dict[str, str] = {
     "en": "en_US-lessac-medium.onnx",
@@ -36,17 +27,8 @@ PIPER_LANG_ID: dict[str, int | None] = {
     "zh": None,
 }
 
-GTTS_LANG_MAP: dict[str, str] = {
-    "en": "en",
-    "en_gb": "en",
-    "zh": "zh-CN",
-    "ja": "ja",
-    "yue": "zh-CN",
-}
-
 PIPER_LANGS: list[str] = list(PIPER_VOICES)
-GTTS_LANGS: list[str] = list(GTTS_LANG_MAP)
-SUPPORTED_LANGS: list[str] = sorted(set(PIPER_LANGS) | set(GTTS_LANGS))
+SUPPORTED_LANGS: list[str] = sorted(PIPER_LANGS)
 
 
 def piper_lang_available(lang: str, model_dir: str) -> bool:
@@ -62,6 +44,11 @@ class PiperEngine:
         self._model_dir = model_dir
         self._voices: dict[str, object] = {}
         self._lock = threading.Lock()
+
+    def model_name(self, lang: str) -> str:
+        if lang not in PIPER_VOICES:
+            raise ValueError(f"Unknown language '{lang}'. Supported: {PIPER_LANGS}")
+        return PIPER_VOICES[lang]
 
     def speak(self, text: str, lang: str) -> bytes:
         if lang not in PIPER_VOICES:
@@ -88,44 +75,19 @@ class PiperEngine:
             return self._voices[lang]
 
 
-class GTTSEngine:
-    def speak(self, text: str, lang: str) -> bytes:
-        if lang not in GTTS_LANG_MAP:
-            raise ValueError(f"Unknown language '{lang}'. Supported: {GTTS_LANGS}")
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
-            temp_path = temp_file.name
-        try:
-            gTTS(text=text, lang=GTTS_LANG_MAP[lang]).save(temp_path)
-            with open(temp_path, "rb") as audio_file:
-                return audio_file.read()
-        finally:
-            Path(temp_path).unlink(missing_ok=True)
-
-
-_ENGINES: dict[tuple[str, str], PiperEngine | GTTSEngine] = {}
+_ENGINES: dict[str, PiperEngine] = {}
 _ENGINES_LOCK = threading.Lock()
 
 
-def get_engine(name: str, model_dir: str) -> PiperEngine | GTTSEngine:
-    if name == "piper":
-        if not PIPER_AVAILABLE:
-            raise RuntimeError("piper-tts is not installed. Run: pip install piper-tts")
-    elif name == "gtts":
-        if not GTTS_AVAILABLE:
-            raise RuntimeError("gtts is not installed. Run: pip install gtts")
-    else:
-        raise ValueError(f"Unknown engine '{name}'. Supported: piper, gtts")
-
-    key = (name, model_dir)
-    engine = _ENGINES.get(key)
+def get_engine(model_dir: str) -> PiperEngine:
+    if not PIPER_AVAILABLE:
+        raise RuntimeError("piper-tts is not installed. Run: pip install piper-tts")
+    engine = _ENGINES.get(model_dir)
     if engine is not None:
         return engine
     with _ENGINES_LOCK:
-        engine = _ENGINES.get(key)
+        engine = _ENGINES.get(model_dir)
         if engine is None:
-            if name == "piper":
-                engine = PiperEngine(model_dir)
-            else:
-                engine = GTTSEngine()
-            _ENGINES[key] = engine
+            engine = PiperEngine(model_dir)
+            _ENGINES[model_dir] = engine
         return engine

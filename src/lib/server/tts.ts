@@ -1,6 +1,6 @@
 import { getSettingStringValue } from './settings'
 
-const FALLBACK_LANGS = ['en', 'en_gb', 'zh', 'ja', 'yue']
+const FALLBACK_LANGS = ['en', 'en_gb', 'zh', 'ja']
 const CAPABILITIES_CACHE_TTL_MS = 60_000
 const FALLBACK_CACHE_TTL_MS = 10_000
 
