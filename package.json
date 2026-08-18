@@ -16,7 +16,7 @@
     "schema:apply": "node ./scripts/apply-schema.mjs",
     "schema:recreate": "node ./scripts/recreate-schema.mjs",
     "tts:setup": "bash backend/setup.sh",
-    "tts:start": "cd backend && (lsof -ti:8000 2>/dev/null | xargs -r kill) && ./.venv/bin/uvicorn app.main:app --port 8000"
+    "tts:start": "node ./scripts/tts-start.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",
