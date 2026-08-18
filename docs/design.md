@@ -112,16 +112,21 @@ document name and type selector, then the tag chips, then the action buttons —
   saved). It is disabled while the document is clean.
 - **Copy** copies the editor content to the clipboard (disabled when empty).
 - **Read aloud** speaks the editor content through the external local
-  text-to-speech service (Piper/gTTS) reached via a same-origin proxy. It reads
+  text-to-speech service (Piper) reached via a same-origin proxy. It reads
   the currently selected text when there is a selection, otherwise the whole
-  document; the text is grouped by language runs across line breaks and even
-  within unspaced latin/CJK runs (so each segment is synthesized with its own
-  language model — Han → zh, kana → ja, otherwise en — with short runs folded
-  into the dominant language and CJK newlines stripped for a continuous read)
-  and played back in sequence. The
-  button switches to a highlighted **Stop** toggle immediately on click (no
-  loading spinner), and clicking it again cancels in-flight synthesis and stops
-  playback, so the user can interrupt while audio is still being generated. The
+  document; the text is grouped by language runs across single line breaks and
+  even within unspaced latin/CJK runs (so each segment is synthesized with its
+  own language model — Han → zh, kana → ja, otherwise en — with short runs
+  folded into the dominant language, blank lines splitting paragraphs into
+  separate segments, oversized paragraphs split on sentence boundaries, and CJK
+  newlines stripped for a continuous read) and played back in sequence. The
+  button shows a **Preparing** spinner while the first segments are being
+  synthesized, then switches to a highlighted **Stop** toggle as soon as the
+  first audio segment plays; clicking it again cancels in-flight synthesis and
+  stops playback, so the user can interrupt while audio is still being
+  generated. Because synthesis is streamed (segments are requested in parallel
+  and each plays as soon as it is ready), long documents start speaking long
+  before the whole document has been processed. The
   button is disabled when the document is empty. Repeatedly
   reading the same text skips synthesis: the client caches the audio blob per
   segment (text + language) in memory, so unchanged lines play instantly from

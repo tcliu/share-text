@@ -311,11 +311,14 @@ synchronizes through a small fetch-based JSON API.
   the document body whose language mode follows the selected type) out as two
   responsive panes: side by side when the dialog is wide enough, with the
   Content pane flowing below Details when the dialog is too narrow for both
-  (a `flex-wrap` with a per-pane `min-w` floor). The dialog panel itself never
-  scrolls: `BaseDialog` holds the title fixed while its body scrolls, and the
-  dialog keeps its OK/Create and Reset button row outside the scroll container,
-  so the title and action buttons stay visible while only the panes scroll
-  vertically on overflow. OK/Apply and Reset follow the
+  (a `flex-wrap` with a per-pane `min-w` floor). `BaseDialog` holds the title
+  fixed while the body wrapper (`flex-1 min-h-0 overflow-y-auto`) scrolls, and
+  the dialog keeps its OK/Create and Reset button row outside the scroll
+  container, so the title and action buttons stay visible while only the panes
+  scroll vertically on overflow. The dialog panel itself carries
+  `overflow-y-auto` only as a safety net: content is expected to control its
+  own space usage, and the panel-level scrollbar engages only when a dialog
+  breaks that pattern, so overflow stays reachable rather than clipped. OK/Apply and Reset follow the
   shared editable-form pattern with `content` included in the dirty check, and
   OK stays disabled until the content fetch settles so the body can never be
   saved as empty mid-load. In edit mode the Details pane also shows an editable
@@ -657,37 +660,43 @@ identity so the browser app can render the admin entry point;
   `Hello你好世界` splits into `en` + `zh` while `こんにちは世界` stays one
   `ja` segment; digits inherit the surrounding script (a number after Han is
   read in zh, after English in en); adjacent same-language runs merge across
-  line breaks, short runs (English < 4 chars, CJK < 2) fold into the
+  single line breaks, short runs (English < 4 chars, CJK < 2) fold into the
   dominant surrounding language so stray words don't create spurious segments,
-  and newlines inside CJK segments are stripped so Chinese/Japanese read as one
-  continuous sentence (English keeps its newlines as natural pauses);
+  blank lines split paragraphs into separate segments so a document with many
+  paragraphs streams incrementally, newlines inside CJK segments are stripped so
+  Chinese/Japanese read as one continuous sentence (English keeps its newlines
+  as natural pauses), and any paragraph still over `MAX_SEGMENT_LENGTH` (500
+  chars) is split on sentence boundaries so no single request is oversized;
   each segment
   synthesizes with its own language model, then plays
   the audio segments in sequence from the proxy in a hidden `<audio>` element
-  (advancing on the element's `ended`/`error` events). The button switches to a
-  Stop toggle immediately on click and synthesis is cancellable — `stopReading`
+  (advancing on the element's `ended`/`error` events). Synthesis is streamed:
+  `synthesizeTtsStreaming` in `$lib/tts-client.ts` is an async generator that
+  launches up to `SYNTHESIS_CONCURRENCY` (4) requests at once and yields each
+  segment's blob as soon as it completes, preserving input order, so playback
+  of the first segment starts before the rest of the document is synthesized.
+  The button shows a Preparing spinner while synthesis runs before any audio,
+  then switches to a Stop toggle once the first segment plays; the Stop toggle
+  is active during both phases and synthesis is cancellable — `stopReading`
   aborts in-flight synthesis via an `AbortController` (passed as the fetch
   signal in `$lib/tts-client.ts`) and pauses playback. Playback is a play/stop
   toggle reset by the element's
   `ended`/`error`/`pause` events and paused on unmount. Repeat reads of the
-  same segment skip synthesis: `synthesizeTtsCached` in `$lib/tts-client.ts`
+  same segment skip synthesis: the per-segment cache in `$lib/tts-client.ts`
   keeps a bounded in-memory map (LRU-style eviction at 100 entries) keyed by
   `text + lang` storing the returned `Blob`; object URLs created from the
   blobs are revoked on stop/unmount. Synthesis is stateless: the backend
   returns audio bytes in memory (`backend/app/engines.py` writes Piper to a
-  `BytesIO`, gTTS to a temp file it deletes) and writes nothing to disk, so
+  `BytesIO`) and writes nothing to disk, so
   there is no `output_path`/`/api/audio` round trip and no scratch dir — this
   is what makes the service multi-instance/serverless-safe. The backend caches
-  engines at the process level
+  the engine at the process level
   (`backend/app/engines.py`): one `PiperEngine` per model dir reused across
   requests with voices kept in memory, so parallel segment synthesis loads each
-  model once. Piper is only chosen for a language when its model files (`.onnx`
-  + `.onnx.json`) exist on disk (`piper_lang_available`); `zh` prefers gTTS
-  because Piper's zh voice reads Mandarin in short choppy groups, and other
-  languages prefer Piper when available, otherwise `auto` falls back to gTTS —
-  a missing voice degrades gracefully instead of 503ing.
-  The client caps segment synthesis at 4 concurrent requests
-  (`SYNTHESIS_CONCURRENCY` in `$lib/tts-client.ts`) and preserves input order.
+  model once. Piper is the only engine; a language is synthesizable only when
+  its model files (`.onnx`
+  + `.onnx.json`) exist on disk (`piper_lang_available`), so
+  a missing voice degrades gracefully with a 503 instead of an unhandled 500.
   Empty documents disable the button.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
   `usePreviewMode` holds the editor/split/preview tri-state and reads/writes it
