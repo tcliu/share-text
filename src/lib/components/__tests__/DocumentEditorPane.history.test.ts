@@ -14,9 +14,12 @@ describe('DocumentEditorPane version history button', () => {
     expect(queryByLabelText('Version history')).toBeNull()
   })
 
-  it('shows the version history button when the document has multiple versions', () => {
-    const { getByLabelText } = render(HistoryHost, { props: { versionCount: 3 } })
+  it('shows the version history action when the document has multiple versions', async () => {
+    const { getByLabelText, findByText } = render(HistoryHost, { props: { versionCount: 3 } })
 
-    expect(getByLabelText('Version history')).toBeTruthy()
+    const trigger = getByLabelText('More actions')
+    expect(trigger).toBeTruthy()
+    trigger.click()
+    expect(await findByText('History')).toBeTruthy()
   })
 })

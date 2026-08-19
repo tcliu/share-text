@@ -588,46 +588,23 @@
       {/snippet}
     </Button>
     {#if ttsConfigured}
-    <Button
-      size="sm"
-      ariaLabel={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
-      tooltip={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
-      variant={speaking || processing ? 'outline' : 'secondary'}
-      ariaPressed={speaking || processing}
-      preventFocusSteal
-      onClick={handleReadAloud}
-      disabled={!speaking && !processing && content.length === 0}>
-      {#snippet icon()}
-        {#if processing}
-          <Spinner className="h-4 w-4" />
-        {:else if speaking}
-          <StopIcon />
-        {:else}
-          <SpeakerIcon />
-        {/if}
-      {/snippet}
-    </Button>
-    {/if}
-    {#if onClone || cloneDisabled}
       <Button
         size="sm"
-        ariaLabel={t('editor.cloneDocument')}
-        tooltip={t('editor.clone')}
-        onClick={onClone}
-        disabled={cloneDisabled || content.length === 0}>
+        ariaLabel={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
+        tooltip={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
+        variant={speaking || processing ? 'outline' : 'secondary'}
+        ariaPressed={speaking || processing}
+        preventFocusSteal
+        onClick={handleReadAloud}
+        disabled={!speaking && !processing && content.length === 0}>
         {#snippet icon()}
-          {@render cloneIcon()}
-        {/snippet}
-      </Button>
-    {/if}
-    {#if versionCount >= 2 && !context.isMobile}
-      <Button
-        size="sm"
-        ariaLabel={t('editor.versionHistory')}
-        tooltip={t('editor.history')}
-        onClick={() => (historyOpen = true)}>
-        {#snippet icon()}
-          {@render historyIcon()}
+          {#if processing}
+            <Spinner className="h-4 w-4" />
+          {:else if speaking}
+            <StopIcon />
+          {:else}
+            <SpeakerIcon />
+          {/if}
         {/snippet}
       </Button>
     {/if}
@@ -664,16 +641,58 @@
           {/snippet}
         </Button>
       {/if}
-    {/if}
-    {#if onTagsSave && editable}
-      <Button size="sm" ariaLabel={t('editor.editTags')} tooltip={t('editor.tags')} onClick={() => (tagsOpen = true)}>
+      {#if (onClone || cloneDisabled) || (onTagsSave && editable) || versionCount >= 2}
+        <KebabMenu
+          ariaLabel={t('editor.moreActions')}
+          items={[
+            ...(onClone || cloneDisabled
+              ? [
+                  {
+                    id: 'clone',
+                    label: t('editor.clone'),
+                    onClick: onClone ?? (() => {}),
+                    disabled: cloneDisabled || content.length === 0,
+                    icon: cloneIcon,
+                  },
+                ]
+              : []),
+            ...(onTagsSave && editable
+              ? [
+                  {
+                    id: 'tags',
+                    label: t('editor.tags'),
+                    onClick: () => (tagsOpen = true),
+                    icon: tagsIcon,
+                  },
+                  {
+                    id: 'copy-link',
+                    label: t('editor.copyLink'),
+                    onClick: handleCopyLink,
+                    icon: linkIcon,
+                  },
+                ]
+              : []),
+            ...(versionCount >= 2
+              ? [
+                  {
+                    id: 'history',
+                    label: t('editor.history'),
+                    onClick: () => (historyOpen = true),
+                    icon: historyIcon,
+                  },
+                ]
+              : []),
+          ]} />
+      {/if}
+    {:else if onClone || cloneDisabled}
+      <Button
+        size="sm"
+        ariaLabel={t('editor.cloneDocument')}
+        tooltip={t('editor.clone')}
+        onClick={onClone}
+        disabled={cloneDisabled || content.length === 0}>
         {#snippet icon()}
-          <TagsIcon />
-        {/snippet}
-      </Button>
-      <Button size="sm" ariaLabel={t('editor.copySharableLink')} tooltip={t('editor.copyLink')} onClick={handleCopyLink}>
-        {#snippet icon()}
-          <LinkIcon />
+          {@render cloneIcon()}
         {/snippet}
       </Button>
     {/if}
@@ -735,9 +754,18 @@
     <FormatIcon />
   {/snippet}
 
+  {#snippet linkIcon()}
+    <LinkIcon />
+  {/snippet}
+
+  {#snippet tagsIcon()}
+    <TagsIcon />
+  {/snippet}
+
   {#snippet menuIcon()}
     <MenuIcon />
   {/snippet}
+
 
   {#if context.isMobile}
     <div class="flex flex-col gap-2">
@@ -861,6 +889,7 @@
           preview={currentType.preview}
           content={previewContent.value}
           {docType}
+          {editable}
           onContentChange={(v: string) => (content = v)} />
       </div>
     {/if}
