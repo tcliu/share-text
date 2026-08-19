@@ -26,6 +26,7 @@
     path?: string[]
     onChange?: (path: string[], newValue: unknown) => void
     onRenameKey?: (parentPath: string[], oldKey: string, newKey: string) => void
+    editable?: boolean
   }
 
   let {
@@ -35,6 +36,7 @@
     path = [],
     onChange,
     onRenameKey,
+    editable = true,
   }: Props = $props()
 
   // svelte-ignore state_referenced_locally
@@ -217,8 +219,9 @@
             path={entryPath(entry)}
             {onChange}
             {onRenameKey}
+            {editable}
           />
-        {:else if editingValueKey === entry.key && onChange}
+        {:else if editingValueKey === entry.key && onChange && editable}
           <div class="flex items-center gap-1 rounded px-1 py-px">
             <span class="w-3 shrink-0"></span>
             <span class="text-slate-300 shrink-0">{entry.key}</span>
@@ -234,7 +237,7 @@
               />
             </div>
           </div>
-        {:else if editingNameKey === entry.key && onRenameKey}
+        {:else if editingNameKey === entry.key && onRenameKey && editable}
           <div class="flex items-center gap-1 rounded px-1 py-px">
             <span class="w-3 shrink-0"></span>
             <input
@@ -252,10 +255,10 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="group flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40"
-            ondblclick={onChange ? () => startEditValue(entry) : undefined}
+            ondblclick={onChange && editable ? () => startEditValue(entry) : undefined}
           >
             <span class="w-3 shrink-0"></span>
-            {#if onRenameKey}
+            {#if onRenameKey && editable}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
                 class="text-slate-300 shrink-0 cursor-pointer rounded outline-none hover:underline focus:underline"
@@ -272,7 +275,7 @@
             <span class="min-w-0 truncate text-slate-400">
               <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
             </span>
-            {#if onChange}
+            {#if onChange && editable}
               <span bind:this={editBtnEl} class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                 <Button
                   size="sm"

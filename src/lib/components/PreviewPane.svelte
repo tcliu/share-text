@@ -8,9 +8,10 @@
     content: string
     docType?: string
     onContentChange?: (content: string) => void
+    editable?: boolean
   }
 
-  let { preview, content, docType, onContentChange }: Props = $props()
+  let { preview, content, docType, onContentChange, editable = true }: Props = $props()
 
   let PreviewComponent = $state<Component<PreviewProps> | null>(null)
   let loadError = $state('')
@@ -36,7 +37,7 @@
 </script>
 
 {#if PreviewComponent}
-  <PreviewComponent {content} {docType} {onContentChange} />
+  <PreviewComponent {content} {docType} {onContentChange} {editable} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
     {loadError || t('preview.loading')}

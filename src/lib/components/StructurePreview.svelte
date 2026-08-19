@@ -6,7 +6,7 @@
   import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from './structure-value'
   import { t } from '$lib/i18n.svelte'
 
-  let { content, onContentChange }: PreviewProps = $props()
+  let { content, onContentChange, editable = true }: PreviewProps = $props()
 
   type State =
     | { status: 'loading' }
@@ -102,6 +102,7 @@
   {:else}
     <StructureTree
       value={state.value}
+      {editable}
       onChange={onContentChange ? handleNodeChange : undefined}
       onRenameKey={onContentChange ? handleRenameKey : undefined}
     />

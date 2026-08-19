@@ -6,10 +6,11 @@
     value: unknown
     onChange?: (path: string[], newValue: unknown) => void
     onRenameKey?: (parentPath: string[], oldKey: string, newKey: string) => void
+    editable?: boolean
     testId?: string
   }
 
-  let { value, onChange, onRenameKey, testId = 'structure-tree' }: Props = $props()
+  let { value, onChange, onRenameKey, editable = true, testId = 'structure-tree' }: Props = $props()
 
   function containerLabel(value: unknown): string {
     return Array.isArray(value)
@@ -24,6 +25,6 @@
   {:else if !isContainer(value)}
     <pre class={valueClass(value)}>{valueText(value)}</pre>
   {:else}
-    <StructureNode label={containerLabel(value)} value={value} depth={0} {onChange} {onRenameKey} />
+    <StructureNode label={containerLabel(value)} value={value} depth={0} {onChange} {onRenameKey} {editable} />
   {/if}
 </div>

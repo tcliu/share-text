@@ -70,6 +70,21 @@ describe('StructurePreview', () => {
     expect(writeText).not.toHaveBeenCalledWith('{\n  "child": {\n    "grand": 1\n  }\n}')
   })
 
+  it('disables node editing when editable is false', async () => {
+    const onChange = vi.fn()
+    render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange, editable: false })
+    const root = await screen.findByTestId('structure-preview')
+    await waitForNode(root, 'name')
+
+    expect(within(root).queryByRole('button', { name: 'Edit name' })).toBeNull()
+    expect(within(root).getByRole('button', { name: 'Copy name' })).toBeTruthy()
+
+    const row = within(root).getByText('name').closest('div.group') as HTMLElement
+    await fireEvent.dblClick(row)
+    expect(root.querySelector('input')).toBeNull()
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('edits a value via double-click and Enter, calling onContentChange', async () => {
     const onChange = vi.fn()
     render(StructurePreview, { content: '{"name":"root"}', onContentChange: onChange })

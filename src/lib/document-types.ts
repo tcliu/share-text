@@ -49,6 +49,7 @@ export interface PreviewProps {
   content: string
   docType?: string
   onContentChange?: (content: string) => void
+  editable?: boolean
 }
 
 export interface DocumentTypeDefinition {
