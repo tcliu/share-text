@@ -41,7 +41,7 @@
     buttonClass,
     controlClass,
     optionClass,
-    panelClass = 'w-32 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
+    panelClass = 'w-max max-w-xs overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
   }: Props = $props()
 
   const SIZE_CLASS = {
@@ -289,7 +289,7 @@
                 ? 'bg-cyan-500/15 text-cyan-200'
                 : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'
           }`}>
-          <span>{option.label}</span>
+          <span class="min-w-0 truncate">{option.label}</span>
         </button>
       {/each}
     </div>
