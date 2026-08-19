@@ -32,7 +32,5 @@
     options={options}
     activeValue={activeValue}
     ariaLabel={t('settings.readAloud.selectVoice', { language: langLabel })}
-    size="md"
-    panelClass="w-72 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur"
     onSelect={onSelect} />
 </div>
