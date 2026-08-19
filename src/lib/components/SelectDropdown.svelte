@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import { t } from '$lib/i18n.svelte'
@@ -69,10 +70,12 @@
 
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
-  let controlRef = $state<HTMLButtonElement | HTMLDivElement | null>(null)
+  let inputRef = $state<HTMLInputElement | null>(null)
+  let controlRef = $state<HTMLInputElement | HTMLButtonElement | HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   let filterText = $state('')
   let highlightIndex = $state(0)
+  let suppressOpenOnFocus = false
 
   const filteredOptions = $derived.by(() => {
     if (!filterable) {
@@ -108,36 +111,82 @@
   }
 
   function toggle() {
-    open = !open
+    if (open) {
+      close()
+    } else {
+      openPanel()
+    }
   }
 
   function openPanel() {
+    lastFilteredOptions = filteredOptions
     open = true
+    highlightIndex = 0
   }
 
   function handleControlFocus() {
+    if (suppressOpenOnFocus) {
+      suppressOpenOnFocus = false
+      return
+    }
     openPanel()
   }
 
-  function select(value: string) {
+  function handleControlClick() {
+    if (!open) {
+      openPanel()
+    }
+  }
+
+  async function select(value: string) {
+    const selectedOption = options.find(option => option.value === value)
+    const needsFocusRestore = filterable && inputRef !== null && document.activeElement !== inputRef
     onSelect(value)
+    if (filterable && selectedOption) {
+      filterText = selectedOption.label
+    }
     close()
+    if (needsFocusRestore) {
+      suppressOpenOnFocus = true
+      await tick()
+      inputRef?.focus()
+    }
+  }
+
+  function moveHighlight(direction: 'down' | 'up') {
+    if (filteredOptions.length === 0) return
+    if (!open) {
+      openPanel()
+      if (direction === 'up') {
+        highlightIndex = filteredOptions.length - 1
+      }
+      return
+    }
+    if (direction === 'down') {
+      highlightIndex = (highlightIndex + 1) % filteredOptions.length
+    } else {
+      highlightIndex = (highlightIndex - 1 + filteredOptions.length) % filteredOptions.length
+    }
   }
 
   function handleControlKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      if (filteredOptions.length === 0) return
-      highlightIndex = (highlightIndex + 1) % filteredOptions.length
+      moveHighlight('down')
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      if (filteredOptions.length === 0) return
-      highlightIndex = (highlightIndex - 1 + filteredOptions.length) % filteredOptions.length
+      moveHighlight('up')
     } else if (event.key === 'Enter') {
+      if (!open) {
+        if (filterable) {
+          event.preventDefault()
+        }
+        return
+      }
       event.preventDefault()
       const option = filteredOptions[highlightIndex] ?? filteredOptions[0]
       if (option) {
-        select(option.value)
+        void select(option.value)
       }
     }
   }
@@ -176,6 +225,7 @@
   {#if filterable}
     <div class="relative w-fit" bind:this={controlRef}>
       <input
+        bind:this={inputRef}
         type="text"
         bind:value={filterText}
         role="combobox"
@@ -187,6 +237,7 @@
           ? `${panelId}-option-${highlightIndex}`
           : undefined}
         onfocus={handleControlFocus}
+        onclick={handleControlClick}
         onkeydown={handleControlKeydown}
         class={resolvedControlClass} />
       <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -204,6 +255,7 @@
         ? `${panelId}-option-${highlightIndex}`
         : undefined}
       onclick={toggle}
+      onkeydown={handleControlKeydown}
       class={resolvedButtonClass}>
       <span>{buttonLabel}</span>
       <ChevronDownIcon className="h-4 w-4 text-slate-500" />
@@ -227,7 +279,8 @@
           role="option"
           tabindex="-1"
           aria-selected={option.value === activeValue}
-          onclick={() => select(option.value)}
+          onpointerdown={event => event.preventDefault()}
+          onclick={() => void select(option.value)}
           onmouseenter={() => (highlightIndex = index)}
           class={`${optionRowClass} ${
             index === highlightIndex

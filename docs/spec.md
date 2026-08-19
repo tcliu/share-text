@@ -525,6 +525,19 @@ locale calls `setLocale`. It renders in the document-list header (so also in
 the mobile drawer, which reuses the `documentList` snippet) and in the
 collapsed left rail.
 
+`SelectDropdown` (`src/lib/components/SelectDropdown.svelte`) renders either a
+filterable `<input role="combobox">` or a plain `<button>` trigger for the same
+`listbox`. The filterable control opens on focus and on click when closed, and
+keeps focus on the input after a selection — option `pointerdown` is prevented
+so it never steals focus, and the selection only restores focus (with the
+focus-open suppressed once) when focus was actually lost. Reopening works from
+a focused-but-closed control: click or ArrowDown/ArrowUp reopens, with
+ArrowDown landing on the first option and ArrowUp on the last. Enter confirms
+the highlighted option only while the panel is open and does nothing when
+closed (the button mode lets the native Enter/Space toggle open instead).
+Mouse hover and arrow keys share the single `highlightIndex`, exposed to
+assistive tech via `aria-activedescendant`.
+
 ### UI Localization (i18n)
 
 Both the browser app and the admin console are localized through
