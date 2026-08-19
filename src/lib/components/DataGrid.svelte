@@ -24,6 +24,7 @@
   interface Props {
     value?: string[][]
     onChange?: (rows: string[][]) => void
+    editable?: boolean
     showHeaders?: boolean
     testId?: string
     // Locks the grid to a fixed number of columns (e.g. key/value pairs): column
@@ -48,6 +49,7 @@
   let {
     value = [],
     onChange,
+    editable = true,
     showHeaders = $bindable(true),
     testId = 'data-grid',
     maxColumns,
@@ -93,6 +95,7 @@
 
   // Column widths in pixels. Empty array means auto-width (min-w-32 fallback).
   let columnWidths = $state<number[]>([])
+  let autoColumnWidths = $state<number[]>([])
 
   let gridContainer: HTMLElement | null = null
   let headerWrapper: HTMLElement | null = null
@@ -134,6 +137,23 @@
     return widths
   }
 
+  function equalWidths(a: number[], b: number[]): boolean {
+    return a.length === b.length && a.every((value, index) => value === b[index])
+  }
+
+  function resolveAutoWidths(): number[] {
+    const count = model.columnCount
+    if (count === 0) return []
+    const available = Math.max(
+      MIN_COLUMN_WIDTH * count,
+      (gridContainer?.clientWidth ?? rootEl?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
+    )
+    const base = Math.max(MIN_COLUMN_WIDTH, Math.floor(available / count))
+    const widths = Array.from({ length: count }, () => base)
+    widths[count - 1] = Math.max(MIN_COLUMN_WIDTH, available - base * (count - 1))
+    return widths
+  }
+
   $effect(() => {
     if (!gridContainer) return
     const persisted = resize.loadPersistedWidths()
@@ -142,6 +162,17 @@
     } else if (columnWidths.length === 0 && initialColumnWidths?.length) {
       const resolved = resolveInitialWidths()
       if (resolved.length > 0) columnWidths = resolved
+    }
+  })
+
+  $effect(() => {
+    if (columnWidths.length > 0) {
+      autoColumnWidths = []
+      return
+    }
+    const resolved = resolveAutoWidths()
+    if (!equalWidths(autoColumnWidths, resolved)) {
+      autoColumnWidths = resolved
     }
   })
 
@@ -314,8 +345,14 @@
     if (!viewport) return
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
-      if (columnWidths.length === 0) return
-      rescaleToContainer()
+      if (columnWidths.length > 0) {
+        rescaleToContainer()
+        return
+      }
+      const resolved = resolveAutoWidths()
+      if (!equalWidths(autoColumnWidths, resolved)) {
+        autoColumnWidths = resolved
+      }
     })
     observer.observe(viewport)
     return () => observer.disconnect()
@@ -349,12 +386,13 @@
   // True when any column has an explicit pixel width, switching the table to
   // fixed layout so each sized column keeps its exact width.
   const managedWidths = $derived(columnWidths.length > 0)
+  const renderedColumnWidths = $derived(managedWidths ? columnWidths : autoColumnWidths)
 
   // Total table width: row-number column plus all data columns.
   const totalWidth = $derived.by(() => {
     let sum = ROW_NUMBER_WIDTH
     for (let i = 0; i < model.columnCount; i++) {
-      sum += columnWidths[i]
+      sum += renderedColumnWidths[i] ?? 0
     }
     return sum
   })
@@ -385,9 +423,13 @@
   })
 
   function columnWidthStyle(ci: number): string {
-    const w = columnWidths[ci]
+    const w = renderedColumnWidths[ci]
     if (w == null) return ''
     return `width:${w}px;min-width:${w}px;`
+  }
+
+  function mutationDisabled(disabled = false): boolean {
+    return !editable || disabled
   }
 
   // `expanded` marks a cell whose editor is a multiline overlay: the cell is
@@ -528,7 +570,7 @@
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-1">
       {#if !hideHeaderToggle}
-        <Button size="sm" ariaLabel={t('grid.toggleHeader')} tooltip={t('grid.toggleHeader')} ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)}>
+        <Button size="sm" ariaLabel={t('grid.toggleHeader')} tooltip={t('grid.toggleHeader')} ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)} disabled={!editable}>
           {#snippet icon()}
             <TableIcon />
           {/snippet}
@@ -539,7 +581,7 @@
         ariaLabel={t('grid.insertRowAbove')}
         tooltip={t('grid.insertRowAbove')}
         onClick={() => sel.insertRowAt(sel.actionRow, false)}
-        disabled={sel.rowInsertDisabled}>
+        disabled={mutationDisabled(sel.rowInsertDisabled)}>
         {#snippet icon()}
           <RowInsertAboveIcon />
         {/snippet}
@@ -548,7 +590,8 @@
         size="sm"
         ariaLabel={t('grid.insertRowBelow')}
         tooltip={t('grid.insertRowBelow')}
-        onClick={() => (sel.noSelection ? sel.addRow() : sel.insertRowAt(sel.actionRow, true))}>
+        onClick={() => (sel.noSelection ? sel.addRow() : sel.insertRowAt(sel.actionRow, true))}
+        disabled={!editable}>
         {#snippet icon()}
           <RowInsertBelowIcon />
         {/snippet}
@@ -559,7 +602,7 @@
           ariaLabel={t('grid.insertColumnBefore')}
           tooltip={t('grid.insertColumnBefore')}
           onClick={() => sel.insertColumnAt(sel.actionCol, true)}
-          disabled={sel.colInsertDisabled}>
+          disabled={mutationDisabled(sel.colInsertDisabled)}>
           {#snippet icon()}
             <ColumnInsertBeforeIcon />
           {/snippet}
@@ -568,7 +611,8 @@
           size="sm"
           ariaLabel={t('grid.insertColumnAfter')}
           tooltip={t('grid.insertColumnAfter')}
-          onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}>
+          onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}
+          disabled={!editable}>
           {#snippet icon()}
             <ColumnInsertAfterIcon />
           {/snippet}
@@ -579,7 +623,7 @@
         ariaLabel={t('grid.deleteRows')}
         tooltip={t('grid.deleteRows')}
         onClick={() => sel.deleteSelectedRows()}
-        disabled={selState.selectedRows.size === 0}>
+        disabled={mutationDisabled(selState.selectedRows.size === 0)}>
         {#snippet icon()}
           <DeleteRowsIcon />
         {/snippet}
@@ -590,7 +634,7 @@
           ariaLabel={t('grid.deleteColumns')}
           tooltip={t('grid.deleteColumns')}
           onClick={() => sel.deleteSelectedColumns()}
-          disabled={selState.selectedCols.size === 0}>
+          disabled={mutationDisabled(selState.selectedCols.size === 0)}>
           {#snippet icon()}
             <DeleteColumnsIcon />
           {/snippet}
@@ -601,7 +645,7 @@
         ariaLabel={t('grid.trimTrailing')}
         tooltip={t('grid.trimTrailing')}
         onClick={handleTrim}
-        disabled={!model.needsTrim}>
+        disabled={mutationDisabled(!model.needsTrim)}>
         {#snippet icon()}
           <TrimIcon />
         {/snippet}
@@ -614,7 +658,7 @@
           model.undo()
           restoreFocusAfterHistoryChange()
         }}
-        disabled={!historyState.canUndo}>
+        disabled={mutationDisabled(!historyState.canUndo)}>
         {#snippet icon()}
           <UndoIcon />
         {/snippet}
@@ -627,7 +671,7 @@
           model.redo()
           restoreFocusAfterHistoryChange()
         }}
-        disabled={!historyState.canRedo}>
+        disabled={mutationDisabled(!historyState.canRedo)}>
         {#snippet icon()}
           <RedoIcon />
         {/snippet}
@@ -643,13 +687,13 @@
         aria-label={t('grid.spreadsheet')}
         aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
         aria-colcount={model.columnCount}
-        class="border-separate border-spacing-0 border-t border-l border-slate-800 text-sm {managedWidths ? '' : 'w-full'}"
-        style={managedWidths ? `table-layout:fixed;width:${totalWidth}px;` : ''}>
-        {#if managedWidths}
+        class="border-separate border-spacing-0 border-t border-l border-slate-800 text-sm"
+        style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
+        {#if renderedColumnWidths.length > 0}
           <colgroup>
             <col style="width:2.25rem;">
             {#each Array.from({ length: model.columnCount }) as _, ci}
-              <col style="width:{columnWidths[ci]}px;">
+              <col style="width:{renderedColumnWidths[ci]}px;">
             {/each}
           </colgroup>
         {/if}
@@ -691,7 +735,8 @@
                         class="leading-none outline-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={t('grid.sortAsc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
-                        onclick={() => handleSortClick(ci, 'asc')}>
+                        onclick={() => editable && handleSortClick(ci, 'asc')}
+                        disabled={!editable}>
                         <SortAscIcon className="h-2.5 w-2.5" />
                       </button>
                       <button
@@ -699,7 +744,8 @@
                         class="-mt-1 leading-none outline-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={t('grid.sortDesc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
-                        onclick={() => handleSortClick(ci, 'desc')}>
+                        onclick={() => editable && handleSortClick(ci, 'desc')}
+                        disabled={!editable}>
                         <SortDescIcon className="h-2.5 w-2.5" />
                       </button>
                     </span>
@@ -709,9 +755,9 @@
                     class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                     style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
                     aria-label={t('grid.resizeColumn', { index: ci + 1 })}
-                    onmousedown={event => resize.startColumnResize(event, ci)}
-                    onkeydown={event => resize.handleResizeKeydown(event, ci)}
-                  ></button>
+                    onmousedown={event => editable && resize.startColumnResize(event, ci)}
+                    onkeydown={event => editable && resize.handleResizeKeydown(event, ci)}
+                    ></button>
                 </th>
               {/each}
             </tr>
@@ -746,13 +792,14 @@
                       wrap="off"
                       class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
                       value={cell.value}
-                      oninput={event => model.setValue(0, ci, event.currentTarget.value)}
+                      readonly={!editable}
+                      oninput={event => editable && model.setValue(0, ci, event.currentTarget.value)}
                       onfocus={() => {
                         handleInputFocus(0, ci)
                         focus.cellInputAtEnd(0, ci)
                       }}
                       onblur={() => handleBodyBlur()}
-                      onkeydown={event => handleInputKeydown(event, 0, ci)}></textarea>
+                      onkeydown={event => editable && handleInputKeydown(event, 0, ci)}></textarea>
                   </th>
                 {/each}
               </tr>
@@ -767,13 +814,13 @@
           aria-label={t('grid.spreadsheet')}
           aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
           aria-colcount={model.columnCount}
-class="border-separate border-spacing-0 border-l border-slate-800 text-sm {managedWidths ? '' : 'w-full'}"
-        style={managedWidths ? `table-layout:fixed;width:${totalWidth}px;` : ''}>
-          {#if managedWidths}
+class="border-separate border-spacing-0 border-l border-slate-800 text-sm"
+        style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
+          {#if renderedColumnWidths.length > 0}
             <colgroup>
               <col style="width:2.25rem;">
               {#each Array.from({ length: model.columnCount }) as _, ci}
-                <col style="width:{columnWidths[ci]}px;">
+                <col style="width:{renderedColumnWidths[ci]}px;">
               {/each}
             </colgroup>
           {/if}
@@ -827,10 +874,11 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
                           ? EDITOR_OVERLAY_STYLE + (lineCount > EDITOR_MAX_LINES ? EDITOR_OVERLAY_SCROLL_STYLE : '')
                           : ''}
                         value={cell.value}
-                        oninput={event => model.setValue(actualRi, ci, event.currentTarget.value)}
+                        readonly={!editable}
+                        oninput={event => editable && model.setValue(actualRi, ci, event.currentTarget.value)}
                         onfocus={() => handleInputFocus(actualRi, ci)}
                         onblur={() => handleBodyBlur()}
-                        onkeydown={event => handleInputKeydown(event, actualRi, ci)}></textarea>
+                        onkeydown={event => editable && handleInputKeydown(event, actualRi, ci)}></textarea>
                     </td>
                   {/each}
                 </tr>
@@ -842,7 +890,7 @@ class="border-separate border-spacing-0 border-l border-slate-800 text-sm {manag
         {#if model.rowCount === 0}
           <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
             <span>No content to preview</span>
-            <button class="rounded border border-slate-700 px-3 py-1 text-slate-300 outline-none transition hover:bg-slate-800 focus:bg-slate-800" onclick={() => sel.addRow()}>
+            <button class="rounded border border-slate-700 px-3 py-1 text-slate-300 outline-none transition hover:bg-slate-800 focus:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40" onclick={() => sel.addRow()} disabled={!editable}>
               Add row
             </button>
           </div>

@@ -3,7 +3,7 @@
   import type { PreviewProps } from '$lib/document-types'
   import { parseCsv, serializeCsv } from '$lib/csv-utils'
 
-  let { content, onContentChange }: PreviewProps = $props()
+  let { content, onContentChange, editable = true }: PreviewProps = $props()
 
   let parsedRows = $state<string[][]>([])
   let suppressSync = false
@@ -40,4 +40,4 @@
   }
 </script>
 
-<DataGrid value={parsedRows} onChange={handleChange} testId="csv-preview" storageKey="csv-preview" />
+<DataGrid value={parsedRows} onChange={handleChange} {editable} testId="csv-preview" storageKey="csv-preview" />

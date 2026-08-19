@@ -4,7 +4,7 @@
   import { parseProperties, serializeProperties } from '$lib/document-type-utils'
   import { t } from '$lib/i18n.svelte'
 
-  let { content, onContentChange }: PreviewProps = $props()
+  let { content, onContentChange, editable = true }: PreviewProps = $props()
 
   function parseRows(text: string): { rows: string[][]; error: string | null } {
     const parsed = parseProperties(text)
@@ -68,6 +68,7 @@
   <DataGrid
     value={parsedRows}
     onChange={handleChange}
+    {editable}
     maxColumns={2}
     columnLabels={[t('properties.key'), t('properties.value')]}
     showHeaders={false}
