@@ -893,7 +893,9 @@ table (top) and body table (below). Only the body wrapper
 the header row stays reachable without scrolling; the header wrapper
 (`flex-none overflow-hidden`) never scrolls vertically. Each table carries its
 own `<colgroup>` and `style.width`, so the two tables share identical column
-widths in managed mode. A scroll listener mirrors the body wrapper's
+widths in both managed-width mode and the default auto-width mode; the grid now
+resolves a shared width array even before manual resizing so the header and body
+cannot drift apart. A scroll listener mirrors the body wrapper's
 `scrollLeft` into the header wrapper (its hidden scrollbar is what moves the
 sticky header row horizontally), and wheel events over the header forward
 `deltaY`/`deltaX` to the body wrapper. Sticky positioning is per-table (the
@@ -942,11 +944,17 @@ line height; once the value exceeds 5 lines the editor switches to
 `overflow-y:auto` and stays capped at a 5-line block instead of growing
 further. The moment the value loses its newline or the cell loses focus the
 editor returns to the in-flow single-line height. Header-row editors keep
-`rows=2` growth instead of the overlay because the header band is a fixed-
+  `rows=2` growth instead of the overlay because the header band is a fixed-
 height band whose wrapper clips any absolutely positioned child. Pressing
 `Enter` (or blurring) returns the cell to single-line height. CSV and
 properties serialization already round-trips embedded newlines (papaparse
 quotes fields), so multiline cells survive the preview content feedback.
+
+When `editable={false}`, `DataGrid` switches to read-only mode: every textarea
+is `readonly`, sort/resizer affordances and all mutating toolbar actions are
+disabled, and the empty-state **Add row** button is disabled. Selection,
+scrolling, copy, and the shared fixed-width column alignment still work so CSV
+and Properties previews remain readable on shared/read-only documents.
 
 ### DataGrid Column Resize
 
@@ -1027,8 +1035,10 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
   `rescaleToContainer` used by the proportional container-resize path), so
   deleting a column never leaves a gap at the table's right edge.
 - Structured previews use `StructurePreview.svelte` (parse/serialize JSON, YAML,
-  or XML) rendering an editable `StructureTree`/`StructureNode`; edits are
-  patched immutably via `structure-value.ts` and serialized back to content.
+  or XML) rendering a `StructureTree`/`StructureNode`; when `editable` is true,
+  edits are patched immutably via `structure-value.ts` and serialized back to
+  content, and when it is false the same tree renders in copyable/read-only
+  mode with edit/rename affordances removed.
 
 ### Version History
 

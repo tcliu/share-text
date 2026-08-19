@@ -220,10 +220,14 @@ document name and type selector, then the tag chips, then the action buttons —
 - Structured types (**JSON**, **XML**, **YAML**) preview as an editable
   structure tree: double-clicking (or using the inline edit icon on) a value
   opens an in-place input, and double-clicking a key renames it; `Enter`
-  commits, `Escape` cancels, and values can be copied.
+  commits, `Escape` cancels, and values can be copied. When the document is
+  read-only, JSON/XML/YAML previews stay browsable and copyable but do not open
+  editors.
 - **CSV** previews as an editable spreadsheet grid (see **CSV Grid** below).
 - The **Properties** type previews as an editable two-column **Key**/**Value**
-  grid (see **CSV Grid**), with no header row.
+  grid (see **CSV Grid**), with no header row. When the document is read-only,
+  both CSV and Properties previews stay scrollable and selectable but disable
+  cell edits and mutating grid toolbar actions.
 
 ### CSV Grid
 
