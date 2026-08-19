@@ -9,6 +9,7 @@
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import OwnedDocumentsView from '$lib/components/OwnedDocumentsView.svelte'
   import SettingsGeneralView from '$lib/components/SettingsGeneralView.svelte'
+  import SettingsProfileView from '$lib/components/SettingsProfileView.svelte'
   import SettingsReadAloudView from '$lib/components/SettingsReadAloudView.svelte'
   import Spinner from '$lib/components/Spinner.svelte'
   import Tabs, { type Tab } from '$lib/components/Tabs.svelte'
@@ -23,6 +24,7 @@
   import { useUserSettings } from '$lib/use-user-settings.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
 
+  const PROFILE_PATH = '/settings/profile'
   const GENERAL_PATH = '/settings/general'
   const READ_ALOUD_PATH = '/settings/read-aloud'
   const DOCUMENTS_PATH = '/settings/documents'
@@ -131,6 +133,9 @@
         <Spinner className="h-6 w-6" />
       </div>
     {:else if userAuthState.state === 'signedIn'}
+      {#snippet profileContent()}
+        <SettingsProfileView user={userAuthState.user} />
+      {/snippet}
       {#snippet generalContent(state: SettingsState)}
         <SettingsGeneralView settingsState={state.settingsState} />
       {/snippet}
@@ -181,6 +186,11 @@
       {/snippet}
       {@const settingsTabs = [
         {
+          label: t('settings.tab.profile'),
+          path: PROFILE_PATH,
+          content: profileContent,
+        },
+        {
           label: t('settings.tab.general'),
           path: GENERAL_PATH,
           content: generalContent,
@@ -203,7 +213,7 @@
           state={{ settingsState, documentsState }}
           pathname={page.url.pathname}
           ariaLabel={t('settings.title')} />
-        {#if page.url.pathname !== DOCUMENTS_PATH}
+        {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
           <Buttons>
             {#snippet children()}
               <Button
