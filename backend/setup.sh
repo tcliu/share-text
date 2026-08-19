@@ -4,7 +4,21 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 is_setup_complete() {
-  [ -x .venv/bin/uvicorn ]
+  [ -x .venv/bin/uvicorn ] || return 1
+  ./.venv/bin/python -c '
+import re
+import sys
+from importlib.metadata import distribution
+
+for line in open("requirements.txt"):
+    name = re.split(r"[<>=!~\[\s]", line, 1)[0]
+    if not name or name.startswith("#"):
+        continue
+    try:
+        distribution(name)
+    except Exception:
+        sys.exit(1)
+' 2>/dev/null
 }
 
 run_setup() {

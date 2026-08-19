@@ -61,6 +61,18 @@ function mockFetch() {
     if (path.includes('/api/admin/preferences')) {
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ preferredLanguage: 'en' }) })
     }
+    if (path.includes('/api/admin/tts/voices')) {
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          configured: true,
+          languages: ['en', 'zh'],
+          voices: { en: ['en_US-lessac-medium.onnx'], zh: [] },
+          defaultVoices: {},
+        }),
+      })
+    }
     if (path.includes('/api/admin/documents')) {
       return Promise.resolve({
         ok: true,

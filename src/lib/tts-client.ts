@@ -8,6 +8,7 @@ export interface TtsCapabilities {
   configured: boolean
   languages: string[]
   voices: TtsVoices
+  defaultVoices: Record<string, string>
   maxSegmentLength: number
   synthesisConcurrency: number
 }
@@ -24,6 +25,7 @@ function unconfiguredCapabilities(): TtsCapabilities {
     configured: false,
     languages: [],
     voices: {},
+    defaultVoices: {},
     maxSegmentLength: MAX_SEGMENT_LENGTH,
     synthesisConcurrency: SYNTHESIS_CONCURRENCY,
   }
@@ -46,6 +48,7 @@ export function loadTtsCapabilities(): Promise<TtsCapabilities> {
       }
       const data = (await response.json()) as Partial<TtsCapabilities>
       const voices: TtsVoices = {}
+      const defaultVoices: Record<string, string> = {}
       if (data.voices && typeof data.voices === 'object') {
         for (const [lang, list] of Object.entries(data.voices)) {
           if (Array.isArray(list)) {
@@ -53,10 +56,18 @@ export function loadTtsCapabilities(): Promise<TtsCapabilities> {
           }
         }
       }
+      if (data.defaultVoices && typeof data.defaultVoices === 'object') {
+        for (const [lang, voice] of Object.entries(data.defaultVoices)) {
+          if (typeof voice === 'string' && voice) {
+            defaultVoices[lang] = voice
+          }
+        }
+      }
       return {
         configured: Boolean(data.configured),
         languages: Array.isArray(data.languages) ? data.languages : [],
         voices,
+        defaultVoices,
         maxSegmentLength: positiveInt(data.maxSegmentLength, MAX_SEGMENT_LENGTH),
         synthesisConcurrency: positiveInt(data.synthesisConcurrency, SYNTHESIS_CONCURRENCY),
       }

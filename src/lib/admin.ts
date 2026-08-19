@@ -94,6 +94,13 @@ export interface AdminSessionInfo {
   configured: boolean
 }
 
+export interface AdminTtsVoicesState {
+  configured: boolean
+  languages: string[]
+  voices: Record<string, string[]>
+  defaultVoices: Record<string, string>
+}
+
 const BASE_PATH = '/api/admin'
 
 async function parseResponse<T>(response: Response, fallback: string): Promise<T> {
@@ -348,4 +355,37 @@ export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportR
 
   const response = await fetch(url)
   return parseResponse<AdminUserExportRecord[]>(response, t('admin.auth.toast.exportUsers'))
+}
+
+export async function fetchAdminTtsVoices(): Promise<AdminTtsVoicesState> {
+  const response = await fetch(`${BASE_PATH}/tts/voices`)
+  return parseResponse<AdminTtsVoicesState>(response, t('admin.auth.toast.loadTtsVoices'))
+}
+
+export async function saveAdminTtsDefaultVoices(defaultVoices: Record<string, string | null>): Promise<AdminTtsVoicesState> {
+  const response = await fetch(`${BASE_PATH}/tts/voices`, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ defaultVoices }),
+  })
+  return parseResponse<AdminTtsVoicesState>(response, t('admin.auth.toast.saveTtsVoices'))
+}
+
+export async function uploadAdminTtsVoice(lang: string, model: File, config: File): Promise<AdminTtsVoicesState> {
+  const formData = new FormData()
+  formData.set('lang', lang)
+  formData.set('model', model)
+  formData.set('config', config)
+  const response = await fetch(`${BASE_PATH}/tts/voices`, {
+    method: 'POST',
+    body: formData,
+  })
+  return parseResponse<AdminTtsVoicesState>(response, t('admin.auth.toast.uploadTtsVoice'))
+}
+
+export async function deleteAdminTtsVoice(lang: string, voice: string): Promise<AdminTtsVoicesState> {
+  const response = await fetch(`${BASE_PATH}/tts/voices?lang=${encodeURIComponent(lang)}&voice=${encodeURIComponent(voice)}`, {
+    method: 'DELETE',
+  })
+  return parseResponse<AdminTtsVoicesState>(response, t('admin.auth.toast.deleteTtsVoice'))
 }

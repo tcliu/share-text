@@ -22,6 +22,7 @@
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
   import { useAdminSegments } from '$lib/use-admin-segments.svelte'
+  import { useAdminTtsVoices } from '$lib/use-admin-tts-voices.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import UploadIcon from '$lib/icons/UploadIcon.svelte'
@@ -39,6 +40,7 @@
     documentsState: ReturnType<typeof useAdminDocuments>
     usersState: ReturnType<typeof useAdminUsers>
     segmentsState: ReturnType<typeof useAdminSegments>
+    voicesState: ReturnType<typeof useAdminTtsVoices>
   }
 
   let { children }: { children?: Snippet } = $props()
@@ -51,6 +53,7 @@
   const documentsState = useAdminDocuments({ onSignedOut: () => authState.handleSignedOut() })
   const usersState = useAdminUsers({ onSignedOut: () => authState.handleSignedOut() })
   const segmentsState = useAdminSegments()
+  const voicesState = useAdminTtsVoices(() => authState.handleSignedOut())
   const authState = useAdminAuth({
     onSignedOut() {
       preferencesState.reset()
@@ -58,6 +61,7 @@
       documentsState.reset()
       usersState.reset()
       segmentsState.reset()
+      voicesState.reset()
     },
   })
 
@@ -87,6 +91,9 @@
     if (page.url.pathname === TTS_PATH && !segmentsState.loaded) {
       void segmentsState.reload()
     }
+    if (page.url.pathname === TTS_PATH && !voicesState.loaded) {
+      void voicesState.load()
+    }
   })
 
   function handleDiscardAndNavigate() {
@@ -96,6 +103,7 @@
     if (!url) return
     preferencesState.resetDraft()
     settingsState.resetDraft()
+    voicesState.resetDraft()
     void goto(url)
   }
 
@@ -105,7 +113,7 @@
   }
 
   beforeNavigate(navigation => {
-    if (!preferencesState.hasUnsavedChanges && !settingsState.hasUnsavedChanges) return
+    if (!preferencesState.hasUnsavedChanges && !settingsState.hasUnsavedChanges && !voicesState.hasUnsavedChanges) return
     const url = navigation.to?.url
     if (!url) return
     // Tab switches within /admin share this layout's state, so the settings
@@ -295,7 +303,7 @@
         <AdminUsersView usersState={state.usersState} />
       {/snippet}
       {#snippet ttsContent(state: AdminState)}
-        <AdminTextToSpeechView segmentsState={state.segmentsState} />
+        <AdminTextToSpeechView segmentsState={state.segmentsState} voicesState={state.voicesState} />
       {/snippet}
       {@const adminTabs = [
         {
@@ -329,7 +337,7 @@
       <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
         <Tabs
           tabs={adminTabs}
-          state={{ preferencesState, settingsState, documentsState, usersState, segmentsState }}
+          state={{ preferencesState, settingsState, documentsState, usersState, segmentsState, voicesState }}
           pathname={page.url.pathname}
           ariaLabel={t('admin.sections')} />
       </div>

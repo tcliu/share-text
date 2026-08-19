@@ -35,6 +35,7 @@ describe('loadTtsCapabilities', () => {
       configured: true,
       languages: ['en', 'zh'],
       voices: {},
+      defaultVoices: {},
       maxSegmentLength: 300,
       synthesisConcurrency: 2,
     })
@@ -50,6 +51,9 @@ describe('loadTtsCapabilities', () => {
           en: ['en_US-lessac-medium.onnx', 'en_GB-alba-medium.onnx'],
           zh: ['zh_CN-huayan-medium.onnx'],
         },
+        defaultVoices: {
+          en: 'en_US-lessac-medium.onnx',
+        },
         maxSegmentLength: 300,
         synthesisConcurrency: 2,
       }),
@@ -62,6 +66,9 @@ describe('loadTtsCapabilities', () => {
       voices: {
         en: ['en_US-lessac-medium.onnx', 'en_GB-alba-medium.onnx'],
         zh: ['zh_CN-huayan-medium.onnx'],
+      },
+      defaultVoices: {
+        en: 'en_US-lessac-medium.onnx',
       },
       maxSegmentLength: 300,
       synthesisConcurrency: 2,
@@ -79,6 +86,7 @@ describe('loadTtsCapabilities', () => {
       configured: false,
       languages: [],
       voices: {},
+      defaultVoices: {},
       maxSegmentLength: 500,
       synthesisConcurrency: 4,
     })

@@ -7,18 +7,22 @@
     langLabel: string
     voices: string[]
     activeValue: string
+    defaultVoice: string | null
     onSelect: (voice: string) => void
   }
 
-  let { lang, langLabel, voices, activeValue, onSelect }: Props = $props()
+  let { lang, langLabel, voices, activeValue, defaultVoice, onSelect }: Props = $props()
 
   const options = $derived([
-    { value: '', label: t('settings.readAloud.voiceDefault') },
-    ...voices.map(voice => ({ value: voice, label: voice })),
+    ...(defaultVoice ? [{ value: '', label: `${defaultVoice} (${t('settings.readAloud.voiceDefault')})` }] : []),
+    ...voices.map(voice => ({
+      value: voice,
+      label: voice === defaultVoice ? `${voice} (${t('settings.readAloud.voiceDefault')})` : voice,
+    })),
   ])
 
   const currentLabel = $derived(
-    options.find(option => option.value === activeValue)?.label ?? t('settings.readAloud.voiceDefault'),
+    options.find(option => option.value === activeValue)?.label ?? (defaultVoice ? `${defaultVoice} (${t('settings.readAloud.voiceDefault')})` : ''),
   )
 </script>
 

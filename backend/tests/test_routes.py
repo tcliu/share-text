@@ -47,6 +47,7 @@ def test_over_limit_request_is_rejected(monkeypatch):
 
 
 def test_capabilities_reports_available_voices_per_language(monkeypatch):
+    monkeypatch.setattr(routes_module, "configured_default_voices", lambda model_dir: {"en": "en_US-lessac-medium.onnx"})
     monkeypatch.setattr(
         routes_module,
         "piper_voices_available",
@@ -55,6 +56,21 @@ def test_capabilities_reports_available_voices_per_language(monkeypatch):
     capabilities = get_capabilities()
     assert capabilities["voices"]["en"] == ["en_US-lessac-medium.onnx"]
     assert capabilities["voices"]["zh"] == []
+    assert capabilities["defaultVoices"] == {"en": "en_US-lessac-medium.onnx"}
+
+
+def test_admin_voices_reports_configured_defaults(monkeypatch):
+    monkeypatch.setattr(routes_module, "configured_default_voices", lambda model_dir: {"en": "en_US-lessac-medium.onnx"})
+    monkeypatch.setattr(
+        routes_module,
+        "piper_voices_available",
+        lambda lang, model_dir: ["en_US-lessac-medium.onnx"] if lang == "en" else [],
+    )
+
+    payload = routes_module.get_admin_voices()
+
+    assert payload["defaultVoices"] == {"en": "en_US-lessac-medium.onnx"}
+    assert payload["voices"]["en"] == ["en_US-lessac-medium.onnx"]
 
 
 def test_synthesize_rejects_unknown_voice(monkeypatch):
