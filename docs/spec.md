@@ -679,10 +679,10 @@ the menu owns the `FormatDialog`), followed by the Editor view / Preview view
 toggle pair and the Copy, Read aloud, Clone, Tags, Copy link, Reset, and Save
 toolbar buttons (Clone only when available; Copy link and Tags only for saved
 documents). On desktop the toolbar shows the TypeActions plus the
-Copy, Read aloud, Clone, History, Upload, Export, Format, Tags, Copy link,
-Reset, and Save
-buttons (History between Clone and Upload, Format between Export and Tags,
-Copy link directly after Tags, Reset directly before Save). On desktop the
+Copy, Read aloud, Upload, Export, Format, a `KebabMenu` holding Clone, Tags,
+Copy link, and History (when available), then Share/Delete, Reset, and Save.
+Both mobile and desktop `KebabMenu` items prepend the same icon glyph they
+formerly used as standalone toolbar buttons. On desktop the
 header lays the name/tags group, the type
 selector, and the (self-wrapping) button panel out in one wrapping flex
 (content-driven wrapping): the name/tags group uses `flex-basis: min-content`
@@ -728,9 +728,9 @@ pane header shows a Login button after the Refresh button that navigates to
   endpoints: `GET /api/tts/capabilities` (reports `configured` from the
   runtime `tts_service_url` setting plus the service's supported languages and,
   per language, the available piper voices (both empty when the feature is
-  unconfigured; it also carries the runtime
-  `tts_max_segment_length` and `tts_synthesis_concurrency` values the client
-  applies when splitting and streaming) and `POST /api/tts/synthesize`
+  unconfigured; it also carries the runtime `tts_max_segment_length`,
+  `tts_synthesis_concurrency`, and `defaultVoices` values the client applies
+  when splitting and streaming) and `POST /api/tts/synthesize`
   (forwards `{ text, lang, voice }` to the service's `/api/synthesize` with
   `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
   **bytes** back with the service's Content-Type). `voice` is optional and
@@ -1034,7 +1034,8 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
 
 A document always has one version for its creation state, and a content/type
 save appends another. Once a document has two or more versions it shows a
-History (clock) button in the editor toolbar. Clicking it opens `HistoryDialog`:
+History action in the desktop editor's More actions menu and in the mobile
+header kebab menu. Clicking it opens `HistoryDialog`:
 
 - The dialog loads the version list (`GET /api/documents/[id]/versions`,
   newest first), auto-selects the newest version, and fetches the selected

@@ -49,11 +49,12 @@ The page is split into two vertical panes.
       dropdown, and visible tag chips on the left, and a toolbar on the right
       with icon buttons (all with tooltips): an **Editor view** toggle and a
       **Preview view** toggle, type-specific **Format**/convert actions,
-      **History** (when the document has multiple versions), **Copy**,
-      **Read aloud**, **Clone**, **Upload**, **Export**, **Tags**, **Copy link**,
-      **Share** (for the document's owner), **Delete** (only on documents you
-      own — created anonymously from your client IP, or claimed by your
-      account), **Reset**, and **Save**,
+      **Copy**, **Read aloud**, **Upload**, **Export**, **Format**, a three-dot
+      **More actions** menu with **Clone**, **Tags**, **Copy link**, and
+      **History** (when the document has multiple versions), plus **Share**
+      (for the document's owner), **Delete** (only on documents you own —
+      created anonymously from your client IP, or claimed by your account),
+      **Reset**, and **Save**,
     - a CodeMirror plain-text editor that fills the rest of the pane (optionally
       split with a preview pane),
     - a footer with the last-updated timestamp, updating-by IP, refreshing
@@ -85,7 +86,9 @@ document name and type selector, then the tag chips, then the action buttons —
 - The interface can be shown in English (default), Simplified Chinese, or
   Traditional Chinese. The **Language** (globe) button in the document-list
   header (also on the collapsed rail) opens a menu listing the three languages
-  in their own script; the active one is marked.
+  in their own script; the active one is marked. When signed in, the globe sits
+  immediately before **Settings**; when signed out it sits immediately before
+  **Login**.
 - The choice is remembered on the device: the next visit opens in the selected
   language. Both the browser app and the admin console are translated, so
   switching the language also switches the admin tabs, toolbars, dialogs, and
@@ -353,9 +356,11 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   one **Apply / Reload / Reset** footer and keep one shared preferences draft.
   **General** holds the account's preferred interface language, applied
   automatically whenever the account signs in. **Read aloud** lists each TTS
-  language the service supports with a voice dropdown for that language (a
-  **Default** entry restores the service default); the voices you choose are
-  used whenever you read a document aloud, per language. **Documents** is an
+  language the service supports with a voice dropdown for that language; each
+  option shows the model filename, and the admin-configured default model is
+  labeled `(Default)` so choosing the service default still identifies the
+  concrete voice. The voices you choose are used whenever you read a document
+  aloud, per language. **Documents** is an
   admin-style management table scoped to documents you own, with search,
   sorting, selection, rename-on-hover, **Open selected**, **Delete selected**,
   and **Reload** toolbar actions plus a **New document** shortcut. Leaving the
