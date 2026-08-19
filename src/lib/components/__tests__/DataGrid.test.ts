@@ -75,6 +75,36 @@ describe('DataGrid (reusable grid)', () => {
     expect(root.querySelector('thead')).not.toBeNull()
   })
 
+  it('keeps header and body columns aligned through a shared colgroup width model', async () => {
+    render(DataGrid, {
+      value: [
+        ['a', 'b', 'c', 'd'],
+        ['1', '2', '3', '4'],
+      ],
+    })
+    const root = await screen.findByTestId('data-grid')
+    const tables = root.querySelectorAll('table')
+    const headerCols = tables[0]?.querySelectorAll('col')
+    const bodyCols = tables[1]?.querySelectorAll('col')
+    expect(headerCols?.length).toBe(5)
+    expect(bodyCols?.length).toBe(5)
+    expect(Array.from(headerCols ?? []).map(col => (col as HTMLElement).getAttribute('style'))).toEqual(
+      Array.from(bodyCols ?? []).map(col => (col as HTMLElement).getAttribute('style')),
+    )
+  })
+
+  it('renders a read-only grid when editable is false', async () => {
+    const onChange = vi.fn()
+    render(DataGrid, { value: [['a'], ['1']], onChange, editable: false })
+    const root = await screen.findByTestId('data-grid')
+    const input = gridCell(root, 1, 0) as HTMLTextAreaElement
+    expect(input.readOnly).toBe(true)
+    expect((within(root).getByRole('button', { name: 'Insert row below' }) as HTMLButtonElement).disabled).toBe(true)
+    await fireEvent.input(input, { target: { value: '9' } })
+    await fireEvent.blur(input)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('uses a lighter bottom border on header cells than on body cells', async () => {
     render(DataGrid, {
       value: [
@@ -1953,15 +1983,15 @@ describe('DataGrid (column resize)', () => {
     expect(root.querySelector('colgroup')).not.toBeNull()
   })
 
-  it('uses auto-width layout when initialColumnWidths is omitted', async () => {
+  it('uses a shared fixed-width colgroup when initialColumnWidths is omitted', async () => {
     render(DataGrid, {
       value: [['a', 'b'], ['1', '2']],
       showHeaders: false,
     })
     const root = await screen.findByTestId('data-grid')
     const table = root.querySelector('table') as HTMLElement
-    expect(root.querySelector('colgroup')).toBeNull()
-    expect(table.className).toContain('w-full')
+    expect(root.querySelector('colgroup')).not.toBeNull()
+    expect(table.getAttribute('style')).toContain('table-layout: fixed')
   })
 
   it('renders resize splitter buttons with aria-labels in the column selector row', async () => {

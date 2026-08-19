@@ -99,6 +99,18 @@ describe('PropertiesPreview', () => {
     expect(onChange.mock.calls[0][0]).toContain('name=Bob')
   })
 
+  it('renders a read-only grid when editable is false', async () => {
+    const onChange = vi.fn()
+    render(PropertiesPreview, { content: 'name=Alice\ncount=3', onContentChange: onChange, editable: false })
+    const root = await screen.findByTestId('properties-preview')
+    const input = cellInput(root, 'Alice')
+    expect(input.readOnly).toBe(true)
+    expect((within(root).getByRole('button', { name: 'Insert row below' }) as HTMLButtonElement).disabled).toBe(true)
+    await fireEvent.input(input, { target: { value: 'Bob' } })
+    await fireEvent.blur(input)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('renames a key via the grid input and reports the change', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice', onContentChange: onChange })

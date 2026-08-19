@@ -85,6 +85,18 @@ describe('CsvPreview (custom grid)', () => {
     expect(onChange.mock.calls[0][0]).toContain('Alicia')
   })
 
+  it('renders a read-only grid when editable is false', async () => {
+    const onChange = vi.fn()
+    render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange, editable: false })
+    const root = await screen.findByTestId('csv-preview')
+    const input = cellInput(root, 'Alice')
+    expect(input.readOnly).toBe(true)
+    expect((within(root).getByRole('button', { name: 'Insert row below' }) as HTMLButtonElement).disabled).toBe(true)
+    await fireEvent.input(input, { target: { value: 'Alicia' } })
+    await fireEvent.blur(input)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('renders the header row as <thead> with <th> cells', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
     const root = await screen.findByTestId('csv-preview')
