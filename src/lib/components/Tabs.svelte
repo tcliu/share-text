@@ -30,6 +30,11 @@
           <a
             href={tab.path}
             aria-current={tab.path === pathname ? 'page' : undefined}
+            onclick={event => {
+              if (tab.path === pathname) {
+                event.preventDefault()
+              }
+            }}
             class={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition ${tab.path === pathname ? 'bg-cyan-500 text-slate-950' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
             {tab.label}
           </a>
