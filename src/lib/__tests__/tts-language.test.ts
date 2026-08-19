@@ -148,8 +148,9 @@ describe('splitTtsSegments', () => {
       expect(segment.lang).toBe('en')
       expect(segment.text.length).toBeLessThanOrEqual(500)
       expect(segment.text).not.toContain('\n\n')
+      expect(segment.text).toBe(segment.text.trim())
     }
-    expect(segments.map(s => s.text).join('').replace(/\s+/g, ' ').trim()).toBe(
+    expect(segments.map(s => s.text).join(' ').replace(/\s+/g, ' ').trim()).toBe(
       paragraph.replace(/\s+/g, ' ').trim(),
     )
   })

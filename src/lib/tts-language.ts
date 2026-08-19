@@ -272,13 +272,22 @@ export function splitTtsSegments(text: string, maxSegmentLength = MAX_SEGMENT_LE
       let searchFrom = 0
       for (const chunk of chunks) {
         const chunkStart = clean.indexOf(chunk, searchFrom)
-        const chunkEnd = chunkStart + chunk.length
-        searchFrom = chunkEnd
+        // preserve searchFrom based on the original chunk so subsequent
+        // searches don't re-find this occurrence even after trimming
+        searchFrom = chunkStart + chunk.length
+
+        // Trim so segment text carries no leading/trailing whitespace; index
+        // ranges map to the trimmed span so text and range always agree.
+        const trimmed = chunk.trim()
+        if (!trimmed) continue
+        const trimmedStart = clean.indexOf(trimmed, chunkStart)
+        const trimmedEnd = trimmedStart + trimmed.length
+
         segments.push({
-          text: chunk,
+          text: trimmed,
           lang: run.lang,
-          indexStart: offsets[chunkStart],
-          indexEnd: offsets[chunkEnd - 1],
+          indexStart: offsets[trimmedStart],
+          indexEnd: offsets[trimmedEnd - 1],
         })
       }
     }
