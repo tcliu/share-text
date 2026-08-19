@@ -511,19 +511,24 @@ resize and scroll; it restores the panel to its original DOM parent on
 unmount. The owning component keeps its own open/close, keyboard, and
 outside-click handling.
 
-`KebabMenu` (`src/lib/components/KebabMenu.svelte`) follows this pattern for a
-three-dot action menu: it takes `items` (`{ id, label, onClick, disabled?,
-icon? }`) plus an optional `ariaLabel`/`align`/`autoPlace`, keeps its own open
-state and arrow-key focus (`activeIndex` with a `firstEnabledIndex` guard),
-and closes on item click, Escape, outside pointer-down, and scroll.
-
-`LanguageMenu` (`src/lib/components/LanguageMenu.svelte`) follows the same
-pattern for the language picker: a globe-icon trigger opens a
-`positionPanel` menu of the supported locales (labeled in their own language)
-with the active one marked by a `menuitemradio` role and a dot; selecting a
-locale calls `setLocale`. It renders in the document-list header (so also in
-the mobile drawer, which reuses the `documentList` snippet) and in the
-collapsed left rail.
+Both overlays with a trigger-and-item-menu shape share the `Menu`
+(`src/lib/components/Menu.svelte`) primitive, which owns the trigger button,
+the `positionPanel` panel, open/close/toggle, and the roving real-focus
+keyboard model: opening (trigger click or ArrowDown/ArrowUp on the closed
+trigger) moves focus to the first enabled item, ArrowUp/ArrowDown/Home/End
+navigate with disabled-skip, mouse hover syncs `activeIndex` (and real focus,
+keeping the `tabindex` rotation coherent), and Escape/outside pointer-down/
+scroll close the menu, returning focus to the trigger. Item buttons carry
+`role="menuitem"`/`role="menuitemradio"` (with `aria-checked`) and
+`onSelect(index)` fires after close. `KebabMenu` and `LanguageMenu` are thin
+instantiations: `KebabMenu` (`src/lib/components/KebabMenu.svelte`) renders a
+three-dot action menu from `items` (`{ id, label, onClick, disabled?, icon? }`)
+with `role="menuitem"` items; `LanguageMenu`
+(`src/lib/components/LanguageMenu.svelte`) renders a globe-icon `menuitemradio`
+picker of the supported locales (labeled in their own language) with the active
+one marked by a dot, calling `setLocale` on select. `LanguageMenu` renders in
+the document-list header (so also in the mobile drawer, which reuses the
+`documentList` snippet) and in the collapsed left rail.
 
 `SelectDropdown` (`src/lib/components/SelectDropdown.svelte`) renders either a
 filterable `<input role="combobox">` or a plain `<button>` trigger for the same
@@ -700,9 +705,11 @@ identity so the browser app can render the admin entry point;
   chars) is split on sentence boundaries so no single request is oversized;
   the limit is the runtime `tts_max_segment_length` setting (DB override, else
   `TTS_MAX_SEGMENT_LENGTH` env, else 500) exposed to the client by the
-  capabilities endpoint; each emitted segment carries `indexStart` and
-  `indexEnd` (inclusive, 0-based character offsets into the original document
-  text) so the backend can log exactly which part of the document is spoken;
+  capabilities endpoint; each emitted segment's text is trimmed of leading and
+  trailing whitespace, and carries `indexStart` and `indexEnd` (inclusive,
+  0-based character offsets into the original document text) mapped to that
+  trimmed span — so text and range always agree and the backend can log exactly
+  which part of the document is spoken;
   each segment
   synthesizes with its own language model, then plays
   the audio segments in sequence from the proxy in a hidden `<audio>` element
