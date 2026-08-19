@@ -34,6 +34,35 @@ describe('loadTtsCapabilities', () => {
     expect(await loadTtsCapabilities()).toEqual({
       configured: true,
       languages: ['en', 'zh'],
+      voices: {},
+      maxSegmentLength: 300,
+      synthesisConcurrency: 2,
+    })
+  })
+
+  it('parses the per-language voices from the response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        configured: true,
+        languages: ['en', 'zh'],
+        voices: {
+          en: ['en_US-lessac-medium.onnx', 'en_GB-alba-medium.onnx'],
+          zh: ['zh_CN-huayan-medium.onnx'],
+        },
+        maxSegmentLength: 300,
+        synthesisConcurrency: 2,
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(await loadTtsCapabilities()).toEqual({
+      configured: true,
+      languages: ['en', 'zh'],
+      voices: {
+        en: ['en_US-lessac-medium.onnx', 'en_GB-alba-medium.onnx'],
+        zh: ['zh_CN-huayan-medium.onnx'],
+      },
       maxSegmentLength: 300,
       synthesisConcurrency: 2,
     })
@@ -49,6 +78,7 @@ describe('loadTtsCapabilities', () => {
     expect(await loadTtsCapabilities()).toEqual({
       configured: false,
       languages: [],
+      voices: {},
       maxSegmentLength: 500,
       synthesisConcurrency: 4,
     })
@@ -116,6 +146,29 @@ describe('synthesizeTtsCached', () => {
 
     const secondBody = JSON.parse(fetchMock.mock.calls[1][1].body)
     expect(secondBody).toMatchObject({ text: 'Hello', lang: 'en', segmentIndex: 1 })
+  })
+
+  it('sends a requested voice in the request body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: async () => audioBlob() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await synthesizeTtsCached([{ text: 'Hello', lang: 'en', voice: 'en_GB-alba-medium.onnx' }])
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body).toMatchObject({ text: 'Hello', lang: 'en', voice: 'en_GB-alba-medium.onnx' })
+  })
+
+  it('distinguishes the cache by voice', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, blob: async () => audioBlob() })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await synthesizeTtsCached([{ text: 'Hello', lang: 'en', voice: 'en_US-lessac-medium.onnx' }])
+    await synthesizeTtsCached([{ text: 'Hello', lang: 'en' }])
+    await synthesizeTtsCached([{ text: 'Hello', lang: 'en', voice: 'en_GB-alba-medium.onnx' }])
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+
+    await synthesizeTtsCached([{ text: 'Hello', lang: 'en', voice: 'en_GB-alba-medium.onnx' }])
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
 

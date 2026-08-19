@@ -82,7 +82,7 @@ describe('/login page', () => {
     await fireEvent.click(getByText('Continue'))
 
     await waitFor(() => {
-      expect(goto).toHaveBeenCalledWith('/admin/properties')
+      expect(goto).toHaveBeenCalledWith('/admin/general')
     })
   })
 })

@@ -4,6 +4,6 @@ import { isAdminSession } from '$lib/server/admin-auth'
 
 export const load: LayoutServerLoad = ({ cookies }) => {
   if (!isAdminSession({ cookies })) {
-    throw redirect(307, '/login/admin')
+    throw redirect(307, '/login')
   }
 }

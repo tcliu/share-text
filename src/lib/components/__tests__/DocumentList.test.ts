@@ -20,44 +20,21 @@ function renderList(props: Record<string, unknown> = {}) {
 }
 
 describe('DocumentList', () => {
-  it('shows the profile button for a signed-in user', async () => {
+  it('shows the settings button for a signed-in user', async () => {
     const { getByLabelText, queryByLabelText } = renderList({
       user: { username: 'alice', email: 'alice@example.com' },
     })
 
-    expect(getByLabelText('Profile')).toBeTruthy()
-    expect(queryByLabelText('Admin console')).toBeNull()
-  })
-
-  it('shows the admin console button instead of profile for an admin', async () => {
-    const { getByLabelText, queryByLabelText } = renderList({
-      user: { username: 'admin' },
-      isAdmin: true,
-      onAdmin: vi.fn(),
-    })
-
-    expect(getByLabelText('Admin console')).toBeTruthy()
+    expect(getByLabelText('Settings')).toBeTruthy()
     expect(queryByLabelText('Profile')).toBeNull()
-  })
-
-  it('navigates to /admin when the admin console button is clicked', async () => {
-    const { getByLabelText } = renderList({
-      user: { username: 'admin' },
-      isAdmin: true,
-      onAdmin: () => goto('/admin'),
-    })
-
-    fireEvent.click(getByLabelText('Admin console'))
-
-    expect(goto).toHaveBeenCalledWith('/admin')
+    expect(queryByLabelText('Admin console')).toBeNull()
   })
 
   it('shows the login button when signed out', async () => {
     const { getByLabelText, queryByLabelText } = renderList()
 
     expect(getByLabelText('Login')).toBeTruthy()
-    expect(queryByLabelText('Profile')).toBeNull()
-    expect(queryByLabelText('Admin console')).toBeNull()
+    expect(queryByLabelText('Settings')).toBeNull()
   })
 
   it('renders document names as plain labels without a copy button', async () => {
@@ -79,5 +56,16 @@ describe('DocumentList', () => {
 
     expect(getByText('My Doc')).toBeTruthy()
     expect(queryByLabelText(/Copy document name/)).toBeNull()
+  })
+
+  it('navigates to the settings route when the settings button is clicked', async () => {
+    const { getByLabelText } = renderList({
+      user: { username: 'alice', email: 'alice@example.com' },
+      onSettings: () => goto('/settings'),
+    })
+
+    fireEvent.click(getByLabelText('Settings'))
+
+    expect(goto).toHaveBeenCalledWith('/settings')
   })
 })

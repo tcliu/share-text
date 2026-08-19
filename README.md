@@ -110,13 +110,15 @@ the list header opens `/login`, where visitors can sign in or create an account.
 ## Admin
 
 The admin console is a dedicated area under `/admin`, reached by navigating
-there directly (`/admin` redirects to `/admin/properties`, or to `/login/admin`
+there directly (`/admin` redirects to `/admin/general`, or to `/login`
 when signed out). Sign in with the configured `ADMIN_USERNAME`/`ADMIN_PASSWORD`
-(or `ADMIN_PASSWORD_HASH` in production). Three tabs are available after
-sign-in as real routes: **Properties** (`/admin/properties`, runtime-adjustable
-application properties), **Documents** (`/admin/documents`, browse all
-documents across all client IPs), and **Users** (`/admin/users`, manage
-registered user accounts). The Documents and Users toolbars offer JSON
+(or `ADMIN_PASSWORD_HASH` in production) through the shared `/login` page.
+Five tabs are available after sign-in as real routes: **General**
+(`/admin/general`, admin preferred language), **Properties**
+(`/admin/properties`, runtime-adjustable application properties),
+**Documents** (`/admin/documents`, browse all documents across all client IPs),
+**Users** (`/admin/users`, manage registered user accounts), and **Text To
+Speech** (`/admin/text-to-speech`). The Documents and Users toolbars offer JSON
 **Import**/**Export**.
 
 Admin API endpoints live under `/api/admin/*` and are protected by a signed,

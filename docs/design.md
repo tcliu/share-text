@@ -18,9 +18,9 @@ The page is split into two vertical panes.
 - **Left pane: document list**
   - Header with **Collapse document list** (collapses the pane), **New
     document**, **Refresh**, a **Language** (globe) button that opens the
-    language picker, and — depending on sign-in state — **Login**, **Profile**
-    + **Sign out** (signed-in user), or **Admin console** + **Sign out**
-    (signed-in admin) icon buttons (all with tooltips). The language picker also
+    language picker, and — depending on sign-in state — **Login**, or a
+    **Settings** (gear) + **Sign out** button for any signed-in account (all
+    with tooltips). The language picker also
     appears on the collapsed rail.
   - The pane lists the documents the visitor can view — public documents, their
     own documents, and documents shared with them — most recently edited first.
@@ -120,7 +120,10 @@ document name and type selector, then the tag chips, then the action buttons —
   own language model — Han → zh, kana → ja, otherwise en — with short runs
   folded into the dominant language, blank lines splitting paragraphs into
   separate segments, oversized paragraphs split on sentence boundaries, and CJK
-  newlines stripped for a continuous read) and played back in sequence. The
+  newlines stripped for a continuous read) and played back in sequence. Each
+  segment is synthesized with the account's saved voice for that language when
+  one is set (see **Settings → Read aloud**), otherwise the service default.
+  The
   button shows a **Preparing** spinner while the first segments are being
   synthesized, then switches to a highlighted **Stop** toggle as soon as the
   first audio segment plays; clicking it again cancels in-flight synthesis and
@@ -340,11 +343,24 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   claims the documents the visitor created anonymously from that client IP. A
   **Remember me** checkbox issues a 30-day session cookie; the password is
   never stored client-side.
-- A signed-in user sees **Profile** (their username and email) and **Sign out**
-  buttons in the list header instead of **Login**; an admin session additionally
-  shows an **Admin console** button.
+- A signed-in user sees a **Settings** (gear) button and **Sign out** in the
+  list header instead of **Login**. The Settings button opens `/settings` for a
+  registered user and `/admin` for an admin session.
 - Signing in accepts either a user account or the configured admin credentials;
-  the dedicated admin sign-in page lives at `/login/admin`.
+  `/login` is the only sign-in page.
+- The **Settings** page (`/settings`) is organized into **General**,
+  **Read aloud**, and **Documents** tabs. **General** and **Read aloud** share
+  one **Apply / Reload / Reset** footer and keep one shared preferences draft.
+  **General** holds the account's preferred interface language, applied
+  automatically whenever the account signs in. **Read aloud** lists each TTS
+  language the service supports with a voice dropdown for that language (a
+  **Default** entry restores the service default); the voices you choose are
+  used whenever you read a document aloud, per language. **Documents** is an
+  admin-style management table scoped to documents you own, with search,
+  sorting, selection, rename-on-hover, **Open selected**, **Delete selected**,
+  and **Reload** toolbar actions plus a **New document** shortcut. Leaving the
+  page with unsaved preference changes asks for confirmation. Admins see the
+  admin console instead of this page.
 - Anonymous visitors can create, edit, and delete only the documents they own
   (created from their client IP). Registered users can additionally edit any
   public or shared document, and can delete and manage only the documents they
@@ -371,24 +387,26 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 The admin console is a dedicated area under `/admin`, reached by direct
 navigation. A server-side layout guard redirects unauthenticated visitors to
-`/login/admin`, which shows the sign-in form; if no admin password source is
-configured, that page reports that admin is disabled instead. A
-**Remember me** checkbox persists the username to `localStorage` (pre-filling
-it on the next visit) and issues a 30-day session cookie; the password is
-never stored client-side. The page header offers **Go to Documents** and
-**Sign out** once signed in. The four tabs live at the real routes
-`/admin/properties`, `/admin/documents`, `/admin/users`, and `/admin/text-to-speech`
-(`/admin` redirects to the Properties route), so each view has a stable, shareable URL and survives
-refresh and back/forward; the generic `Tabs` component renders the tab bar and
-the active tab's toolbar and content from a per-tab `Tab` entry (label, path,
-toolbar snippet, content snippet) defined in the shared admin layout, which
-keeps the settings draft and documents/users data alive across tab switches.
+`/login`, which accepts admin credentials on the same form as user sign-in; if
+no admin password source is configured, admin sign-in simply fails to match.
+The page header offers **Go to Documents** and **Sign out** once signed in. The
+five tabs live at the real routes `/admin/general`, `/admin/properties`,
+`/admin/documents`, `/admin/users`, and `/admin/text-to-speech` (`/admin`
+redirects to the General route), so each view has a stable, shareable URL and
+survives refresh and back/forward; the generic `Tabs` component renders the tab
+bar and the active tab's toolbar and content from a per-tab `Tab` entry
+(label, path, toolbar snippet, content snippet) defined in the shared admin
+layout, which keeps the general/settings draft and documents/users data alive
+across tab switches.
 
 - Successful sign-in sets an HTTP-only, `SameSite=strict` signed session cookie
   (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per
   IP (5 per 15 minutes). All `/api/admin/*` routes except `login` and `session`
   require a valid session.
-- The page has four tabs:
+- The page has five tabs:
+  - **General** — the admin account's preferred interface language, persisted
+    server-side and applied on sign-in, with the same **Apply / Reload / Reset**
+    footer pattern as other editable settings screens.
   - **Properties** — application properties (`max_documents_per_ip`,
     `max_content_length`, `document_key_length`, `max_document_versions`). The
     tab splits into **Form** and **Properties** sub-tabs editing the same draft:

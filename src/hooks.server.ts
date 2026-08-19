@@ -1,7 +1,7 @@
 import type { Handle } from '@sveltejs/kit'
 import { ADMIN_SESSION_COOKIE, verifySessionToken } from '$lib/server/admin-auth'
 
-const PUBLIC_ADMIN_PATHS = new Set(['/api/admin/login', '/api/admin/session'])
+const PUBLIC_ADMIN_PATHS = new Set(['/api/admin/session'])
 
 export const handle: Handle = async ({ event, resolve }) => {
   const { pathname } = event.url

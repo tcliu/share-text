@@ -1,8 +1,13 @@
 import { MAX_SEGMENT_LENGTH } from './tts-language'
 
+export interface TtsVoices {
+  [lang: string]: string[]
+}
+
 export interface TtsCapabilities {
   configured: boolean
   languages: string[]
+  voices: TtsVoices
   maxSegmentLength: number
   synthesisConcurrency: number
 }
@@ -18,6 +23,7 @@ function unconfiguredCapabilities(): TtsCapabilities {
   return {
     configured: false,
     languages: [],
+    voices: {},
     maxSegmentLength: MAX_SEGMENT_LENGTH,
     synthesisConcurrency: SYNTHESIS_CONCURRENCY,
   }
@@ -39,9 +45,18 @@ export function loadTtsCapabilities(): Promise<TtsCapabilities> {
         return unconfiguredCapabilities()
       }
       const data = (await response.json()) as Partial<TtsCapabilities>
+      const voices: TtsVoices = {}
+      if (data.voices && typeof data.voices === 'object') {
+        for (const [lang, list] of Object.entries(data.voices)) {
+          if (Array.isArray(list)) {
+            voices[lang] = list.filter((voice): voice is string => typeof voice === 'string')
+          }
+        }
+      }
       return {
         configured: Boolean(data.configured),
         languages: Array.isArray(data.languages) ? data.languages : [],
+        voices,
         maxSegmentLength: positiveInt(data.maxSegmentLength, MAX_SEGMENT_LENGTH),
         synthesisConcurrency: positiveInt(data.synthesisConcurrency, SYNTHESIS_CONCURRENCY),
       }
@@ -60,6 +75,7 @@ export interface TtsSegmentMeta {
 export interface TtsSegmentInput extends TtsSegmentMeta {
   text: string
   lang: string
+  voice?: string
 }
 
 export async function synthesizeTts(
@@ -67,11 +83,16 @@ export async function synthesizeTts(
   lang: string,
   signal?: AbortSignal,
   meta?: TtsSegmentMeta,
+  voice?: string,
 ): Promise<Blob> {
+  const body: Record<string, string | number> = { text, lang }
+  if (voice) {
+    body.voice = voice
+  }
   const response = await fetch('/api/tts/synthesize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, lang, ...meta }),
+    body: JSON.stringify({ ...body, ...meta }),
     signal,
   })
   if (!response.ok) {
@@ -105,7 +126,7 @@ export async function* synthesizeTtsStreaming(
       const index = launched
       launched += 1
       const segment = segments[index]
-      synthesizeOneCached(segment.text, segment.lang, signal, {
+      synthesizeOneCached(segment.text, segment.lang, signal, segment.voice, {
         segmentIndex: index,
         indexStart: segment.indexStart,
         indexEnd: segment.indexEnd,
@@ -153,14 +174,15 @@ async function synthesizeOneCached(
   text: string,
   lang: string,
   signal?: AbortSignal,
+  voice?: string,
   meta?: TtsSegmentMeta,
 ): Promise<Blob> {
-  const key = `${lang}\u0000${text}`
+  const key = `${lang}\u0000${voice ?? ''}\u0000${text}`
   const cached = synthesisCache.get(key)
   if (cached) {
     return cached
   }
-  const blob = await synthesizeTts(text, lang, signal, meta)
+  const blob = await synthesizeTts(text, lang, signal, meta, voice)
   synthesisCache.set(key, blob)
   if (synthesisCache.size > SYNTHESIS_CACHE_LIMIT) {
     const oldestKey = synthesisCache.keys().next().value

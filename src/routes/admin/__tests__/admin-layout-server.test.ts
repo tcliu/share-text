@@ -25,15 +25,15 @@ describe('admin layout server load', () => {
     expect(result).toBeUndefined()
   })
 
-  it('redirects unauthenticated sessions to /login/admin', async () => {
+  it('redirects unauthenticated sessions to /login', async () => {
     authMocks.isAdminSession.mockReturnValue(false)
     try {
       await load({ cookies: { get: () => null } } as never)
-      expect.unreachable('expected a redirect to /login/admin')
+      expect.unreachable('expected a redirect to /login')
     } catch (error) {
       const redirect = error as { status?: number; location?: string }
       expect(redirect.status).toBe(307)
-      expect(redirect.location).toBe('/login/admin')
+      expect(redirect.location).toBe('/login')
     }
   })
 })

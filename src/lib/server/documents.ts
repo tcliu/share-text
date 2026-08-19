@@ -611,6 +611,15 @@ export interface ListDocumentsForAdminOptions {
   order?: 'asc' | 'desc'
 }
 
+export interface ListOwnedDocumentsOptions {
+  search?: string
+  searchKeys?: string[]
+  limit?: number
+  offset?: number
+  sortBy?: string
+  order?: 'asc' | 'desc'
+}
+
 export async function listDocumentsForAdmin(options: ListDocumentsForAdminOptions = {}) {
   const { search, searchKeys, by, limit, offset = 0, sortBy, order } = options
   const sortColumn = ADMIN_SORT_COLUMNS[sortBy ?? 'updatedAt'] ?? ADMIN_SORT_COLUMNS.updatedAt
@@ -635,6 +644,49 @@ export async function listDocumentsForAdmin(options: ListDocumentsForAdminOption
 
   const whereClause = conditions.length > 0 ? ' where ' + conditions.join(' and ') : ''
 
+  const countResult = await runQuery<{ count: number | string }>(
+    `select count(*) as count from documents${whereClause}`,
+    params,
+  )
+  const total = Number(countResult.rows[0]?.count ?? 0)
+
+  let sql = `select key, name, document_type, tags, created_by, updated_by, created_at, updated_at, length(content) as content_size, is_public
+    from documents${whereClause} order by ${sortColumn} ${sortDir}`
+  const listParams = [...params]
+  if (limit !== undefined) {
+    sql += ` limit $${listParams.length + 1}`
+    listParams.push(limit)
+    sql += ` offset $${listParams.length + 1}`
+    listParams.push(offset)
+  }
+
+  const result = await runQuery<AdminDocumentRow>(sql, listParams)
+  return {
+    documents: result.rows.map(toAdminDocumentSummary),
+    total,
+    hasMore: limit !== undefined ? offset + result.rows.length < total : false,
+  }
+}
+
+export async function listDocumentsForOwnedUser(userId: number, options: ListOwnedDocumentsOptions = {}) {
+  const { search, searchKeys, limit, offset = 0, sortBy, order } = options
+  const sortColumn = ADMIN_SORT_COLUMNS[sortBy ?? 'updatedAt'] ?? ADMIN_SORT_COLUMNS.updatedAt
+  const sortDir = order === 'asc' ? 'asc' : 'desc'
+  const conditions = [`owner_user_id = $1`]
+  const params: unknown[] = [userId]
+
+  if (search) {
+    appendSearchConditions({
+      search,
+      searchKeys: searchKeys ?? [],
+      columns: DOCUMENT_SEARCH_COLUMNS,
+      defaultKeys: ['name'],
+      conditions,
+      params,
+    })
+  }
+
+  const whereClause = ' where ' + conditions.join(' and ')
   const countResult = await runQuery<{ count: number | string }>(
     `select count(*) as count from documents${whereClause}`,
     params,

@@ -58,9 +58,9 @@ describe('handle guard for /api/admin/*', () => {
     expect(response.status).toBe(200)
   })
 
-  it('skips the guard for the public admin login and session endpoints', async () => {
+  it('skips the guard for the public admin session endpoint', async () => {
     authMocks.verifySessionToken.mockReturnValue(false)
-    for (const pathname of ['/api/admin/login', '/api/admin/session']) {
+    for (const pathname of ['/api/admin/session']) {
       const { event, resolve } = makeEvent(pathname, undefined)
       const response = await handle({ event, resolve } as never)
       expect(response.status).toBe(200)

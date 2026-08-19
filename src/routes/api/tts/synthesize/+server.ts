@@ -13,6 +13,7 @@ export const POST: RequestHandler = async ({ request }) => {
   }
   const text = typeof body.text === 'string' ? body.text.trim() : ''
   const lang = typeof body.lang === 'string' ? body.lang.trim() : ''
+  const voice = typeof body.voice === 'string' ? body.voice.trim() : ''
   if (!text) {
     return json({ error: 'Text must not be empty' }, { status: 400 })
   }
@@ -20,6 +21,9 @@ export const POST: RequestHandler = async ({ request }) => {
     return json({ error: `Unsupported language '${lang}'` }, { status: 400 })
   }
   const forwarded: Record<string, string | number> = { text, lang }
+  if (voice) {
+    forwarded.voice = voice
+  }
   for (const [camel, snake] of [
     ['segmentIndex', 'segment_index'],
     ['indexStart', 'index_start'],

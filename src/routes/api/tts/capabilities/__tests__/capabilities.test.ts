@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const ttsMocks = vi.hoisted(() => ({
   isTtsConfigured: vi.fn(),
   getSupportedTtsLanguages: vi.fn(),
+  getSupportedTtsVoices: vi.fn(),
 }))
 const settingsMocks = vi.hoisted(() => ({
   getSettingValue: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock('$lib/server/tts', async () => {
     ...actual,
     isTtsConfigured: ttsMocks.isTtsConfigured,
     getSupportedTtsLanguages: ttsMocks.getSupportedTtsLanguages,
+    getSupportedTtsVoices: ttsMocks.getSupportedTtsVoices,
   }
 })
 
@@ -45,6 +47,7 @@ describe('GET /api/tts/capabilities', () => {
     await expect(response.json()).resolves.toEqual({
       configured: false,
       languages: [],
+      voices: {},
       maxSegmentLength: 300,
       synthesisConcurrency: 2,
     })
@@ -53,6 +56,10 @@ describe('GET /api/tts/capabilities', () => {
   it('includes the settings alongside the configured languages', async () => {
     ttsMocks.isTtsConfigured.mockResolvedValue(true)
     ttsMocks.getSupportedTtsLanguages.mockResolvedValue(['en', 'zh'])
+    ttsMocks.getSupportedTtsVoices.mockResolvedValue({
+      en: ['en_US-lessac-medium.onnx'],
+      zh: ['zh_CN-huayan-medium.onnx'],
+    })
     settingsMocks.getSettingValue.mockImplementation(async (key: string) =>
       key === 'tts_max_segment_length' ? 400 : 3,
     )
@@ -62,6 +69,10 @@ describe('GET /api/tts/capabilities', () => {
     await expect(response.json()).resolves.toEqual({
       configured: true,
       languages: ['en', 'zh'],
+      voices: {
+        en: ['en_US-lessac-medium.onnx'],
+        zh: ['zh_CN-huayan-medium.onnx'],
+      },
       maxSegmentLength: 400,
       synthesisConcurrency: 3,
     })

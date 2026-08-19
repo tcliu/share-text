@@ -3,7 +3,7 @@
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Button from './Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
-  import AdminIcon from '$lib/icons/AdminIcon.svelte'
+  import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
@@ -29,11 +29,9 @@
     onNew: () => void
     onRefresh: () => void
     onLogin: () => void
-    onProfile?: () => void
-    onAdmin?: () => void
+    onSettings?: () => void
     onSignOut?: () => void
     user?: ProfileIdentity | null
-    isAdmin?: boolean
     onLoadMore: () => void
     onToggleCollapse?: () => void
     width?: number
@@ -53,11 +51,9 @@
     onNew,
     onRefresh,
     onLogin,
-    onProfile,
-    onAdmin,
+    onSettings,
     onSignOut,
     user = null,
-    isAdmin = false,
     onLoadMore,
     onToggleCollapse,
     width,
@@ -141,27 +137,15 @@
       </Button>
       <LanguageMenu />
       {#if user}
-        {#if isAdmin}
-          <Button
-            size="sm"
-            ariaLabel={t('list.adminConsole')}
-            tooltip={t('list.adminConsoleWith', { name: user.username })}
-            onClick={onAdmin}>
-            {#snippet icon()}
-              <AdminIcon />
-            {/snippet}
-          </Button>
-        {:else}
-          <Button
-            size="sm"
-            ariaLabel={t('list.profile')}
-            tooltip={t('list.profileWith', { name: user.username })}
-            onClick={onProfile}>
-            {#snippet icon()}
-              <PersonIcon />
-            {/snippet}
-          </Button>
-        {/if}
+        <Button
+          size="sm"
+          ariaLabel={t('list.settings')}
+          tooltip={t('list.settingsWith', { name: user.username })}
+          onClick={onSettings}>
+          {#snippet icon()}
+            <SettingsIcon />
+          {/snippet}
+        </Button>
         <Button size="sm" ariaLabel={t('list.signOut')} tooltip={t('list.signOut')} onClick={onSignOut}>
           {#snippet icon()}
             <SignOutIcon />

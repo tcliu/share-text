@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectTtsLanguage, splitTtsSegments } from '../tts-language'
+import { detectTtsLanguage, splitTtsSegments, ttsLanguageLabel } from '../tts-language'
 
 function stripIndexes(segments: ReturnType<typeof splitTtsSegments>) {
   return segments.map(({ text, lang }) => ({ text, lang }))
@@ -204,5 +204,19 @@ describe('splitTtsSegments index ranges', () => {
       previousEnd = segment.indexEnd!
     }
     expect(segments[0].indexStart).toBe(0)
+  })
+})
+
+describe('ttsLanguageLabel', () => {
+  it('returns a human-readable label for known languages', () => {
+    expect(ttsLanguageLabel('en')).toBe('English')
+    expect(ttsLanguageLabel('en_gb')).toBe('English (UK)')
+    expect(ttsLanguageLabel('zh')).toBe('中文')
+    expect(ttsLanguageLabel('ja')).toBe('日本語')
+    expect(ttsLanguageLabel('yue')).toBe('粵語')
+  })
+
+  it('falls back to the raw language code for unknown languages', () => {
+    expect(ttsLanguageLabel('ko')).toBe('ko')
   })
 })

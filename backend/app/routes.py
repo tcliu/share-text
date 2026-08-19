@@ -15,6 +15,7 @@ from .engines import (
     SUPPORTED_LANGS,
     get_engine,
     piper_lang_available,
+    piper_voices_available,
 )
 from .logging import get_request_ip, log_event
 from .settings import get_tts_max_segment_length
@@ -26,8 +27,8 @@ _synthesis_cache: OrderedDict[str, bytes] = OrderedDict()
 _synthesis_cache_lock = threading.Lock()
 
 
-def _cache_key(text: str, lang: str) -> str:
-    return hashlib.sha256(f"{lang}\0{text}".encode()).hexdigest()
+def _cache_key(text: str, lang: str, voice: str | None = None) -> str:
+    return hashlib.sha256(f"{lang}\0{voice or ''}\0{text}".encode()).hexdigest()
 
 
 def _cache_get(key: str) -> bytes | None:
@@ -51,6 +52,7 @@ router = APIRouter(prefix="/api")
 class SynthesizeBody(BaseModel):
     text: str
     lang: str = "en"
+    voice: str | None = None
     segment_index: int | None = None
     index_start: int | None = None
     index_end: int | None = None
@@ -65,6 +67,13 @@ def segment_log_details(body: SynthesizeBody) -> dict:
     return details
 
 
+def request_log_details(body: SynthesizeBody) -> dict:
+    details = segment_log_details(body)
+    if body.voice:
+        details["voice"] = body.voice
+    return details
+
+
 @router.get("/capabilities")
 def get_capabilities() -> dict:
     return {
@@ -75,7 +84,7 @@ def get_capabilities() -> dict:
             },
         },
         "languages": SUPPORTED_LANGS,
-        "voices": {},
+        "voices": {lang: piper_voices_available(lang, str(MODEL_DIR)) for lang in SUPPORTED_LANGS},
     }
 
 
@@ -103,7 +112,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
             ip=ip,
             action="tts_synthesize_error",
             details={
-                **segment_log_details(body),
+                **request_log_details(body),
                 "error": f"Text exceeds the maximum segment length of {max_length} characters",
                 "elapsed_ms": round((time.monotonic() - started_at) * 1000),
             },
@@ -120,7 +129,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
                 "lang": lang,
                 "error": f"Unknown language '{lang}'. Supported: {SUPPORTED_LANGS}",
                 "elapsed_ms": round((time.monotonic() - started_at) * 1000),
-                **segment_log_details(body),
+                **request_log_details(body),
             },
         )
         raise HTTPException(status_code=422, detail=f"Unknown language '{lang}'. Supported: {SUPPORTED_LANGS}")
@@ -132,7 +141,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
                 "lang": lang,
                 "error": "piper-tts is not installed",
                 "elapsed_ms": round((time.monotonic() - started_at) * 1000),
-                **segment_log_details(body),
+                **request_log_details(body),
             },
         )
         raise HTTPException(status_code=503, detail="piper-tts is not installed")
@@ -144,13 +153,30 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
                 "lang": lang,
                 "error": f"No TTS engine available for the requested language '{lang}'",
                 "elapsed_ms": round((time.monotonic() - started_at) * 1000),
-                **segment_log_details(body),
+                **request_log_details(body),
             },
         )
         raise HTTPException(status_code=503, detail=f"No TTS engine available for the requested language '{lang}'")
+    available_voices = piper_voices_available(lang, str(MODEL_DIR))
+    if body.voice and body.voice not in available_voices:
+        log_event(
+            ip=ip,
+            action="tts_synthesize_error",
+            details={
+                "lang": lang,
+                "voice": body.voice,
+                "error": f"Unknown voice '{body.voice}' for language '{lang}'",
+                "elapsed_ms": round((time.monotonic() - started_at) * 1000),
+                **request_log_details(body),
+            },
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown voice '{body.voice}' for language '{lang}'",
+        )
 
     # --- cache check --------------------------------------------------------
-    key = _cache_key(text, lang)
+    key = _cache_key(text, lang, body.voice)
     cached_audio = _cache_get(key)
     if cached_audio is not None:
         log_event(
@@ -163,7 +189,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
                 "text_size": len(text),
                 "elapsed_ms": round((time.monotonic() - started_at) * 1000),
                 "cache": "hit",
-                **segment_log_details(body),
+                **request_log_details(body),
             },
         )
         return Response(content=cached_audio, media_type="audio/wav")
@@ -180,7 +206,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     try:
-        audio = engine.speak(text, lang)
+        audio = engine.speak(text, lang, body.voice)
     except ValueError as exc:
         log_event(
             ip=ip,
@@ -204,11 +230,11 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
         details={
             "lang": lang,
             "engine": "piper",
-            "model": engine.model_name(lang),
+            "model": engine.model_name(lang, body.voice),
             "text_size": len(text),
             "elapsed_ms": round((time.monotonic() - started_at) * 1000),
             "cache": "miss",
-            **segment_log_details(body),
+            **request_log_details(body),
         },
     )
 

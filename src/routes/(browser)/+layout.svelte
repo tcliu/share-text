@@ -10,13 +10,12 @@
   import Splitter from '$lib/components/Splitter.svelte'
   import Button from '$lib/components/Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
-  import AdminIcon from '$lib/icons/AdminIcon.svelte'
+  import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsRightIcon from '$lib/icons/ChevronsRightIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
-  import ProfileDialog from '$lib/components/ProfileDialog.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import { t } from '$lib/i18n.svelte'
   import { useDocuments } from '$lib/use-documents.svelte'
@@ -47,7 +46,6 @@
   let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
   let editorFocus = $state<(() => void) | null>(null)
   let mobileDrawerOpen = $state(false)
-  let profileOpen = $state(false)
 
   const selectedId = $derived($page.params.id ?? null)
   const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
@@ -250,10 +248,8 @@
     onNew={handleNew}
     onRefresh={handleRefresh}
     onLogin={() => goto('/login')}
-    onProfile={() => (profileOpen = true)}
-    onAdmin={() => goto('/admin')}
+    onSettings={isAdminIdentity ? () => goto('/admin') : () => goto('/settings')}
     user={profileIdentity}
-    isAdmin={isAdminIdentity}
     onSignOut={handleSignOut}
     onLoadMore={documentsState.loadMore}
     onToggleCollapse={handleListCollapse}
@@ -290,13 +286,15 @@
       </Button>
       <LanguageMenu />
       {#if profileIdentity}
-        {#if isAdminIdentity}
-          <Button size="sm" ariaLabel={t('list.adminConsole')} tooltip={t('list.adminConsole')} onClick={() => goto('/admin')}>
-            {#snippet icon()}
-              <AdminIcon />
-            {/snippet}
-          </Button>
-        {/if}
+        <Button
+          size="sm"
+          ariaLabel={t('list.settings')}
+          tooltip={t('list.settingsWith', { name: profileIdentity.username })}
+          onClick={isAdminIdentity ? () => goto('/admin') : () => goto('/settings')}>
+          {#snippet icon()}
+            <SettingsIcon />
+          {/snippet}
+        </Button>
         <Button
           size="sm"
           ariaLabel={t('list.signOut')}
@@ -361,8 +359,4 @@
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />
-{/if}
-
-{#if profileOpen && profileIdentity}
-  <ProfileDialog user={profileIdentity} onClose={() => (profileOpen = false)} />
 {/if}

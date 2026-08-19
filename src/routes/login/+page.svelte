@@ -4,7 +4,7 @@
   import { t } from '$lib/i18n.svelte'
 
   function handleAuthenticated(admin = false) {
-    void goto(admin ? '/admin/properties' : '/')
+    void goto(admin ? '/admin/general' : '/')
   }
 </script>
 

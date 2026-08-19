@@ -57,6 +57,30 @@ export async function getDb(): Promise<Db> {
         )`,
       )
       await initialized.query(
+        `create table if not exists user_preferences (
+          user_id bigint not null references users(id) on delete cascade,
+          preferred_language text not null default 'en',
+          updated_at timestamptz not null default current_timestamp,
+          primary key (user_id)
+        )`,
+      )
+      await initialized.query(
+        `create table if not exists user_tts_voices (
+          user_id bigint not null references users(id) on delete cascade,
+          lang text not null,
+          voice text not null,
+          updated_at timestamptz not null default current_timestamp,
+          primary key (user_id, lang)
+        )`,
+      )
+      await initialized.query(
+        `create table if not exists admin_preferences (
+          username text primary key,
+          preferred_language text not null default 'en',
+          updated_at timestamptz not null default current_timestamp
+        )`,
+      )
+      await initialized.query(
         `create table if not exists login_attempts (
           ip text primary key,
           attempt_count integer not null default 0,

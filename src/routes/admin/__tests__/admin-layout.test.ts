@@ -58,6 +58,9 @@ function mockFetch() {
     if (path.includes('/api/admin/settings')) {
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ settings }) })
     }
+    if (path.includes('/api/admin/preferences')) {
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ preferredLanguage: 'en' }) })
+    }
     if (path.includes('/api/admin/documents')) {
       return Promise.resolve({
         ok: true,
@@ -73,23 +76,26 @@ describe('admin layout route tabs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
-    page.url = new URL('http://localhost/admin/properties') as typeof page.url
+    page.url = new URL('http://localhost/admin/general') as typeof page.url
     vi.stubGlobal('fetch', mockFetch())
   })
 
-  it('renders the tab chrome and properties content when authenticated', async () => {
+  it('renders the tab chrome and general content when authenticated', async () => {
     const { getByRole, getByText } = render(Layout)
 
-    const propertiesLink = await waitFor(() => getByRole('link', { name: 'Properties' }))
+    const generalLink = await waitFor(() => getByRole('link', { name: 'General' }))
+    const propertiesLink = getByRole('link', { name: 'Properties' })
     const documentsLink = getByRole('link', { name: 'Documents' })
+    expect(generalLink.getAttribute('href')).toBe('/admin/general')
     expect(propertiesLink.getAttribute('href')).toBe('/admin/properties')
     expect(documentsLink.getAttribute('href')).toBe('/admin/documents')
-    expect(propertiesLink.getAttribute('aria-current')).toBe('page')
+    expect(generalLink.getAttribute('aria-current')).toBe('page')
+    expect(propertiesLink.getAttribute('aria-current')).toBeNull()
     expect(documentsLink.getAttribute('aria-current')).toBeNull()
 
-    expect(getByText('Reload')).toBeTruthy()
+    expect(getByText('Preferred language')).toBeTruthy()
     await waitFor(() => {
-      expect(getByText('Max documents per IP')).toBeTruthy()
+      expect(getByText('Apply')).toBeTruthy()
     })
   })
 
@@ -123,7 +129,7 @@ describe('admin layout route tabs', () => {
     expect([...boxes].filter(box => box.checked).length).toBe(0)
   })
 
-  it('redirects to /login/admin when the session is not authenticated', async () => {
+  it('redirects to /login when the session is not authenticated', async () => {
     page.url = new URL('http://localhost/admin/documents') as typeof page.url
     vi.stubGlobal(
       'fetch',
@@ -141,12 +147,12 @@ describe('admin layout route tabs', () => {
     render(Layout)
 
     await waitFor(() => {
-      expect(goto).toHaveBeenCalledWith('/login/admin')
+      expect(goto).toHaveBeenCalledWith('/login')
     })
   })
 
   it('shows a retryable error state instead of redirecting on a transient session check failure', async () => {
-    page.url = new URL('http://localhost/admin/properties') as typeof page.url
+    page.url = new URL('http://localhost/admin/general') as typeof page.url
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')))
     const { getByText, getByLabelText } = render(Layout)
 

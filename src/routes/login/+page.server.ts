@@ -5,7 +5,7 @@ import { isUserSession } from '$lib/server/user-auth'
 
 export const load: PageServerLoad = ({ cookies }) => {
   if (isAdminSession({ cookies })) {
-    throw redirect(307, '/admin/properties')
+    throw redirect(307, '/admin/general')
   }
   if (isUserSession({ cookies })) {
     throw redirect(307, '/')

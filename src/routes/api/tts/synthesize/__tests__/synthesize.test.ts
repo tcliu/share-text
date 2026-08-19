@@ -72,4 +72,38 @@ describe('POST /api/tts/synthesize', () => {
     const sent = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(JSON.parse(String(sent[1].body))).toEqual({ text: 'Hello', lang: 'en' })
   })
+
+  it('forwards a requested voice to the backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: new ReadableStream(),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await post({ text: 'Hello', lang: 'en', voice: 'en_GB-alba-medium.onnx' })
+
+    expect(response.status).toBe(200)
+    const sent = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(sent[1].body))).toEqual({
+      text: 'Hello',
+      lang: 'en',
+      voice: 'en_GB-alba-medium.onnx',
+    })
+  })
+
+  it('omits an empty voice', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers(),
+      body: new ReadableStream(),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await post({ text: 'Hello', lang: 'en', voice: '' })
+
+    expect(response.status).toBe(200)
+    const sent = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(JSON.parse(String(sent[1].body))).toEqual({ text: 'Hello', lang: 'en' })
+  })
 })

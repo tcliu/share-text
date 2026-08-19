@@ -41,8 +41,9 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
-  import { loadTtsCapabilities, synthesizeTtsStreaming, SYNTHESIS_CONCURRENCY } from '$lib/tts-client'
-  import { splitTtsSegments, MAX_SEGMENT_LENGTH, type TtsSegment } from '$lib/tts-language'
+  import { loadTtsCapabilities, synthesizeTtsStreaming, SYNTHESIS_CONCURRENCY, type TtsSegmentInput } from '$lib/tts-client'
+  import { splitTtsSegments, MAX_SEGMENT_LENGTH } from '$lib/tts-language'
+  import { fetchUserPreferences } from '$lib/user-settings'
   import { t } from '$lib/i18n.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -112,6 +113,7 @@
   let ttsConfigured = $state(false)
   let ttsMaxSegmentLength = $state(MAX_SEGMENT_LENGTH)
   let ttsSynthesisConcurrency = $state(SYNTHESIS_CONCURRENCY)
+  let ttsVoiceOptions = $state<Record<string, string[]>>({})
   let speaking = $state(false)
   let processing = $state(false)
   let audioRef = $state<HTMLAudioElement | null>(null)
@@ -120,9 +122,10 @@
   let ttsObjectUrls: string[] = []
   let ttsAbortController: AbortController | null = null
   let ttsSynthesizing = false
-  let ttsSegments = $state<TtsSegment[]>([])
+  let ttsSegments = $state<TtsSegmentInput[]>([])
   let ttsHadSelection = false
   let ttsSelectionOffset = 0
+  let userTtsVoices = $state<Record<string, string>>({})
   let pendingRange = $state<{ from: number; to: number } | null>(null)
   let editorReady = $state(0)
 
@@ -141,8 +144,29 @@
         ttsConfigured = capabilities.configured
         ttsMaxSegmentLength = capabilities.maxSegmentLength
         ttsSynthesisConcurrency = capabilities.synthesisConcurrency
+        ttsVoiceOptions = capabilities.voices
       }
     })
+    return () => {
+      cancelled = true
+    }
+  })
+
+  $effect(() => {
+    if (!context.user) {
+      userTtsVoices = {}
+      return
+    }
+    let cancelled = false
+    void fetchUserPreferences()
+      .then(preferences => {
+        if (!cancelled) {
+          userTtsVoices = preferences.ttsVoices
+        }
+      })
+      .catch(() => {
+        // keep default voices when preferences cannot be loaded
+      })
     return () => {
       cancelled = true
     }
@@ -363,7 +387,13 @@
     const selection = selectionRange ? content.slice(selectionRange.from, selectionRange.to) : ''
     const hasSelection = selection.trim().length > 0
     const text = hasSelection ? selection : content
-    const segments = splitTtsSegments(text, ttsMaxSegmentLength)
+    const segments: TtsSegmentInput[] = splitTtsSegments(text, ttsMaxSegmentLength).map(segment => {
+      const voice = userTtsVoices[segment.lang]
+      const available = ttsVoiceOptions[segment.lang]
+      // Only stamp the saved voice when the backend still serves it, so a
+      // stale preference (TTS reconfigured) falls back to the default voice.
+      return voice && available?.includes(voice) ? { ...segment, voice } : segment
+    })
     if (segments.length === 0) {
       toast.error(t('editor.toast.nothingToRead'))
       return

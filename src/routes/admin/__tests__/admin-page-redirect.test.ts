@@ -19,27 +19,27 @@ describe('admin root page', () => {
     authMocks.isAdminSession.mockReset()
   })
 
-  it('redirects to /admin/properties only when the session is authenticated', async () => {
+  it('redirects to /admin/general only when the session is authenticated', async () => {
     authMocks.isAdminSession.mockReturnValue(true)
     try {
       await load({ cookies: { get: () => null } } as never)
-      expect.unreachable('expected a redirect to /admin/properties')
+      expect.unreachable('expected a redirect to /admin/general')
     } catch (error) {
       const redirect = error as { status?: number; location?: string }
       expect(redirect.status).toBe(307)
-      expect(redirect.location).toBe('/admin/properties')
+      expect(redirect.location).toBe('/admin/general')
     }
   })
 
-  it('redirects to /login/admin when the session is not authenticated', async () => {
+  it('redirects to /login when the session is not authenticated', async () => {
     authMocks.isAdminSession.mockReturnValue(false)
     try {
       await load({ cookies: { get: () => null } } as never)
-      expect.unreachable('expected a redirect to /login/admin')
+      expect.unreachable('expected a redirect to /login')
     } catch (error) {
       const redirect = error as { status?: number; location?: string }
       expect(redirect.status).toBe(307)
-      expect(redirect.location).toBe('/login/admin')
+      expect(redirect.location).toBe('/login')
     }
   })
 })

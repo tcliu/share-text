@@ -57,10 +57,8 @@ synchronizes through a small fetch-based JSON API.
   `/api/auth/logout` clears both session cookies. `/api/auth/session` reports
   the signed-in `user` (dropping stale sessions for inactive users) and any
   `admin` identity.
-- `/api/admin/login` — `POST` verifies admin credentials, sets an HTTP-only
-  signed session cookie, and is rate-limited per IP. `/api/admin/logout`
-  clears the cookie. `/api/admin/session` reports whether admin is configured
-  and whether the caller is authenticated.
+- `/api/admin/logout` clears the admin cookie. `/api/admin/session` reports
+  whether admin is configured and whether the caller is authenticated.
 - `/api/admin/settings` — `GET` returns resolved application properties with
   their source; `PUT` accepts `{ settings: [{ key, value }] }` and updates or,
   when `value` is `null`, deletes the override (reverting to env/default).
@@ -164,7 +162,10 @@ synchronizes through a small fetch-based JSON API.
   snapshot per save, keyed by the numeric `documents.id`, with the
   `idx_document_versions_document_id_created_at` index), the account/auth
   tables — `users`, `document_shares` (document/user pairs with a cascade
-  composite primary key), `user_config`, and `login_attempts` (persisted login
+  composite primary key), `user_config`, `user_preferences` (one row per user:
+  the account's preferred UI `preferred_language`), `user_tts_voices` (one row
+  per user/language pair: the account's chosen Read aloud voice per language),
+  and `login_attempts` (persisted login
   rate limiting) — plus the `app_config` key/value table that stores runtime
   property overrides.
 - Content versions: creating a document records its initial state as the
@@ -231,19 +232,20 @@ synchronizes through a small fetch-based JSON API.
   cached in memory for a short TTL and invalidated on write.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
-  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the four
-  tabs as real routes (`/admin/properties`, `/admin/documents`,
-  `/admin/users`, `/admin/text-to-speech`) backed by empty `+page.svelte` shells.
+  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the five
+  tabs as real routes (`/admin/general`, `/admin/properties`,
+  `/admin/documents`, `/admin/users`, `/admin/text-to-speech`) backed by empty
+  `+page.svelte` shells.
   A `+layout.server.ts` guards every `/admin/*` route server-side, redirecting
-  unauthenticated sessions to `/login/admin` before the client shell renders;
+  unauthenticated sessions to `/login` before the client shell renders;
   the layout then redirects there on the client only when the session is
   genuinely gone (unauthenticated, session timeout, or sign-out) and shows a
   retryable error state for transient session-check failures. The auth state
   machine lives in the `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`);
-  the layout defines the four `Tab` entries (label, path, toolbar snippet,
-  content snippet) that render the shared `AdminPropertiesView`/
+  the layout defines the five `Tab` entries (label, path, toolbar snippet,
+  content snippet) that render the shared `AdminGeneralView`/`AdminPropertiesView`/
   `AdminDocumentsView`/`AdminUsersView`/`AdminTextToSpeechView`, and keeps the
-  settings/documents/users state alive across tab switches. The old gear-icon dialog
+  general/settings/documents/users state alive across tab switches. The old gear-icon dialog
   (`AdminDialog.svelte`) has been removed.
   `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
   **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
@@ -273,8 +275,8 @@ synchronizes through a small fetch-based JSON API.
   the next visit) and issues a 30-day session cookie instead of the default
   24-hour one; the password is never stored client-side.
 - The console routes its tabs as real routes so each keeps a stable, shareable
-  URL: `/admin` redirects (`+page.server.ts`) to `/admin/properties` when the
-  session is authenticated and to `/login/admin` when it is not. `Tabs`
+  URL: `/admin` redirects (`+page.server.ts`) to `/admin/general` when the
+  session is authenticated and to `/login` when it is not. `Tabs`
   renders the tab bar (marking the active path with `aria-current="page"`,
   wrapped in a `nav` landmark labelled via the `ariaLabel` prop), the active
   tab's toolbar, and the active tab's content; the layout stays mounted across
@@ -283,12 +285,9 @@ synchronizes through a small fetch-based JSON API.
   `beforeNavigate` discard guard lets navigations within `/admin` through
   without prompting, since the shared state survives tab switches, and the
   admin layout renders no top header row until the session is `authenticated`.
-  The admin sign-in page lives at `/login/admin` (`+page.server.ts` redirects
-  authenticated sessions to `/admin/properties` and returns the `configured`
-  flag otherwise; `+page.svelte` renders the shared `LoginPanel`), and a
-  successful sign-in there navigates to `/admin/properties`. The browser-level
-  account login/register page lives at `/login` (it redirects an existing admin
-  session to `/admin/properties` and a user session to `/`).
+  The browser-level account login/register page lives at `/login`; it accepts
+  both user and admin credentials through the unified auth endpoint, redirecting
+  an existing admin session to `/admin/general` and a user session to `/`.
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
   `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`,
@@ -440,6 +439,65 @@ synchronizes through a small fetch-based JSON API.
   `admin_user_update_username`, `admin_user_update_email`,
   `admin_user_update_password`, `admin_user_update_status`,
   `admin_user_delete`, `admin_document_export`, `admin_user_export`).
+
+## User Settings
+
+- Per-account preferences live behind `src/routes/settings/` (real routes, same
+  layout-guard pattern as `/admin`): `+layout.server.ts` resolves the viewer and
+  redirects admins to `/admin` and anonymous visitors to `/login`; `/settings`
+  redirects to `/settings/general`. The layout renders the shared `Tabs`
+  (route-driven links: General → `/settings/general`, Read aloud →
+  `/settings/read-aloud`, Documents → `/settings/documents`) and keeps the
+  preferences draft in `useUserSettings` (`src/lib/use-user-settings.svelte.ts`)
+  plus the owned-documents list state in `useOwnedDocuments`
+  (`src/lib/use-owned-documents.svelte.ts`) so both survive tab switches.
+  General and Read aloud share one Apply/Reload/Reset footer; Documents uses a
+  toolbar instead. Leaving `/settings` with unsaved preference changes prompts
+  to discard (the same `beforeNavigate` protocol as the admin console). The
+  header offers the language menu, a go-to-Documents button, and sign out.
+- `useUserSettings` loads once on sign-in via `GET /api/user/preferences` and
+  exposes `load`/`apply`/`reload`/`resetDraft` plus `setPreferredLanguage` and
+  `setTtsVoice` (a null voice clears the saved preference). `hasUnsavedChanges`
+  compares the draft against the last-saved state. Apply writes the whole draft
+  (all-or-nothing) through `PUT /api/user/preferences`; a 401 from either
+  endpoint signs the user out.
+- `src/routes/api/user/preferences/+server.ts` is login-gated (`resolveViewer`,
+  401 for anonymous/admin) and reads/writes through `src/lib/server/user-config.ts`:
+  `getUserPreferences` returns the single `user_preferences.preferred_language`
+  row (default `en`) plus every `user_tts_voices` row as a `{ lang: voice }`
+  map; `saveUserPreferences` runs a transaction (upsert the preference row,
+  delete all voice rows, re-insert the posted ones). `normalizePreferencesInput`
+  validates `preferredLanguage` against the fixed `en`/`zh-CN`/`zh-TW` set and
+  requires `ttsVoices` to be an object of string values (empty strings are
+  dropped); invalid input is rejected 400 before any write. The PUT is logged as
+  `user_preferences_save` with the username, user id, preferred language, and
+  the saved voice languages.
+- The General view edits the preferred language with a `SelectDropdown`
+  (`LOCALES`); the Read aloud view loads `/api/tts/capabilities` (client-side,
+  cached) and lists one row per language that has voices, each with a
+  `SelectDropdown` of that language's voices plus a "Default" option
+  (`value: ''`) that clears the saved voice; the view shows a not-configured
+  hint when TTS is off and is disabled implicitly through the per-language
+  voice availability. Language labels come from `ttsLanguageLabel`
+  (`src/lib/tts-language.ts`, shared with the admin Segments view).
+- The Documents view is a user-owned management table backed by
+  `GET /api/user/documents`, which lists only rows whose `owner_user_id`
+  matches the signed-in user and returns the admin-style summary shape used by
+  `DataTable`. It supports the same search/sort/pagination contract as the admin
+  Documents API, but only for the owner's documents. The toolbar offers **New
+  document**, **Open selected**, **Delete selected**, and **Reload**; row names
+  are inline-renamable through `PUT /api/user/documents/[id]`, and bulk delete
+  goes through `DELETE /api/user/documents/[id]`. Those user-settings document
+  mutation routes are login-gated and require ownership (`canDelete` from
+  `resolveDocumentAccess`) so shared/public non-owned documents never appear or
+  mutate through this path.
+- The preferred language is applied on sign-in: `useUserAuth.checkSession`,
+  `signIn`, and `signUp` fetch `/api/user/preferences` and call
+  `setLocale(preferredLanguage)` (failures are ignored).
+- The account button in `DocumentList` and the browser layout's collapsed rail
+  is a single Settings gear button: it navigates to `/settings` for a normal
+  user and `/admin` for an admin, replacing the former Profile dialog and the
+  admin-only console button (`ProfileDialog` was removed).
 
 ## Limits
 
@@ -646,13 +704,13 @@ the list gives way.
 `width` style is only set on desktop). The left
 pane header shows a Login button after the Refresh button that navigates to
 `/login`, where visitors sign in or create an account (the account form also
-accepts admin credentials when the identifier matches `ADMIN_USERNAME`). A
-signed-in registered user sees Profile and Sign out buttons instead (Profile
-opens `ProfileDialog`); a signed-in admin session sees an Admin console button
-that navigates to `/admin` plus Sign out. `/api/auth/session` reports the
-signed-in `user` and, when an admin session is present, an `admin: { username }`
-identity so the browser app can render the admin entry point;
-`/api/auth/logout` clears both the user and admin session cookies.
+  accepts admin credentials when the identifier matches `ADMIN_USERNAME`). A
+  signed-in registered user sees a Settings button (a gear icon) and a Sign out
+  button; the Settings button navigates to `/settings` for a normal user and to
+  `/admin` for an admin session. `/api/auth/session` reports the
+  signed-in `user` and, when an admin session is present, an `admin: { username }`
+  identity so the browser app can render the account entry point;
+  `/api/auth/logout` clears both the user and admin session cookies.
 
 ## Editor
 
@@ -668,13 +726,16 @@ identity so the browser app can render the admin entry point;
   per-type language extensions from the type registry.
 - Read aloud proxies the external tts service through two same-origin
   endpoints: `GET /api/tts/capabilities` (reports `configured` from the
-  runtime `tts_service_url` setting plus the service's supported languages,
-  both empty when the feature is unconfigured; it also carries the runtime
+  runtime `tts_service_url` setting plus the service's supported languages and,
+  per language, the available piper voices (both empty when the feature is
+  unconfigured; it also carries the runtime
   `tts_max_segment_length` and `tts_synthesis_concurrency` values the client
   applies when splitting and streaming) and `POST /api/tts/synthesize`
-  (forwards `{ text, lang }` to the service's `/api/synthesize` with
+  (forwards `{ text, lang, voice }` to the service's `/api/synthesize` with
   `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
-  **bytes** back with the service's Content-Type). Both endpoints resolve the
+  **bytes** back with the service's Content-Type). `voice` is optional and
+  passed through when present; the client omits it to use the service
+  default. Both endpoints resolve the
   language list via `getSupportedTtsLanguages` (`$lib/server/tts.ts`: fetched
   from the service's `/api/capabilities` and cached 60s, falling back to a
   default set cached 10s when the service is unreachable), so the gate and the
@@ -710,8 +771,9 @@ identity so the browser app can render the admin entry point;
   0-based character offsets into the original document text) mapped to that
   trimmed span — so text and range always agree and the backend can log exactly
   which part of the document is spoken;
-  each segment
-  synthesizes with its own language model, then plays
+  segment synthesizes with its own language model (the account's saved voice
+  for that language when a registered user has chosen one — `DocumentEditorPane`
+  loads `/api/user/preferences` on mount and stamps each segment's `voice`), then plays
   the audio segments in sequence from the proxy in a hidden `<audio>` element
   (advancing on the element's `ended`/`error` events). Synthesis is streamed:
   `synthesizeTtsStreaming` in `$lib/tts-client.ts` is an async generator that
@@ -729,7 +791,7 @@ identity so the browser app can render the admin entry point;
   `ended`/`error`/`pause` events and paused on unmount. Repeat reads of the
   same segment skip synthesis: the per-segment cache in `$lib/tts-client.ts`
   keeps a bounded in-memory map (LRU-style eviction at 100 entries) keyed by
-  `text + lang` storing the returned `Blob`; object URLs created from the
+  `text + lang + voice` storing the returned `Blob`; object URLs created from the
   blobs are revoked on stop/unmount. The client sends each synthesis request
   with the segment's 0-based `segmentIndex` and its `indexStart`/`indexEnd`
   ranges; the same-origin proxy
@@ -753,7 +815,9 @@ identity so the browser app can render the admin entry point;
   requests with voices kept in memory, so parallel segment synthesis loads each
   model once. Piper is the only engine; a language is synthesizable only when
   its model files (`.onnx`
-  + `.onnx.json`) exist on disk (`piper_lang_available`), so
+  + `.onnx.json`) exist on disk (`piper_lang_available`), and a specific voice
+  is available only when that voice's files exist (`piper_voice_available`);
+  an unknown voice in a synthesize request is rejected with 422, and
   a missing voice degrades gracefully with a 503 instead of an unhandled 500.
   Empty documents disable the button.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;

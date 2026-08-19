@@ -18,6 +18,18 @@ export function detectTtsLanguage(text: string): string {
   return 'en'
 }
 
+const TTS_LANGUAGE_LABELS: Record<string, string> = {
+  en: 'English',
+  en_gb: 'English (UK)',
+  zh: '中文',
+  ja: '日本語',
+  yue: '粵語',
+}
+
+export function ttsLanguageLabel(lang: string): string {
+  return TTS_LANGUAGE_LABELS[lang] ?? lang
+}
+
 export interface TtsSegment {
   text: string
   lang: string
