@@ -135,8 +135,8 @@
           <RefreshIcon />
         {/snippet}
       </Button>
-      <LanguageMenu />
       {#if user}
+        <LanguageMenu />
         <Button
           size="sm"
           ariaLabel={t('list.settings')}
@@ -179,12 +179,11 @@
     {:else}
       <div class="flex flex-col">
         {#each documents as document (document.id)}
-          <div
-            class={`group flex items-start gap-2 rounded-md p-2 transition ${document.id === selectedId ? 'bg-slate-800/70' : 'hover:bg-slate-800/40'}`}>
-            <a
-              href={`/${document.id}`}
-              aria-current={document.id === selectedId ? 'true' : undefined}
-              class="flex min-w-0 flex-1 flex-wrap items-center gap-2 rounded-md text-sm text-slate-300 transition outline-none hover:text-slate-100 focus:text-slate-100">
+          <a
+            href={`/${document.id}`}
+            aria-current={document.id === selectedId ? 'true' : undefined}
+            class={`group flex w-full items-start gap-2 rounded-md p-2 text-sm text-slate-300 outline-none transition ${document.id === selectedId ? 'bg-slate-800/70 text-slate-100' : 'hover:bg-slate-800/40 hover:text-slate-100 focus:bg-slate-800/40 focus:text-slate-100'}`}>
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               <span class="min-w-0 truncate">{document.name}</span>
               {#if document.documentType !== 'text'}
                 <Chip
@@ -200,8 +199,8 @@
                   {t('list.private')}
                 </span>
               {/if}
-            </a>
-          </div>
+            </div>
+          </a>
         {/each}
         {#if hasMore}
           <div

@@ -284,8 +284,8 @@
           <RefreshIcon />
         {/snippet}
       </Button>
-      <LanguageMenu />
       {#if profileIdentity}
+        <LanguageMenu />
         <Button
           size="sm"
           ariaLabel={t('list.settings')}
