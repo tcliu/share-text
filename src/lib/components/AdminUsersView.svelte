@@ -111,7 +111,7 @@
 {/snippet}
 
 {#snippet usernameCell(user: AdminUser)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <EditableText
       text={user.username}
       size="sm"
@@ -124,7 +124,7 @@
 {/snippet}
 
 {#snippet emailCell(user: AdminUser)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <EditableText
       text={user.email}
       size="sm"

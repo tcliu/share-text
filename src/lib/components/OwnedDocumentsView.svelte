@@ -126,11 +126,23 @@
   storageKey="settings-documents" />
 
 {#snippet idCell(document: AdminDocumentSummary)}
-  <PlainCell value={document.id} className="font-mono text-slate-400" />
+  {#if supportsHover.value}
+    <Copyable text={document.id} className="font-mono text-slate-400" copyAriaLabel={t('admin.copyDocumentKey', { id: document.id })}>
+      <a
+        href={`/${document.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="font-mono text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300">
+        {document.id}
+      </a>
+    </Copyable>
+  {:else}
+    <PlainCell value={document.id} className="font-mono text-slate-400" />
+  {/if}
 {/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <EditableText
       text={document.name}
       size="sm"
@@ -144,7 +156,7 @@
 {/snippet}
 
 {#snippet documentTypeCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <Copyable
       text={document.documentType}
       className="text-slate-400 capitalize"
@@ -164,7 +176,7 @@
 
 {#snippet tagsCell(document: AdminDocumentSummary)}
   {#if (document.tags ?? []).length > 0}
-    {#if supportsHover}
+    {#if supportsHover.value}
       <Copyable
         text={formatTags(document.tags)}
         className="block text-slate-400"

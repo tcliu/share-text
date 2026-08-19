@@ -151,7 +151,7 @@
   storageKey="admin-documents" />
 
 {#snippet idCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <EditableText
       text={document.id}
       size="sm"
@@ -165,7 +165,7 @@
 {/snippet}
 
 {#snippet nameCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <EditableText
       text={document.name}
       size="sm"
@@ -178,7 +178,7 @@
 {/snippet}
 
 {#snippet documentTypeCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <Copyable
       text={document.documentType}
       className="text-slate-400 capitalize"
@@ -198,7 +198,7 @@
 
 {#snippet tagsCell(document: AdminDocumentSummary)}
   {#if (document.tags ?? []).length > 0}
-    {#if supportsHover}
+    {#if supportsHover.value}
       <Copyable
         text={formatTags(document.tags)}
         className="block text-slate-400"
@@ -216,7 +216,7 @@
 {/snippet}
 
 {#snippet createdByCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <Copyable
       text={document.createdBy}
       className="block truncate text-slate-400"
@@ -227,7 +227,7 @@
 {/snippet}
 
 {#snippet updatedByCell(document: AdminDocumentSummary)}
-  {#if supportsHover}
+  {#if supportsHover.value}
     <Copyable
       text={document.updatedBy}
       className="block truncate text-slate-400"

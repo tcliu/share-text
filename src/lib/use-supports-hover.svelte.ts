@@ -6,10 +6,23 @@
 // mount, so the client value is already correct on the first paint of the
 // table.
 export function useSupportsHover() {
-  const supportsHover = $derived(
-    typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(hover: hover)').matches,
-  )
+  const supportsHover = $state({ value: false })
+
+  $effect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      supportsHover.value = false
+      return
+    }
+
+    const media = window.matchMedia('(hover: hover)')
+    const sync = () => {
+      supportsHover.value = media.matches
+    }
+
+    sync()
+    media.addEventListener('change', sync)
+    return () => media.removeEventListener('change', sync)
+  })
+
   return supportsHover
 }
