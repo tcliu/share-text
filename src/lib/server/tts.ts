@@ -1,6 +1,6 @@
 import { getSettingStringValue } from './settings'
 
-const FALLBACK_LANGS = ['en', 'en_gb', 'zh', 'ja']
+const FALLBACK_LANGS = ['en', 'en_gb', 'zh', 'ja', 'yue']
 const CAPABILITIES_CACHE_TTL_MS = 60_000
 const FALLBACK_CACHE_TTL_MS = 10_000
 
@@ -124,6 +124,16 @@ async function readError(response: Response, fallback: string): Promise<string> 
   return fallback
 }
 
+export class TtsServiceError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'TtsServiceError'
+    this.status = status
+  }
+}
+
 async function requestTtsService(path: string, init?: RequestInit): Promise<Response> {
   const url = await getTtsServiceUrl()
   if (!url) {
@@ -158,7 +168,7 @@ export async function getAdminTtsVoicesState(): Promise<AdminTtsVoicesState> {
   }
   const response = await fetch(`${url}/api/admin/voices`)
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to load TTS voices'))
+    throw new TtsServiceError(await readError(response, 'Failed to load TTS voices'), response.status)
   }
   return normalizeAdminState(await response.json())
 }
@@ -170,7 +180,7 @@ export async function saveAdminTtsDefaultVoices(defaultVoices: Record<string, st
     body: JSON.stringify({ default_voices: defaultVoices }),
   })
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to save TTS default voices'))
+    throw new TtsServiceError(await readError(response, 'Failed to save TTS default voices'), response.status)
   }
   clearTtsLanguageCache()
   return normalizeAdminState(await response.json())
@@ -182,7 +192,7 @@ export async function uploadAdminTtsVoice(formData: FormData): Promise<AdminTtsV
     body: formData,
   })
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to upload TTS voice'))
+    throw new TtsServiceError(await readError(response, 'Failed to upload TTS voice'), response.status)
   }
   clearTtsLanguageCache()
   return normalizeAdminState(await response.json())
@@ -193,7 +203,7 @@ export async function deleteAdminTtsVoice(lang: string, voice: string): Promise<
     method: 'DELETE',
   })
   if (!response.ok) {
-    throw new Error(await readError(response, 'Failed to delete TTS voice'))
+    throw new TtsServiceError(await readError(response, 'Failed to delete TTS voice'), response.status)
   }
   clearTtsLanguageCache()
   return normalizeAdminState(await response.json())

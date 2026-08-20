@@ -191,7 +191,11 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
         log_event(
             ip=ip,
             action="tts_synthesize_error",
-            details={"error": "Text must not be empty", "elapsed_ms": round((time.monotonic() - started_at) * 1000)},
+            details={
+                "error": "Text must not be empty",
+                "elapsed_ms": round((time.monotonic() - started_at) * 1000),
+                **request_log_details(body),
+            },
         )
         raise HTTPException(status_code=422, detail="Text must not be empty")
     max_length = get_tts_max_segment_length()
@@ -291,24 +295,39 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
         log_event(
             ip=ip,
             action="tts_synthesize_error",
-            details={"lang": lang, "error": str(exc), "elapsed_ms": round((time.monotonic() - started_at) * 1000)},
+            details={
+                "lang": lang,
+                "error": str(exc),
+                "elapsed_ms": round((time.monotonic() - started_at) * 1000),
+                **request_log_details(body),
+            },
         )
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     try:
-        audio = engine.speak(text, lang, body.voice)
+        audio = engine.speak(text, lang, resolved_voice)
     except ValueError as exc:
         log_event(
             ip=ip,
             action="tts_synthesize_error",
-            details={"lang": lang, "error": str(exc), "elapsed_ms": round((time.monotonic() - started_at) * 1000)},
+            details={
+                "lang": lang,
+                "error": str(exc),
+                "elapsed_ms": round((time.monotonic() - started_at) * 1000),
+                **request_log_details(body),
+            },
         )
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except (RuntimeError, OSError) as exc:
         log_event(
             ip=ip,
             action="tts_synthesize_error",
-            details={"lang": lang, "error": str(exc), "elapsed_ms": round((time.monotonic() - started_at) * 1000)},
+            details={
+                "lang": lang,
+                "error": str(exc),
+                "elapsed_ms": round((time.monotonic() - started_at) * 1000),
+                **request_log_details(body),
+            },
         )
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -320,7 +339,7 @@ def synthesize(request: Request, body: SynthesizeBody) -> Response:
         details={
             "lang": lang,
             "engine": "piper",
-            "model": engine.model_name(lang, body.voice),
+            "model": engine.model_name(lang, resolved_voice),
             "text_size": len(text),
             "elapsed_ms": round((time.monotonic() - started_at) * 1000),
             "cache": "miss",

@@ -2,17 +2,25 @@ import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { logEvent } from '$lib/server/logging'
 import {
+  TtsServiceError,
   deleteAdminTtsVoice,
   getAdminTtsVoicesState,
   saveAdminTtsDefaultVoices,
   uploadAdminTtsVoice,
 } from '$lib/server/tts'
 
+function ttsErrorResponse(error: unknown, fallback: string) {
+  if (error instanceof TtsServiceError) {
+    return json({ error: error.message }, { status: error.status >= 500 ? 502 : error.status })
+  }
+  return json({ error: error instanceof Error ? error.message : fallback }, { status: 502 })
+}
+
 export const GET: RequestHandler = async () => {
   try {
     return json(await getAdminTtsVoicesState())
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Failed to load TTS voices' }, { status: 502 })
+    return ttsErrorResponse(error, 'Failed to load TTS voices')
   }
 }
 
@@ -40,7 +48,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     })
     return json(state)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Failed to save TTS default voices' }, { status: 502 })
+    return ttsErrorResponse(error, 'Failed to save TTS default voices')
   }
 }
 
@@ -62,7 +70,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     })
     return json(state)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Failed to upload TTS voice' }, { status: 502 })
+    return ttsErrorResponse(error, 'Failed to upload TTS voice')
   }
 }
 
@@ -83,6 +91,6 @@ export const DELETE: RequestHandler = async ({ url, getClientAddress }) => {
     })
     return json(state)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Failed to delete TTS voice' }, { status: 502 })
+    return ttsErrorResponse(error, 'Failed to delete TTS voice')
   }
 }

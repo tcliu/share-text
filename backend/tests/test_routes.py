@@ -92,14 +92,21 @@ def test_synthesize_rejects_unknown_voice(monkeypatch):
 
 
 def test_synthesize_uses_the_requested_voice(monkeypatch):
+    spoken_voice = None
+    model_voice = None
+
     class FakeVoice:
         config = type("Config", (), {"sample_rate": 22050})()
 
     class FakeEngine:
         def model_name(self, lang, voice=None):
+            nonlocal model_voice
+            model_voice = voice
             return voice or "default.onnx"
 
         def speak(self, text, lang, voice=None):
+            nonlocal spoken_voice
+            spoken_voice = voice
             return b"audio-bytes"
 
     monkeypatch.setattr(routes_module, "PIPER_AVAILABLE", True)
@@ -126,3 +133,5 @@ def test_synthesize_uses_the_requested_voice(monkeypatch):
         SynthesizeBody(text="hello", lang="en", voice="en_GB-alba-medium.onnx"),
     )
     assert response.body == b"audio-bytes"
+    assert spoken_voice == "en_GB-alba-medium.onnx"
+    assert model_voice == "en_GB-alba-medium.onnx"
