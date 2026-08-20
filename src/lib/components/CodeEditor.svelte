@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { EditorState, EditorSelection, type Extension } from '@codemirror/state'
-  import { EditorView, keymap, lineNumbers } from '@codemirror/view'
+  import { EditorView, drawSelection, keymap, lineNumbers } from '@codemirror/view'
   import { defaultKeymap, history, historyKeymap, indentLess } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
@@ -79,6 +79,7 @@
       githubDark,
       ...languageExtensions,
       EditorView.editable.of(editable),
+      drawSelection(),
       lineNumbers(),
       search({ top: true }),
       history(),

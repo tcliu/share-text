@@ -22,6 +22,7 @@ vi.mock('$lib/user-settings', () => ({
 }))
 
 import MobileEditorHost from './MobileEditorHost.svelte'
+import ReadOnlyHost from './ReadOnlyHost.svelte'
 
 describe('DocumentEditorPane read-aloud selection', () => {
   beforeEach(() => {
@@ -89,6 +90,25 @@ describe('DocumentEditorPane read-aloud selection', () => {
     await waitFor(() => {
       expect(view.state.selection.main.from).toBe(0)
       expect(view.state.selection.main.to).toBe(11)
+    })
+  })
+
+  it('keeps a drawn selection layer available during playback when the editor is read-only', async () => {
+    render(ReadOnlyHost)
+
+    await waitFor(() => expect(document.querySelector('.cm-content')).toBeTruthy())
+    const editor = document.querySelector<HTMLElement>('.cm-content')!
+    const view = EditorView.findFromDOM(editor)!
+    expect(document.querySelector('.cm-selectionLayer')).toBeTruthy()
+
+    const readAloud = document.querySelector('[aria-label="Read aloud"]') as HTMLButtonElement | null
+    expect(readAloud).toBeTruthy()
+
+    await fireEvent.click(readAloud!)
+
+    await waitFor(() => {
+      expect(view.state.selection.main.from).toBe(0)
+      expect(view.state.selection.main.to).toBe(5)
     })
   })
 })
