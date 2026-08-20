@@ -45,9 +45,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
   }
 
   const isPublic = typeof body.isPublic === 'boolean' ? body.isPublic : undefined
-  const sharedWith = Array.isArray(body.sharedWith)
-    ? body.sharedWith.flatMap(value => (typeof value === 'string' ? [value.trim()] : []))
-    : undefined
+  if (body.sharedWith !== undefined) {
+    if (!Array.isArray(body.sharedWith) || body.sharedWith.some(value => typeof value !== 'string')) {
+      return json({ error: 'sharedWith must be an array of strings' }, { status: 400 })
+    }
+  }
+  const sharedWith = body.sharedWith?.map(value => value.trim())
 
   if (isPublic === undefined && sharedWith === undefined) {
     return json({ error: 'Request body must include isPublic or sharedWith' }, { status: 400 })
