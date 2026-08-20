@@ -10,6 +10,8 @@
     versionCount?: number
     onClone?: () => void
     onOpenDrawer?: () => void
+    editable?: boolean
+    initialContent?: string
   }
 
   let {
@@ -19,9 +21,13 @@
     versionCount = 0,
     onClone,
     onOpenDrawer,
+    editable = true,
+    initialContent = 'hello',
   }: Props = $props()
 
-  let content = $state('hello')
+  // initialContent is fixed test setup captured at component init.
+  // svelte-ignore state_referenced_locally
+  let content = $state(initialContent)
 
   setShareTextContext({
     documents: [],
@@ -56,7 +62,7 @@
           { name: 'beta', color: '#55A6FF' },
         ]
       : [],
-    content: 'hello',
+    content: initialContent,
     updatedAt: '2026-08-01T00:00:00.000Z',
     updatedBy: '203.0.113.7',
   }))
@@ -71,6 +77,7 @@
   onReset={() => {}}
   onRename={() => {}}
   onTypeChange={() => {}}
+  {editable}
   {versionCount}
   onClone={withClone ? onClone ?? (() => {}) : undefined}
   onTagsSave={() => {}} />
