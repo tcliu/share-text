@@ -77,9 +77,9 @@ navigating to a document. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
   and the action row opens with a three-dot (kebab) menu holding **Upload**,
   **Export**, **History**, and **Format**, followed by the **Editor view** /
-  **Preview view** toggles and the **Copy**, **Read aloud**, **Clone**, **Tags**,
-  **Copy link**, **Share** (for the document's owner), **Delete** (only on
-  documents you own), **Reset**, and **Save** buttons.
+  **Preview view** toggles and the **Copy**, **Read aloud**, **Clone**,
+  **Share** (for the document's owner), **Delete** (only on documents you own),
+  **Reset**, and **Save** buttons.
 
 ## Language
 
@@ -123,7 +123,11 @@ document name and type selector, then the tag chips, then the action buttons —
   own language model — Han → zh, kana → ja, otherwise en — with short runs
   folded into the dominant language, blank lines splitting paragraphs into
   separate segments, oversized paragraphs split on sentence boundaries, and CJK
-  newlines stripped for a continuous read) and played back in sequence. Each
+  newlines stripped for a continuous read) and played back in sequence. As
+  playback advances, the editor selection follows the currently spoken segment
+  (even when reading a selection, the highlight moves within it); when the
+  reading finishes or is stopped, the original selection — or the cursor
+  position when there was none — is restored. Each
   segment is synthesized with the account's saved voice for that language when
   one is set (see **Settings → Read aloud**), otherwise the service default.
   The
@@ -331,6 +335,8 @@ Unsaved edits are protected across every way of leaving the current document:
   local edits with the saved snapshot).
 - **Delete** of the currently selected document while dirty prompts to discard
   before the delete confirmation.
+- **Settings** and **Sign out** while dirty prompt first before leaving the
+  editor context.
 
 The guard is coordinated through a shared context: the editor pane registers its
 dirty-state guard with the shell, and the shell runs every leave-path through it.
@@ -355,21 +361,21 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
   registered user and `/admin` for an admin session.
 - Signing in accepts either a user account or the configured admin credentials;
   `/login` is the only sign-in page.
-- The **Settings** page (`/settings`) is organized into **General**,
-  **Read aloud**, and **Documents** tabs. **General** and **Read aloud** share
-  one **Apply / Reload / Reset** footer and keep one shared preferences draft.
+- The **Settings** page (`/settings`) is organized into **Profile**,
+  **General**, **Read aloud**, and **Documents** tabs. **Profile** shows the
+  signed-in account identity. **General** and **Read aloud** share one
+  **Apply / Reload / Reset** footer and keep one shared preferences draft.
   **General** holds the account's preferred interface language, applied
   automatically whenever the account signs in. **Read aloud** lists each TTS
   language the service supports with a voice dropdown for that language; each
   option shows the model filename, and the admin-configured default model is
   labeled `(Default)` so choosing the service default still identifies the
   concrete voice. The voices you choose are used whenever you read a document
-  aloud, per language. **Documents** is an
-  admin-style management table scoped to documents you own, with search,
-  sorting, selection, rename-on-hover, **Open selected**, **Delete selected**,
-  and **Reload** toolbar actions plus a **New document** shortcut. Leaving the
-  page with unsaved preference changes asks for confirmation. Admins see the
-  admin console instead of this page.
+  aloud, per language. **Documents** is an admin-style management table scoped
+  to documents you own, with search, sorting, selection, rename-on-hover,
+  **Open selected**, **Delete selected**, and **Reload** toolbar actions plus a
+  **New document** shortcut. Leaving the page with unsaved preference changes
+  asks for confirmation. Admins see the admin console instead of this page.
 - Anonymous visitors can create, edit, and delete only the documents they own
   (created from their client IP). Registered users can additionally edit any
   public or shared document, and can delete and manage only the documents they
@@ -416,8 +422,9 @@ across tab switches.
   - **General** — the admin account's preferred interface language, persisted
     server-side and applied on sign-in, with the same **Apply / Reload / Reset**
     footer pattern as other editable settings screens.
-  - **Properties** — application properties (`max_documents_per_ip`,
-    `max_content_length`, `document_key_length`, `max_document_versions`). The
+  - **Properties** — application properties including document limits,
+    key/version settings, and TTS runtime settings such as the service URL,
+    max segment length, and synthesis concurrency. The
     tab splits into **Form** and **Properties** sub-tabs editing the same draft:
     the form shows each row with its effective
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
@@ -432,11 +439,12 @@ across tab switches.
     confirm dialog; there is no per-row delete button. The ID, name, created-by,
     and updated-by cells are copyable editable text on hover-capable devices and
     plain values on touch devices (where the icons would always be visible and
-    overwhelming), with a **Public/Private** visibility column. Each row's
-    **Edit** button opens a dialog split into **Details** and **Content**
-    tabs: the details tab edits the key, name, created-by, and updated-by
-    fields, and the content tab edits the document body in a CodeMirror editor
-    (loaded lazily). An **Import** button opens an import dialog with a JSON
+    overwhelming), with a **Public/Private** visibility column. The toolbar's
+    **Edit** button opens a responsive dialog with **Details** and **Content**
+    panes: the details pane edits the key, name, document type, visibility,
+    sharing, and metadata fields, while the content pane edits the document
+    body in a code editor. On narrow dialog widths the
+    content pane flows below details. An **Import** button opens an import dialog with a JSON
     editor: paste or upload a JSON object (single record) or array (multiple
     records), and **OK** validates and creates the records in one all-or-nothing
     batch before the table refreshes. A help icon opens a samples panel with
@@ -456,13 +464,14 @@ across tab switches.
     **Add user** dialog creates an account, and an **Import** button pastes or
     uploads user records as JSON in the same all-or-nothing batch style as the
     Documents import.
-  - **Text To Speech** — a debugging tool for the Read aloud segmenter, organized
-    as sub-tabs via the state-driven `Tabs` component (matching the Properties
-    Form/Properties sub-tab pattern). The **Segments** sub-tab lets you type or
-    paste any text and lists how it splits into TTS segments (each segment's
-    language, its inclusive character range into the original text, and its
-    text), using the runtime **TTS max segment length** setting; the input and
-    the breakdown survive switching to another tab and back.
+  - **Text To Speech** — organized into **Voices** and **Segments** sub-tabs.
+    **Voices** manages per-language backend default voices and uploads/removes
+    voice model files. **Segments** is the debugging tool for the
+    Read aloud segmenter: type or paste text and it lists how the text splits
+    into TTS segments (each segment's language, its inclusive character range
+    into the original text, and its text), using the runtime **TTS max segment
+    length** setting; the input and the breakdown survive switching away and
+    back.
   - Numeric properties accept thousand separators (for example `7,000`) both in
     the Properties form and the `key=value` editor, and the same parsing applies
     server-side and in the TTS backend's resolution of `tts_max_segment_length`.
