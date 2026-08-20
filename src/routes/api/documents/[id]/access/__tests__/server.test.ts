@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const documentsMocks = vi.hoisted(() => ({
+const documentMocks = vi.hoisted(() => ({
   resolveDocumentAccess: vi.fn(),
   getDocumentAccess: vi.fn(),
+  missingSharees: vi.fn(),
   setDocumentAccess: vi.fn(),
 }))
 
@@ -10,9 +11,10 @@ vi.mock('$lib/server/documents', async () => {
   const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
   return {
     ...actual,
-    resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
-    getDocumentAccess: documentsMocks.getDocumentAccess,
-    setDocumentAccess: documentsMocks.setDocumentAccess,
+    resolveDocumentAccess: documentMocks.resolveDocumentAccess,
+    getDocumentAccess: documentMocks.getDocumentAccess,
+    missingSharees: documentMocks.missingSharees,
+    setDocumentAccess: documentMocks.setDocumentAccess,
   }
 })
 
@@ -26,19 +28,7 @@ vi.mock('$lib/server/viewer', async () => {
   }
 })
 
-const loggingMocks = vi.hoisted(() => ({ logEvent: vi.fn() }))
-
-vi.mock('$lib/server/logging', () => ({ logEvent: loggingMocks.logEvent }))
-
-const usersMocks = vi.hoisted(() => ({ findUsersByUsernameOrEmail: vi.fn() }))
-
-vi.mock('$lib/server/users', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/users')>('$lib/server/users')
-  return {
-    ...actual,
-    findUsersByUsernameOrEmail: usersMocks.findUsersByUsernameOrEmail,
-  }
-})
+vi.mock('$lib/server/logging', () => ({ logEvent: vi.fn() }))
 
 import { GET, PUT } from '../+server'
 
@@ -64,29 +54,20 @@ const adminViewer = () => ({ type: 'admin', userId: null, ip: '127.0.0.1', name:
 
 const bobUser = () => ({ id: 2, username: 'bob', email: 'bob@example.com', status: 'active' as const })
 
-function resolveFor(values: string[]) {
-  return Promise.resolve(
-    values.filter(value => {
-      const normalized = value.trim().toLowerCase()
-      return normalized === 'bob' || normalized === 'bob@example.com'
-    }).map(bobUser),
-  )
-}
-
 describe('PUT /api/documents/[id]/access', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    documentsMocks.resolveDocumentAccess.mockResolvedValue(accessFor(true))
-    documentsMocks.setDocumentAccess.mockResolvedValue({
+    viewerMocks.resolveViewer.mockResolvedValue(userViewer())
+    documentMocks.resolveDocumentAccess.mockResolvedValue(accessFor(true))
+    documentMocks.missingSharees.mockResolvedValue([])
+    documentMocks.setDocumentAccess.mockResolvedValue({
       isPublic: false,
       sharedWith: [bobUser()],
     })
-    usersMocks.findUsersByUsernameOrEmail.mockImplementation(resolveFor)
   })
 
   it('rejects when the viewer cannot manage access', async () => {
-    documentsMocks.resolveDocumentAccess.mockResolvedValue(accessFor(false))
-    viewerMocks.resolveViewer.mockResolvedValue(userViewer())
+    documentMocks.resolveDocumentAccess.mockResolvedValue(accessFor(false))
 
     const response = await PUT({
       ...baseEvent(),
@@ -98,11 +79,11 @@ describe('PUT /api/documents/[id]/access', () => {
     })
 
     expect(response.status).toBe(403)
-    expect(documentsMocks.setDocumentAccess).not.toHaveBeenCalled()
+    expect(documentMocks.setDocumentAccess).not.toHaveBeenCalled()
   })
 
   it('rejects the whole update when any sharee cannot be resolved for a normal user', async () => {
-    viewerMocks.resolveViewer.mockResolvedValue(userViewer())
+    documentMocks.missingSharees.mockResolvedValue(['nobody'])
 
     const response = await PUT({
       ...baseEvent(),
@@ -118,7 +99,24 @@ describe('PUT /api/documents/[id]/access', () => {
       error: 'Not shared: nobody',
       missing: ['nobody'],
     })
-    expect(documentsMocks.setDocumentAccess).not.toHaveBeenCalled()
+    expect(documentMocks.setDocumentAccess).not.toHaveBeenCalled()
+  })
+
+  it('rejects non-string sharedWith entries', async () => {
+    const response = await PUT({
+      params: { id: 'a1b2c3' },
+      request: new Request('http://localhost/api/documents/a1b2c3/access', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sharedWith: [123] }),
+      }),
+      cookies: { get: () => null },
+      getClientAddress: () => '127.0.0.1',
+    } as never)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({ error: 'sharedWith must be an array of strings' })
+    expect(documentMocks.setDocumentAccess).not.toHaveBeenCalled()
   })
 
   it('resolves sharees including inactive users for an admin', async () => {
@@ -133,7 +131,7 @@ describe('PUT /api/documents/[id]/access', () => {
       }),
     })
 
-    expect(documentsMocks.setDocumentAccess).toHaveBeenCalledWith(
+    expect(documentMocks.setDocumentAccess).toHaveBeenCalledWith(
       'a1b2c3',
       { isPublic: undefined, sharedWith: ['bob'] },
       { includeInactive: true },
@@ -141,8 +139,6 @@ describe('PUT /api/documents/[id]/access', () => {
   })
 
   it('accepts a resolved email as a valid sharee', async () => {
-    viewerMocks.resolveViewer.mockResolvedValue(userViewer())
-
     const response = await PUT({
       ...baseEvent(),
       request: new Request('http://localhost/api/documents/a1b2c3/access', {
@@ -153,7 +149,7 @@ describe('PUT /api/documents/[id]/access', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.setDocumentAccess).toHaveBeenCalled()
+    expect(documentMocks.setDocumentAccess).toHaveBeenCalled()
     await expect(response.json()).resolves.toEqual({
       isPublic: false,
       sharedWith: [bobUser()],
@@ -164,8 +160,8 @@ describe('PUT /api/documents/[id]/access', () => {
 describe('GET /api/documents/[id]/access', () => {
   it('returns the access state without a missing field', async () => {
     viewerMocks.resolveViewer.mockResolvedValue(userViewer())
-    documentsMocks.resolveDocumentAccess.mockResolvedValue(accessFor(true))
-    documentsMocks.getDocumentAccess.mockResolvedValue({
+    documentMocks.resolveDocumentAccess.mockResolvedValue(accessFor(true))
+    documentMocks.getDocumentAccess.mockResolvedValue({
       isPublic: true,
       sharedWith: [],
     })

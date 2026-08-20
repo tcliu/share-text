@@ -53,11 +53,14 @@ function makeSettingsFetch() {
     if (String(url).includes('/api/admin/settings')) {
       if (init?.method === 'PUT') {
         const body = JSON.parse(String(init.body)) as {
-          settings: Array<{ key: string; value: number | string }>
+          settings: Array<{ key: string; value: number | string | null }>
         }
         const updated = settings.map(setting => {
           const change = body.settings.find(item => item.key === setting.key)
-          return change ? { ...setting, value: change.value ?? setting.value, source: 'database' as const } : setting
+          if (!change) return setting
+          return change.value === null
+            ? { ...setting, value: setting.defaultValue, source: 'default' as const }
+            : { ...setting, value: change.value, source: 'database' as const }
         })
         return Promise.resolve({ ok: true, status: 200, json: async () => ({ settings: updated }) })
       }
@@ -131,6 +134,63 @@ describe('useAdminSettings properties text sync', () => {
     await waitFor(() => expect(state().propertiesProblems).toContain('Unknown setting: not_a_setting'))
     expect(state().draftValues['not_a_setting']).toBeUndefined()
     expect(state().draftValues['max_documents_per_ip']).toBe('50')
+  })
+
+  it('removes known settings from the draft when they are deleted from the editor', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
+    const state = renderHost()
+    await waitFor(() => expect(state().settings.length).toBe(3))
+
+    state().updatePropertiesText('max_documents_per_ip=50')
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
+    expect(state().draftValues['max_content_length']).toBeUndefined()
+    expect(state().draftValues['tts_service_url']).toBeUndefined()
+  })
+
+  it('treats deleted settings as unsaved changes and applies them as resets', async () => {
+    const fetchMock = makeSettingsFetch()
+    vi.stubGlobal('fetch', fetchMock)
+    const state = renderHost()
+    await waitFor(() => expect(state().settings.length).toBe(3))
+
+    state().updatePropertiesText('max_documents_per_ip=50')
+    await waitFor(() => expect(state().hasUnsavedChanges).toBe(true))
+
+    state().apply()
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/admin/settings',
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            settings: [
+              { key: 'max_documents_per_ip', value: 50 },
+              { key: 'max_content_length', value: null },
+              { key: 'tts_service_url', value: null },
+            ],
+          }),
+        }),
+      ),
+    )
+  })
+
+  it('resyncs the editor text after applying resets, showing the reset settings at default', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
+    const state = renderHost()
+    await waitFor(() => expect(state().settings.length).toBe(3))
+
+    state().updatePropertiesText('max_documents_per_ip=50')
+    await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
+    expect(state().hasUnsavedChanges).toBe(true)
+
+    state().apply()
+
+    await waitFor(() => expect(state().hasUnsavedChanges).toBe(false))
+    expect(state().draftValues['max_documents_per_ip']).toBe('50')
+    expect(state().draftValues['max_content_length']).toBe('1048576')
+    expect(state().draftValues['tts_service_url']).toBe('')
+    expect(state().propertiesText).toBe('max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=')
   })
 
   it('reports values that fail a setting rule and ignores string settings', async () => {

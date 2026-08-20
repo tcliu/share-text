@@ -254,17 +254,21 @@ synchronizes through a small fetch-based JSON API.
   (`propertiesText`) bound by the code editor (`AdminPropertiesCodeView`); the
   two directions are reconciled with the shared self-echo guard so the editor is
   never rewritten by its own push: editor edits are parsed back into the draft
-  (`pickKnownSettings` + merge, unknown settings reported in a live
+  (`pickKnownSettings` + replace, unknown settings reported in a live
   `propertiesProblems` banner and never pushed), while form edits, Apply,
   Reload, and Reset resync the editor text. Apply persists only the changed
   settings through `PUT /api/admin/settings`; Reset restores both views from
   the saved settings. The old batch dialog (`AdminSettingsBatchDialog.svelte`)
   has been removed.
-  The admin Text To Speech tab (`AdminTextToSpeechView` + `useAdminSegments`) is a
-  client-side text→segment debug tool: `useAdminSegments` holds the pasted text
-  and the runtime max segment length (resolved once from `/api/tts/capabilities`),
-  and derives the segment list with `splitTtsSegments`, so switching tabs keeps
-  the input. Number settings accept thousand separators in every parsing layer —
+  The admin Text To Speech tab (`AdminTextToSpeechView`) is split into
+  state-driven **Voices** and **Segments** sub-tabs. `useAdminTtsVoices` owns
+  the backend-voice state and the Apply/Reload/Reset draft for per-language
+  default voices plus upload/remove actions through `/api/admin/tts/voices`.
+  `useAdminSegments` remains the client-side text→segment debug tool: it holds
+  the pasted text and the runtime max segment length (resolved once from
+  `/api/tts/capabilities`), and derives the segment list with
+  `splitTtsSegments`, so switching tabs keeps the input. Number settings accept
+  thousand separators in every parsing layer —
   the client `parseNumberWithSeparators` (`use-admin-settings.svelte.ts`),
   `readNumber`/`validateSettingValue` (`src/lib/server/settings.ts`), and the
   backend `_read_number` (`backend/app/settings.py`) all strip commas before
@@ -445,16 +449,18 @@ synchronizes through a small fetch-based JSON API.
 - Per-account preferences live behind `src/routes/settings/` (real routes, same
   layout-guard pattern as `/admin`): `+layout.server.ts` resolves the viewer and
   redirects admins to `/admin` and anonymous visitors to `/login`; `/settings`
-  redirects to `/settings/general`. The layout renders the shared `Tabs`
-  (route-driven links: General → `/settings/general`, Read aloud →
-  `/settings/read-aloud`, Documents → `/settings/documents`) and keeps the
-  preferences draft in `useUserSettings` (`src/lib/use-user-settings.svelte.ts`)
-  plus the owned-documents list state in `useOwnedDocuments`
+  redirects to `/settings/profile`. The layout renders the shared `Tabs`
+  (route-driven links: Profile → `/settings/profile`, General →
+  `/settings/general`, Read aloud → `/settings/read-aloud`, Documents →
+  `/settings/documents`) and keeps the preferences draft in
+  `useUserSettings` (`src/lib/use-user-settings.svelte.ts`) plus the
+  owned-documents list state in `useOwnedDocuments`
   (`src/lib/use-owned-documents.svelte.ts`) so both survive tab switches.
-  General and Read aloud share one Apply/Reload/Reset footer; Documents uses a
-  toolbar instead. Leaving `/settings` with unsaved preference changes prompts
-  to discard (the same `beforeNavigate` protocol as the admin console). The
-  header offers the language menu, a go-to-Documents button, and sign out.
+  Profile shows the signed-in account identity, General and Read aloud share
+  one Apply/Reload/Reset footer, and Documents uses a toolbar instead. Leaving
+  `/settings` with unsaved preference changes prompts to discard (the same
+  `beforeNavigate` protocol as the admin console). The header offers the
+  language menu, a go-to-Documents button, and sign out.
 - `useUserSettings` loads once on sign-in via `GET /api/user/preferences` and
   exposes `load`/`apply`/`reload`/`resetDraft` plus `setPreferredLanguage` and
   `setTtsVoice` (a null voice clears the saved preference). `hasUnsavedChanges`
@@ -496,8 +502,7 @@ synchronizes through a small fetch-based JSON API.
   `setLocale(preferredLanguage)` (failures are ignored).
 - The account button in `DocumentList` and the browser layout's collapsed rail
   is a single Settings gear button: it navigates to `/settings` for a normal
-  user and `/admin` for an admin, replacing the former Profile dialog and the
-  admin-only console button (`ProfileDialog` was removed).
+  user and `/admin` for an admin.
 
 ## Limits
 
@@ -525,7 +530,7 @@ synchronizes through a small fetch-based JSON API.
 - `(browser)/+layout.svelte` is the shell: it owns the document list, runs
   `beforeNavigate` through the dirty guard, hosts the discard and delete
   confirm dialogs, and drives `useUserAuth` (session check on mount,
-  sign-out) plus the `ProfileDialog`. The first page of summaries is preloaded
+  sign-out). The first page of summaries is preloaded
   on the server via `(browser)/+layout.server.ts` (the same viewer-resolving
   `fetchDocumentSummaries`/`getClientAddress` path as the API,
   `DEFAULT_DOCUMENTS_PAGE_SIZE`) and seeded once into `useDocuments` via

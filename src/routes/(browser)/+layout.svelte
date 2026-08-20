@@ -154,6 +154,23 @@
     await documentsState.refreshList()
   }
 
+  function handleSettings() {
+    const url = isAdminIdentity ? '/admin' : '/settings'
+    if (!editorGuardState.canLeaveCurrentDocument()) {
+      editorGuardState.requestDiscard({ kind: 'navigate', url })
+      return
+    }
+    void goto(url)
+  }
+
+  function handleSignOutClick() {
+    if (!editorGuardState.canLeaveCurrentDocument()) {
+      editorGuardState.requestDiscard({ kind: 'signOut' })
+      return
+    }
+    void handleSignOut()
+  }
+
   $effect(() => {
     void userAuthState.checkSession()
   })
@@ -183,6 +200,8 @@
       handleRefresh()
     } else if (action.kind === 'delete') {
       deleteTarget = action.id
+    } else if (action.kind === 'signOut') {
+      void handleSignOut()
     }
   }
 
@@ -248,9 +267,9 @@
     onNew={handleNew}
     onRefresh={handleRefresh}
     onLogin={() => goto('/login')}
-    onSettings={isAdminIdentity ? () => goto('/admin') : () => goto('/settings')}
+    onSettings={handleSettings}
     user={profileIdentity}
-    onSignOut={handleSignOut}
+    onSignOut={handleSignOutClick}
     onLoadMore={documentsState.loadMore}
     onToggleCollapse={handleListCollapse}
     onMinWidthChange={handleMinWidthChange} />
@@ -290,7 +309,7 @@
           size="sm"
           ariaLabel={t('list.settings')}
           tooltip={t('list.settingsWith', { name: profileIdentity.username })}
-          onClick={isAdminIdentity ? () => goto('/admin') : () => goto('/settings')}>
+          onClick={handleSettings}>
           {#snippet icon()}
             <SettingsIcon />
           {/snippet}
@@ -299,12 +318,13 @@
           size="sm"
           ariaLabel={t('list.signOut')}
           tooltip={t('list.signedInAs', { name: profileIdentity.username })}
-          onClick={() => void handleSignOut()}>
+          onClick={handleSignOutClick}>
           {#snippet icon()}
             <SignOutIcon />
           {/snippet}
         </Button>
       {:else}
+        <LanguageMenu />
         <Button size="sm" ariaLabel={t('list.login')} tooltip={t('list.login')} onClick={() => goto('/login')}>
           {#snippet icon()}
             <PersonIcon />

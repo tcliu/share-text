@@ -7,6 +7,7 @@ type PendingAction =
   | { kind: 'refresh' }
   | { kind: 'navigate'; url: string }
   | { kind: 'delete'; id: string }
+  | { kind: 'signOut' }
 
 export function useEditorGuard() {
   let editorGuard = $state<EditorGuard | null>(null)
@@ -31,6 +32,8 @@ export function useEditorGuard() {
     } else if (action.kind === 'refresh') {
       // This will be handled by the caller
     } else if (action.kind === 'delete') {
+      // This will be handled by the caller
+    } else if (action.kind === 'signOut') {
       // This will be handled by the caller
     } else if (action.kind === 'navigate') {
       goto(action.url)

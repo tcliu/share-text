@@ -20,7 +20,7 @@ describe('getSupportedTtsLanguages', () => {
   it('returns the fallback set when the service url is empty', async () => {
     mockGetSettingStringValue.mockResolvedValue('')
 
-    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja'])
+    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja', 'yue'])
   })
 
   it('returns the backend languages and caches them', async () => {
@@ -41,7 +41,7 @@ describe('getSupportedTtsLanguages', () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('unreachable'))
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja'])
+    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja', 'yue'])
   })
 
   it('uses the default set when the backend responds with a non-ok status', async () => {
@@ -49,7 +49,7 @@ describe('getSupportedTtsLanguages', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 503 })
     vi.stubGlobal('fetch', fetchMock)
 
-    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja'])
+    expect(await getSupportedTtsLanguages()).toEqual(['en', 'en_gb', 'zh', 'ja', 'yue'])
   })
 })
 

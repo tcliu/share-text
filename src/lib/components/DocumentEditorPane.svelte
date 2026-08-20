@@ -125,6 +125,7 @@
   let ttsSegments = $state<TtsSegmentInput[]>([])
   let ttsHadSelection = false
   let ttsSelectionOffset = 0
+  let ttsOriginalSelection = $state<{ from: number; to: number } | null>(null)
   let userTtsVoices = $state<Record<string, string>>({})
   let pendingRange = $state<{ from: number; to: number } | null>(null)
   let editorReady = $state(0)
@@ -309,14 +310,21 @@
     ttsSegments = []
     ttsHadSelection = false
     ttsSelectionOffset = 0
-    pendingRange = null
+    if (ttsOriginalSelection) {
+      if (!editorRef || !editorRef.setSelection(ttsOriginalSelection.from, ttsOriginalSelection.to)) {
+        pendingRange = ttsOriginalSelection
+      }
+    } else {
+      pendingRange = null
+      editorRef?.clearSelection()
+    }
+    ttsOriginalSelection = null
     releaseTtsObjectUrls()
     speaking = false
     processing = false
   }
 
   function setSelectionForCurrentSegment() {
-    if (ttsHadSelection) return
     const segment = ttsSegments[ttsQueueIndex]
     if (!segment || segment.indexStart == null || segment.indexEnd == null) return
     const range = { from: ttsSelectionOffset + segment.indexStart, to: ttsSelectionOffset + segment.indexEnd + 1 }
@@ -342,16 +350,22 @@
         return
       }
       const shouldClearSelection = !ttsHadSelection
+      const originalSelection = ttsOriginalSelection
       ttsQueue = []
       ttsQueueIndex = 0
       ttsSegments = []
       ttsHadSelection = false
       ttsSelectionOffset = 0
+      ttsOriginalSelection = null
       pendingRange = null
       releaseTtsObjectUrls()
       speaking = false
       processing = false
-      if (shouldClearSelection) {
+      if (originalSelection) {
+        if (!editorRef || !editorRef.setSelection(originalSelection.from, originalSelection.to)) {
+          pendingRange = originalSelection
+        }
+      } else if (shouldClearSelection) {
         editorRef?.clearSelection()
       }
       return
@@ -407,6 +421,7 @@
       ttsQueue = []
       ttsQueueIndex = 0
       ttsHadSelection = hasSelection
+      ttsOriginalSelection = selectionRange ?? null
       ttsSelectionOffset = hasSelection ? selectionRange?.from ?? 0 : 0
       ttsSegments = segments
       for await (const blob of synthesizeTtsStreaming(segments, signal, ttsSynthesisConcurrency)) {
@@ -427,10 +442,16 @@
         ttsQueueIndex = 0
         ttsSegments = []
         ttsSelectionOffset = 0
+        const originalSelection = ttsOriginalSelection
+        ttsOriginalSelection = null
         pendingRange = null
         releaseTtsObjectUrls()
         processing = false
-        if (!ttsHadSelection) {
+        if (originalSelection) {
+          if (!editorRef || !editorRef.setSelection(originalSelection.from, originalSelection.to)) {
+            pendingRange = originalSelection
+          }
+        } else if (!ttsHadSelection) {
           editorRef?.clearSelection()
         }
         ttsHadSelection = false
@@ -609,16 +630,17 @@
       </Button>
     {/if}
     {#if !context.isMobile}
-      <Button
-        size="sm"
-        ariaLabel={t('editor.upload')}
-        tooltip={t('editor.upload')}
-        onClick={handleUploadClick}
-        disabled={!editable}>
-        {#snippet icon()}
-          {@render uploadIcon()}
-        {/snippet}
-      </Button>
+      {#if editable}
+        <Button
+          size="sm"
+          ariaLabel={t('editor.upload')}
+          tooltip={t('editor.upload')}
+          onClick={handleUploadClick}>
+          {#snippet icon()}
+            {@render uploadIcon()}
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel={t('editor.export')}
@@ -715,23 +737,25 @@
         {/snippet}
       </Button>
     {/if}
-    <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!editable || !dirty || saving}>
-      {#snippet icon()}
-        <RefreshIcon />
-      {/snippet}
-    </Button>
-    <Button
-      size="sm"
-      ariaLabel={t('editor.save')}
-      tooltip={t('editor.save')}
-      onClick={handleSave}
-      disabled={!editable || !dirty || saving}
-      variant="primary"
-      accent="cyan">
-      {#snippet icon()}
-        <SaveIcon />
-      {/snippet}
-    </Button>
+    {#if editable}
+      <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!dirty || saving}>
+        {#snippet icon()}
+          <RefreshIcon />
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel={t('editor.save')}
+        tooltip={t('editor.save')}
+        onClick={handleSave}
+        disabled={!dirty || saving}
+        variant="primary"
+        accent="cyan">
+        {#snippet icon()}
+          <SaveIcon />
+        {/snippet}
+      </Button>
+    {/if}
   {/snippet}
 
   {#snippet cloneIcon()}
@@ -890,7 +914,7 @@
           content={previewContent.value}
           {docType}
           {editable}
-          onContentChange={(v: string) => (content = v)} />
+          onContentChange={editable ? (v: string) => (content = v) : undefined} />
       </div>
     {/if}
   </div>

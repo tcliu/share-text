@@ -145,6 +145,25 @@ function foldShortRuns(runs: TtsRun[]): TtsRun[] {
   return mergeAdjacentRuns(folded)
 }
 
+function mergeBracketedCjkPrefixes(runs: TtsRun[]): TtsRun[] {
+  const merged = [...runs]
+  for (let i = 0; i < merged.length - 1; i++) {
+    const current = merged[i]
+    const next = merged[i + 1]
+    if (
+      current.lang === 'en' &&
+      next.lang !== 'en' &&
+      /^[\[(<{\u300c\u300e\u3010][\d\s]+$/.test(current.text.trimStart())
+    ) {
+      next.text = current.text + next.text
+      next.start = current.start
+      merged.splice(i, 1)
+      i -= 1
+    }
+  }
+  return merged
+}
+
 export const MAX_SEGMENT_LENGTH = 500
 const BLANK_LINE_RE = /\n\s*\n/g
 const SENTENCE_TERMINATOR_RE = /[.!?。！？]+\s*/g
@@ -263,7 +282,7 @@ function cleanParagraph(paragraph: TtsParagraph, lang: string): { text: string; 
 }
 
 export function splitTtsSegments(text: string, maxSegmentLength = MAX_SEGMENT_LENGTH): TtsSegment[] {
-  const runs = foldShortRuns(mergeAdjacentRuns(splitTtsRuns(text)))
+  const runs = mergeBracketedCjkPrefixes(foldShortRuns(mergeAdjacentRuns(splitTtsRuns(text))))
   const segments: TtsSegment[] = []
   for (const run of runs) {
     for (const paragraph of splitParagraphRanges(run)) {

@@ -21,8 +21,12 @@ export function useAdminSettings(onSignedOut: () => void) {
   let propertiesText = $state('')
   let lastPushedProperties = $state<Record<string, string> | null>(null)
 
+  function hasDraftValue(key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(draftValues, key)
+  }
+
   const hasUnsavedChanges = $derived(
-    settings.some(setting => (draftValues[setting.key] ?? String(setting.value)) !== String(setting.value)),
+    settings.some(setting => !hasDraftValue(setting.key) || draftValues[setting.key] !== String(setting.value)),
   )
 
   function handleAuthError(error: unknown) {
@@ -124,12 +128,15 @@ export function useAdminSettings(onSignedOut: () => void) {
 
   function apply() {
     const changed = settings.filter(
-      setting => (draftValues[setting.key] ?? String(setting.value)) !== String(setting.value),
+      setting => !hasDraftValue(setting.key) || draftValues[setting.key] !== String(setting.value),
     )
     if (changed.length === 0) {
       return
     }
     for (const setting of changed) {
+      if (!hasDraftValue(setting.key)) {
+        continue
+      }
       const raw = draftValues[setting.key]?.trim() ?? ''
       if (setting.kind === 'number') {
         const validated = validateSettingNumber(setting, raw)
@@ -143,8 +150,9 @@ export function useAdminSettings(onSignedOut: () => void) {
     void updateAdminSettings(
       changed.map(setting => ({
         key: setting.key,
-        value:
-          setting.kind === 'string'
+        value: !hasDraftValue(setting.key)
+          ? null
+          : setting.kind === 'string'
             ? (draftValues[setting.key]?.trim() ?? '')
             : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
       })),
@@ -227,9 +235,15 @@ export function useAdminSettings(onSignedOut: () => void) {
       const known = pickKnownSettings(parsed.value)
       if (recordsEqual(known, pickKnownSettings(draftValues))) return
       lastPushedProperties = known
-      for (const [key, value] of Object.entries(known)) {
-        draftValues[key] = value
+      const nextDraft = { ...draftValues }
+      const knownKeys = new Set(settings.map(setting => setting.key))
+      for (const key of knownKeys) {
+        delete nextDraft[key]
       }
+      for (const [key, value] of Object.entries(known)) {
+        nextDraft[key] = value
+      }
+      draftValues = nextDraft
     },
     load,
     apply,

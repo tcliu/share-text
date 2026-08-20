@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { TtsServiceError } from '$lib/server/tts'
 
 const ttsMocks = vi.hoisted(() => ({
   getAdminTtsVoicesState: vi.fn(),
@@ -67,6 +68,22 @@ describe('PUT /api/admin/tts/voices', () => {
 
     expect(ttsMocks.saveAdminTtsDefaultVoices).toHaveBeenCalledWith({ en: 'a.onnx', zh: null })
     expect(response.status).toBe(200)
+  })
+
+  it('preserves user-correctable backend validation errors', async () => {
+    ttsMocks.saveAdminTtsDefaultVoices.mockRejectedValue(new TtsServiceError('Unknown voice', 422))
+
+    const response = await PUT({
+      request: new Request('http://localhost/api/admin/tts/voices', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ defaultVoices: { en: 'missing.onnx' } }),
+      }),
+      getClientAddress: () => '127.0.0.1',
+    } as never)
+
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toEqual({ error: 'Unknown voice' })
   })
 })
 

@@ -1,3 +1,4 @@
+import { replaceState } from '$app/navigation'
 import { page } from '$app/state'
 import {
   loadEditorPreviewSplit,
@@ -26,7 +27,7 @@ function applyPreviewMode(mode: PreviewMode) {
       url.searchParams.delete('editor')
     }
   }
-  history.replaceState(history.state, '', url)
+  replaceState(url, page.state)
 }
 
 export function usePreviewMode(hasPreview: () => boolean) {

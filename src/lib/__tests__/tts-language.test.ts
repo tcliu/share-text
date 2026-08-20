@@ -123,6 +123,12 @@ describe('splitTtsSegments', () => {
     expect(stripIndexes(splitTtsSegments('文件100個'))).toEqual([{ text: '文件100個', lang: 'zh' }])
   })
 
+  it('keeps bracketed cjk titles with digits in one zh segment', () => {
+    expect(stripIndexes(splitTtsSegments('[2026 皇玥月餅〡月滿中秋豐盛新境]'))).toEqual([
+      { text: '[2026 皇玥月餅〡月滿中秋豐盛新境]', lang: 'zh' },
+    ])
+  })
+
   it('joins multi-line cjk into one continuous segment', () => {
     const segments = stripIndexes(splitTtsSegments('即便周星馳已經有想配合採訪了125000222\n但感覺依然還是個有夠難採訪的對象\n不得不說這個主持人真的很厲害'))
     expect(segments).toEqual([

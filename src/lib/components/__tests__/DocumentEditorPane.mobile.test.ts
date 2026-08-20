@@ -132,6 +132,22 @@ describe('DocumentEditorPane mobile header', () => {
     expect(queryByText('History')).toBeNull()
   })
 
+  it('hides upload, reset, and save when the document is read-only', async () => {
+    const { queryByLabelText, queryByText } = render(MobileEditorHost, {
+      docType: 'markdown',
+      editable: false,
+      withClone: false,
+    })
+
+    expect(queryByLabelText('Reset')).toBeNull()
+    expect(queryByLabelText('Save')).toBeNull()
+
+    const trigger = queryByLabelText('More actions')
+    expect(trigger).toBeTruthy()
+    await fireEvent.click(trigger!)
+    expect(queryByText('Upload')).toBeNull()
+  })
+
   it('preserves the editor cursor position when closing the preview on mobile', async () => {
     const { getByRole } = render(MobileEditorHost, { docType: 'markdown' })
 
