@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const authMocks = vi.hoisted(() => ({ getCurrentUserId: vi.fn() }))
+const viewerMocks = vi.hoisted(() => ({ resolveViewer: vi.fn() }))
 
-vi.mock('$lib/server/user-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/user-auth')>('$lib/server/user-auth')
+vi.mock('$lib/server/viewer', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/viewer')>('$lib/server/viewer')
   return {
     ...actual,
-    getCurrentUserId: authMocks.getCurrentUserId,
+    resolveViewer: viewerMocks.resolveViewer,
   }
 })
 
@@ -22,7 +22,7 @@ vi.mock('$lib/server/users', async () => {
 
 import { GET } from '../+server'
 
-const event = () => ({ cookies: { get: () => null } }) as never
+const event = () => ({ cookies: { get: () => null }, getClientAddress: () => '127.0.0.1' }) as never
 
 describe('GET /api/users/recent-sharees', () => {
   beforeEach(() => {
@@ -30,7 +30,7 @@ describe('GET /api/users/recent-sharees', () => {
   })
 
   it('rejects requests without a user session', async () => {
-    authMocks.getCurrentUserId.mockReturnValue(null)
+    viewerMocks.resolveViewer.mockResolvedValue({ type: 'anonymous', userId: null, username: null, ip: '127.0.0.1', name: '127.0.0.1' })
 
     const response = await GET(event())
 
@@ -39,7 +39,7 @@ describe('GET /api/users/recent-sharees', () => {
   })
 
   it('returns the users the current user has previously shared with', async () => {
-    authMocks.getCurrentUserId.mockReturnValue(1)
+    viewerMocks.resolveViewer.mockResolvedValue({ type: 'user', userId: 1, username: 'alice', ip: '127.0.0.1', name: 'alice' })
     usersMocks.listRecentSharees.mockResolvedValue([
       { id: 2, username: 'bob', email: 'bob@example.com', status: 'active' },
     ])
@@ -51,5 +51,14 @@ describe('GET /api/users/recent-sharees', () => {
     await expect(response.json()).resolves.toEqual({
       users: [{ id: 2, username: 'bob', email: 'bob@example.com', status: 'active' }],
     })
+  })
+
+  it('rejects admin sessions', async () => {
+    viewerMocks.resolveViewer.mockResolvedValue({ type: 'admin', userId: null, ip: '127.0.0.1', name: 'admin' })
+
+    const response = await GET(event())
+
+    expect(response.status).toBe(401)
+    expect(usersMocks.listRecentSharees).not.toHaveBeenCalled()
   })
 })
