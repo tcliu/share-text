@@ -118,4 +118,5 @@ describe('Mobile layout', () => {
       expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
     })
   })
+
 })

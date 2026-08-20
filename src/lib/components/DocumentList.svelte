@@ -152,6 +152,7 @@
           {/snippet}
         </Button>
       {:else}
+        <LanguageMenu />
         <Button size="sm" ariaLabel={t('list.login')} tooltip={t('list.login')} onClick={onLogin}>
           {#snippet icon()}
             <PersonIcon />
