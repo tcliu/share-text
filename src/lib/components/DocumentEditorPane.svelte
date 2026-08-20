@@ -630,16 +630,17 @@
       </Button>
     {/if}
     {#if !context.isMobile}
-      <Button
-        size="sm"
-        ariaLabel={t('editor.upload')}
-        tooltip={t('editor.upload')}
-        onClick={handleUploadClick}
-        disabled={!editable}>
-        {#snippet icon()}
-          {@render uploadIcon()}
-        {/snippet}
-      </Button>
+      {#if editable}
+        <Button
+          size="sm"
+          ariaLabel={t('editor.upload')}
+          tooltip={t('editor.upload')}
+          onClick={handleUploadClick}>
+          {#snippet icon()}
+            {@render uploadIcon()}
+          {/snippet}
+        </Button>
+      {/if}
       <Button
         size="sm"
         ariaLabel={t('editor.export')}
@@ -736,23 +737,25 @@
         {/snippet}
       </Button>
     {/if}
-    <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!editable || !dirty || saving}>
-      {#snippet icon()}
-        <RefreshIcon />
-      {/snippet}
-    </Button>
-    <Button
-      size="sm"
-      ariaLabel={t('editor.save')}
-      tooltip={t('editor.save')}
-      onClick={handleSave}
-      disabled={!editable || !dirty || saving}
-      variant="primary"
-      accent="cyan">
-      {#snippet icon()}
-        <SaveIcon />
-      {/snippet}
-    </Button>
+    {#if editable}
+      <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!dirty || saving}>
+        {#snippet icon()}
+          <RefreshIcon />
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel={t('editor.save')}
+        tooltip={t('editor.save')}
+        onClick={handleSave}
+        disabled={!dirty || saving}
+        variant="primary"
+        accent="cyan">
+        {#snippet icon()}
+          <SaveIcon />
+        {/snippet}
+      </Button>
+    {/if}
   {/snippet}
 
   {#snippet cloneIcon()}
@@ -911,7 +914,7 @@
           content={previewContent.value}
           {docType}
           {editable}
-          onContentChange={(v: string) => (content = v)} />
+          onContentChange={editable ? (v: string) => (content = v) : undefined} />
       </div>
     {/if}
   </div>

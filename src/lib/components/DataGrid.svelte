@@ -750,14 +750,16 @@
                       </button>
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
-                    style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
-                    aria-label={t('grid.resizeColumn', { index: ci + 1 })}
-                    onmousedown={event => editable && resize.startColumnResize(event, ci)}
-                    onkeydown={event => editable && resize.handleResizeKeydown(event, ci)}
-                    ></button>
+                  {#if editable}
+                    <button
+                      type="button"
+                      class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+                      style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
+                      aria-label={t('grid.resizeColumn', { index: ci + 1 })}
+                      onmousedown={event => resize.startColumnResize(event, ci)}
+                      onkeydown={event => resize.handleResizeKeydown(event, ci)}
+                      ></button>
+                  {/if}
                 </th>
               {/each}
             </tr>

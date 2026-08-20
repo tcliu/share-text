@@ -105,6 +105,13 @@ describe('DataGrid (reusable grid)', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it('omits column resize handles when editable is false', async () => {
+    render(DataGrid, { value: [['a', 'b'], ['1', '2']], editable: false })
+    const root = await screen.findByTestId('data-grid')
+    expect(within(root).queryByRole('button', { name: 'Resize column 1' })).toBeNull()
+    expect(within(root).queryByRole('button', { name: 'Resize column 2' })).toBeNull()
+  })
+
   it('uses a lighter bottom border on header cells than on body cells', async () => {
     render(DataGrid, {
       value: [

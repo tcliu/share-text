@@ -15,9 +15,14 @@
 
   let PreviewComponent = $state<Component<PreviewProps> | null>(null)
   let loadError = $state('')
+  let lastPreview: (() => Promise<Component<PreviewProps>>) | null = null
 
   $effect(() => {
+    if (preview === lastPreview) return
+    lastPreview = preview
     let cancelled = false
+    PreviewComponent = null
+    loadError = ''
     preview()
       .then(module => {
         if (!cancelled) {
@@ -37,7 +42,7 @@
 </script>
 
 {#if PreviewComponent}
-  <PreviewComponent {content} {docType} {onContentChange} {editable} />
+  <PreviewComponent {content} {docType} onContentChange={editable ? onContentChange : undefined} {editable} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
     {loadError || t('preview.loading')}

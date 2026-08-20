@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/svelte'
+import { render, waitFor } from '@testing-library/svelte'
 import { describe, expect, it, beforeEach } from 'vitest'
 import ReadOnlyHost from './ReadOnlyHost.svelte'
 
@@ -13,5 +13,15 @@ describe('DocumentEditorPane read-only document name', () => {
 
     expect(getByText('My Document')).toBeTruthy()
     expect(getByLabelText('Copy document name My Document')).toBeTruthy()
+  })
+
+  it('hides upload, reset, and save buttons for read-only documents', async () => {
+    const { queryByLabelText } = render(ReadOnlyHost)
+
+    await waitFor(() => {
+      expect(queryByLabelText('Upload')).toBeNull()
+      expect(queryByLabelText('Reset')).toBeNull()
+      expect(queryByLabelText('Save')).toBeNull()
+    })
   })
 })
