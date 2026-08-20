@@ -1,116 +1,123 @@
-import { execFileSync } from 'node:child_process'
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+#!/usr/bin/env node
+import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { parse as parseDotenv } from 'dotenv'
+import { stdin as input, stdout as output } from 'node:process'
+import { createInterface } from 'node:readline'
 
-const branch = process.argv[2]
-if (!branch) {
-  console.error('Usage: node scripts/create-worktree.mjs <branch>')
-  process.exit(1)
-}
-if (
-  !/^[a-zA-Z0-9._/-]+$/.test(branch) ||
-  branch.startsWith('/') ||
-  branch.endsWith('/') ||
-  branch.includes('..')
-) {
-  console.error(`Invalid branch name: ${branch}`)
-  process.exit(1)
-}
+import { c } from './_terminal.mjs'
+import {
+  copyDevFiles,
+  deleteBranch,
+  getWorktreesRoot,
+  isValidBranchName,
+  registerWorktree,
+  removeWorktree,
+  setDevTag,
+} from './_worktrees.mjs'
 
-const root = process.cwd()
-if (path.resolve(root).split(path.sep).includes('.worktrees')) {
-  console.error('Run this script from the default worktree, not a nested worktree.')
-  process.exit(1)
+function printUsage() {
+  console.log(`${c.bold}Usage:${c.reset}`)
+  console.log('  node scripts/create-worktree.mjs <branch>')
+  console.log('  node scripts/create-worktree.mjs --interactive')
 }
 
-const worktreeDir = path.join(root, '.worktrees', branch)
-if (existsSync(worktreeDir)) {
-  console.error(`Worktree already exists: ${worktreeDir}`)
-  process.exit(1)
-}
-
-mkdirSync(path.dirname(worktreeDir), { recursive: true })
-execFileSync('git', ['worktree', 'add', worktreeDir, '-b', branch], { stdio: 'inherit' })
-
-try {
-  copyDevFiles(root, worktreeDir)
-  setDevTag(worktreeDir, branch)
-} catch (error) {
-  console.error(`Failed to set up worktree: ${error.message}`)
-  cleanupWorktree(worktreeDir, branch)
-  process.exit(1)
-}
-
-console.log(`\nWorktree created: ${worktreeDir}`)
-console.log(`DEV_TAG=${branch} set in ${path.join(worktreeDir, '.env.dev')}`)
-
-function copyDevFiles(sourceRoot, targetRoot) {
-  copyEnvDev(path.join(sourceRoot, '.env.dev'), path.join(targetRoot, '.env.dev'))
-  copyEnvDev(
-    path.join(sourceRoot, 'backend', '.env.dev'),
-    path.join(targetRoot, 'backend', '.env.dev'),
-  )
-  copyDirectoryContents(path.join(sourceRoot, '.data'), path.join(targetRoot, '.data'))
-}
-
-function copyEnvDev(sourceEnv, targetEnv) {
-  if (existsSync(sourceEnv) && !existsSync(targetEnv)) {
-    copyFileSync(sourceEnv, targetEnv)
+function parseArgs(argv) {
+  const args = argv.slice(2)
+  if (args.includes('--help') || args.includes('-h')) {
+    printUsage()
+    process.exit(0)
+  }
+  const positional = args.filter(arg => !arg.startsWith('-'))
+  return {
+    interactive: args.includes('--interactive') || args.includes('-i') || positional.length === 0,
+    branch: positional[0] ?? null,
   }
 }
 
-function copyDirectoryContents(sourceDir, targetDir) {
-  if (!existsSync(sourceDir)) return
-  mkdirSync(targetDir, { recursive: true })
-  for (const entry of readdirSync(sourceDir)) {
-    const source = path.join(sourceDir, entry)
-    const target = path.join(targetDir, entry)
-    if (statSync(source).isDirectory()) {
-      copyDirectoryContents(source, target)
-    } else if (!existsSync(target)) {
-      copyFileSync(source, target)
+async function promptBranchName(root) {
+  const rl = createInterface({ input, output })
+  const prompt = `${c.cyan}Branch name${c.reset} (${c.dim}leave empty to cancel${c.reset}): `
+  process.stdout.write(prompt)
+
+  for await (const line of rl) {
+    const answer = line.trim()
+    if (!answer) {
+      rl.close()
+      return null
+    }
+    if (!isValidBranchName(answer)) {
+      console.error(`${c.red}Invalid branch name:${c.reset} ${answer}`)
+    } else if (existsSync(path.join(getWorktreesRoot(root), answer))) {
+      console.error(`${c.red}Worktree already exists:${c.reset} ${answer}`)
+    } else {
+      rl.close()
+      return answer
+    }
+    process.stdout.write(prompt)
+  }
+  rl.close()
+  return null
+}
+
+async function main() {
+  const root = process.cwd()
+  if (path.resolve(root).split(path.sep).includes('.worktrees')) {
+    console.error(`${c.red}Run this script from the default worktree, not a nested worktree.${c.reset}`)
+    process.exit(1)
+  }
+
+  const { interactive, branch } = parseArgs(process.argv)
+
+  let branchName = branch
+  if (interactive) {
+    branchName = await promptBranchName(root)
+    if (!branchName) {
+      console.log(`${c.yellow}Cancelled.${c.reset}`)
+      return
     }
   }
+
+  if (!isValidBranchName(branchName)) {
+    console.error(`${c.red}Invalid branch name:${c.reset} ${branchName}`)
+    process.exit(1)
+  }
+
+  const worktreeDir = path.join(getWorktreesRoot(root), branchName)
+  if (existsSync(worktreeDir)) {
+    console.error(`${c.red}Worktree already exists:${c.reset} ${worktreeDir}`)
+    process.exit(1)
+  }
+
+  try {
+    registerWorktree(root, worktreeDir, branchName)
+  } catch (error) {
+    console.error(`${c.red}Failed to create worktree:${c.reset} ${error.message}`)
+    process.exit(1)
+  }
+
+  try {
+    copyDevFiles(root, worktreeDir)
+    setDevTag(worktreeDir, branchName)
+  } catch (error) {
+    console.error(`${c.red}Failed to set up worktree:${c.reset} ${error.message}`)
+    cleanupWorktree(root, worktreeDir, branchName)
+    process.exit(1)
+  }
+
+  console.log(`\n${c.green}Worktree created:${c.reset} ${worktreeDir}`)
+  console.log(`${c.green}DEV_TAG=${branchName}${c.reset} set in ${path.join(worktreeDir, '.env.dev')}`)
 }
 
-function cleanupWorktree(worktreeDir, branchName) {
-  try {
-    execFileSync('git', ['worktree', 'remove', '--force', worktreeDir], { stdio: 'inherit' })
-  } catch {
-    console.error(`Failed to remove incomplete worktree: ${worktreeDir}`)
+function cleanupWorktree(root, worktreeDir, branchName) {
+  if (!removeWorktree(root, { path: worktreeDir })) {
+    console.error(`${c.red}Failed to remove incomplete worktree:${c.reset} ${worktreeDir}`)
   }
-  try {
-    execFileSync('git', ['branch', '-D', branchName], { stdio: 'inherit' })
-  } catch {
-    console.error(`Failed to delete branch: ${branchName}`)
+  if (!deleteBranch(root, branchName)) {
+    console.error(`${c.red}Failed to delete branch:${c.reset} ${branchName}`)
   }
 }
 
-function setDevTag(worktreeRoot, tag) {
-  const filePath = path.join(worktreeRoot, '.env.dev')
-  const content = existsSync(filePath) ? readFileSync(filePath, 'utf8') : ''
-  const values = parseDotenv(content)
-  const entry = `DEV_TAG=${tag}`
-  if (!Object.prototype.hasOwnProperty.call(values, 'DEV_TAG')) {
-    writeFileSync(filePath, content.replace(/\s*$/, '') + (content.trim() ? '\n' : '') + `${entry}\n`)
-    return
-  }
-  const output = content.split(/\r?\n/).map(line => {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) return line
-    const separatorIndex = trimmed.indexOf('=')
-    if (separatorIndex === -1) return line
-    if (trimmed.slice(0, separatorIndex).trim() !== 'DEV_TAG') return line
-    return entry
-  })
-  writeFileSync(filePath, output.join('\n') + '\n')
-}
+main().catch(error => {
+  console.error(`${c.red}${error.message}${c.reset}`)
+  process.exit(1)
+})
