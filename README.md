@@ -24,16 +24,16 @@ npm install
 
 Runtime configuration comes from environment variables. For local development,
 keep the defaults in `.env` and optional local overrides in `.env.local`.
-`.env.dev` is loaded only by the dev server as a dev-specific override (it wins
-over `.env` and `.env.local`); real shell environment variables always take
-precedence.
+`.env.local` holds dev-specific overrides (it wins over `.env`); real shell
+environment variables always take precedence. A legacy `.env.dev` file is
+migrated into `.env.local` automatically by the worktree tooling.
 
 Some scripts also merge env files directly:
 
 - `scripts/db-config.mjs` loads `.env`, `.env.local`, and `.env.vercel`, then
   overlays the current shell environment.
-- `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel` before syncing
-  production values to Vercel.
+- `scripts/sync-vercel-env.mjs` syncs `.env.vercel` to the Vercel project
+  (never pushes local dev files; `--prune` removes unmanaged keys).
 - `.env.example` is a template only; it is not loaded by the app or scripts.
 
 ### Profiles

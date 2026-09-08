@@ -26,6 +26,6 @@
 </script>
 
 <NewPage
-  data={{ maxContentLength: 100000, documents: [], hasMore: false, devTag: null }}
+  data={{ maxContentLength: 100000, documents: [], hasMore: false, devTag: null, user: null }}
   params={{}}
   form={null} />
