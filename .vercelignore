@@ -3,11 +3,14 @@
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # Local-only data and dev artifacts
 .data/
 .tmp/
 .worktrees/
+archive/
+node_modules/
 
 # Build artifacts generated locally (Vercel runs its own build)
 .svelte-kit/

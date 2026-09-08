@@ -22,7 +22,7 @@ describe('admin layout server load', () => {
   it('lets authenticated sessions reach the tab routes', async () => {
     authMocks.isAdminSession.mockReturnValue(true)
     const result = await load({ cookies: { get: () => null } } as never)
-    expect(result).toBeUndefined()
+    expect(result).toEqual({ adminAuthenticated: true })
   })
 
   it('redirects unauthenticated sessions to /login', async () => {

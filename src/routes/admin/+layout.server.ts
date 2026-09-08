@@ -6,4 +6,5 @@ export const load: LayoutServerLoad = ({ cookies }) => {
   if (!isAdminSession({ cookies })) {
     throw redirect(307, '/login')
   }
+  return { adminAuthenticated: true }
 }

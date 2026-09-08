@@ -8,8 +8,8 @@ function parseArgs(argv) {
   const args = argv.slice(2)
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`${c.bold}Usage:${c.reset}`)
-    console.log('  scripts/v2/delete-worktrees.mjs [paths or names...]')
-    console.log('  scripts/v2/delete-worktrees.mjs --interactive')
+    console.log('  scripts/delete-worktrees.mjs [paths or names...]')
+    console.log('  scripts/delete-worktrees.mjs --interactive')
     process.exit(0)
   }
   return {

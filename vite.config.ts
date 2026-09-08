@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { parseEnvFile } from './scripts/db-config.mjs'
 
-const DEV_ENV_FILES = ['.env', '.env.local', '.env.dev']
+const DEV_ENV_FILES = ['.env', '.env.local']
 
 function loadDevEnv() {
   const merged: Record<string, string> = {}
