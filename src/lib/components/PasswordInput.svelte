@@ -32,6 +32,10 @@
 
   let visible = $state(false)
   let input = $state<HTMLInputElement>()
+  let toggleBtn = $state<HTMLElement | null>(null)
+  export function focus() {
+    input?.focus()
+  }
 
   function toggleVisibility() {
     visible = !visible
@@ -55,6 +59,7 @@
     {oninput}
     class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pr-12 pl-3 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 {className}" />
   <button
+    bind:this={toggleBtn}
     onclick={toggleVisibility}
     aria-label={visible ? i18n.t('password.hide') : i18n.t('password.show')}
     type="button"
@@ -65,6 +70,6 @@
     {:else}
       <EyeIcon className="h-5 w-5" />
     {/if}
-    <Tooltip>{visible ? i18n.t('password.hide') : i18n.t('password.show')}</Tooltip>
+    <Tooltip trigger={toggleBtn}>{visible ? i18n.t('password.hide') : i18n.t('password.show')}</Tooltip>
   </button>
 </div>
