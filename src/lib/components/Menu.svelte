@@ -9,8 +9,12 @@
 </script>
 
 <script lang="ts" generics="T">
+  import { flushSync, tick } from 'svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
-  import { tick } from 'svelte'
+  import { createFocusoutClose } from '$lib/actions/use-focusout-close'
+  import { useDropdown } from '$lib/actions/use-dropdown.svelte'
+  import { useListSelection } from '$lib/actions/use-list-selection.svelte'
+  import Tooltip from './Tooltip.svelte'
 
   interface Props {
     items: T[]
@@ -23,6 +27,8 @@
     align?: 'left' | 'right'
     autoPlace?: boolean
     triggerClass?: string
+    triggerTooltip?: string
+    triggerTooltipAlign?: 'center' | 'left' | 'right'
     panelClass?: string
     itemClass?: (item: T, state: MenuItemState) => string
     itemRole?: 'menuitem' | 'menuitemradio'
@@ -37,10 +43,12 @@
     icon,
     item,
     ariaLabel,
-    id = Math.random().toString(36).slice(2),
+    id,
     align = 'right',
     autoPlace = true,
     triggerClass = '',
+    triggerTooltip,
+    triggerTooltipAlign = 'center',
     panelClass = '',
     itemClass,
     itemRole = 'menuitem',
@@ -48,12 +56,14 @@
     itemDisabled = () => false,
   }: Props = $props()
 
-  const menuId = $derived(`menu-${id}`)
+  const fallbackId = $props.id()
+  const menuId = $derived(`menu-${id ?? fallbackId}`)
 
   let open = $state(false)
-  let activeIndex = $state(0)
+  const selection = useListSelection()
   let containerRef = $state<HTMLDivElement | null>(null)
   let triggerRef = $state<HTMLButtonElement | null>(null)
+  let tooltipTriggerEl = $state<HTMLElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   let itemRefs = $state<HTMLButtonElement[]>([])
 
@@ -68,12 +78,27 @@
     }
   }
 
-  function toggle() {
-    open = !open
+  function openWithSelection(index: number) {
+    selection.set(index >= 0 ? index : 0)
+    open = true
   }
 
-  function openFromTrigger() {
-    if (!open) open = true
+  function toggle() {
+    if (open) {
+      close(false)
+      return
+    }
+    openWithSelection(initialActiveIndex())
+  }
+
+  function openFromTrigger(direction: 'down' | 'up') {
+    if (open) {
+      moveFocus(direction)
+      return
+    }
+    flushSync(() => {
+      openWithSelection(direction === 'up' ? lastEnabledIndex() : initialActiveIndex())
+    })
   }
 
   function firstEnabledIndex(): number {
@@ -87,53 +112,79 @@
     return -1
   }
 
-  function moveFocus(delta: number) {
+  function initialActiveIndex(): number {
+    if (itemRole === 'menuitemradio' && itemChecked) {
+      const checkedIndex = items.findIndex(item => itemChecked(item) && !isDisabled(item))
+      if (checkedIndex >= 0) return checkedIndex
+    }
+    const fallback = firstEnabledIndex()
+    return fallback >= 0 ? fallback : 0
+  }
+
+  function moveFocus(direction: 'down' | 'up' | 'first' | 'last') {
     const count = items.length
     if (count === 0) return
-    let index = activeIndex
-    for (let step = 0; step < count; step++) {
-      index = (index + delta + count) % count
-      if (!isDisabled(items[index])) {
-        activeIndex = index
+    if (direction === 'first') {
+      const index = firstEnabledIndex()
+      if (index === -1) return
+      flushSync(() => {
+        selection.set(index)
         itemRefs[index]?.focus()
+      })
+      return
+    }
+    if (direction === 'last') {
+      const index = lastEnabledIndex()
+      if (index === -1) return
+      flushSync(() => {
+        selection.set(index)
+        itemRefs[index]?.focus()
+      })
+      return
+    }
+    const delta = direction === 'down' ? 1 : -1
+    let idx = selection.peek()
+    for (let step = 0; step < count; step++) {
+      idx = (idx + delta + count) % count
+      if (!isDisabled(items[idx])) {
+        // OS key auto-repeat fires back-to-back keydowns; Svelte batches
+        // $state until the next microtask, so the active highlight would
+        // only appear on keyup. Flush synchronously so each repeat paints
+        // the newly active item immediately.
+        flushSync(() => {
+          selection.set(idx)
+          itemRefs[idx]?.focus()
+        })
         return
       }
     }
   }
 
   function setActive(index: number) {
-    activeIndex = index
+    selection.set(index)
     itemRefs[index]?.focus()
   }
 
   function handleTriggerKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault()
-      openFromTrigger()
+      openFromTrigger(event.key === 'ArrowDown' ? 'down' : 'up')
     }
   }
 
   function handlePanelKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      moveFocus(1)
+      moveFocus('down')
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      moveFocus(-1)
+      moveFocus('up')
     } else if (event.key === 'Home') {
       event.preventDefault()
-      const index = firstEnabledIndex()
-      if (index !== -1) {
-        activeIndex = index
-        itemRefs[index]?.focus()
-      }
+      moveFocus('first')
     } else if (event.key === 'End') {
       event.preventDefault()
-      const index = lastEnabledIndex()
-      if (index !== -1) {
-        activeIndex = index
-        itemRefs[index]?.focus()
-      }
+      moveFocus('last')
     }
   }
 
@@ -144,43 +195,36 @@
   }
 
   $effect(() => {
-    if (open) {
-      tick().then(() => {
-        const index = firstEnabledIndex()
-        activeIndex = index === -1 ? 0 : index
-        itemRefs[activeIndex]?.focus()
-      })
-    }
+    if (!open) return
+    tick().then(() => {
+      itemRefs[selection.index]?.focus()
+    })
   })
 
   $effect(() => {
     if (!open) return
-    function handleKeydownCapture(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.stopImmediatePropagation()
-        event.preventDefault()
-        close()
-      }
-    }
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node
-      if (containerRef && !containerRef.contains(target) && panelRef && !panelRef.contains(target)) {
-        close(false)
-      }
-    }
-    const handleScroll = () => close(false)
-    window.addEventListener('keydown', handleKeydownCapture, true)
-    document.addEventListener('mousedown', handlePointerDown)
-    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
-    return () => {
-      window.removeEventListener('keydown', handleKeydownCapture, true)
-      document.removeEventListener('mousedown', handlePointerDown)
-      window.removeEventListener('scroll', handleScroll, { capture: true })
-    }
+    selection.clamp(items.length)
   })
+
+  const handleFocusOut = createFocusoutClose(
+    () => open,
+    () => ({ container: containerRef, panel: panelRef }),
+    () => close(false),
+  )
+
+  useDropdown(() => ({
+    isOpen: () => open,
+    container: () => containerRef,
+    onOutsideClick: () => close(false),
+    onEscape: () => {
+      close()
+    },
+    onScrollClose: () => close(false),
+    panel: () => panelRef,
+  }))
 </script>
 
-<div class="relative inline-flex" bind:this={containerRef} data-escape-capture={open ? '' : null}>
+{#snippet triggerButton()}
   <button
     type="button"
     bind:this={triggerRef}
@@ -190,9 +234,24 @@
     aria-controls={open ? menuId : undefined}
     onclick={toggle}
     onkeydown={handleTriggerKeydown}
-    class={`inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 ${triggerClass}`}>
+    class={`inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 outline-none transition motion-reduce:transition-none hover:border-cyan-500 hover:text-cyan-300 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500 ${triggerClass}`}>
     {@render icon()}
   </button>
+{/snippet}
+
+<div
+  class="relative inline-flex"
+  bind:this={containerRef}
+  data-escape-capture={open ? '' : null}
+  onfocusout={handleFocusOut}>
+  {#if triggerTooltip}
+    <span bind:this={tooltipTriggerEl} class="group relative inline-flex">
+      {@render triggerButton()}
+      <Tooltip align={triggerTooltipAlign} trigger={tooltipTriggerEl}>{triggerTooltip}</Tooltip>
+    </span>
+  {:else}
+    {@render triggerButton()}
+  {/if}
   {#if open}
     <div
       bind:this={panelRef}
@@ -200,18 +259,20 @@
       role="menu"
       tabindex="-1"
       aria-label={ariaLabel}
+      onfocusout={handleFocusOut}
       onkeydown={handlePanelKeydown}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
       class={`fixed left-0 top-0 z-40 will-change-transform overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur ${panelClass}`}>
       {#each items as itemValue, index (itemKey(itemValue))}
-        {@const state = { index, active: index === activeIndex, disabled: isDisabled(itemValue) }}
+        {@const state = { index, active: index === selection.index, disabled: isDisabled(itemValue) }}
         <button
           type="button"
           role={itemRole}
           aria-checked={itemRole === 'menuitemradio' && itemChecked ? itemChecked(itemValue) : undefined}
           bind:this={itemRefs[index]}
-          tabindex={index === activeIndex ? 0 : -1}
+          tabindex={index === selection.index ? 0 : -1}
           onclick={() => handleItemClick(index)}
+          onfocus={() => selection.set(index)}
           onmouseenter={() => setActive(index)}
           disabled={state.disabled}
           class={itemClass ? itemClass(itemValue, state) : undefined}>
