@@ -38,20 +38,10 @@ const settings = [
     value: 1024 * 1024,
     source: 'default' as const,
   },
-  {
-    key: 'tts_service_url',
-    label: 'TTS service URL',
-    description: 'Base URL of the text-to-speech service.',
-    kind: 'string' as const,
-    defaultValue: '',
-    envKey: 'TTS_SERVICE_URL',
-    value: 'http://127.0.0.1:8000',
-    source: 'environment' as const,
-  },
 ]
 
 const INITIAL_PROPERTIES =
-  'max_documents_per_ip=10\nmax_content_length=1048576\ntts_service_url=http\\://127.0.0.1\\:8000'
+  'max_documents_per_ip=10\nmax_content_length=1048576'
 
 function makeSettingsFetch() {
   return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
@@ -62,7 +52,8 @@ function makeSettingsFetch() {
         }
         const updated = settings.map(setting => {
           const change = body.settings.find(item => item.key === setting.key)
-          return change ? { ...setting, value: change.value ?? setting.value, source: 'database' as const } : setting
+          if (!change) return setting
+          return { ...setting, value: change.value }
         })
         return Promise.resolve({ ok: true, status: 200, json: async () => ({ settings: updated }) })
       }
@@ -98,13 +89,12 @@ describe('AdminPropertiesView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
-    vi.stubGlobal('fetch', makeSettingsFetch())
   })
 
   it('shows the Form sub-tab and shared Apply/Reload/Reset footer', async () => {
-    const { getByText, getByLabelText, getByRole } = renderHost()
-
-    await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
+    vi.stubGlobal('fetch', makeSettingsFetch())
+    const { getByText, getByRole } = renderHost()
+    await waitFor(() => expect(getByText('Form')).toBeTruthy())
     expect(getByText('Apply')).toBeTruthy()
     expect(getByText('Reload')).toBeTruthy()
     expect(getByText('Reset')).toBeTruthy()
@@ -113,6 +103,7 @@ describe('AdminPropertiesView', () => {
   })
 
   it('reflects a form edit in the editor text', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByText, getByLabelText } = renderHost()
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
 
@@ -121,11 +112,12 @@ describe('AdminPropertiesView', () => {
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
     await waitFor(() =>
-      expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http\\://127.0.0.1\\:8000'),
+      expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'),
     )
   })
 
   it('reflects an editor edit back in the form', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByText, getByLabelText } = renderHost()
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
 
@@ -135,16 +127,16 @@ describe('AdminPropertiesView', () => {
 
     fireEvent.input(editor, {
       target: {
-        value: 'max_documents_per_ip=50\nmax_content_length=2048\ntts_service_url=http://tts.internal:9000',
+        value: 'max_documents_per_ip=50\nmax_content_length=2048',
       },
     })
     switchToFormTab(getByText)
     await waitFor(() => expect((getByLabelText('Max documents per IP') as HTMLInputElement).value).toBe('50'))
     expect((getByLabelText('Max content length (chars)') as HTMLInputElement).value).toBe('2048')
-    expect((getByLabelText('TTS service URL') as HTMLInputElement).value).toBe('http://tts.internal:9000')
   })
 
   it('shows a validation banner for unknown settings in the editor', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByText, getByLabelText } = renderHost()
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
 
@@ -152,7 +144,7 @@ describe('AdminPropertiesView', () => {
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
     fireEvent.input(editor, {
       target: {
-        value: 'max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http://x:1\nnot_a_setting=5',
+        value: 'max_documents_per_ip=50\nmax_content_length=1048576\nnot_a_setting=5',
       },
     })
 
@@ -160,48 +152,49 @@ describe('AdminPropertiesView', () => {
   })
 
   it('places the caret at the end of a value when keyboard focus moves into an input', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByLabelText } = renderHost()
     await waitFor(() => expect(getByLabelText('Max documents per IP')).toBeTruthy())
 
-    const urlInput = getByLabelText('TTS service URL') as HTMLInputElement
-    urlInput.focus()
-    fireEvent.focusIn(urlInput)
+    const input = getByLabelText('Max documents per IP') as HTMLInputElement
+    input.focus()
+    fireEvent.focusIn(input)
 
-    expect(urlInput.selectionStart).toBe(urlInput.value.length)
-    expect(urlInput.selectionEnd).toBe(urlInput.value.length)
+    expect(input.selectionStart).toBe(input.value.length)
+    expect(input.selectionEnd).toBe(input.value.length)
   })
 
   it('keeps the natural caret placement when an input is focused by mouse', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByLabelText } = renderHost()
     await waitFor(() => expect(getByLabelText('Max documents per IP')).toBeTruthy())
 
-    const urlInput = getByLabelText('TTS service URL') as HTMLInputElement
-    urlInput.setSelectionRange(0, 0)
-    fireEvent.mouseDown(urlInput)
-    fireEvent.focusIn(urlInput)
+    const input = getByLabelText('Max documents per IP') as HTMLInputElement
+    input.setSelectionRange(0, 0)
+    fireEvent.mouseDown(input)
+    fireEvent.focusIn(input)
 
-    expect(urlInput.selectionStart).toBe(0)
-    expect(urlInput.selectionEnd).toBe(0)
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(0)
   })
 
   it('resets both the form and the editor text', async () => {
+    vi.stubGlobal('fetch', makeSettingsFetch())
     const { getByText, getByLabelText } = renderHost()
     await waitFor(() => expect(getByText('Max documents per IP')).toBeTruthy())
 
     fireEvent.input(getByLabelText('Max documents per IP'), { target: { value: '50' } })
-    fireEvent.input(getByLabelText('TTS service URL'), { target: { value: 'http://tts.internal:9000' } })
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
     await waitFor(() =>
       expect(editor.value).toBe(
-        'max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=http\\://tts.internal\\:9000',
+        'max_documents_per_ip=50\nmax_content_length=1048576',
       ),
     )
 
     switchToFormTab(getByText)
     fireEvent.click(getByText('Reset'))
     await waitFor(() => expect((getByLabelText('Max documents per IP') as HTMLInputElement).value).toBe('10'))
-    expect((getByLabelText('TTS service URL') as HTMLInputElement).value).toBe('http://127.0.0.1:8000')
 
     switchToPropertiesTab(getByText)
     await waitFor(() =>

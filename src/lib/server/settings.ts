@@ -57,39 +57,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     min: 1,
     max: 1000,
   },
-  {
-    key: 'tts_max_segment_length',
-    label: 'TTS max segment length (chars)',
-    description:
-      'Maximum length of a single text segment sent to the TTS service. Longer paragraphs are split on sentence boundaries.',
-    kind: 'number',
-    defaultValue: 500,
-    envKey: 'TTS_MAX_SEGMENT_LENGTH',
-    min: 50,
-    max: 5000,
-  },
-  {
-    key: 'tts_service_url',
-    label: 'TTS service URL',
-    description:
-      'Base URL of the external text-to-speech service used by the Read aloud feature. Empty disables the feature.',
-    kind: 'string',
-    defaultValue: '',
-    envKey: 'TTS_SERVICE_URL',
-  },
-  {
-    key: 'tts_synthesis_concurrency',
-    label: 'TTS synthesis concurrency',
-    description:
-      'Maximum number of TTS synthesis requests the browser issues at once while reading a document aloud.',
-    kind: 'number',
-    defaultValue: 4,
-    envKey: 'TTS_SYNTHESIS_CONCURRENCY',
-    min: 1,
-    max: 8,
-  },
 ]
-
 export type SettingSource = 'database' | 'environment' | 'default'
 
 export interface ResolvedSetting extends SettingDefinition {

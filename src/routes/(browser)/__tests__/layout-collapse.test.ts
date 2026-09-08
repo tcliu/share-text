@@ -18,20 +18,19 @@ function stubDesktop() {
 }
 
 function mockFetch() {
-  return vi.fn().mockImplementation((url: string, init?: RequestInit) =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: async () =>
-        String(url).includes('/api/auth/session')
-          ? { user: signedInUser, admin: null }
-          : String(url).includes('/api/auth/logout')
-            ? { ok: true }
-            : String(url).includes('/api/user/preferences')
-              ? { preferredLanguage: 'en', ttsVoices: {} }
-              : { documents: [existingDoc], hasMore: false },
-    }),
-  )
+  return vi.fn().mockImplementation((url: string) => {
+    let result: unknown
+    if (String(url).includes('/api/auth/session')) {
+      result = { user: signedInUser, admin: null }
+    } else if (String(url).includes('/api/auth/logout')) {
+      result = { ok: true }
+    } else if (String(url).includes('/api/user/preferences')) {
+      result = { preferredLanguage: 'en' }
+    } else {
+      result = { documents: [existingDoc], hasMore: false }
+    }
+    return Promise.resolve({ ok: true, status: 200, json: async () => result })
+  })
 }
 
 describe('Collapse document list focus', () => {

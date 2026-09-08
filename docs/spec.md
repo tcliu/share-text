@@ -163,9 +163,7 @@ synchronizes through a small fetch-based JSON API.
   `idx_document_versions_document_id_created_at` index), the account/auth
   tables — `users`, `document_shares` (document/user pairs with a cascade
   composite primary key), `user_config`, `user_preferences` (one row per user:
-  the account's preferred UI `preferred_language`), `user_tts_voices` (one row
-  per user/language pair: the account's chosen Read aloud voice per language),
-  and `login_attempts` (persisted login
+  the account's preferred UI `preferred_language`), and `login_attempts` (persisted login
   rate limiting) — plus the `app_config` key/value table that stores runtime
   property overrides.
 - Content versions: creating a document records its initial state as the
@@ -232,20 +230,17 @@ synchronizes through a small fetch-based JSON API.
   cached in memory for a short TTL and invalidated on write.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
-  generic `Tabs` component (`src/lib/components/Tabs.svelte`), with the five
   tabs as real routes (`/admin/general`, `/admin/properties`,
-  `/admin/documents`, `/admin/users`, `/admin/text-to-speech`) backed by empty
-  `+page.svelte` shells.
+  `/admin/documents`, `/admin/users`) backed by empty `+page.svelte` shells.
   A `+layout.server.ts` guards every `/admin/*` route server-side, redirecting
   unauthenticated sessions to `/login` before the client shell renders;
   the layout then redirects there on the client only when the session is
   genuinely gone (unauthenticated, session timeout, or sign-out) and shows a
   retryable error state for transient session-check failures. The auth state
   machine lives in the `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`);
-  the layout defines the five `Tab` entries (label, path, toolbar snippet,
+  the layout defines the four `Tab` entries (label, path, toolbar snippet,
   content snippet) that render the shared `AdminGeneralView`/`AdminPropertiesView`/
-  `AdminDocumentsView`/`AdminUsersView`/`AdminTextToSpeechView`, and keeps the
-  general/settings/documents/users state alive across tab switches. The old gear-icon dialog
+  `AdminDocumentsView`/`AdminUsersView`, and keeps the
   (`AdminDialog.svelte`) has been removed.
   `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
   **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
@@ -260,20 +255,6 @@ synchronizes through a small fetch-based JSON API.
   settings through `PUT /api/admin/settings`; Reset restores both views from
   the saved settings. The old batch dialog (`AdminSettingsBatchDialog.svelte`)
   has been removed.
-  The admin Text To Speech tab (`AdminTextToSpeechView`) is split into
-  state-driven **Voices** and **Segments** sub-tabs. `useAdminTtsVoices` owns
-  the backend-voice state and the Apply/Reload/Reset draft for per-language
-  default voices plus upload/remove actions through `/api/admin/tts/voices`.
-  `useAdminSegments` remains the client-side text→segment debug tool: it holds
-  the pasted text and the runtime max segment length (resolved once from
-  `/api/tts/capabilities`), and derives the segment list with
-  `splitTtsSegments`, so switching tabs keeps the input. Number settings accept
-  thousand separators in every parsing layer —
-  the client `parseNumberWithSeparators` (`use-admin-settings.svelte.ts`),
-  `readNumber`/`validateSettingValue` (`src/lib/server/settings.ts`), and the
-  backend `_read_number` (`backend/app/settings.py`) all strip commas before
-  `Number`/`int` — so `7,000` is accepted in the form, the Properties editor,
-  the settings API, and the TTS backend's `app_config`/env resolution.
   The login form has a "Remember me" checkbox that persists the username in
   `localStorage` under `share-text-admin-remembered-login` (pre-filling it on
   the next visit) and issues a 30-day session cookie instead of the default
@@ -451,41 +432,30 @@ synchronizes through a small fetch-based JSON API.
   redirects admins to `/admin` and anonymous visitors to `/login`; `/settings`
   redirects to `/settings/profile`. The layout renders the shared `Tabs`
   (route-driven links: Profile → `/settings/profile`, General →
-  `/settings/general`, Read aloud → `/settings/read-aloud`, Documents →
-  `/settings/documents`) and keeps the preferences draft in
-  `useUserSettings` (`src/lib/use-user-settings.svelte.ts`) plus the
-  owned-documents list state in `useOwnedDocuments`
+  `/settings/general`, Documents → `/settings/documents`) and keeps the
+  preferences draft in `useUserSettings` (`src/lib/use-user-settings.svelte.ts`)
+  plus the owned-documents list state in `useOwnedDocuments`
   (`src/lib/use-owned-documents.svelte.ts`) so both survive tab switches.
-  Profile shows the signed-in account identity, General and Read aloud share
-  one Apply/Reload/Reset footer, and Documents uses a toolbar instead. Leaving
-  `/settings` with unsaved preference changes prompts to discard (the same
+  Profile shows the signed-in account identity, General has its own
+  Apply/Reload/Reset footer, and Documents uses a toolbar instead.
+  Leaving `/settings` with unsaved preference changes prompts to discard (the same
   `beforeNavigate` protocol as the admin console). The header offers the
   language menu, a go-to-Documents button, and sign out.
 - `useUserSettings` loads once on sign-in via `GET /api/user/preferences` and
-  exposes `load`/`apply`/`reload`/`resetDraft` plus `setPreferredLanguage` and
-  `setTtsVoice` (a null voice clears the saved preference). `hasUnsavedChanges`
-  compares the draft against the last-saved state. Apply writes the whole draft
-  (all-or-nothing) through `PUT /api/user/preferences`; a 401 from either
-  endpoint signs the user out.
+  exposes `load`/`apply`/`reload`/`resetDraft` plus `setPreferredLanguage`.
+  `hasUnsavedChanges` compares the draft against the last-saved state. Apply writes
+  the whole draft (all-or-nothing) through `PUT /api/user/preferences`; a 401 from
+  either endpoint signs the session out.
 - `src/routes/api/user/preferences/+server.ts` is login-gated (`resolveViewer`,
   401 for anonymous/admin) and reads/writes through `src/lib/server/user-config.ts`:
   `getUserPreferences` returns the single `user_preferences.preferred_language`
-  row (default `en`) plus every `user_tts_voices` row as a `{ lang: voice }`
-  map; `saveUserPreferences` runs a transaction (upsert the preference row,
-  delete all voice rows, re-insert the posted ones). `normalizePreferencesInput`
-  validates `preferredLanguage` against the fixed `en`/`zh-CN`/`zh-TW` set and
-  requires `ttsVoices` to be an object of string values (empty strings are
-  dropped); invalid input is rejected 400 before any write. The PUT is logged as
-  `user_preferences_save` with the username, user id, preferred language, and
-  the saved voice languages.
+  row (default `en`); `saveUserPreferences` upserts the preference row.
+  `normalizePreferencesInput` validates `preferredLanguage` against the fixed
+  `en`/`zh-CN`/`zh-TW` set; invalid input is rejected 400 before any write. The PUT
+  is logged as `user_preferences_save` with the username, user id, and preferred
+  language.
 - The General view edits the preferred language with a `SelectDropdown`
-  (`LOCALES`); the Read aloud view loads `/api/tts/capabilities` (client-side,
-  cached) and lists one row per language that has voices, each with a
-  `SelectDropdown` of that language's voices plus a "Default" option
-  (`value: ''`) that clears the saved voice; the view shows a not-configured
-  hint when TTS is off and is disabled implicitly through the per-language
-  voice availability. Language labels come from `ttsLanguageLabel`
-  (`src/lib/tts-language.ts`, shared with the admin Segments view).
+  (`LOCALES`).
 - The Documents view is a user-owned management table backed by
   `GET /api/user/documents`, which lists only rows whose `owner_user_id`
   matches the signed-in user and returns the admin-style summary shape used by
@@ -567,8 +537,8 @@ synchronizes through a small fetch-based JSON API.
 Overlay option panels (dropdowns, tag suggestions) position via the shared
 `positionPanel` action (`src/lib/position-panel.svelte.ts`). Attach it to the
 panel with `use:positionPanel={() => ({ getTrigger, getOpen, align?, autoPlace? })}`
-and keep the `fixed left-0 top-0 z-50 will-change-transform` positioning classes
-on the panel. The action portals the panel to `document.body`, auto-places it
+and keep the `fixed left-0 top-0 z-40 will-change-transform` positioning classes
+on the panel (`z-40`: overlays stay below the `z-50` dev worktree-tag block). The action portals the panel to `document.body`, auto-places it
 above/below the trigger (with an 8px viewport margin), and repositions on
 resize and scroll; it restores the panel to its original DOM parent on
 unmount. The owning component keeps its own open/close, keyboard, and
@@ -661,7 +631,7 @@ still reachable from an editor via a left slide-out `MobileDrawer`: the editor
 header shows a hamburger button before the filename that opens it
 (`openMobileDrawer` on the share-text context, set on the layout's
 `mobileDrawerOpen` state), and the drawer renders the same shared `documentList`
-snippet the layout uses on the list route. The drawer is a `fixed inset-0 z-50`
+snippet the layout uses on the list route. The drawer is a `fixed inset-0 z-40`
 overlay whose dark backdrop closes on click, whose panel (`w-full max-w-sm`)
 hosts the list, and which closes on the collapse button, on Escape, and on any
 client-side navigation via `afterNavigate`. The panel is exposed as
@@ -681,10 +651,10 @@ its own row when the screen is too narrow for both. On mobile the action row
 opens with a `KebabMenu` (three-dot) holding the Upload, Export, History, and
 Format actions in that order (History only when the document has 2+ versions;
 the menu owns the `FormatDialog`), followed by the Editor view / Preview view
-toggle pair and the Copy, Read aloud, Clone, Tags, Copy link, Reset, and Save
+toggle pair and the Copy, Clone, Tags, Copy link, Reset, and Save
 toolbar buttons (Clone only when available; Copy link and Tags only for saved
 documents). On desktop the toolbar shows the TypeActions plus the
-Copy, Read aloud, Upload, Export, Format, a `KebabMenu` holding Clone, Tags,
+Copy, Upload, Export, Format, a `KebabMenu` holding Clone, Tags,
 Copy link, and History (when available), then Share/Delete, Reset, and Save.
 Both mobile and desktop `KebabMenu` items prepend the same icon glyph they
 formerly used as standalone toolbar buttons. On desktop the
@@ -729,102 +699,6 @@ pane header shows a Login button after the Refresh button that navigates to
   preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
   per-type language extensions from the type registry.
-- Read aloud proxies the external tts service through two same-origin
-  endpoints: `GET /api/tts/capabilities` (reports `configured` from the
-  runtime `tts_service_url` setting plus the service's supported languages and,
-  per language, the available piper voices (both empty when the feature is
-  unconfigured; it also carries the runtime `tts_max_segment_length`,
-  `tts_synthesis_concurrency`, and `defaultVoices` values the client applies
-  when splitting and streaming) and `POST /api/tts/synthesize`
-  (forwards `{ text, lang, voice }` to the service's `/api/synthesize` with
-  `engine: auto`, maps errors to 4xx/5xx, and streams the returned audio
-  **bytes** back with the service's Content-Type). `voice` is optional and
-  passed through when present; the client omits it to use the service
-  default. Both endpoints resolve the
-  language list via `getSupportedTtsLanguages` (`$lib/server/tts.ts`: fetched
-  from the service's `/api/capabilities` and cached 60s, falling back to a
-  default set cached 10s when the service is unreachable), so the gate and the
-  client report the same languages. `$lib/server/tts.ts` reads
-  the setting via
-  `getSettingStringValue('tts_service_url')` (DB override, else
-  `TTS_SERVICE_URL` env, else empty) and gates every endpoint with
-  `isTtsConfigured()`, returning 503 when it is empty — the feature is
-  disabled   without it. Admin can set/clear the URL in the Properties tab in
-  real time (the settings value cache is invalidated on write). The editor
-  button (`DocumentEditorPane`) loads capabilities once
-  on mount (cached in `$lib/tts-client.ts`), reads the current CodeMirror
-  selection when non-empty (`CodeEditor` exposes `getSelectionText()`,
-  forwarded through `LazyCodeEditor`) else the whole document, splits the text
-  into language segments via `splitTtsSegments` (`$lib/tts-language.ts`):
-  the text is scanned character by character into latin/CJK runs — a run
-  touching kana is ja, pure Han or any CJK punctuation/fullwidth form
-  (`\u3000`–`\u303f`, `\uff00`–`\uffef`) is zh, else en — so unspaced text like
-  `Hello你好世界` splits into `en` + `zh` while `こんにちは世界` stays one
-  `ja` segment; digits inherit the surrounding script (a number after Han is
-  read in zh, after English in en); adjacent same-language runs merge across
-  single line breaks, short runs (English < 4 chars, CJK < 2) fold into the
-  dominant surrounding language so stray words don't create spurious segments,
-  blank lines split paragraphs into separate segments so a document with many
-  paragraphs streams incrementally, newlines inside CJK segments are stripped so
-  Chinese/Japanese read as one continuous sentence (English keeps its newlines
-  as natural pauses), and any paragraph still over `MAX_SEGMENT_LENGTH` (500
-  chars) is split on sentence boundaries so no single request is oversized;
-  the limit is the runtime `tts_max_segment_length` setting (DB override, else
-  `TTS_MAX_SEGMENT_LENGTH` env, else 500) exposed to the client by the
-  capabilities endpoint; each emitted segment's text is trimmed of leading and
-  trailing whitespace, and carries `indexStart` and `indexEnd` (inclusive,
-  0-based character offsets into the original document text) mapped to that
-  trimmed span — so text and range always agree and the backend can log exactly
-  which part of the document is spoken;
-  segment synthesizes with its own language model (the account's saved voice
-  for that language when a registered user has chosen one — `DocumentEditorPane`
-  loads `/api/user/preferences` on mount and stamps each segment's `voice`), then plays
-  the audio segments in sequence from the proxy in a hidden `<audio>` element
-  (advancing on the element's `ended`/`error` events). Synthesis is streamed:
-  `synthesizeTtsStreaming` in `$lib/tts-client.ts` is an async generator that
-  launches up to `SYNTHESIS_CONCURRENCY` (4) requests at once (the runtime
-  `tts_synthesis_concurrency` setting, else `TTS_SYNTHESIS_CONCURRENCY` env)
-  and yields each
-  segment's blob as soon as it completes, preserving input order, so playback
-  of the first segment starts before the rest of the document is synthesized.
-  The button shows a Preparing spinner while synthesis runs before any audio,
-  then switches to a Stop toggle once the first segment plays; the Stop toggle
-  is active during both phases and synthesis is cancellable — `stopReading`
-  aborts in-flight synthesis via an `AbortController` (passed as the fetch
-  signal in `$lib/tts-client.ts`) and pauses playback. Playback is a play/stop
-  toggle reset by the element's
-  `ended`/`error`/`pause` events and paused on unmount. Repeat reads of the
-  same segment skip synthesis: the per-segment cache in `$lib/tts-client.ts`
-  keeps a bounded in-memory map (LRU-style eviction at 100 entries) keyed by
-  `text + lang + voice` storing the returned `Blob`; object URLs created from the
-  blobs are revoked on stop/unmount. The client sends each synthesis request
-  with the segment's 0-based `segmentIndex` and its `indexStart`/`indexEnd`
-  ranges; the same-origin proxy
-  (`src/routes/api/tts/synthesize/+server.ts`) forwards them to the backend as
-  `segment_index`/`index_start`/`index_end`, which logs them and never fails a
-  request on them. The backend enforces the same `tts_max_segment_length`
-  runtime prop as a hard cap: it resolves it read-only from `app_config`
-  (SQLite when no `DATABASE_URL` is set, else Postgres; cached 5 s, then
-  `TTS_MAX_SEGMENT_LENGTH` env, else 500) and rejects over-limit requests with
-  422. Synthesis is stateless: the backend
-  returns audio bytes in memory (`backend/app/engines.py` writes Piper to a
-  `BytesIO`, pre-setting the 16-bit mono WAV header at the model sample rate so
-  a request yielding no audio chunks — e.g. punctuation-only text — closes as a
-  valid empty WAV instead of raising `wave.Error`) and writes nothing to disk
-  (its only database access is that
-  read-only settings lookup), so
-  there is no `output_path`/`/api/audio` round trip and no scratch dir — this
-  is what makes the service multi-instance/serverless-safe. The backend caches
-  the engine at the process level
-  (`backend/app/engines.py`): one `PiperEngine` per model dir reused across
-  requests with voices kept in memory, so parallel segment synthesis loads each
-  model once. Piper is the only engine; a language is synthesizable only when
-  its model files (`.onnx`
-  + `.onnx.json`) exist on disk (`piper_lang_available`), and a specific voice
-  is available only when that voice's files exist (`piper_voice_available`);
-  an unknown voice in a synthesize request is rejected with 422, and
-  a missing voice degrades gracefully with a 503 instead of an unhandled 500.
-  Empty documents disable the button.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
   `usePreviewMode` holds the editor/split/preview tri-state and reads/writes it
   to the URL (`?preview=true`, `?editor=false`) via two toggle setters

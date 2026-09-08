@@ -33,20 +33,10 @@ const settings = [
     value: 1024 * 1024,
     source: 'default' as const,
   },
-  {
-    key: 'tts_service_url',
-    label: 'TTS service URL',
-    description: 'Base URL of the text-to-speech service.',
-    kind: 'string' as const,
-    defaultValue: '',
-    envKey: 'TTS_SERVICE_URL',
-    value: 'http://127.0.0.1:8000',
-    source: 'environment' as const,
-  },
 ]
 
 const INITIAL_PROPERTIES =
-  'max_documents_per_ip=10\nmax_content_length=1048576\ntts_service_url=http\\://127.0.0.1\\:8000'
+  'max_documents_per_ip=10\nmax_content_length=1048576'
 
 function makeSettingsFetch() {
   const settingsFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
@@ -93,42 +83,40 @@ describe('useAdminSettings properties text sync', () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
 
-    await waitFor(() => expect(state().settings.length).toBe(3))
-    expect(state().propertiesText).toBe(INITIAL_PROPERTIES)
+    await waitFor(() => expect(state().propertiesText).toBe(INITIAL_PROPERTIES))
+    await waitFor(() => expect(state().settings.length).toBe(2))
   })
 
   it('pushes a properties edit into the shared draft and preserves the typed text', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
-
+    await waitFor(() => expect(state().settings.length).toBe(2))
     state().updatePropertiesText(
-      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576\ntts_service_url=http://tts.internal:9000',
+      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576',
     )
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
     expect(state().draftValues['max_content_length']).toBe('1048576')
-    expect(state().draftValues['tts_service_url']).toBe('http://tts.internal:9000')
     expect(state().propertiesText).toBe(
-      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576\ntts_service_url=http://tts.internal:9000',
+      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576',
     )
   })
 
   it('reconciles a form draft edit back into the editor text', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().draftValues['max_content_length'] = '2048'
     await waitFor(() => expect(state().propertiesText).toContain('max_content_length=2048'))
     expect(state().propertiesText).toBe(
-      'max_documents_per_ip=10\nmax_content_length=2048\ntts_service_url=http\\://127.0.0.1\\:8000',
+      'max_documents_per_ip=10\nmax_content_length=2048',
     )
   })
 
   it('reports unknown settings in the editor without pushing them', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=50\nnot_a_setting=5')
     await waitFor(() => expect(state().propertiesProblems).toContain('Unknown setting: not_a_setting'))
@@ -139,19 +127,18 @@ describe('useAdminSettings properties text sync', () => {
   it('removes known settings from the draft when they are deleted from the editor', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=50')
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
     expect(state().draftValues['max_content_length']).toBeUndefined()
-    expect(state().draftValues['tts_service_url']).toBeUndefined()
   })
 
   it('treats deleted settings as unsaved changes and applies them as resets', async () => {
     const fetchMock = makeSettingsFetch()
     vi.stubGlobal('fetch', fetchMock)
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=50')
     await waitFor(() => expect(state().hasUnsavedChanges).toBe(true))
@@ -167,7 +154,6 @@ describe('useAdminSettings properties text sync', () => {
             settings: [
               { key: 'max_documents_per_ip', value: 50 },
               { key: 'max_content_length', value: null },
-              { key: 'tts_service_url', value: null },
             ],
           }),
         }),
@@ -178,7 +164,7 @@ describe('useAdminSettings properties text sync', () => {
   it('resyncs the editor text after applying resets, showing the reset settings at default', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=50')
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
@@ -189,16 +175,15 @@ describe('useAdminSettings properties text sync', () => {
     await waitFor(() => expect(state().hasUnsavedChanges).toBe(false))
     expect(state().draftValues['max_documents_per_ip']).toBe('50')
     expect(state().draftValues['max_content_length']).toBe('1048576')
-    expect(state().draftValues['tts_service_url']).toBe('')
-    expect(state().propertiesText).toBe('max_documents_per_ip=50\nmax_content_length=1048576\ntts_service_url=')
+    expect(state().propertiesText).toBe('max_documents_per_ip=50\nmax_content_length=1048576')
   })
 
   it('reports values that fail a setting rule and ignores string settings', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
-    state().updatePropertiesText('max_documents_per_ip=abc\nmax_content_length=0\ntts_service_url=anything')
+    state().updatePropertiesText('max_documents_per_ip=abc\nmax_content_length=0')
     await waitFor(() =>
       expect(state().propertiesProblems).toEqual(
         expect.arrayContaining([
@@ -207,13 +192,12 @@ describe('useAdminSettings properties text sync', () => {
         ]),
       ),
     )
-    expect(state().propertiesProblems.some(problem => problem.includes('TTS service URL'))).toBe(false)
   })
 
   it('accepts thousand-separated numbers in the properties editor and applies the normalized value', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=1,000')
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('1,000'))
@@ -227,7 +211,7 @@ describe('useAdminSettings properties text sync', () => {
   it('reports thousand-separated numbers that exceed the range', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
     state().updatePropertiesText('max_documents_per_ip=10,000')
     await waitFor(() =>
@@ -240,15 +224,14 @@ describe('useAdminSettings properties text sync', () => {
   it('resets both the form draft and the editor text', async () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
-    await waitFor(() => expect(state().settings.length).toBe(3))
+    await waitFor(() => expect(state().settings.length).toBe(2))
 
-    state().updatePropertiesText('max_documents_per_ip=50\nmax_content_length=2048\ntts_service_url=http://x:1')
+    state().updatePropertiesText('max_documents_per_ip=50\nmax_content_length=2048')
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
 
     state().resetDraft()
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('10'))
     expect(state().draftValues['max_content_length']).toBe('1048576')
-    expect(state().draftValues['tts_service_url']).toBe('http://127.0.0.1:8000')
     expect(state().propertiesText).toBe(INITIAL_PROPERTIES)
   })
 })

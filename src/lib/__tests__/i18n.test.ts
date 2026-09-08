@@ -72,13 +72,13 @@ describe('i18n', () => {
   })
 
   it('resolves setting labels and descriptions per locale', () => {
-    expect(settingLabel('tts_max_segment_length')).toBe('TTS max segment length (chars)')
+    expect(settingLabel('max_documents_per_ip')).toBe('Max documents per IP')
     expect(settingDescription('max_document_versions')).toContain('content versions')
     setLocale('zh-CN')
-    expect(settingLabel('tts_max_segment_length')).toBe('TTS 最大分段长度（字符）')
+    expect(settingLabel('max_documents_per_ip')).toBe('单 IP 最大文档数')
     expect(settingDescription('max_document_versions')).toContain('版本')
     setLocale('zh-TW')
-    expect(settingLabel('tts_service_url')).toBe('TTS 服務 URL')
+    expect(settingLabel('max_content_length')).toBe('最大內容長度（字元）')
   })
 
   it('returns null for unknown settings so callers fall back to the server label', () => {

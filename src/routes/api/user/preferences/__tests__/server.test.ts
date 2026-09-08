@@ -53,7 +53,7 @@ describe('GET /api/user/preferences', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     viewerMocks.resolveViewer.mockResolvedValue(userViewer())
-    userConfigMocks.getUserPreferences.mockResolvedValue({ preferredLanguage: 'en', ttsVoices: {} })
+    userConfigMocks.getUserPreferences.mockResolvedValue({ preferredLanguage: 'en' })
   })
 
   it('requires a signed-in user', async () => {
@@ -69,7 +69,6 @@ describe('GET /api/user/preferences', () => {
   it('returns the saved preferences for a signed-in user', async () => {
     userConfigMocks.getUserPreferences.mockResolvedValue({
       preferredLanguage: 'zh-CN',
-      ttsVoices: { en: 'en_US-lessac-medium.onnx' },
     })
 
     const response = await GET(baseEvent() as never)
@@ -77,7 +76,6 @@ describe('GET /api/user/preferences', () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       preferredLanguage: 'zh-CN',
-      ttsVoices: { en: 'en_US-lessac-medium.onnx' },
     })
     expect(userConfigMocks.getUserPreferences).toHaveBeenCalledWith(userViewer())
   })
@@ -96,8 +94,7 @@ describe('PUT /api/user/preferences', () => {
       ...baseEvent(),
       request: new Request('http://localhost/api/user/preferences', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredLanguage: 'en', ttsVoices: {} }),
+        body: JSON.stringify({ preferredLanguage: 'en' }),
       }),
     } as never)
 
@@ -110,8 +107,7 @@ describe('PUT /api/user/preferences', () => {
       ...baseEvent(),
       request: new Request('http://localhost/api/user/preferences', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredLanguage: 'de', ttsVoices: {} }),
+        body: JSON.stringify({ preferredLanguage: 'de' }),
       }),
     } as never)
 
@@ -120,23 +116,9 @@ describe('PUT /api/user/preferences', () => {
     expect(userConfigMocks.saveUserPreferences).not.toHaveBeenCalled()
   })
 
-  it('rejects an invalid ttsVoices shape', async () => {
-    const response = await PUT({
-      ...baseEvent(),
-      request: new Request('http://localhost/api/user/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ preferredLanguage: 'en', ttsVoices: { en: 42 } }),
-      }),
-    } as never)
-
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Invalid ttsVoices' })
-    expect(userConfigMocks.saveUserPreferences).not.toHaveBeenCalled()
-  })
 
   it('saves valid preferences and logs the mutation', async () => {
-    const preferences = { preferredLanguage: 'zh-TW', ttsVoices: { zh: 'zh_CN-huayan-medium.onnx' } }
+    const preferences = { preferredLanguage: 'zh-TW' }
     userConfigMocks.saveUserPreferences.mockResolvedValue(preferences)
 
     const response = await PUT({
@@ -158,34 +140,9 @@ describe('PUT /api/user/preferences', () => {
           user: 'alice',
           user_id: 1,
           preferred_language: 'zh-TW',
-          tts_voice_langs: 'zh',
         }),
       }),
     )
   })
 })
 
-describe('normalizePreferencesInput', () => {
-  it('normalizes empty or null voices to an empty record', () => {
-    expect(normalizePreferencesInput({ preferredLanguage: 'en', ttsVoices: null })).toEqual({
-      preferredLanguage: 'en',
-      ttsVoices: {},
-    })
-    expect(normalizePreferencesInput({ preferredLanguage: 'en' })).toEqual({
-      preferredLanguage: 'en',
-      ttsVoices: {},
-    })
-  })
-
-  it('drops empty-string voices instead of keeping them', () => {
-    expect(
-      normalizePreferencesInput({
-        preferredLanguage: 'en',
-        ttsVoices: { en: 'en_US-lessac-medium.onnx', zh: '' },
-      }),
-    ).toEqual({
-      preferredLanguage: 'en',
-      ttsVoices: { en: 'en_US-lessac-medium.onnx' },
-    })
-  })
-})

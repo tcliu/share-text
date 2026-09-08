@@ -48,8 +48,8 @@ The page is split into two vertical panes.
       access, otherwise a copy-on-hover label — a document type selector
       dropdown, and visible tag chips on the left, and a toolbar on the right
       with icon buttons (all with tooltips): an **Editor view** toggle and a
-      **Preview view** toggle, type-specific **Format**/convert actions,
-      **Copy**, **Read aloud**, **Upload**, **Export**, **Format**, a three-dot
+  **Preview view** toggle, type-specific **Format**/convert actions,
+  **Copy**, **Upload**, **Export**, **Format**, a three-dot
       **More actions** menu with **Clone**, **Tags**, **Copy link**, and
       **History** (when the document has multiple versions), plus **Share**
       (for the document's owner), **Delete** (only on documents you own —
@@ -76,9 +76,8 @@ its collapse button, on Escape, on tapping the dark backdrop, and after
 navigating to a document. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
   and the action row opens with a three-dot (kebab) menu holding **Upload**,
-  **Export**, **History**, and **Format**, followed by the **Editor view** /
-  **Preview view** toggles and the **Copy**, **Read aloud**, **Clone**,
-  **Share** (for the document's owner), **Delete** (only on documents you own),
+  **Preview view** toggles and the **Copy**,
+  **Clone**, **Share** (for the document's owner), **Delete** (only on documents you own),
   **Reset**, and **Save** buttons.
 
 ## Language
@@ -115,38 +114,6 @@ document name and type selector, then the tag chips, then the action buttons —
   snapshot (the server content, or an empty string when the document was never
   saved). It is disabled while the document is clean.
 - **Copy** copies the editor content to the clipboard (disabled when empty).
-- **Read aloud** speaks the editor content through the external local
-  text-to-speech service (Piper) reached via a same-origin proxy. It reads
-  the currently selected text when there is a selection, otherwise the whole
-  document; the text is grouped by language runs across single line breaks and
-  even within unspaced latin/CJK runs (so each segment is synthesized with its
-  own language model — Han → zh, kana → ja, otherwise en — with short runs
-  folded into the dominant language, blank lines splitting paragraphs into
-  separate segments, oversized paragraphs split on sentence boundaries, and CJK
-  newlines stripped for a continuous read) and played back in sequence. As
-  playback advances, the editor selection follows the currently spoken segment
-  (even when reading a selection, the highlight moves within it); when the
-  reading finishes or is stopped, the original selection — or the cursor
-  position when there was none — is restored. Each
-  segment is synthesized with the account's saved voice for that language when
-  one is set (see **Settings → Read aloud**), otherwise the service default.
-  The
-  button shows a **Preparing** spinner while the first segments are being
-  synthesized, then switches to a highlighted **Stop** toggle as soon as the
-  first audio segment plays; clicking it again cancels in-flight synthesis and
-  stops playback, so the user can interrupt while audio is still being
-  generated. Because synthesis is streamed (segments are requested in parallel
-  and each plays as soon as it is ready), long documents start speaking long
-  before the whole document has been processed. The
-  button is disabled when the document is empty. Repeatedly
-  reading the same text skips synthesis: the client caches the audio blob per
-  segment (text + language) in memory, so unchanged lines play instantly from
-  object URLs (revoked on stop/unmount). The feature is disabled unless a
-  `tts_service_url` setting is set — configured
-  in the admin **Properties** tab in real time (with `TTS_SERVICE_URL` as the
-  environment fallback); when it is empty the button is hidden entirely, and
-  when the service is unreachable it shows a
-  toast explaining the failure.
 - **Export** downloads the content as a `{name}.{extension}` file, where the
   extension is determined by the selected document type (disabled when empty).
 
@@ -362,16 +329,11 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 - Signing in accepts either a user account or the configured admin credentials;
   `/login` is the only sign-in page.
 - The **Settings** page (`/settings`) is organized into **Profile**,
-  **General**, **Read aloud**, and **Documents** tabs. **Profile** shows the
-  signed-in account identity. **General** and **Read aloud** share one
-  **Apply / Reload / Reset** footer and keep one shared preferences draft.
-  **General** holds the account's preferred interface language, applied
-  automatically whenever the account signs in. **Read aloud** lists each TTS
-  language the service supports with a voice dropdown for that language; each
-  option shows the model filename, and the admin-configured default model is
-  labeled `(Default)` so choosing the service default still identifies the
-  concrete voice. The voices you choose are used whenever you read a document
-  aloud, per language. **Documents** is an admin-style management table scoped
+  **General**, and **Documents** tabs. **Profile** shows the
+  signed-in account identity. **General** holds the account's preferred
+  interface language, applied automatically whenever the account signs in,
+  with its own **Apply / Reload / Reset** footer and shared preferences draft.
+  **Documents** is an admin-style management table scoped
   to documents you own, with search, sorting, selection, rename-on-hover,
   **Open selected**, **Delete selected**, and **Reload** toolbar actions plus a
   **New document** shortcut. Leaving the page with unsaved preference changes
@@ -405,10 +367,8 @@ navigation. A server-side layout guard redirects unauthenticated visitors to
 `/login`, which accepts admin credentials on the same form as user sign-in; if
 no admin password source is configured, admin sign-in simply fails to match.
 The page header offers **Go to Documents** and **Sign out** once signed in. The
-five tabs live at the real routes `/admin/general`, `/admin/properties`,
-`/admin/documents`, `/admin/users`, and `/admin/text-to-speech` (`/admin`
-redirects to the General route), so each view has a stable, shareable URL and
-survives refresh and back/forward; the generic `Tabs` component renders the tab
+The four tabs live at the real routes `/admin/general`, `/admin/properties`,
+`/admin/documents`, and `/admin/users` (`/admin` redirects to the General route),
 bar and the active tab's toolbar and content from a per-tab `Tab` entry
 (label, path, toolbar snippet, content snippet) defined in the shared admin
 layout, which keeps the general/settings draft and documents/users data alive
@@ -418,14 +378,14 @@ across tab switches.
   (24h TTL, or 30 days with Remember me). Failed sign-ins are rate-limited per
   IP (5 per 15 minutes). All `/api/admin/*` routes except `login` and `session`
   require a valid session.
-- The page has five tabs:
+The page has four tabs:
   - **General** — the admin account's preferred interface language, persisted
     server-side and applied on sign-in, with the same **Apply / Reload / Reset**
     footer pattern as other editable settings screens.
-  - **Properties** — application properties including document limits,
-    key/version settings, and TTS runtime settings such as the service URL,
-    max segment length, and synthesis concurrency. The
-    tab splits into **Form** and **Properties** sub-tabs editing the same draft:
+  - **Properties** — application properties including document limits and
+    key/version settings, with the same **Apply / Reload / Reset**
+    footer pattern as other editable settings screens.
+    The tab splits into **Form** and **Properties** sub-tabs editing the same draft:
     the form shows each row with its effective
     value and source (`Saved`/`Environment`/`Default`), an inline editor, and a
     revert button that deletes the database override; the Properties sub-tab is
@@ -464,17 +424,6 @@ across tab switches.
     **Add user** dialog creates an account, and an **Import** button pastes or
     uploads user records as JSON in the same all-or-nothing batch style as the
     Documents import.
-  - **Text To Speech** — organized into **Voices** and **Segments** sub-tabs.
-    **Voices** manages per-language backend default voices and uploads/removes
-    voice model files. **Segments** is the debugging tool for the
-    Read aloud segmenter: type or paste text and it lists how the text splits
-    into TTS segments (each segment's language, its inclusive character range
-    into the original text, and its text), using the runtime **TTS max segment
-    length** setting; the input and the breakdown survive switching away and
-    back.
-  - Numeric properties accept thousand separators (for example `7,000`) both in
-    the Properties form and the `key=value` editor, and the same parsing applies
-    server-side and in the TTS backend's resolution of `tts_max_segment_length`.
 
 ### Runtime properties
 

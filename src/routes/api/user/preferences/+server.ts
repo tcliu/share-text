@@ -46,7 +46,6 @@ export const PUT: RequestHandler = async event => {
       user: viewer.username,
       user_id: viewer.userId,
       preferred_language: saved.preferredLanguage,
-      tts_voice_langs: Object.keys(saved.ttsVoices).join(','),
     },
   })
   return json(saved)

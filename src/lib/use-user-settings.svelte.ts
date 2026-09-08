@@ -10,21 +10,14 @@ import {
 
 export function useUserSettings(onSignedOut: () => void) {
   let saved = $state<UserPreferences | null>(null)
-  let draft = $state<UserPreferences>({ preferredLanguage: 'en', ttsVoices: {} })
+  let draft = $state<UserPreferences>({ preferredLanguage: 'en' })
   let loading = $state(false)
   let pending = $state(false)
 
   const hasUnsavedChanges = $derived(
-    saved !== null &&
-      (draft.preferredLanguage !== saved.preferredLanguage ||
-        !ttsVoicesEqual(draft.ttsVoices, saved.ttsVoices)),
+    saved !== null && draft.preferredLanguage !== saved.preferredLanguage,
   )
 
-  function ttsVoicesEqual(a: Record<string, string>, b: Record<string, string>): boolean {
-    const aKeys = Object.keys(a)
-    if (aKeys.length !== Object.keys(b).length) return false
-    return aKeys.every(key => a[key] === b[key])
-  }
 
   function handleError(error: unknown, fallbackKey: MessageKey): boolean {
     if (error instanceof UserSettingsAuthError) {
@@ -40,7 +33,7 @@ export function useUserSettings(onSignedOut: () => void) {
     try {
       const preferences = await fetchUserPreferences()
       saved = preferences
-      draft = { preferredLanguage: preferences.preferredLanguage, ttsVoices: { ...preferences.ttsVoices } }
+      draft = { preferredLanguage: preferences.preferredLanguage }
       return true
     } catch (error) {
       handleError(error, 'settings.toast.loadFailed')
@@ -56,7 +49,7 @@ export function useUserSettings(onSignedOut: () => void) {
     try {
       const updated = await saveUserPreferences(draft)
       saved = updated
-      draft = { preferredLanguage: updated.preferredLanguage, ttsVoices: { ...updated.ttsVoices } }
+      draft = { preferredLanguage: updated.preferredLanguage }
       toast.success(t('settings.toast.saved'))
     } catch (error) {
       handleError(error, 'settings.toast.saveFailed')
@@ -76,22 +69,12 @@ export function useUserSettings(onSignedOut: () => void) {
 
   function resetDraft() {
     if (saved) {
-      draft = { preferredLanguage: saved.preferredLanguage, ttsVoices: { ...saved.ttsVoices } }
+      draft = { preferredLanguage: saved.preferredLanguage }
     }
   }
 
   function setPreferredLanguage(locale: Locale) {
     draft = { ...draft, preferredLanguage: locale }
-  }
-
-  function setTtsVoice(lang: string, voice: string | null) {
-    const next = { ...draft.ttsVoices }
-    if (voice) {
-      next[lang] = voice
-    } else {
-      delete next[lang]
-    }
-    draft = { ...draft, ttsVoices: next }
   }
 
   return {
@@ -115,6 +98,5 @@ export function useUserSettings(onSignedOut: () => void) {
     reload,
     resetDraft,
     setPreferredLanguage,
-    setTtsVoice,
   }
 }

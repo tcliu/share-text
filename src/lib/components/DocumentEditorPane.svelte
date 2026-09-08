@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
   import { toast } from 'svelte-sonner'
   import type { Document } from '$lib/documents'
   import ConfirmDialog from './ConfirmDialog.svelte'
@@ -9,8 +8,6 @@
   import PencilIcon from '$lib/icons/PencilIcon.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
-  import SpeakerIcon from '$lib/icons/SpeakerIcon.svelte'
-  import StopIcon from '$lib/icons/StopIcon.svelte'
   import LinkIcon from '$lib/icons/LinkIcon.svelte'
   import TagsIcon from '$lib/icons/TagsIcon.svelte'
   import SaveIcon from '$lib/icons/SaveIcon.svelte'
@@ -41,9 +38,6 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
-  import { loadTtsCapabilities, synthesizeTtsStreaming, SYNTHESIS_CONCURRENCY, type TtsSegmentInput } from '$lib/tts-client'
-  import { splitTtsSegments, MAX_SEGMENT_LENGTH } from '$lib/tts-language'
-  import { fetchUserPreferences } from '$lib/user-settings'
   import { t } from '$lib/i18n.svelte'
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
@@ -110,23 +104,6 @@
     clearSelection: () => void
   } | null>(null)
   let refocusEditor = $state(false)
-  let ttsConfigured = $state(false)
-  let ttsMaxSegmentLength = $state(MAX_SEGMENT_LENGTH)
-  let ttsSynthesisConcurrency = $state(SYNTHESIS_CONCURRENCY)
-  let ttsVoiceOptions = $state<Record<string, string[]>>({})
-  let speaking = $state(false)
-  let processing = $state(false)
-  let audioRef = $state<HTMLAudioElement | null>(null)
-  let ttsQueue = $state<string[]>([])
-  let ttsQueueIndex = $state(0)
-  let ttsObjectUrls: string[] = []
-  let ttsAbortController: AbortController | null = null
-  let ttsSynthesizing = false
-  let ttsSegments = $state<TtsSegmentInput[]>([])
-  let ttsHadSelection = false
-  let ttsSelectionOffset = 0
-  let ttsOriginalSelection = $state<{ from: number; to: number } | null>(null)
-  let userTtsVoices = $state<Record<string, string>>({})
   let pendingRange = $state<{ from: number; to: number } | null>(null)
   let editorReady = $state(0)
 
@@ -135,41 +112,6 @@
     if (!pendingRange || !editorRef) return
     if (editorRef.setSelection(pendingRange.from, pendingRange.to)) {
       pendingRange = null
-    }
-  })
-
-  $effect(() => {
-    let cancelled = false
-    loadTtsCapabilities().then(capabilities => {
-      if (!cancelled) {
-        ttsConfigured = capabilities.configured
-        ttsMaxSegmentLength = capabilities.maxSegmentLength
-        ttsSynthesisConcurrency = capabilities.synthesisConcurrency
-        ttsVoiceOptions = capabilities.voices
-      }
-    })
-    return () => {
-      cancelled = true
-    }
-  })
-
-  $effect(() => {
-    if (!context.user) {
-      userTtsVoices = {}
-      return
-    }
-    let cancelled = false
-    void fetchUserPreferences()
-      .then(preferences => {
-        if (!cancelled) {
-          userTtsVoices = preferences.ttsVoices
-        }
-      })
-      .catch(() => {
-        // keep default voices when preferences cannot be loaded
-      })
-    return () => {
-      cancelled = true
     }
   })
 
@@ -293,190 +235,6 @@
     URL.revokeObjectURL(url)
   }
 
-  function releaseTtsObjectUrls() {
-    for (const url of ttsObjectUrls) {
-      URL.revokeObjectURL(url)
-    }
-    ttsObjectUrls = []
-  }
-
-  function stopReading() {
-    ttsAbortController?.abort()
-    ttsAbortController = null
-    audioRef?.pause()
-    ttsQueue = []
-    ttsQueueIndex = 0
-    ttsSynthesizing = false
-    ttsSegments = []
-    ttsHadSelection = false
-    ttsSelectionOffset = 0
-    if (ttsOriginalSelection) {
-      if (!editorRef || !editorRef.setSelection(ttsOriginalSelection.from, ttsOriginalSelection.to)) {
-        pendingRange = ttsOriginalSelection
-      }
-    } else {
-      pendingRange = null
-      editorRef?.clearSelection()
-    }
-    ttsOriginalSelection = null
-    releaseTtsObjectUrls()
-    speaking = false
-    processing = false
-  }
-
-  function setSelectionForCurrentSegment() {
-    const segment = ttsSegments[ttsQueueIndex]
-    if (!segment || segment.indexStart == null || segment.indexEnd == null) return
-    const range = { from: ttsSelectionOffset + segment.indexStart, to: ttsSelectionOffset + segment.indexEnd + 1 }
-    if (!editorRef || !editorRef.setSelection(range.from, range.to)) {
-      pendingRange = range
-    }
-  }
-
-  function playUrl(url: string) {
-    if (!audioRef) return
-    audioRef.src = url
-    audioRef.play().catch(() => {
-      toast.error(t('editor.toast.playFailed'))
-      stopReading()
-    })
-  }
-
-  function playNextSegment() {
-    const nextIndex = ttsQueueIndex + 1
-    const nextUrl = ttsQueue[nextIndex]
-    if (!nextUrl || !audioRef) {
-      if (ttsSynthesizing) {
-        return
-      }
-      const shouldClearSelection = !ttsHadSelection
-      const originalSelection = ttsOriginalSelection
-      ttsQueue = []
-      ttsQueueIndex = 0
-      ttsSegments = []
-      ttsHadSelection = false
-      ttsSelectionOffset = 0
-      ttsOriginalSelection = null
-      pendingRange = null
-      releaseTtsObjectUrls()
-      speaking = false
-      processing = false
-      if (originalSelection) {
-        if (!editorRef || !editorRef.setSelection(originalSelection.from, originalSelection.to)) {
-          pendingRange = originalSelection
-        }
-      } else if (shouldClearSelection) {
-        editorRef?.clearSelection()
-      }
-      return
-    }
-    ttsQueueIndex = nextIndex
-    setSelectionForCurrentSegment()
-    playUrl(nextUrl)
-  }
-
-  function appendTtsUrl(url: string) {
-    ttsObjectUrls.push(url)
-    ttsQueue.push(url)
-    if (ttsQueue.length === 1) {
-      processing = false
-      speaking = true
-      setSelectionForCurrentSegment()
-      playUrl(url)
-    } else if (audioRef?.paused && ttsQueueIndex + 1 < ttsQueue.length) {
-      playNextSegment()
-    }
-  }
-
-  async function handleReadAloud() {
-    if (speaking || processing) {
-      stopReading()
-      return
-    }
-    if (!ttsConfigured) {
-      toast.error(t('editor.toast.ttsNotConfigured'))
-      return
-    }
-    const selectionRange = editorRef?.getSelectionRange()
-    const selection = selectionRange ? content.slice(selectionRange.from, selectionRange.to) : ''
-    const hasSelection = selection.trim().length > 0
-    const text = hasSelection ? selection : content
-    const segments: TtsSegmentInput[] = splitTtsSegments(text, ttsMaxSegmentLength).map(segment => {
-      const voice = userTtsVoices[segment.lang]
-      const available = ttsVoiceOptions[segment.lang]
-      // Only stamp the saved voice when the backend still serves it, so a
-      // stale preference (TTS reconfigured) falls back to the default voice.
-      return voice && available?.includes(voice) ? { ...segment, voice } : segment
-    })
-    if (segments.length === 0) {
-      toast.error(t('editor.toast.nothingToRead'))
-      return
-    }
-    processing = true
-    ttsSynthesizing = true
-    ttsAbortController = new AbortController()
-    const signal = ttsAbortController.signal
-    try {
-      releaseTtsObjectUrls()
-      ttsQueue = []
-      ttsQueueIndex = 0
-      ttsHadSelection = hasSelection
-      ttsOriginalSelection = selectionRange ?? null
-      ttsSelectionOffset = hasSelection ? selectionRange?.from ?? 0 : 0
-      ttsSegments = segments
-      for await (const blob of synthesizeTtsStreaming(segments, signal, ttsSynthesisConcurrency)) {
-        if (signal.aborted) {
-          ttsSynthesizing = false
-          return
-        }
-        if (!audioRef) {
-          ttsSynthesizing = false
-          processing = false
-          return
-        }
-        appendTtsUrl(URL.createObjectURL(blob))
-      }
-      ttsSynthesizing = false
-      if (!speaking) {
-        ttsQueue = []
-        ttsQueueIndex = 0
-        ttsSegments = []
-        ttsSelectionOffset = 0
-        const originalSelection = ttsOriginalSelection
-        ttsOriginalSelection = null
-        pendingRange = null
-        releaseTtsObjectUrls()
-        processing = false
-        if (originalSelection) {
-          if (!editorRef || !editorRef.setSelection(originalSelection.from, originalSelection.to)) {
-            pendingRange = originalSelection
-          }
-        } else if (!ttsHadSelection) {
-          editorRef?.clearSelection()
-        }
-        ttsHadSelection = false
-        return
-      }
-      if (audioRef?.paused && ttsQueueIndex + 1 >= ttsQueue.length) {
-        playNextSegment()
-      }
-    } catch (error) {
-      if (signal.aborted) {
-        return
-      }
-      toast.error(error instanceof Error ? error.message : t('editor.toast.synthesizeFailed'))
-      stopReading()
-    }
-  }
-
-  onDestroy(() => {
-    ttsAbortController?.abort()
-    ttsAbortController = null
-    if (audioRef?.currentSrc) {
-      audioRef.pause()
-    }
-    releaseTtsObjectUrls()
-  })
 
   async function handleTypeSelect(value: string) {
     if (value === docType) return
@@ -608,27 +366,6 @@
         <CopyIcon />
       {/snippet}
     </Button>
-    {#if ttsConfigured}
-      <Button
-        size="sm"
-        ariaLabel={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
-        tooltip={processing ? t('editor.preparingReading') : speaking ? t('editor.stopReading') : t('editor.readAloud')}
-        variant={speaking || processing ? 'outline' : 'secondary'}
-        ariaPressed={speaking || processing}
-        preventFocusSteal
-        onClick={handleReadAloud}
-        disabled={!speaking && !processing && content.length === 0}>
-        {#snippet icon()}
-          {#if processing}
-            <Spinner className="h-4 w-4" />
-          {:else if speaking}
-            <StopIcon />
-          {:else}
-            <SpeakerIcon />
-          {/if}
-        {/snippet}
-      </Button>
-    {/if}
     {#if !context.isMobile}
       {#if editable}
         <Button
@@ -926,19 +663,6 @@
     class="hidden"
     onchange={handleFileChange} />
 
-  <audio
-    bind:this={audioRef}
-    class="hidden"
-    onended={() => playNextSegment()}
-    onerror={() => {
-      toast.error(t('editor.toast.segmentPlayFailed'))
-      playNextSegment()
-    }}
-    onpause={() => {
-      if (ttsQueue.length === 0) {
-        speaking = false
-      }
-    }}></audio>
 
   <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}

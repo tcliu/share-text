@@ -14,9 +14,7 @@
     "format": "prettier --write '**/*.{js,ts,svelte}'",
     "env:sync:vercel": "node ./scripts/sync-vercel-env.mjs",
     "schema:apply": "node ./scripts/apply-schema.mjs",
-    "schema:recreate": "node ./scripts/recreate-schema.mjs",
-    "tts:setup": "bash backend/setup.sh",
-    "tts:start": "node ./scripts/tts-start.mjs"
+    "schema:recreate": "node ./scripts/recreate-schema.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.3",

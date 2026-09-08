@@ -10,7 +10,6 @@
   import OwnedDocumentsView from '$lib/components/OwnedDocumentsView.svelte'
   import SettingsGeneralView from '$lib/components/SettingsGeneralView.svelte'
   import SettingsProfileView from '$lib/components/SettingsProfileView.svelte'
-  import SettingsReadAloudView from '$lib/components/SettingsReadAloudView.svelte'
   import Spinner from '$lib/components/Spinner.svelte'
   import Tabs, { type Tab } from '$lib/components/Tabs.svelte'
   import DeleteIcon from '$lib/icons/DeleteIcon.svelte'
@@ -26,7 +25,6 @@
 
   const PROFILE_PATH = '/settings/profile'
   const GENERAL_PATH = '/settings/general'
-  const READ_ALOUD_PATH = '/settings/read-aloud'
   const DOCUMENTS_PATH = '/settings/documents'
 
   type SettingsState = {
@@ -139,9 +137,6 @@
       {#snippet generalContent(state: SettingsState)}
         <SettingsGeneralView settingsState={state.settingsState} />
       {/snippet}
-      {#snippet readAloudContent(state: SettingsState)}
-        <SettingsReadAloudView settingsState={state.settingsState} />
-      {/snippet}
       {#snippet documentsToolbar(state: SettingsState)}
         <Button size="sm" ariaLabel={t('settings.documents.add')} tooltip={t('settings.documents.add')} onClick={() => goto('/new')}>
           {#snippet icon()}
@@ -196,11 +191,6 @@
           content: generalContent,
         },
         {
-          label: t('settings.tab.readAloud'),
-          path: READ_ALOUD_PATH,
-          content: readAloudContent,
-        },
-        {
           label: t('settings.tab.documents'),
           path: DOCUMENTS_PATH,
           toolbar: documentsToolbar,
@@ -212,7 +202,8 @@
           tabs={settingsTabs}
           state={{ settingsState, documentsState }}
           pathname={page.url.pathname}
-          ariaLabel={t('settings.title')} />
+          ariaLabel={t('settings.title')}
+          class="bg-slate-950" />
         {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
           <Buttons>
             {#snippet children()}

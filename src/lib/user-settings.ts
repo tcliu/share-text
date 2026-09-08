@@ -2,7 +2,6 @@ import type { Locale } from './i18n.svelte'
 
 export interface UserPreferences {
   preferredLanguage: Locale
-  ttsVoices: Record<string, string>
 }
 
 export class UserSettingsAuthError extends Error {}
@@ -13,15 +12,7 @@ function parseLocale(value: unknown): Locale {
 
 export function parseUserPreferences(data: unknown): UserPreferences {
   const record = (typeof data === 'object' && data !== null ? data : {}) as Record<string, unknown>
-  const ttsVoices: Record<string, string> = {}
-  if (record.ttsVoices && typeof record.ttsVoices === 'object') {
-    for (const [lang, voice] of Object.entries(record.ttsVoices)) {
-      if (typeof voice === 'string' && voice.length > 0) {
-        ttsVoices[lang] = voice
-      }
-    }
-  }
-  return { preferredLanguage: parseLocale(record.preferredLanguage), ttsVoices }
+  return { preferredLanguage: parseLocale(record.preferredLanguage) }
 }
 
 async function readError(response: Response, fallback: string): Promise<string> {

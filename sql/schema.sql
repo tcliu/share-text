@@ -57,13 +57,6 @@ create table if not exists user_preferences (
   primary key (user_id)
 );
 
-create table if not exists user_tts_voices (
-  user_id bigint not null references users(id) on delete cascade,
-  lang text not null,
-  voice text not null,
-  updated_at timestamptz not null default current_timestamp,
-  primary key (user_id, lang)
-);
 
 create table if not exists admin_preferences (
   username text primary key,
