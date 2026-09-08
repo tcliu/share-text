@@ -14,7 +14,7 @@
     className?: string
     showControls?: boolean
     id?: string
-    ariaLabel?: string
+    ariaLabel: string
     onkeydown?: (event: KeyboardEvent) => void
     oninput?: (event: Event) => void
     onblur?: (event: FocusEvent) => void
@@ -45,6 +45,28 @@
   const currentValue = $derived(Number.parseFloat(value))
   const isAtMax = $derived(max !== undefined && !Number.isNaN(currentValue) && currentValue >= max)
   const isAtMin = $derived(min !== undefined && !Number.isNaN(currentValue) && currentValue <= min)
+  const inputType = $derived(step !== undefined && !Number.isInteger(step) ? 'decimal' : 'numeric')
+
+  function stepDecimals() {
+    if (step === undefined) return 0
+    const s = String(step)
+    if (s.includes('e-')) {
+      const parts = s.split('e-')
+      return Number(parts[1] ?? 0)
+    }
+    const dot = s.indexOf('.')
+    return dot === -1 ? 0 : s.length - dot - 1
+  }
+
+  function snapToStep(val: number): number {
+    if (step === undefined || min === undefined) return val
+    const decimals = stepDecimals()
+    const steps = Math.round((val - min) / step)
+    const snapped = min + steps * step
+    const clampedSnap =
+      max !== undefined ? Math.min(max, Math.max(min, snapped)) : snapped
+    return Number(clampedSnap.toFixed(decimals))
+  }
 
   function handleInput(event: Event) {
     const input = event.target as HTMLInputElement
@@ -71,6 +93,7 @@
     const input = event.target as HTMLInputElement
     const numValue = Number.parseFloat(input.value)
     if (input.value === '' || Number.isNaN(numValue)) {
+      onblur?.(event)
       return
     }
     let clamped = numValue
@@ -80,8 +103,11 @@
     if (max !== undefined && clamped > max) {
       clamped = max
     }
-    if (clamped !== numValue) {
-      const next = String(clamped)
+    const snapped = snapToStep(clamped)
+    const finalValue = snapped !== numValue ? snapped : clamped !== numValue ? clamped : null
+    if (finalValue !== null) {
+      const decimals = stepDecimals()
+      const next = decimals > 0 ? String(Number(finalValue.toFixed(decimals))) : String(finalValue)
       input.value = next
       value = next
     }
@@ -101,9 +127,13 @@
     if (max !== undefined && next > max) {
       next = max
     }
-    value = String(next)
+    next = snapToStep(next)
+    // Ensure fixed decimals for display consistency when step has decimals
+    const decimals = stepDecimals()
+    const nextStr = decimals > 0 ? String(Number(next.toFixed(decimals))) : String(next)
+    value = nextStr
     if (inputEl) {
-      inputEl.value = String(next)
+      inputEl.value = nextStr
       inputEl.dispatchEvent(new Event('input', { bubbles: true }))
       inputEl.focus()
     }
@@ -122,12 +152,12 @@
 </script>
 
 <div
-  class={`flex items-stretch ${showControls ? 'overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500' : ''}`}>
+  class={`flex items-stretch ${showControls ? 'overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition motion-reduce:transition-none focus-within:border-cyan-500' : ''}`}>
   <input
     bind:this={inputEl}
     {id}
     type="text"
-    inputmode="numeric"
+    inputmode={inputType}
     {placeholder}
     {disabled}
     aria-label={ariaLabel}
@@ -138,7 +168,7 @@
     }}
     onblur={handleBlur}
     onkeydown={handleKeydown}
-    class={`flex-1 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 ${showControls ? 'min-w-0 border-0 bg-transparent' : ''} ${className}`} />
+    class={`flex-1 px-3 py-2 text-sm text-slate-100 outline-none transition motion-reduce:transition-none disabled:opacity-40 ${showControls ? 'min-w-0 border-0 bg-transparent' : ''} ${className}`} />
   {#if showControls}
     <div class="flex flex-col">
       <button
@@ -147,7 +177,7 @@
         disabled={disabled || isAtMax}
         tabindex="-1"
         aria-label={i18n.t('number.increment')}
-        class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300 disabled:opacity-40">
+        class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 outline-none transition motion-reduce:transition-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40">
         <ChevronUpSmallIcon className="h-3 w-3" />
       </button>
       <button
@@ -156,7 +186,7 @@
         disabled={disabled || isAtMin}
         tabindex="-1"
         aria-label={i18n.t('number.decrement')}
-        class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300 disabled:opacity-40">
+        class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 outline-none transition motion-reduce:transition-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40">
         <ChevronDownSmallIcon className="h-3 w-3" />
       </button>
     </div>
