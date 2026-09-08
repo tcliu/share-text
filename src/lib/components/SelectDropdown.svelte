@@ -1,6 +1,10 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { flushSync, tick } from 'svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
+  import { createFocusoutClose } from '$lib/actions/use-focusout-close'
+  import { useDropdown } from '$lib/actions/use-dropdown.svelte'
+  import { useListSelection, revealInScrollport } from '$lib/actions/use-list-selection.svelte'
+  import { TEXT_SIZE, type TextSize } from '$lib/text-size'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -18,16 +22,16 @@
     align?: 'left' | 'right'
     autoPlace?: boolean
     filterable?: boolean
-    size?: 'xs' | 'sm' | 'md' | 'lg'
+    size?: TextSize
     onSelect: (value: string) => void
     buttonClass?: string
     controlClass?: string
     optionClass?: string
+    emptyLabel?: string
     panelClass?: string
   }
-
-  const id = Math.random().toString(36).slice(2)
-  const panelId = `select-dropdown-panel-${id}`
+  let id = $props.id()
+  const panelId = `${id}-panel`
 
   let {
     buttonLabel,
@@ -42,7 +46,8 @@
     buttonClass,
     controlClass,
     optionClass,
-    panelClass = 'w-max max-w-xs overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
+    emptyLabel,
+    panelClass = 'w-max max-w-xs max-h-[min(50vh,20rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
   }: Props = $props()
 
   const SIZE_CLASS = {
@@ -54,28 +59,31 @@
 
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex ${SIZE_CLASS[size].minW} items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
+      `inline-flex ${SIZE_CLASS[size].minW} cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
   const resolvedControlClass = $derived(
     controlClass ??
-      `${SIZE_CLASS[size].minW} field-sizing-content rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition hover:border-cyan-500 focus:border-cyan-500 ${SIZE_CLASS[size].pad} text-${size}`,
+      `${SIZE_CLASS[size].minW} field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
+  // Phone viewports get a 44px minimum row height via pure CSS so in-dialog
+  // dropdowns (e.g. Settings Voices) stay thumb-friendly without switching
+  // to a bottom sheet, which must never stack inside a dialog.
   const optionRowClass = $derived(
     optionClass ??
-      `flex w-full items-center justify-between rounded-md px-3 text-left outline-none transition ${SIZE_CLASS[size].pad} text-${size}`,
+      `flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[28rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
-  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} text-${size} text-slate-500`)
+  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-500`)
 
   let open = $state(false)
+  const selection = useListSelection()
   let containerRef = $state<HTMLDivElement | null>(null)
   let inputRef = $state<HTMLInputElement | null>(null)
   let controlRef = $state<HTMLInputElement | HTMLButtonElement | HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   let filterText = $state('')
-  let highlightIndex = $state(0)
   let suppressOpenOnFocus = false
 
   const filteredOptions = $derived.by(() => {
@@ -98,17 +106,32 @@
     }
   })
 
+  // Reset the highlight to the top of the visible list whenever it changes
+  // (filter typing, options prop swap) so the cursor does not stay stranded
+  // on a row that has scrolled out of view.
   let lastFilteredOptions: Option[] | null = null
   $effect(() => {
     if (!open) return
     if (lastFilteredOptions !== filteredOptions) {
       lastFilteredOptions = filteredOptions
-      highlightIndex = 0
+      selection.reset()
     }
+  })
+
+  $effect(() => {
+    if (!open) return
+    selection.clamp(filteredOptions.length)
   })
 
   function close() {
     open = false
+  }
+
+  // Keep the highlighted option visible while arrowing through a scrollable
+  // panel: the option never receives focus (aria-activedescendant pattern),
+  // so the browser would otherwise let it drift out of the scrollport.
+  function revealActive() {
+    revealInScrollport(panelRef?.querySelector<HTMLButtonElement>(`[id="${panelId}-option-${selection.peek()}"]`))
   }
 
   function toggle() {
@@ -121,8 +144,9 @@
 
   function openPanel() {
     lastFilteredOptions = filteredOptions
+    // Highlight the committed value on open; hover/arrows move from there.
+    selection.syncToActive(filteredOptions, option => option.value === activeValue)
     open = true
-    highlightIndex = 0
   }
 
   function handleControlFocus() {
@@ -154,29 +178,40 @@
     }
   }
 
-  function moveHighlight(direction: 'down' | 'up') {
-    if (filteredOptions.length === 0) return
-    if (!open) {
-      openPanel()
-      if (direction === 'up') {
-        highlightIndex = filteredOptions.length - 1
-      }
-      return
-    }
-    if (direction === 'down') {
-      highlightIndex = (highlightIndex + 1) % filteredOptions.length
-    } else {
-      highlightIndex = (highlightIndex - 1 + filteredOptions.length) % filteredOptions.length
-    }
-  }
-
   function handleControlKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
-      moveHighlight('down')
+      if (!open) {
+        flushSync(() => {
+          openPanel()
+        })
+        return
+      }
+      flushSync(() => {
+        selection.move('down', filteredOptions.length)
+        revealActive()
+      })
     } else if (event.key === 'ArrowUp') {
       event.preventDefault()
-      moveHighlight('up')
+      if (!open) {
+        flushSync(() => {
+          openPanel()
+          selection.move('last', filteredOptions.length)
+        })
+        return
+      }
+      flushSync(() => {
+        selection.move('up', filteredOptions.length)
+        revealActive()
+      })
+    } else if (event.key === 'Home' || event.key === 'End') {
+      if (open && filteredOptions.length > 0) {
+        event.preventDefault()
+        flushSync(() => {
+          selection.move(event.key === 'Home' ? 'first' : 'last', filteredOptions.length)
+          revealActive()
+        })
+      }
     } else if (event.key === 'Enter') {
       if (!open) {
         if (filterable) {
@@ -185,44 +220,40 @@
         return
       }
       event.preventDefault()
-      const option = filteredOptions[highlightIndex] ?? filteredOptions[0]
+      const option = filteredOptions[selection.index] ?? filteredOptions[0]
       if (option) {
         void select(option.value)
       }
     }
   }
 
-  $effect(() => {
-    if (!open) {
-      return
-    }
-    function handleKeydownCapture(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        event.stopImmediatePropagation()
-        event.preventDefault()
-        if (filterable && filterText && filterText !== buttonLabel) {
-          filterText = ''
-          return
-        }
-        close()
+  const handleFocusOut = createFocusoutClose(
+    () => open,
+    () => ({ container: containerRef, panel: panelRef }),
+    () => close(),
+  )
+
+  useDropdown(() => ({
+    isOpen: () => open,
+    container: () => containerRef,
+    onOutsideClick: () => close(),
+    onEscape: () => {
+      if (filterable && filterText && filterText !== buttonLabel) {
+        filterText = ''
+        return true
       }
-    }
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node
-      if (controlRef && !controlRef.contains(target) && panelRef && !panelRef.contains(target)) {
-        close()
-      }
-    }
-    window.addEventListener('keydown', handleKeydownCapture, true)
-    document.addEventListener('mousedown', handlePointerDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeydownCapture, true)
-      document.removeEventListener('mousedown', handlePointerDown)
-    }
-  })
+      close()
+    },
+    onScrollClose: () => close(),
+    panel: () => panelRef,
+  }))
 </script>
 
-<div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null}>
+<div
+  class="relative"
+  bind:this={containerRef}
+  data-escape-capture={open ? '' : null}
+  onfocusout={handleFocusOut}>
   {#if filterable}
     <div class="relative w-fit" bind:this={controlRef}>
       <input
@@ -234,8 +265,8 @@
         aria-autocomplete="list"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-activedescendant={open && filteredOptions[highlightIndex]
-          ? `${panelId}-option-${highlightIndex}`
+        aria-activedescendant={open && filteredOptions[selection.index]
+          ? `${panelId}-option-${selection.index}`
           : undefined}
         onfocus={handleControlFocus}
         onclick={handleControlClick}
@@ -252,8 +283,8 @@
       aria-haspopup="listbox"
       aria-expanded={open}
       aria-controls={open ? panelId : undefined}
-      aria-activedescendant={open && filteredOptions[highlightIndex]
-        ? `${panelId}-option-${highlightIndex}`
+      aria-activedescendant={open && filteredOptions[selection.index]
+        ? `${panelId}-option-${selection.index}`
         : undefined}
       onclick={toggle}
       onkeydown={handleControlKeydown}
@@ -271,7 +302,7 @@
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
       class={`fixed left-0 top-0 z-40 will-change-transform ${panelClass}`}>
       {#if filteredOptions.length === 0}
-        <div class={emptyClass}>{i18n.t('dropdown.noOptions')}</div>
+        <div class={emptyClass}>{emptyLabel ?? i18n.t('dropdown.noOptions')}</div>
       {/if}
       {#each filteredOptions as option, index}
         <button
@@ -282,9 +313,10 @@
           aria-selected={option.value === activeValue}
           onpointerdown={event => event.preventDefault()}
           onclick={() => void select(option.value)}
-          onmouseenter={() => (highlightIndex = index)}
+          onfocus={() => selection.set(index)}
+          onmouseenter={() => selection.set(index)}
           class={`${optionRowClass} ${
-            index === highlightIndex
+            index === selection.index
               ? 'bg-slate-800 text-cyan-200'
               : option.value === activeValue
                 ? 'bg-cyan-500/15 text-cyan-200'
