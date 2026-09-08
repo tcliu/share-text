@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     open: boolean
@@ -11,7 +12,7 @@
 
   let { open, onClose, ariaLabel, children }: Props = $props()
 
-  const resolvedAriaLabel = $derived(ariaLabel ?? t('editor.documentList'))
+  const resolvedAriaLabel = $derived(ariaLabel ?? i18n.t('editor.documentList'))
 
   let panelRef = $state<HTMLElement | null>(null)
   let previouslyFocused: Element | null = null

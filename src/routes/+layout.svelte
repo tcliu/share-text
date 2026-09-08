@@ -3,13 +3,11 @@
   import '../styles.css'
   import { Toaster, toast } from 'svelte-sonner'
   import type { LayoutData } from './$types'
-  import { initLocale } from '$lib/i18n.svelte'
+  import { createShareTextI18n, setI18nContext } from '$lib/i18n.svelte'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
-  $effect(() => {
-    initLocale()
-  })
+  setI18nContext(createShareTextI18n())
 
   $effect(() => {
     function handleKeydown(event: KeyboardEvent) {

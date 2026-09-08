@@ -7,7 +7,8 @@
   import { getShareTextContext } from '$lib/share-text-context'
   import { clearDraft, loadDraft, loadDraftDocType, loadDraftName, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   let { data }: PageProps = $props()
 
@@ -15,8 +16,8 @@
 
   const DRAFT_ID = NEW_DOCUMENT_DRAFT_ID
 
-  let documentName = $state(t('doc.untitled'))
-  let savedName = $state(t('doc.untitled'))
+  let documentName = $state(i18n.t('doc.untitled'))
+  let savedName = $state(i18n.t('doc.untitled'))
   let savedContent = $state('')
   let savedDocType = $state('text')
   let content = $state('')
@@ -102,7 +103,7 @@
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
-      toast.error(t('doc.toast.cannotSave', { error: validation.error ?? t('doc.toast.invalidType', { label: currentType.label }) }))
+      toast.error(i18n.t('doc.toast.cannotSave', { error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }) }))
       return
     }
     saving = true
@@ -115,11 +116,11 @@
       documentName = created.name
       content = created.content
       docType = created.documentType
-      toast.success(t('doc.toast.saved'))
+      toast.success(i18n.t('doc.toast.saved'))
       await context.refreshList()
       await goto(`/${created.id}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.saveFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.saveFailed'))
     } finally {
       saving = false
     }

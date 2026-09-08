@@ -1,4 +1,5 @@
 import { browser } from '$app/environment'
+import { getContext, hasContext, setContext } from 'svelte'
 
 export const LOCALES = [
   { code: 'en', label: 'English' },
@@ -1326,49 +1327,90 @@ const dictionaries: Record<Locale, Record<MessageKey, string>> = {
   'zh-TW': zhTW,
 }
 
-let currentLocale = $state<Locale>(DEFAULT_LOCALE)
-
-function isLocale(value: unknown): value is Locale {
-  return value === 'en' || value === 'zh-CN' || value === 'zh-TW'
+export interface I18nStore<TKey extends string = string, TLocale extends string = string> {
+  readonly locale: TLocale
+  setLocale(next: TLocale): void
+  t(key: TKey, params?: Record<string, string | number>): string
 }
 
-export function getLocale(): Locale {
-  return currentLocale
-}
+export const I18N_CONTEXT_KEY = 'i18n'
 
-export function setLocale(next: Locale) {
-  currentLocale = next
+export function createI18nStore<TKey extends string, TLocale extends string>(
+  dictionaries: Record<TLocale, Record<TKey, string>>,
+  defaultLocale: TLocale,
+  storageKey: string | null,
+): I18nStore<TKey, TLocale> {
+  let current = $state<TLocale>(defaultLocale)
+
   if (browser) {
     try {
-      localStorage.setItem(STORAGE_KEY, next)
+      const saved = storageKey ? localStorage.getItem(storageKey) : null
+      if (saved !== null && Object.prototype.hasOwnProperty.call(dictionaries, saved)) {
+        current = saved as TLocale
+      }
     } catch {
       // ignore storage errors
     }
-    document.documentElement.lang = next
+    // svelte-ignore state_referenced_locally -- intentional one-time read of the initial locale
+    document.documentElement.lang = current
+  }
+
+  return {
+    get locale() {
+      return current
+    },
+    setLocale(next: TLocale) {
+      current = next
+      if (!browser) return
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, next)
+        } catch {
+          // ignore storage errors
+        }
+      }
+      document.documentElement.lang = next
+    },
+    t(key: TKey, params?: Record<string, string | number>): string {
+      const dictionary = dictionaries[current]
+      let message: string = dictionary[key] ?? dictionaries[defaultLocale][key] ?? key
+      if (params) {
+        for (const [name, value] of Object.entries(params)) {
+          message = message.replaceAll(`{${name}}`, String(value))
+        }
+      }
+      return message
+    },
   }
 }
 
-export function initLocale() {
-  if (!browser) return
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (isLocale(saved) && saved !== DEFAULT_LOCALE) {
-      setLocale(saved)
-    }
-  } catch {
-    // ignore storage errors
-  }
+export type ShareTextI18n = I18nStore<MessageKey, Locale>
+
+export function createShareTextI18n(): ShareTextI18n {
+  return createI18nStore(dictionaries, DEFAULT_LOCALE, STORAGE_KEY)
 }
 
-export function t(key: MessageKey, params?: Record<string, string | number>): string {
-  const dictionary = dictionaries[currentLocale]
-  let message: string = dictionary[key] ?? en[key]
-  if (params) {
-    for (const [name, value] of Object.entries(params)) {
-      message = message.replaceAll(`{${name}}`, String(value))
-    }
+export function setI18nContext(store: ShareTextI18n): ShareTextI18n {
+  setContext(I18N_CONTEXT_KEY, store)
+  return store
+}
+
+let defaultStore: ShareTextI18n | null = null
+
+export function getI18nContext(): ShareTextI18n {
+  if (hasContext(I18N_CONTEXT_KEY)) {
+    return getContext<ShareTextI18n>(I18N_CONTEXT_KEY)
   }
-  return message
+  // per-test provider; app code always runs under the layout store. Warn in
+  // dev so a provider-less component in app code fails loudly instead of
+  // silently rendering English.
+  if (import.meta.env.DEV) {
+    console.warn('getI18nContext: no i18n provider above; using the default English store')
+  }
+  if (!defaultStore) {
+    defaultStore = createShareTextI18n()
+  }
+  return defaultStore
 }
 
 const SETTING_KEYS = {
@@ -1390,12 +1432,12 @@ const SETTING_KEYS = {
   },
 } as const
 
-export function settingLabel(key: string): string | null {
+export function settingLabel(i18n: ShareTextI18n, key: string): string | null {
   const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
-  return setting ? t(setting.label) : null
+  return setting ? i18n.t(setting.label) : null
 }
 
-export function settingDescription(key: string): string | null {
+export function settingDescription(i18n: ShareTextI18n, key: string): string | null {
   const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
-  return setting ? t(setting.description) : null
+  return setting ? i18n.t(setting.description) : null
 }

@@ -17,7 +17,8 @@
     valueClass,
     valueText,
   } from './structure-value'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     label: string
@@ -115,9 +116,9 @@
   async function handleCopy(text: string) {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success(t('editor.toast.copied'))
+      toast.success(i18n.t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
     }
   }
 
@@ -189,7 +190,7 @@
     <button
       type="button"
       class="relative inline-flex shrink-0 items-center justify-center rounded outline-none before:absolute before:-inset-1 before:content-[''] focus:text-cyan-300"
-      aria-label={open ? t('structure.collapse', { name: label }) : t('structure.expand', { name: label })}
+      aria-label={open ? i18n.t('structure.collapse', { name: label }) : i18n.t('structure.expand', { name: label })}
       aria-expanded={open}
       onclick={() => (open = !open)}
     >
@@ -197,8 +198,8 @@
     </button>
     <Copyable
       copyText={copyValue(value)}
-      copyAriaLabel={label ? t('structure.copyValue', { name: label }) : t('structure.copyNode')}
-      copyTooltip={label ? t('structure.copyValue', { name: label }) : t('structure.copyNode')}
+      copyAriaLabel={label ? i18n.t('structure.copyValue', { name: label }) : i18n.t('structure.copyNode')}
+      copyTooltip={label ? i18n.t('structure.copyValue', { name: label }) : i18n.t('structure.copyNode')}
     >
       {#if label !== ''}
         <span class="text-slate-300">{label}</span>
@@ -264,7 +265,7 @@
                 class="text-slate-300 shrink-0 cursor-pointer rounded outline-none hover:underline focus:underline"
                 ondblclick={(e) => { e.stopPropagation(); startEditName(entry) }}
                 onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); startEditName(entry) } }}
-                title={t('structure.renameHint')}
+                title={i18n.t('structure.renameHint')}
                 role="button"
                 tabindex="0"
               >{entry.key}</span>
@@ -280,8 +281,8 @@
                 <Button
                   size="sm"
                   variant="ghost"
-                  ariaLabel={t('structure.editKey', { name: entry.key })}
-                  tooltip={t('structure.editKey', { name: entry.key })}
+                  ariaLabel={i18n.t('structure.editKey', { name: entry.key })}
+                  tooltip={i18n.t('structure.editKey', { name: entry.key })}
                   onClick={(e) => { e.stopPropagation(); startEditValue(entry) }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
                   className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
@@ -296,8 +297,8 @@
               <Button
                 size="sm"
                 variant="ghost"
-                ariaLabel={t('structure.copyValue', { name: entry.key })}
-                tooltip={t('structure.copyValue', { name: entry.key })}
+                ariaLabel={i18n.t('structure.copyValue', { name: entry.key })}
+                tooltip={i18n.t('structure.copyValue', { name: entry.key })}
                 onClick={(e) => { e.stopPropagation(); void handleCopy(copyValue(entry.value)) }}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
                 className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"

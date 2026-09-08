@@ -7,7 +7,8 @@
   import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
   import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
   import { createColumnResize } from './use-column-resize.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   export type SortDirection = 'asc' | 'desc'
 
@@ -104,9 +105,9 @@
     storageKey,
   }: Props<T> = $props()
 
-  const resolvedEmptyMessage = $derived(emptyMessage ?? t('admin.dataTable.noRows'))
-  const resolvedSearchPlaceholder = $derived(searchPlaceholder ?? t('admin.dataTable.search'))
-  const resolvedSelectAllAriaLabel = $derived(selectAllAriaLabel ?? t('admin.dataTable.selectAll'))
+  const resolvedEmptyMessage = $derived(emptyMessage ?? i18n.t('admin.dataTable.noRows'))
+  const resolvedSearchPlaceholder = $derived(searchPlaceholder ?? i18n.t('admin.dataTable.search'))
+  const resolvedSelectAllAriaLabel = $derived(selectAllAriaLabel ?? i18n.t('admin.dataTable.selectAll'))
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
 
@@ -321,14 +322,14 @@
                     <button
                       type="button"
                       class="leading-none outline-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column) ?? t('admin.dataTable.sortAsc', { name: column.header })}
+                      aria-label={sortAriaLabel?.(column) ?? i18n.t('admin.dataTable.sortAsc', { name: column.header })}
                       onclick={() => handleSortClick(column, 'asc')}>
                       <SortAscIcon className="h-2.5 w-2.5" />
                     </button>
                     <button
                       type="button"
                       class="-mt-1 leading-none outline-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column) ?? t('admin.dataTable.sortDesc', { name: column.header })}
+                      aria-label={sortAriaLabel?.(column) ?? i18n.t('admin.dataTable.sortDesc', { name: column.header })}
                       onclick={() => handleSortClick(column, 'desc')}>
                       <SortDescIcon className="h-2.5 w-2.5" />
                     </button>
@@ -342,7 +343,7 @@
                   type="button"
                   class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                   style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
-                  aria-label={t('admin.dataTable.resize', { name: column.header })}
+                  aria-label={i18n.t('admin.dataTable.resize', { name: column.header })}
                   onmousedown={event => resize.startColumnResize(event, i)}
                   onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
               {/if}
@@ -370,7 +371,7 @@
                 <td class="border-b border-slate-800/50 px-3 py-2">
                   <Checkbox
                     checked={selectedIds?.has(rowId(row)) ?? false}
-                    ariaLabel={rowSelectAriaLabel?.(row) ?? t('admin.dataTable.selectRow')}
+                    ariaLabel={rowSelectAriaLabel?.(row) ?? i18n.t('admin.dataTable.selectRow')}
                     onChange={checked => onToggleSelection?.(rowId(row), checked)} />
                 </td>
               {/if}

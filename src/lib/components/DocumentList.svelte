@@ -12,7 +12,8 @@
   import SearchInput from './SearchInput.svelte'
   import Chip from './Chip.svelte'
   import LanguageMenu from './LanguageMenu.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
   import { getDocumentType } from '$lib/document-types'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
 
@@ -104,19 +105,19 @@
 </script>
 
 <aside
-  aria-label={t('editor.documentList')}
+  aria-label={i18n.t('editor.documentList')}
   class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 md:w-[var(--aside-w,100%)]"
   style={width !== undefined ? `--aside-w: ${width}px` : undefined}>
   <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
     <div class="flex items-center gap-1">
-      <span class="p-1 text-md font-semibold text-slate-200">{t('app.name')}</span>
+      <span class="p-1 text-md font-semibold text-slate-200">{i18n.t('app.name')}</span>
     </div>
     <div class="flex items-center gap-1">
       {#if onToggleCollapse}
         <Button
           size="sm"
-          ariaLabel={t('list.collapse')}
-          tooltip={t('list.collapse')}
+          ariaLabel={i18n.t('list.collapse')}
+          tooltip={i18n.t('list.collapse')}
           ariaExpanded={true}
           preventFocusSteal
           onClick={onToggleCollapse}>
@@ -125,12 +126,12 @@
           {/snippet}
         </Button>
       {/if}
-      <Button size="sm" ariaLabel={t('list.newDocument')} tooltip={t('list.newDocument')} onClick={onNew}>
+      <Button size="sm" ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={onNew}>
         {#snippet icon()}
           <PlusIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel={t('list.refresh')} tooltip={t('list.refresh')} onClick={onRefresh} disabled={loading}>
+      <Button size="sm" ariaLabel={i18n.t('list.refresh')} tooltip={i18n.t('list.refresh')} onClick={onRefresh} disabled={loading}>
         {#snippet icon()}
           <RefreshIcon />
         {/snippet}
@@ -139,21 +140,21 @@
         <LanguageMenu />
         <Button
           size="sm"
-          ariaLabel={t('list.settings')}
-          tooltip={t('list.settingsWith', { name: user.username })}
+          ariaLabel={i18n.t('list.settings')}
+          tooltip={i18n.t('list.settingsWith', { name: user.username })}
           onClick={onSettings}>
           {#snippet icon()}
             <SettingsIcon />
           {/snippet}
         </Button>
-        <Button size="sm" ariaLabel={t('list.signOut')} tooltip={t('list.signOut')} onClick={onSignOut}>
+        <Button size="sm" ariaLabel={i18n.t('list.signOut')} tooltip={i18n.t('list.signOut')} onClick={onSignOut}>
           {#snippet icon()}
             <SignOutIcon />
           {/snippet}
         </Button>
       {:else}
         <LanguageMenu />
-        <Button size="sm" ariaLabel={t('list.login')} tooltip={t('list.login')} onClick={onLogin}>
+        <Button size="sm" ariaLabel={i18n.t('list.login')} tooltip={i18n.t('list.login')} onClick={onLogin}>
           {#snippet icon()}
             <PersonIcon />
           {/snippet}
@@ -166,16 +167,16 @@
     bind:value={searchInput}
     oninput={onSearchInput}
     onkeydown={onSearchKeydown}
-    ariaLabel={t('list.searchDocuments')}
-    placeholder={t('list.searchDocumentsPlaceholder')}
+    ariaLabel={i18n.t('list.searchDocuments')}
+    placeholder={i18n.t('list.searchDocumentsPlaceholder')}
     wrapperClass="px-2" />
 
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
     {#if loading && documents.length === 0}
-      <p class="p-2 text-sm text-slate-400">{t('list.loadingDocuments')}</p>
+      <p class="p-2 text-sm text-slate-400">{i18n.t('list.loadingDocuments')}</p>
     {:else if documents.length === 0}
       <p class="p-2 text-sm text-slate-400">
-        {searchActive ? t('list.noMatches') : t('list.empty')}
+        {searchActive ? i18n.t('list.noMatches') : i18n.t('list.empty')}
       </p>
     {:else}
       <div class="flex flex-col">
@@ -197,7 +198,7 @@
                   class={tagChipClass()}
                   style="color: #94a3b8; border-color: rgba(148,163,184,0.4); background-color: rgba(148,163,184,0.1);">
                   <LockIcon className="h-3 w-3" />
-                  {t('list.private')}
+                  {i18n.t('list.private')}
                 </span>
               {/if}
             </div>
@@ -207,7 +208,7 @@
           <div
             bind:this={loadMoreSentinel}
             class="flex min-h-10 items-center justify-center py-2 text-sm text-slate-400">
-            {loading ? t('list.loadingMore') : ''}
+            {loading ? i18n.t('list.loadingMore') : ''}
           </div>
         {/if}
       </div>

@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Component } from 'svelte'
   import type { PreviewProps } from '$lib/document-types'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     preview: () => Promise<Component<PreviewProps>>
@@ -31,7 +32,7 @@
       })
       .catch(error => {
         if (!cancelled) {
-          loadError = error instanceof Error ? error.message : t('preview.loadFailed')
+          loadError = error instanceof Error ? error.message : i18n.t('preview.loadFailed')
         }
       })
 
@@ -45,6 +46,6 @@
   <PreviewComponent {content} {docType} onContentChange={editable ? onContentChange : undefined} {editable} />
 {:else}
   <div class="flex h-full items-center justify-center text-sm text-slate-400">
-    {loadError || t('preview.loading')}
+    {loadError || i18n.t('preview.loading')}
   </div>
 {/if}

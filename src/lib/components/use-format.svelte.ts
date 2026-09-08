@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
 import type { FormatSpec } from '$lib/document-types'
-import { t } from '$lib/i18n.svelte'
+import { getI18nContext } from '$lib/i18n.svelte'
 
 export function useFormat(options: {
   format: () => FormatSpec | undefined
@@ -8,6 +8,7 @@ export function useFormat(options: {
   setContent: (value: string) => void
   label: () => string
 }) {
+  const i18n = getI18nContext()
   let open = $state(false)
 
   function openDialog() {
@@ -25,7 +26,7 @@ export function useFormat(options: {
     if (result.ok) {
       options.setContent(result.value ?? '')
     } else {
-      toast.error(t('editor.toast.cannotFormat', { error: result.error ?? t('doc.toast.invalidType', { label: options.label() }) }))
+      toast.error(i18n.t('editor.toast.cannotFormat', { error: result.error ?? i18n.t('doc.toast.invalidType', { label: options.label() }) }))
     }
     open = false
   }

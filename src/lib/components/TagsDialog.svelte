@@ -8,7 +8,8 @@
   import TagInput from './TagInput.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     open: boolean
@@ -79,16 +80,16 @@
 </script>
 
 {#if open}
-  <BaseDialog title={t('tags.title')} maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
+  <BaseDialog title={i18n.t('tags.title')} maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-      <FormField label={t('tags.label')} htmlFor="document-tags-input">
+      <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
         <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>
 
       <Buttons>
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{t('common.ok')}</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{t('common.reset')}</Button>
+          <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{i18n.t('common.ok')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
         {/snippet}
       </Buttons>
     </div>
@@ -97,9 +98,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title={t('tags.discardTitle')}
-    message={t('tags.discardMessage')}
-    confirmLabel={t('tags.discard')}
+    title={i18n.t('tags.discardTitle')}
+    message={i18n.t('tags.discardMessage')}
+    confirmLabel={i18n.t('tags.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

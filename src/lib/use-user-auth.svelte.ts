@@ -1,13 +1,13 @@
 import { toast } from 'svelte-sonner'
 import { fetchUserSession, login, logout, register, type AdminIdentity } from '$lib/user-auth'
 import type { User } from '$lib/documents'
-import { setLocale, type Locale } from '$lib/i18n.svelte'
 import { fetchUserPreferences } from '$lib/user-settings'
-import { t } from '$lib/i18n.svelte'
+import { getI18nContext, type Locale } from '$lib/i18n.svelte'
 
 export type UserAuthState = 'checking' | 'signedOut' | 'signedIn'
 
 export function useUserAuth() {
+  const i18n = getI18nContext()
   let state = $state<UserAuthState>('checking')
   let user = $state<User | null>(null)
   let admin = $state<AdminIdentity | null>(null)
@@ -15,7 +15,7 @@ export function useUserAuth() {
   async function applyPreferredLanguage() {
     try {
       const preferences = await fetchUserPreferences()
-      setLocale(preferences.preferredLanguage as Locale)
+      i18n.setLocale(preferences.preferredLanguage as Locale)
     } catch {
       // sign-in already established; ignore preference load failures
     }
@@ -63,7 +63,7 @@ export function useUserAuth() {
     try {
       await logout()
     } catch {
-      toast.error(t('auth.toast.signOutFailed'))
+      toast.error(i18n.t('auth.toast.signOutFailed'))
     }
     user = null
     admin = null

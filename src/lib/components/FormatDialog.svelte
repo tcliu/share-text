@@ -6,7 +6,8 @@
   import FormField from './FormField.svelte'
   import NumberInput from './NumberInput.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     show: boolean
@@ -59,21 +60,21 @@
   <BaseDialog {title} {className} {maxWidth} {onCancel}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       {#if hasIndent}
-        <FormField label={t('format.indentation')} htmlFor="format-indent-input">
+        <FormField label={i18n.t('format.indentation')} htmlFor="format-indent-input">
           <NumberInput
             id="format-indent-input"
             bind:this={numberInputRef}
             bind:value={indent}
             min={0}
             max={8}
-            ariaLabel={t('format.indentation')}
+            ariaLabel={i18n.t('format.indentation')}
             className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-500" />
         </FormField>
       {/if}
       <Buttons>
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel ?? t('format.apply')}</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{t('common.reset')}</Button>
+          <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel ?? i18n.t('format.apply')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
         {/snippet}
       </Buttons>
     </div>

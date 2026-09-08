@@ -17,7 +17,8 @@
   import type { Tag } from '$lib/tag-colors'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
   import ShareDialog from '$lib/components/ShareDialog.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   let { data }: PageProps = $props()
 
@@ -117,7 +118,7 @@
       content = document.content
       docType = document.documentType
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.loadFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.loadFailed'))
     } finally {
       refreshing = false
     }
@@ -183,7 +184,7 @@
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
-      toast.error(t('doc.toast.cannotSave', { error: validation.error ?? t('doc.toast.invalidType', { label: currentType.label }) }))
+      toast.error(i18n.t('doc.toast.cannotSave', { error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }) }))
       return
     }
     saving = true
@@ -200,11 +201,11 @@
       documentUpdatedBy = updated.updatedBy
       content = updated.content
       docType = updated.documentType
-      toast.success(t('doc.toast.saved'))
+      toast.success(i18n.t('doc.toast.saved'))
       await context.refreshList()
       await refreshVersions()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.saveFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.saveFailed'))
     } finally {
       saving = false
     }
@@ -226,10 +227,10 @@
       documentUpdatedAt = updated.updatedAt
       documentUpdatedBy = updated.updatedBy
       documentTags = updated.tags ?? []
-      toast.success(t('doc.toast.renamed'))
+      toast.success(i18n.t('doc.toast.renamed'))
       await context.refreshList()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.renameFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.renameFailed'))
     } finally {
       renaming = false
     }
@@ -246,15 +247,15 @@
   async function handleClone() {
     if (!currentId || cloning) return
     cloning = true
-    const cloneName = documentName ? t('doc.copySuffix', { name: documentName }) : t('doc.untitled')
+    const cloneName = documentName ? i18n.t('doc.copySuffix', { name: documentName }) : i18n.t('doc.untitled')
     try {
       saveDraft(NEW_DOCUMENT_DRAFT_ID, content, docType, cloneName)
       if (context.canLeaveCurrentDocument()) {
-        toast.success(t('doc.toast.cloned'))
+        toast.success(i18n.t('doc.toast.cloned'))
       }
       await goto(`/${NEW_DOCUMENT_DRAFT_ID}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.cloneFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.cloneFailed'))
     } finally {
       cloning = false
     }
@@ -274,10 +275,10 @@
       savedContent = updated.content
       content = updated.content
       docType = updated.documentType
-      toast.success(t('doc.toast.tagsUpdated'))
+      toast.success(i18n.t('doc.toast.tagsUpdated'))
       await context.refreshList()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.tagsSaveFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.tagsSaveFailed'))
     } finally {
       savingTags = false
     }
@@ -299,7 +300,7 @@
       accessSharedWith = state.sharedWith
       shareOpen = true
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.shareLoadFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.shareLoadFailed'))
     }
   }
 
@@ -311,10 +312,10 @@
       accessIsPublic = state.isPublic
       accessSharedWith = state.sharedWith
       context.updateDocumentSummary(currentId, { isPublic: state.isPublic })
-      toast.success(t('doc.toast.shareUpdated'))
+      toast.success(i18n.t('doc.toast.shareUpdated'))
       shareOpen = false
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('doc.toast.shareUpdateFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('doc.toast.shareUpdateFailed'))
     } finally {
       shareSaving = false
     }

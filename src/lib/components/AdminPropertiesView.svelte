@@ -6,7 +6,8 @@
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
-  import { t, settingDescription, settingLabel } from '$lib/i18n.svelte'
+  import { getI18nContext, settingDescription, settingLabel } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
   interface Props {
@@ -16,17 +17,17 @@
   let { settingsState }: Props = $props()
 
   const sourceLabels = $derived<Record<string, string>>({
-    database: t('admin.source.saved'),
-    environment: t('admin.source.environment'),
-    default: t('admin.source.default'),
+    database: i18n.t('admin.source.saved'),
+    environment: i18n.t('admin.source.environment'),
+    default: i18n.t('admin.source.default'),
   })
 </script>
 
 {#snippet formContent()}
   <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
     {#each settingsState.settings as setting, i}
-      {@const label = settingLabel(setting.key) ?? setting.label}
-      {@const description = settingDescription(setting.key) ?? setting.description}
+      {@const label = settingLabel(i18n, setting.key) ?? setting.label}
+      {@const description = settingDescription(i18n, setting.key) ?? setting.description}
       <div
         class="grid items-center gap-2 p-3 {setting.kind === 'string'
           ? 'md:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.25fr)]'
@@ -45,7 +46,7 @@
             </span>
           </div>
           <p class="mt-0.5 text-xs text-slate-400">{description}</p>
-          <p class="mt-0.5 text-xs text-slate-500">{setting.key} ({t('admin.env')} {setting.envKey})</p>
+          <p class="mt-0.5 text-xs text-slate-500">{setting.key} ({i18n.t('admin.env')} {setting.envKey})</p>
         </div>
         <div class="flex items-center gap-2">
           {#if setting.kind === 'string'}
@@ -67,8 +68,8 @@
           {#if setting.source === 'database'}
             <Button
               size="sm"
-              ariaLabel={t('admin.revertLabelToDefault', { name: label })}
-              tooltip={t('admin.revertToDefault')}
+              ariaLabel={i18n.t('admin.revertLabelToDefault', { name: label })}
+              tooltip={i18n.t('admin.revertToDefault')}
               tooltipAlign="right"
               disabled={settingsState.pending}
               onClick={() => void settingsState.resetSetting(setting)}
@@ -91,11 +92,11 @@
 <div class="flex min-h-0 flex-1 flex-col gap-4">
   <Tabs
     tabs={[
-      { label: t('admin.properties.form'), path: 'form', content: formContent },
-      { label: t('admin.tab.properties'), path: 'properties', content: codeContent },
+      { label: i18n.t('admin.properties.form'), path: 'form', content: formContent },
+      { label: i18n.t('admin.tab.properties'), path: 'properties', content: codeContent },
     ]}
     state={{}}
-    ariaLabel={t('admin.propertiesViews')}
+    ariaLabel={i18n.t('admin.propertiesViews')}
     class="bg-slate-950" />
 
   <Buttons>
@@ -106,13 +107,13 @@
         disabled={!settingsState.hasUnsavedChanges || settingsState.pending}
         pending={settingsState.pending}
         onClick={() => void settingsState.apply()}>
-        {t('common.apply')}
+        {i18n.t('common.apply')}
       </Button>
-      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>{t('common.reload')}</Button>
+      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>{i18n.t('common.reload')}</Button>
       <Button
         disabled={settingsState.pending || !settingsState.hasUnsavedChanges}
         onClick={() => settingsState.resetDraft()}>
-        {t('common.reset')}
+        {i18n.t('common.reset')}
       </Button>
     {/snippet}
   </Buttons>

@@ -18,7 +18,8 @@
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
   import { useOwnedDocuments } from '$lib/use-owned-documents.svelte'
   import { useUserSettings } from '$lib/use-user-settings.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
@@ -101,23 +102,23 @@
 </script>
 
 <svelte:head>
-  <title>{t('settings.title')}</title>
+  <title>{i18n.t('settings.title')}</title>
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
   <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
-    <h1 class="text-md font-semibold text-slate-200">{t('settings.title')}</h1>
+    <h1 class="text-md font-semibold text-slate-200">{i18n.t('settings.title')}</h1>
     <div class="flex items-center gap-2">
       <LanguageMenu />
-      <Button size="sm" ariaLabel={t('auth.goToDocuments')} tooltip={t('auth.goToDocuments')} onClick={() => goto('/')}>
+      <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
         {#snippet icon()}
           <DocumentIcon />
         {/snippet}
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('list.signOut')}
-        tooltip={t('list.signOut')}
+        ariaLabel={i18n.t('list.signOut')}
+        tooltip={i18n.t('list.signOut')}
         onClick={() => void handleSignedOut()}>
         {#snippet icon()}
           <SignOutIcon />
@@ -138,15 +139,15 @@
         <SettingsGeneralView settingsState={state.settingsState} />
       {/snippet}
       {#snippet documentsToolbar(state: SettingsState)}
-        <Button size="sm" ariaLabel={t('settings.documents.add')} tooltip={t('settings.documents.add')} onClick={() => goto('/new')}>
+        <Button size="sm" ariaLabel={i18n.t('settings.documents.add')} tooltip={i18n.t('settings.documents.add')} onClick={() => goto('/new')}>
           {#snippet icon()}
             <PlusIcon />
           {/snippet}
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('settings.documents.openSelected')}
-          tooltip={t('settings.documents.openSelected')}
+          ariaLabel={i18n.t('settings.documents.openSelected')}
+          tooltip={i18n.t('settings.documents.openSelected')}
           disabled={state.documentsState.selectedCount !== 1}
           onClick={() => state.documentsState.openSelected()}>
           {#snippet icon()}
@@ -155,8 +156,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('admin.deleteSelected')}
-          tooltip={t('admin.deleteSelected')}
+          ariaLabel={i18n.t('admin.deleteSelected')}
+          tooltip={i18n.t('admin.deleteSelected')}
           disabled={state.documentsState.selectedCount === 0}
           pending={state.documentsState.bulkDeletePending}
           onClick={() => (state.documentsState.bulkDeleteOpen = true)}
@@ -167,8 +168,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('common.reload')}
-          tooltip={t('common.reload')}
+          ariaLabel={i18n.t('common.reload')}
+          tooltip={i18n.t('common.reload')}
           disabled={state.documentsState.loading}
           onClick={() => void state.documentsState.load()}>
           {#snippet icon()}
@@ -181,17 +182,17 @@
       {/snippet}
       {@const settingsTabs = [
         {
-          label: t('settings.tab.profile'),
+          label: i18n.t('settings.tab.profile'),
           path: PROFILE_PATH,
           content: profileContent,
         },
         {
-          label: t('settings.tab.general'),
+          label: i18n.t('settings.tab.general'),
           path: GENERAL_PATH,
           content: generalContent,
         },
         {
-          label: t('settings.tab.documents'),
+          label: i18n.t('settings.tab.documents'),
           path: DOCUMENTS_PATH,
           toolbar: documentsToolbar,
           content: documentsContent,
@@ -202,7 +203,7 @@
           tabs={settingsTabs}
           state={{ settingsState, documentsState }}
           pathname={page.url.pathname}
-          ariaLabel={t('settings.title')}
+          ariaLabel={i18n.t('settings.title')}
           class="bg-slate-950" />
         {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
           <Buttons>
@@ -213,15 +214,15 @@
                 disabled={!settingsState.hasUnsavedChanges || settingsState.pending}
                 pending={settingsState.pending}
                 onClick={() => void settingsState.apply()}>
-                {t('common.apply')}
+                {i18n.t('common.apply')}
               </Button>
               <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>
-                {t('common.reload')}
+                {i18n.t('common.reload')}
               </Button>
               <Button
                 disabled={settingsState.pending || !settingsState.hasUnsavedChanges}
                 onClick={() => settingsState.resetDraft()}>
-                {t('common.reset')}
+                {i18n.t('common.reset')}
               </Button>
             {/snippet}
           </Buttons>
@@ -234,9 +235,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title={t('settings.discardTitle')}
-    message={t('settings.discardMessage')}
-    confirmLabel={t('common.ok')}
+    title={i18n.t('settings.discardTitle')}
+    message={i18n.t('settings.discardMessage')}
+    confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
     onConfirm={handleDiscardAndNavigate}
     onCancel={handleCancelDiscard} />

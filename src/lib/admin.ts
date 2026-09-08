@@ -1,8 +1,8 @@
 import type { Tag } from './tag-colors'
-import { t } from './i18n.svelte'
+import type { ShareTextI18n } from './i18n.svelte'
 
 export class AdminAuthError extends Error {
-  constructor(message = t('admin.auth.required')) {
+  constructor(message: string) {
     super(message)
     this.name = 'AdminAuthError'
   }
@@ -97,10 +97,10 @@ export interface AdminSessionInfo {
 
 const BASE_PATH = '/api/admin'
 
-async function parseResponse<T>(response: Response, fallback: string): Promise<T> {
+async function parseResponse<T>(response: Response, fallback: string, i18n: ShareTextI18n): Promise<T> {
   const body = await response.json().catch(() => ({}))
   if (response.status === 401) {
-    throw new AdminAuthError()
+    throw new AdminAuthError(i18n.t('admin.auth.required'))
   }
   if (!response.ok) {
     throw new Error(typeof body === 'object' && body !== null && typeof body.error === 'string' ? body.error : fallback)
@@ -108,45 +108,51 @@ async function parseResponse<T>(response: Response, fallback: string): Promise<T
   return body as T
 }
 
-export async function login(username: string, password: string, rememberMe = false): Promise<void> {
+export async function login(
+  username: string,
+  password: string,
+  rememberMe = false,
+  i18n: ShareTextI18n,
+): Promise<void> {
   const response = await fetch(`${BASE_PATH}/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password, rememberMe }),
   })
-  await parseResponse<{ ok: boolean }>(response, t('auth.toast.signInFailed'))
+  await parseResponse<{ ok: boolean }>(response, i18n.t('auth.toast.signInFailed'), i18n)
 }
 
-export async function fetchAdminSession(): Promise<AdminSessionInfo> {
+export async function fetchAdminSession(i18n: ShareTextI18n): Promise<AdminSessionInfo> {
   const response = await fetch(`${BASE_PATH}/session`)
-  return parseResponse<AdminSessionInfo>(response, t('admin.auth.toast.checkFailed'))
+  return parseResponse<AdminSessionInfo>(response, i18n.t('admin.auth.toast.checkFailed'), i18n)
 }
 
-export async function logout(): Promise<void> {
+export async function logout(i18n: ShareTextI18n): Promise<void> {
   const response = await fetch(`${BASE_PATH}/logout`, { method: 'POST' })
-  await parseResponse<{ ok: boolean }>(response, t('auth.toast.signOutFailed'))
+  await parseResponse<{ ok: boolean }>(response, i18n.t('auth.toast.signOutFailed'), i18n)
 }
 
-export async function fetchAdminSettings(): Promise<AdminSetting[]> {
+export async function fetchAdminSettings(i18n: ShareTextI18n): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`)
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, t('admin.auth.toast.loadSettings'))
+  const body = await parseResponse<{ settings: AdminSetting[] }>(response, i18n.t('admin.auth.toast.loadSettings'), i18n)
   return body.settings
 }
 
 export async function updateAdminSettings(
   settings: Array<{ key: string; value: number | string | null }>,
+  i18n: ShareTextI18n,
 ): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ settings }),
   })
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, t('admin.auth.toast.saveSettings'))
+  const body = await parseResponse<{ settings: AdminSetting[] }>(response, i18n.t('admin.auth.toast.saveSettings'), i18n)
   return body.settings
 }
 
-export async function resetAdminSetting(key: string): Promise<AdminSetting[]> {
-  return updateAdminSettings([{ key, value: null }])
+export async function resetAdminSetting(key: string, i18n: ShareTextI18n): Promise<AdminSetting[]> {
+  return updateAdminSettings([{ key, value: null }], i18n)
 }
 
 export async function fetchAdminDocuments(
@@ -158,6 +164,7 @@ export async function fetchAdminDocuments(
     sortBy?: string
     order?: 'asc' | 'desc'
   } = {},
+  i18n: ShareTextI18n,
 ): Promise<AdminDocumentListResponse> {
   const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()
@@ -184,7 +191,7 @@ export async function fetchAdminDocuments(
   const url = queryString ? `${BASE_PATH}/documents?${queryString}` : `${BASE_PATH}/documents`
 
   const response = await fetch(url)
-  const body = await parseResponse<AdminDocumentListResponse>(response, t('admin.auth.toast.loadDocuments'))
+  const body = await parseResponse<AdminDocumentListResponse>(response, i18n.t('admin.auth.toast.loadDocuments'), i18n)
   return body
 }
 
@@ -200,48 +207,52 @@ export async function updateAdminDocument(
     documentType?: string
     sharedWith?: string[]
   },
+  i18n: ShareTextI18n,
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, t('admin.auth.toast.updateDocument'))
+  const body = await parseResponse<{ document: AdminDocument }>(response, i18n.t('admin.auth.toast.updateDocument'), i18n)
   return body.document
 }
 
-export async function createAdminDocument(input: {
-  name: string
-  content: string
-  documentType?: string
-}): Promise<AdminDocument> {
+export async function createAdminDocument(
+  input: {
+    name: string
+    content: string
+    documentType?: string
+  },
+  i18n: ShareTextI18n,
+): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, t('admin.auth.toast.createDocument'))
+  const body = await parseResponse<{ document: AdminDocument }>(response, i18n.t('admin.auth.toast.createDocument'), i18n)
   return body.document
 }
 
-export async function fetchAdminDocument(id: string): Promise<AdminDocumentDetail> {
+export async function fetchAdminDocument(id: string, i18n: ShareTextI18n): Promise<AdminDocumentDetail> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`)
-  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, t('admin.auth.toast.loadDocument'))
+  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, i18n.t('admin.auth.toast.loadDocument'), i18n)
   return body.document
 }
 
-export async function deleteAdminDocument(id: string): Promise<void> {
+export async function deleteAdminDocument(id: string, i18n: ShareTextI18n): Promise<void> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, { method: 'DELETE' })
-  await parseResponse(response, t('admin.auth.toast.deleteDocument'))
+  await parseResponse(response, i18n.t('admin.auth.toast.deleteDocument'), i18n)
 }
 
-export async function importAdminDocuments(records: unknown[]): Promise<AdminDocumentSummary[]> {
+export async function importAdminDocuments(records: unknown[], i18n: ShareTextI18n): Promise<AdminDocumentSummary[]> {
   const response = await fetch(`${BASE_PATH}/documents`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ records }),
   })
-  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, t('admin.auth.toast.importDocuments'))
+  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, i18n.t('admin.auth.toast.importDocuments'), i18n)
   return body.documents
 }
 
@@ -254,6 +265,7 @@ export async function fetchAdminUsers(
     sortBy?: string
     order?: 'asc' | 'desc'
   } = {},
+  i18n: ShareTextI18n,
 ): Promise<AdminUserListResponse> {
   const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()
@@ -280,54 +292,58 @@ export async function fetchAdminUsers(
   const url = queryString ? `${BASE_PATH}/users?${queryString}` : `${BASE_PATH}/users`
 
   const response = await fetch(url)
-  const body = await parseResponse<AdminUserListResponse>(response, t('admin.auth.toast.loadUsers'))
+  const body = await parseResponse<AdminUserListResponse>(response, i18n.t('admin.auth.toast.loadUsers'), i18n)
   return body
 }
 
-export async function createAdminUser(input: {
-  username: string
-  email: string
-  password: string
-  status?: AdminUserStatus
-}): Promise<AdminUser> {
+export async function createAdminUser(
+  input: {
+    username: string
+    email: string
+    password: string
+    status?: AdminUserStatus
+  },
+  i18n: ShareTextI18n,
+): Promise<AdminUser> {
   const response = await fetch(`${BASE_PATH}/users`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
   })
-  const body = await parseResponse<{ user: AdminUser }>(response, t('admin.auth.toast.createUser'))
+  const body = await parseResponse<{ user: AdminUser }>(response, i18n.t('admin.auth.toast.createUser'), i18n)
   return body.user
 }
 
 export async function updateAdminUser(
   id: number,
   changes: { username?: string; email?: string; password?: string; status?: AdminUserStatus },
+  i18n: ShareTextI18n,
 ): Promise<AdminUser> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ user: AdminUser }>(response, t('admin.auth.toast.updateUser'))
+  const body = await parseResponse<{ user: AdminUser }>(response, i18n.t('admin.auth.toast.updateUser'), i18n)
   return body.user
 }
 
-export async function deleteAdminUser(id: number): Promise<void> {
+export async function deleteAdminUser(id: number, i18n: ShareTextI18n): Promise<void> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, { method: 'DELETE' })
-  await parseResponse(response, t('admin.auth.toast.deleteUser'))
+  await parseResponse(response, i18n.t('admin.auth.toast.deleteUser'), i18n)
 }
 
-export async function importAdminUsers(records: unknown[]): Promise<AdminUser[]> {
+export async function importAdminUsers(records: unknown[], i18n: ShareTextI18n): Promise<AdminUser[]> {
   const response = await fetch(`${BASE_PATH}/users`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ records }),
   })
-  const body = await parseResponse<{ users: AdminUser[] }>(response, t('admin.auth.toast.importUsers'))
+  const body = await parseResponse<{ users: AdminUser[] }>(response, i18n.t('admin.auth.toast.importUsers'), i18n)
   return body.users
 }
 
-export async function exportAdminDocuments(ids?: string[]): Promise<AdminDocumentExportRecord[]> {
+export async function exportAdminDocuments(ids: string[] | undefined, i18n: ShareTextI18n): Promise<AdminDocumentExportRecord[]> {
   const params = new URLSearchParams()
   if (ids && ids.length > 0) {
     params.set('ids', ids.join(','))
@@ -336,10 +352,10 @@ export async function exportAdminDocuments(ids?: string[]): Promise<AdminDocumen
   const url = queryString ? `${BASE_PATH}/documents/export?${queryString}` : `${BASE_PATH}/documents/export`
 
   const response = await fetch(url)
-  return parseResponse<AdminDocumentExportRecord[]>(response, t('admin.auth.toast.exportDocuments'))
+  return parseResponse<AdminDocumentExportRecord[]>(response, i18n.t('admin.auth.toast.exportDocuments'), i18n)
 }
 
-export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportRecord[]> {
+export async function exportAdminUsers(ids: number[] | undefined, i18n: ShareTextI18n): Promise<AdminUserExportRecord[]> {
   const params = new URLSearchParams()
   if (ids && ids.length > 0) {
     params.set('ids', ids.join(','))
@@ -347,5 +363,5 @@ export async function exportAdminUsers(ids?: number[]): Promise<AdminUserExportR
   const queryString = params.toString()
   const url = queryString ? `${BASE_PATH}/users/export?${queryString}` : `${BASE_PATH}/users/export`
   const response = await fetch(url)
-  return parseResponse<AdminUserExportRecord[]>(response, t('admin.auth.toast.exportUsers'))
+  return parseResponse<AdminUserExportRecord[]>(response, i18n.t('admin.auth.toast.exportUsers'), i18n)
 }

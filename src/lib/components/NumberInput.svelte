@@ -1,7 +1,8 @@
 <script lang="ts">
   import ChevronUpSmallIcon from '$lib/icons/ChevronUpSmallIcon.svelte'
   import ChevronDownSmallIcon from '$lib/icons/ChevronDownSmallIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     value: string
@@ -145,7 +146,7 @@
         onclick={() => adjust(1)}
         disabled={disabled || isAtMax}
         tabindex="-1"
-        aria-label={t('number.increment')}
+        aria-label={i18n.t('number.increment')}
         class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300 disabled:opacity-40">
         <ChevronUpSmallIcon className="h-3 w-3" />
       </button>
@@ -154,7 +155,7 @@
         onclick={() => adjust(-1)}
         disabled={disabled || isAtMin}
         tabindex="-1"
-        aria-label={t('number.decrement')}
+        aria-label={i18n.t('number.decrement')}
         class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300 disabled:opacity-40">
         <ChevronDownSmallIcon className="h-3 w-3" />
       </button>

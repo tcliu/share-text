@@ -12,7 +12,8 @@
   import { formatTimestamp } from '$lib/date-format'
   import PlainCell from './PlainCell.svelte'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     usersState: ReturnType<typeof useAdminUsers>
@@ -28,7 +29,7 @@
   const columns = $derived.by<DataTableColumn<AdminUser>[]>(() => [
     {
       key: 'id',
-      header: t('admin.users.id'),
+      header: i18n.t('admin.users.id'),
       width: '8%',
       minWidth: 72,
       sortable: true,
@@ -36,7 +37,7 @@
     },
     {
       key: 'username',
-      header: t('admin.users.username'),
+      header: i18n.t('admin.users.username'),
       width: '20%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -46,7 +47,7 @@
     },
     {
       key: 'email',
-      header: t('admin.users.email'),
+      header: i18n.t('admin.users.email'),
       width: '28%',
       minWidth: 200,
       cellClass: 'max-w-0',
@@ -56,7 +57,7 @@
     },
     {
       key: 'status',
-      header: t('admin.users.status'),
+      header: i18n.t('admin.users.status'),
       width: '14%',
       minWidth: 96,
       sortable: true,
@@ -64,7 +65,7 @@
     },
     {
       key: 'createdAt',
-      header: t('admin.users.created'),
+      header: i18n.t('admin.users.created'),
       width: '18%',
       minWidth: 144,
       cellClass: 'text-slate-400',
@@ -79,12 +80,12 @@
   rowId={user => String(user.id)}
   {columns}
   loading={usersState.loading}
-  emptyMessage={usersState.searchQuery ? t('admin.users.noMatches') : t('admin.users.empty')}
+  emptyMessage={usersState.searchQuery ? i18n.t('admin.users.noMatches') : i18n.t('admin.users.empty')}
   bind:searchValue={() => usersState.searchInput, value => (usersState.searchInput = value)}
   onSearchInput={() => usersState.handleSearchInput()}
   onSearchKeydown={event => usersState.handleSearchKeydown(event)}
-  searchAriaLabel={t('admin.users.searchAria')}
-  searchPlaceholder={t('admin.users.searchPlaceholder')}
+  searchAriaLabel={i18n.t('admin.users.searchAria')}
+  searchPlaceholder={i18n.t('admin.users.searchPlaceholder')}
   bind:searchKeys={() => usersState.searchKeys, keys => (usersState.searchKeys = keys)}
   selectable
   selectedIds={usersState.selectedIds}
@@ -92,8 +93,8 @@
   onToggleAll={() => usersState.toggleAllOnCurrentPage()}
   allSelected={usersState.currentPageAllSelected}
   someSelected={usersState.currentPageSomeSelected}
-  rowSelectAriaLabel={user => t('admin.selectUser', { name: user.username })}
-  selectAllAriaLabel={t('admin.users.selectAll')}
+  rowSelectAriaLabel={user => i18n.t('admin.selectUser', { name: user.username })}
+  selectAllAriaLabel={i18n.t('admin.users.selectAll')}
   total={usersState.total}
   pageSize={usersState.pageSize}
   currentPage={usersState.page}
@@ -143,7 +144,7 @@
         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
         : 'border-slate-700 bg-slate-950 text-slate-400'
     }`}>
-    {user.status === 'active' ? t('admin.active') : t('admin.inactive')}
+    {user.status === 'active' ? i18n.t('admin.active') : i18n.t('admin.inactive')}
   </span>
 {/snippet}
 
@@ -170,15 +171,15 @@
 
 {#if usersState.bulkStatusOpen}
   <BaseDialog
-    title={t('admin.users.setStatus')}
+    title={i18n.t('admin.users.setStatus')}
     maxWidth="md"
     onCancel={() => (usersState.bulkStatusOpen = false)}
     pending={usersState.bulkStatusPending}>
     <div class="flex flex-col gap-4">
       <p class="text-sm text-slate-400">
         {usersState.selectedCount === 1
-          ? t('admin.users.setStatusFor', { count: usersState.selectedCount })
-          : t('admin.users.setStatusForPlural', { count: usersState.selectedCount })}
+          ? i18n.t('admin.users.setStatusFor', { count: usersState.selectedCount })
+          : i18n.t('admin.users.setStatusForPlural', { count: usersState.selectedCount })}
       </p>
       <Buttons>
         {#snippet children()}
@@ -187,14 +188,14 @@
             accent="emerald"
             pending={usersState.bulkStatusPending}
             onClick={() => void usersState.setBulkStatus('active')}>
-            {t('admin.users.setActive')}
+            {i18n.t('admin.users.setActive')}
           </Button>
           <Button
             variant="outline"
             accent="amber"
             pending={usersState.bulkStatusPending}
             onClick={() => void usersState.setBulkStatus('inactive')}>
-            {t('admin.users.setInactive')}
+            {i18n.t('admin.users.setInactive')}
           </Button>
         {/snippet}
       </Buttons>
@@ -205,10 +206,10 @@
 {#if usersState.bulkDeleteOpen}
   <ConfirmDialog
     title={usersState.selectedCount === 1
-      ? t('admin.deleteUsersTitle', { count: usersState.selectedCount })
-      : t('admin.deleteUsersTitlePlural', { count: usersState.selectedCount })}
-    message={t('admin.deleteUsersMessage')}
-    confirmLabel={t('common.delete')}
+      ? i18n.t('admin.deleteUsersTitle', { count: usersState.selectedCount })
+      : i18n.t('admin.deleteUsersTitlePlural', { count: usersState.selectedCount })}
+    message={i18n.t('admin.deleteUsersMessage')}
+    confirmLabel={i18n.t('common.delete')}
     confirmColor="rose"
     onConfirm={() => void usersState.confirmBulkDelete()}
     onCancel={() => (usersState.bulkDeleteOpen = false)} />

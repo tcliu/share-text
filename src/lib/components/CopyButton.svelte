@@ -2,7 +2,8 @@
   import { toast } from 'svelte-sonner'
   import Button from './Button.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     text: string
@@ -18,15 +19,15 @@
     alwaysVisible = false,
   }: Props = $props()
 
-  const ariaLabel = $derived(copyAriaLabel ?? t('copy.toClipboard'))
-  const tooltip = $derived(copyTooltip ?? t('common.copy'))
+  const ariaLabel = $derived(copyAriaLabel ?? i18n.t('copy.toClipboard'))
+  const tooltip = $derived(copyTooltip ?? i18n.t('common.copy'))
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(text)
-      toast.success(t('editor.toast.copied'))
+      toast.success(i18n.t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
     }
   }
 </script>

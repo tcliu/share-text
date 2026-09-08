@@ -2,7 +2,8 @@
   import { tick } from 'svelte'
   import Chip from './Chip.svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   export interface ComboboxOption {
     value: string
@@ -175,7 +176,7 @@
           <Chip
             label={item.label}
             chipClass="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-200"
-            ariaLabel={t('combobox.remove', { name: item.label })}
+            ariaLabel={i18n.t('combobox.remove', { name: item.label })}
             onRemove={() => void remove(item.value)} />
         {/if}
       {/each}
@@ -190,7 +191,7 @@
         aria-autocomplete="list"
         aria-activedescendant={activeOptionId}
         class="min-w-0 flex-1 bg-transparent py-1 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-        placeholder={selected.length === 0 ? (placeholder ?? t('combobox.placeholder')) : ''}
+        placeholder={selected.length === 0 ? (placeholder ?? i18n.t('combobox.placeholder')) : ''}
         autocomplete="off"
         data-escape-capture={(dropdownOpen || inputValue.trim()) ? true : undefined}
         onfocus={handleInputFocus}

@@ -8,13 +8,14 @@ import {
   type AdminSetting,
 } from '$lib/admin'
 import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-import { t, settingLabel } from '$lib/i18n.svelte'
+import { getI18nContext, settingLabel } from '$lib/i18n.svelte'
 
 function parseNumberWithSeparators(raw: string): number {
   return Number(raw.replace(/,/g, ''))
 }
 
 export function useAdminSettings(onSignedOut: () => void) {
+  const i18n = getI18nContext()
   let settings = $state<AdminSetting[]>([])
   let draftValues = $state<Record<string, string>>({})
   let pending = $state(false)
@@ -43,7 +44,7 @@ export function useAdminSettings(onSignedOut: () => void) {
   ): { ok: true; value: number } | { ok: false; error: string } {
     const parsed = parseNumberWithSeparators(raw)
     if (!Number.isInteger(parsed)) {
-      return { ok: false, error: t('admin.settingMustBeInteger', { name: settingLabel(setting.key) ?? setting.label }) }
+      return { ok: false, error: i18n.t('admin.settingMustBeInteger', { name: settingLabel(i18n, setting.key) ?? setting.label }) }
     }
     if (
       parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
@@ -51,8 +52,8 @@ export function useAdminSettings(onSignedOut: () => void) {
     ) {
       return {
         ok: false,
-        error: t('admin.settingMustBeBetween', {
-          name: settingLabel(setting.key) ?? setting.label,
+        error: i18n.t('admin.settingMustBeBetween', {
+          name: settingLabel(i18n, setting.key) ?? setting.label,
           min: setting.min ?? 0,
           max: setting.max ?? Number.MAX_SAFE_INTEGER,
         }),
@@ -100,7 +101,7 @@ export function useAdminSettings(onSignedOut: () => void) {
     for (const [key, value] of Object.entries(parsed.value ?? {})) {
       const setting = settings.find(item => item.key === key)
       if (!setting) {
-        problems.push(t('admin.unknownSetting', { key }))
+        problems.push(i18n.t('admin.unknownSetting', { key }))
         continue
       }
       if (setting.kind !== 'number') continue
@@ -114,13 +115,13 @@ export function useAdminSettings(onSignedOut: () => void) {
 
   async function load() {
     try {
-      const loaded = await fetchAdminSettings()
+      const loaded = await fetchAdminSettings(i18n)
       settings = loaded
       draftValues = Object.fromEntries(loaded.map(setting => [setting.key, String(setting.value)]))
       return true
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadSettings'))
+        toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.loadSettings'))
       }
       return false
     }
@@ -156,15 +157,16 @@ export function useAdminSettings(onSignedOut: () => void) {
             ? (draftValues[setting.key]?.trim() ?? '')
             : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
       })),
+      i18n,
     )
       .then(updated => {
         settings = updated
         draftValues = Object.fromEntries(updated.map(setting => [setting.key, String(setting.value)]))
-        toast.success(t('admin.settingsUpdated'))
+        toast.success(i18n.t('admin.settingsUpdated'))
       })
       .catch(error => {
         if (!handleAuthError(error)) {
-          toast.error(error instanceof Error ? error.message : t('admin.auth.toast.saveSettings'))
+          toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.saveSettings'))
         }
       })
       .finally(() => {
@@ -196,13 +198,13 @@ export function useAdminSettings(onSignedOut: () => void) {
   async function resetSetting(setting: AdminSetting) {
     pending = true
     try {
-      const updated = await resetAdminSetting(setting.key)
+      const updated = await resetAdminSetting(setting.key, i18n)
       settings = updated
       draftValues = Object.fromEntries(updated.map(item => [item.key, String(item.value)]))
-      toast.success(t('admin.settingReverted', { name: settingLabel(setting.key) ?? setting.label }))
+      toast.success(i18n.t('admin.settingReverted', { name: settingLabel(i18n, setting.key) ?? setting.label }))
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.resetSetting'))
+        toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.resetSetting'))
       }
     } finally {
       pending = false

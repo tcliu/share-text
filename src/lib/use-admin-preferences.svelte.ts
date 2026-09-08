@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
 import type { Locale } from './i18n.svelte'
-import { setLocale, t } from './i18n.svelte'
+import { getI18nContext } from './i18n.svelte'
 import {
   fetchAdminPreferences,
   saveAdminPreferences,
@@ -8,6 +8,7 @@ import {
 } from './admin-preferences'
 
 export function useAdminPreferences(onSignedOut: () => void) {
+  const i18n = getI18nContext()
   let saved = $state<AdminPreferences | null>(null)
   let draft = $state<AdminPreferences>({ preferredLanguage: 'en' })
   let pending = $state(false)
@@ -28,10 +29,10 @@ export function useAdminPreferences(onSignedOut: () => void) {
       const preferences = await fetchAdminPreferences()
       saved = preferences
       draft = { preferredLanguage: preferences.preferredLanguage }
-      setLocale(preferences.preferredLanguage)
+      i18n.setLocale(preferences.preferredLanguage)
       return true
     } catch (error) {
-      handleError(error, t('settings.toast.loadFailed'))
+      handleError(error, i18n.t('settings.toast.loadFailed'))
       return false
     }
   }
@@ -45,10 +46,10 @@ export function useAdminPreferences(onSignedOut: () => void) {
       const updated = await saveAdminPreferences(draft)
       saved = updated
       draft = { preferredLanguage: updated.preferredLanguage }
-      setLocale(updated.preferredLanguage)
-      toast.success(t('settings.toast.saved'))
+      i18n.setLocale(updated.preferredLanguage)
+      toast.success(i18n.t('settings.toast.saved'))
     } catch (error) {
-      handleError(error, t('settings.toast.saveFailed'))
+      handleError(error, i18n.t('settings.toast.saveFailed'))
     } finally {
       pending = false
     }
