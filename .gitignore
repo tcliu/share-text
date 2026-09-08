@@ -1,6 +1,7 @@
 .venv/
 build/
 archive/
+log/
 node_modules/
 .svelte-kit/
 .tmp/

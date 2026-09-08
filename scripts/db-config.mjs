@@ -1,31 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
 import { Pool } from '@neondatabase/serverless'
+import { parseEnvFile } from './env-file.mjs'
 
-export function parseEnvFile(filePath) {
-  if (!existsSync(filePath)) return {}
-
-  const values = {}
-  const content = readFileSync(filePath, 'utf8')
-
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-
-    const separatorIndex = trimmed.indexOf('=')
-    if (separatorIndex === -1) continue
-
-    const key = trimmed.slice(0, separatorIndex).trim()
-    let value = trimmed.slice(separatorIndex + 1).trim()
-
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1)
-    }
-
-    values[key] = value
-  }
-
-  return values
-}
+export { parseEnvFile }
 
 export function loadScriptEnv(env = process.env) {
   return {
@@ -50,8 +26,8 @@ export function resolveScriptProfile(env = process.env) {
   const explicit = (env.PROFILE || '').trim().toLowerCase()
   if (explicit === 'dev' || explicit === 'prod') return explicit
 
-  const dotEnvProfile = (parseEnvFile('.env').PROFILE || '').trim().toLowerCase()
-  if (dotEnvProfile === 'dev' || dotEnvProfile === 'prod') return dotEnvProfile
+  const mergedProfile = (loadScriptEnv(env).PROFILE || '').trim().toLowerCase()
+  if (mergedProfile === 'dev' || mergedProfile === 'prod') return mergedProfile
 
   return 'dev'
 }
@@ -61,16 +37,38 @@ export function getSqlitePath(env = process.env) {
   return (loadedEnv.SQLITE_PATH || '.data/share-text-dev.sqlite').trim()
 }
 
+export function getSchemaName(env = process.env) {
+  const loadedEnv = loadScriptEnv(env)
+  return (loadedEnv.SCHEMA_NAME || '').trim()
+}
+
+// Host/database identifiers for log lines. Never returns credentials —
+// only the hostname and path the operator needs to find the database.
+export function describeDatabaseTarget(databaseURL) {
+  try {
+    const url = new URL(databaseURL)
+    return {
+      host: url.hostname || 'unknown',
+      database: url.pathname.replace(/^\//, '') || 'unknown',
+    }
+  } catch {
+    return { host: 'unknown', database: 'unknown' }
+  }
+}
+
+// Identifiers cannot be parameterized, so whitelist them before interpolating.
+export function quoteIdentifier(name) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error(`Invalid identifier: ${name}`)
+  }
+  return `"${name}"`
+}
+
 export function toSqliteSql(sql) {
   return sql
     .replace(/\$\d+/g, () => '?')
     .replaceAll('bigserial', 'integer')
     .replaceAll('current_timestamp', "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
-}
-
-export function getSchemaName(env = process.env) {
-  const loadedEnv = loadScriptEnv(env)
-  return (loadedEnv.SCHEMA_NAME || '').trim()
 }
 
 export function createDbPool(env = process.env) {

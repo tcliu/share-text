@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
@@ -8,231 +8,324 @@ import {
   rmSync,
   statSync,
   writeFileSync,
-} from 'node:fs'
-import path from 'node:path'
-import { parse as parseDotenv } from 'dotenv'
+} from "node:fs";
+import path from "node:path";
 
 export function getWorktreesRoot(root = process.cwd()) {
-  return path.join(root, '.worktrees')
+  return path.join(root, ".worktrees");
 }
 
 export function getMainRoot(root = process.cwd()) {
-  return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+  return execFileSync("git", ["rev-parse", "--show-toplevel"], {
     cwd: root,
-    encoding: 'utf-8',
-    stdio: 'pipe',
-  }).trim()
+    encoding: "utf-8",
+    stdio: "pipe",
+  }).trim();
 }
 
 export function getGitWorktrees(root = process.cwd()) {
-  const output = execFileSync('git', ['worktree', 'list', '--porcelain'], {
+  const output = execFileSync("git", ["worktree", "list", "--porcelain"], {
     cwd: root,
-    encoding: 'utf-8',
-    stdio: 'pipe',
-  })
-  const worktrees = []
-  let current = null
+    encoding: "utf-8",
+    stdio: "pipe",
+  });
+  const worktrees = [];
+  let current = null;
 
-  for (const line of output.split('\n')) {
-    if (line.startsWith('worktree ')) {
-      if (current?.path) worktrees.push(current)
-      current = { path: line.slice('worktree '.length) }
-      continue
+  for (const line of output.split("\n")) {
+    if (line.startsWith("worktree ")) {
+      if (current?.path) worktrees.push(current);
+      current = { path: line.slice("worktree ".length) };
+      continue;
     }
-    if (!current) continue
-    if (line.startsWith('branch ')) {
-      current.branch = line.slice('branch '.length).replace('refs/heads/', '')
-      continue
+    if (!current) continue;
+    if (line.startsWith("branch ")) {
+      current.branch = line.slice("branch ".length).replace("refs/heads/", "");
+      continue;
     }
-    if (line === '') {
-      if (current.path) worktrees.push(current)
-      current = null
+    if (line === "") {
+      if (current.path) worktrees.push(current);
+      current = null;
     }
   }
 
-  if (current?.path) worktrees.push(current)
-  return worktrees.map(worktree => ({
+  if (current?.path) worktrees.push(current);
+  return worktrees.map((worktree) => ({
     ...worktree,
     path: path.resolve(worktree.path),
     name: path.relative(getWorktreesRoot(root), path.resolve(worktree.path)),
-  }))
+  }));
 }
 
 export function hasGitEntry(dir) {
-  return existsSync(path.join(dir, '.git'))
+  return existsSync(path.join(dir, ".git"));
 }
 
 export function listNestedGitDirs(root = process.cwd()) {
-  const worktreesRoot = getWorktreesRoot(root)
-  if (!existsSync(worktreesRoot)) return []
+  const worktreesRoot = getWorktreesRoot(root);
+  if (!existsSync(worktreesRoot)) return [];
 
-  const results = []
+  const results = [];
 
   function scan(dir) {
     for (const entry of readdirSync(dir)) {
-      if (entry === 'node_modules' || entry === '.vercel' || entry === '.svelte-kit') continue
-      const full = path.join(dir, entry)
-      if (!statSync(full).isDirectory()) continue
+      if (
+        entry === "node_modules" ||
+        entry === ".vercel" ||
+        entry === ".svelte-kit"
+      )
+        continue;
+      const full = path.join(dir, entry);
+      if (!statSync(full).isDirectory()) continue;
       if (hasGitEntry(full)) {
         results.push({
           path: path.resolve(full),
           name: path.relative(worktreesRoot, path.resolve(full)),
-        })
-        continue
+        });
+        continue;
       }
-      scan(full)
+      scan(full);
     }
   }
 
-  scan(worktreesRoot)
-  return results.sort((a, b) => a.name.localeCompare(b.name))
+  scan(worktreesRoot);
+  return results.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function listCopyTargets(root = process.cwd()) {
-  return listNestedGitDirs(root)
+  return listNestedGitDirs(root);
 }
 
 export function listDeleteTargets(root = process.cwd()) {
-  const registered = new Map(getGitWorktrees(root).map(worktree => [worktree.path, worktree]))
-  return listNestedGitDirs(root).map(item => {
-    const registeredEntry = registered.get(item.path)
-    if (registeredEntry) return registeredEntry
+  const registered = new Map(
+    getGitWorktrees(root).map((worktree) => [worktree.path, worktree]),
+  );
+  return listNestedGitDirs(root).map((item) => {
+    const registeredEntry = registered.get(item.path);
+    if (registeredEntry) return registeredEntry;
     return {
       ...item,
       branch: readBranchFromGitDir(item.path),
       registered: false,
-    }
-  })
+    };
+  });
 }
 
 export function listRegisterTargets(root = process.cwd()) {
-  const registered = new Set(getGitWorktrees(root).map(worktree => worktree.path))
-  return listNestedGitDirs(root).filter(item => !registered.has(item.path))
+  const registered = new Set(
+    getGitWorktrees(root).map((worktree) => worktree.path),
+  );
+  return listNestedGitDirs(root).filter((item) => !registered.has(item.path));
 }
 
 export function readBranchFromGitDir(worktreePath) {
   try {
-    return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    return execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
       cwd: worktreePath,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    }).trim()
+      encoding: "utf-8",
+      stdio: "pipe",
+    }).trim();
   } catch {
-    return null
+    return null;
+  }
+}
+
+export function resolveBaseBranch(root = process.cwd()) {
+  try {
+    const ref = execFileSync("git", ["symbolic-ref", "refs/remotes/origin/HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: "pipe",
+    }).trim();
+    const name = ref.replace("refs/remotes/origin/", "");
+    if (name && name !== "HEAD" && name !== ref) return name;
+  } catch {}
+  for (const cand of ["main", "master"]) {
+    try {
+      execFileSync("git", ["rev-parse", "--verify", `refs/heads/${cand}`], {
+        cwd: root,
+        encoding: "utf-8",
+        stdio: "pipe",
+      });
+      return cand;
+    } catch {}
+  }
+  return null;
+}
+
+// Commits the branch is ahead of / behind the base (both repo-global names,
+// resolved in root). Null when unresolvable; skipped for the main row,
+// detached HEAD, and unregistered dirs (foreign .git names may collide).
+export function getAheadBehind(root, base, branch, registered = true) {
+  if (!base || !branch || branch === base || branch === "HEAD") return null;
+  if (registered === false) return null;
+  try {
+    const out = execFileSync(
+      "git",
+      ["rev-list", "--left-right", "--count", `${base}...${branch}`],
+      { cwd: root, encoding: "utf-8", stdio: "pipe" },
+    ).trim();
+    const [behind, ahead] = out.split(/\s+/).map(Number);
+    if (Number.isNaN(behind) || Number.isNaN(ahead)) return null;
+    return { ahead, behind };
+  } catch {
+    return null;
+  }
+}
+
+// Unix timestamp of a worktree's HEAD commit, resolved inside its own path
+// (correct for unregistered dirs too). Null when unresolvable.
+export function getLastCommitTime(worktreePath) {
+  try {
+    const out = execFileSync("git", ["log", "-1", "--format=%ct"], {
+      cwd: worktreePath,
+      encoding: "utf-8",
+      stdio: "pipe",
+    }).trim();
+    const t = Number(out);
+    return Number.isNaN(t) ? null : t;
+  } catch {
+    return null;
   }
 }
 
 export function registerWorktree(root, worktreePath, branch) {
-  execFileSync('git', ['worktree', 'add', worktreePath, '-b', branch], {
+  execFileSync("git", ["worktree", "add", worktreePath, "-b", branch], {
     cwd: root,
-    stdio: 'pipe',
-  })
+    stdio: "pipe",
+  });
 }
 
 export function removeWorktree(root, worktree) {
-  const mainRoot = getMainRoot(root)
+  const mainRoot = getMainRoot(root);
   if (path.resolve(worktree.path) === mainRoot) {
-    return false
+    return false;
   }
 
   try {
-    execFileSync('git', ['worktree', 'remove', '--force', worktree.path], {
+    execFileSync("git", ["worktree", "remove", "--force", worktree.path], {
       cwd: root,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
-    return true
+      encoding: "utf-8",
+      stdio: "pipe",
+    });
+    return true;
   } catch {
     try {
-      rmSync(worktree.path, { recursive: true, force: true })
-      return true
+      rmSync(worktree.path, { recursive: true, force: true });
+      return true;
     } catch {
-      return false
+      return false;
     }
   }
 }
 
 export function deleteBranch(root, branch) {
-  if (!branch) return false
+  if (!branch) return false;
   try {
-    execFileSync('git', ['branch', '-D', branch], {
+    execFileSync("git", ["branch", "-D", branch], {
       cwd: root,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    })
-    return true
+      encoding: "utf-8",
+      stdio: "pipe",
+    });
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
 export function isValidBranchName(name) {
   return (
     /^[a-zA-Z0-9._/-]+$/.test(name) &&
-    !name.startsWith('/') &&
-    !name.endsWith('/') &&
-    !name.includes('..')
-  )
+    !name.startsWith("/") &&
+    !name.endsWith("/") &&
+    !name.includes("..")
+  );
+}
+
+function parseDotenv(content) {
+  const values = {};
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex === -1) continue;
+    const key = trimmed.slice(0, separatorIndex).trim();
+    values[key] = trimmed.slice(separatorIndex + 1).trim();
+  }
+  return values;
 }
 
 export function setDevTag(worktreeRoot, tag) {
-  const filePath = path.join(worktreeRoot, '.env.dev')
-  const content = existsSync(filePath) ? readFileSync(filePath, 'utf8') : ''
-  const values = parseDotenv(content)
-  const entry = `DEV_TAG=${tag}`
-  if (!Object.prototype.hasOwnProperty.call(values, 'DEV_TAG')) {
-    writeFileSync(filePath, content.replace(/\s*$/, '') + (content.trim() ? '\n' : '') + `${entry}\n`)
-    return
+  const filePath = path.join(worktreeRoot, ".env.local");
+  const content = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
+  const values = parseDotenv(content);
+  const entry = `DEV_TAG=${tag}`;
+  if (!Object.prototype.hasOwnProperty.call(values, "DEV_TAG")) {
+    writeFileSync(
+      filePath,
+      content.replace(/\s*$/, "") + (content.trim() ? "\n" : "") + `${entry}\n`,
+    );
+    return;
   }
-  const output = content.split(/\r?\n/).map(line => {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) return line
-    const separatorIndex = trimmed.indexOf('=')
-    if (separatorIndex === -1) return line
-    if (trimmed.slice(0, separatorIndex).trim() !== 'DEV_TAG') return line
-    return entry
-  })
-  writeFileSync(filePath, output.join('\n') + '\n')
+  const output = content.split(/\r?\n/).map((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return line;
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex === -1) return line;
+    if (trimmed.slice(0, separatorIndex).trim() !== "DEV_TAG") return line;
+    return entry;
+  });
+  writeFileSync(filePath, output.join("\n") + "\n");
 }
 
 export function copyDevFiles(sourceRoot, targetRoot) {
-  copyEnvDev(path.join(sourceRoot, '.env.dev'), path.join(targetRoot, '.env.dev'))
-  copyEnvDev(path.join(sourceRoot, 'backend', '.env.dev'), path.join(targetRoot, 'backend', '.env.dev'))
-  copyDirectoryContents(path.join(sourceRoot, '.data'), path.join(targetRoot, '.data'))
+  copyEnvFile(path.join(sourceRoot, '.env'), path.join(targetRoot, '.env'));
+  copyEnvFile(
+    path.join(sourceRoot, '.env.local'),
+    path.join(targetRoot, '.env.local'),
+  );
+  migrateLegacyDevTag(sourceRoot, targetRoot);
 }
 
-function copyEnvDev(sourceEnv, targetEnv) {
-  if (existsSync(sourceEnv) && !existsSync(targetEnv)) {
-    copyFileSync(sourceEnv, targetEnv)
+// `.env.dev` used to carry DEV_TAG before it merged into `.env.local`.
+// One-way forward migration so old worktrees keep their tag block.
+function migrateLegacyDevTag(sourceRoot, targetRoot) {
+  if (readDevTag(targetRoot)) return;
+  const legacyPath = path.join(sourceRoot, '.env.dev');
+  if (!existsSync(legacyPath)) return;
+  const content = readFileSync(legacyPath, 'utf8');
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) continue;
+    if (trimmed.slice(0, separatorIndex).trim() === 'DEV_TAG') {
+      setDevTag(targetRoot, trimmed.slice(separatorIndex + 1).trim());
+      return;
+    }
   }
 }
 
-function copyDirectoryContents(sourceDir, targetDir) {
-  if (!existsSync(sourceDir)) return
-  mkdirSync(targetDir, { recursive: true })
-  for (const entry of readdirSync(sourceDir)) {
-    const source = path.join(sourceDir, entry)
-    const target = path.join(targetDir, entry)
-    if (statSync(source).isDirectory()) {
-      copyDirectoryContents(source, target)
-    } else if (!existsSync(target)) {
-      copyFileSync(source, target)
-    }
+function copyEnvFile(sourceEnv, targetEnv) {
+  if (existsSync(sourceEnv) && !existsSync(targetEnv)) {
+    copyFileSync(sourceEnv, targetEnv);
   }
 }
 
 export function readDevTag(worktreeRoot) {
-  const envPath = path.join(worktreeRoot, '.env.dev')
-  if (!existsSync(envPath)) return null
-  const content = readFileSync(envPath, 'utf8')
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const separatorIndex = trimmed.indexOf('=')
-    if (separatorIndex === -1) continue
-    if (trimmed.slice(0, separatorIndex).trim() === 'DEV_TAG') {
-      return trimmed.slice(separatorIndex + 1).trim()
+  for (const file of ['.env.local', '.env.dev']) {
+    const envPath = path.join(worktreeRoot, file);
+    if (!existsSync(envPath)) continue;
+    const content = readFileSync(envPath, 'utf8');
+    for (const line of content.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const separatorIndex = trimmed.indexOf('=');
+      if (separatorIndex === -1) continue;
+      if (trimmed.slice(0, separatorIndex).trim() === 'DEV_TAG') {
+        return trimmed.slice(separatorIndex + 1).trim();
+      }
     }
   }
-  return null
+  return null;
 }
