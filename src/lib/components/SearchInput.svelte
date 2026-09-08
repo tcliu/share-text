@@ -7,6 +7,7 @@
     placeholder?: string
     wrapperClass?: string
     inputClass?: string
+    inputRef?: HTMLInputElement | null
     oninput?: (event: Event) => void
     onkeydown?: (event: KeyboardEvent) => void
   }
@@ -16,7 +17,8 @@
     ariaLabel,
     placeholder = 'Search...',
     wrapperClass = '',
-    inputClass = 'w-full rounded-md border border-slate-700 bg-slate-950 p-2 pl-7 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-cyan-500',
+    inputClass = 'w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 pl-7 text-sm text-slate-100 placeholder:text-slate-500 outline-none transition focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 motion-reduce:transition-none',
+    inputRef = $bindable(null),
     oninput,
     onkeydown,
   }: Props = $props()
@@ -25,6 +27,6 @@
 <div class={wrapperClass}>
   <div class="relative">
     <SearchIcon className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-    <input type="search" bind:value aria-label={ariaLabel} {placeholder} {oninput} {onkeydown} class={inputClass} />
+    <input bind:this={inputRef} type="search" bind:value aria-label={ariaLabel} {placeholder} {oninput} {onkeydown} class={inputClass} />
   </div>
 </div>

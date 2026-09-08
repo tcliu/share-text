@@ -61,4 +61,10 @@ describe('Tabs', () => {
     expect((await findByTestId('content-beta')).textContent).toBe('beta-content')
     expect(document.querySelector('[data-testid="content-alpha"]')).toBeNull()
   })
+
+  it('applies the class prop to the sticky header', () => {
+    const { container } = render(TabsHost, { props: { pathname: '/a', class: 'bg-slate-950' } })
+    const header = container.querySelector('.sticky')
+    expect(header?.classList.contains('bg-slate-950')).toBe(true)
+  })
 })

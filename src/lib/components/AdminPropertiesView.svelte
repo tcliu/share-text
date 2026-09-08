@@ -95,7 +95,8 @@
       { label: t('admin.tab.properties'), path: 'properties', content: codeContent },
     ]}
     state={{}}
-    ariaLabel={t('admin.propertiesViews')} />
+    ariaLabel={t('admin.propertiesViews')}
+    class="bg-slate-950" />
 
   <Buttons>
     {#snippet children()}

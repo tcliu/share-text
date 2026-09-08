@@ -1,15 +1,18 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte'
+  import { onDestroy, tick } from 'svelte'
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import { SPLIT_PANE_MAX_WIDTH } from '$lib/split-pane'
+  import { TEXT_SIZE, type TextSize } from '$lib/text-size'
   import { t } from '$lib/i18n.svelte'
 
   interface Props {
     text: string
-    onChange: (text: string) => void
-    size?: 'xs' | 'sm' | 'md' | 'lg'
+    // Return false to reject the committed value (e.g. duplicate name);
+    // the component then restores the previous text and keeps editing.
+    onChange: (text: string) => void | boolean
+    size?: TextSize
     className?: string
     onActivate?: () => void
     // maximum width (in px) the editable input may expand to; actual max
@@ -116,13 +119,17 @@
       editing = false
       return
     }
-    onChange(next)
+    const accepted = onChange(next)
+    if (accepted === false) {
+      value = text
+      return
+    }
     editing = false
   }
 
   $effect(() => {
     if (!editing) return
-    input?.focus()
+    void tick().then(() => input?.focus())
   })
 
   // Auto-resize the input to fit its content while editing, but don't shrink
@@ -166,21 +173,21 @@
       data-escape-capture
       aria-label={t('edit.editText')}
       style={inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'}
-      class={`text-${size} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500`} />
+      class={`${TEXT_SIZE[size]} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition motion-reduce:transition-none focus:outline-cyan-500`} />
   </div>
 {:else}
   {#snippet displayContent()}
     <button
       bind:this={displayBtn}
       type="button"
-      class={`text-${size} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
+      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
       title={t('edit.doubleClickToEdit')}
       onclick={(e) => { e.stopPropagation(); scheduleActivate() }}
       onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
       ondblclick={handleTextDoubleClick}>
       {text}
     </button>
-    <span bind:this={editBtn} class="[@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+    <span bind:this={editBtn} class="[@media(hover:hover)]:opacity-0 transition motion-reduce:transition-none group-hover:opacity-100 focus-within:opacity-100">
       <Button
         size="sm"
         variant="ghost"

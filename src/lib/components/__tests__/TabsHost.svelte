@@ -3,9 +3,10 @@
 
   interface Props {
     pathname?: string
+    class?: string
   }
 
-  let { pathname }: Props = $props()
+  let { pathname, class: className }: Props = $props()
 
   interface State {
     name: string
@@ -36,4 +37,5 @@
     { label: 'Beta', path: '/b', toolbar: betaToolbar, content: betaContent },
   ]}
   {state}
-  {pathname} />
+  {pathname}
+  class={className} />

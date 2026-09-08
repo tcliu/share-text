@@ -13,17 +13,18 @@
     state: TState
     pathname?: string
     ariaLabel?: string
+    class?: string
   }
 
-  let { tabs, state: tabState, pathname, ariaLabel = 'Tabs' }: Props<TState> = $props()
+  let { tabs, state: tabState, pathname, ariaLabel = 'Tabs', class: className = '' }: Props<TState> = $props()
 
   let activePath = $state('')
 
   const activeTab = $derived(tabs.find(tab => tab.path === (pathname ?? activePath)) ?? tabs[0])
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col gap-3">
-  <div class="flex flex-wrap items-center justify-between gap-2">
+<div class="flex min-h-0 flex-1 flex-col">
+  <div class={`sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 pb-3 ${className}`}>
     <nav aria-label={ariaLabel} class="inline-flex rounded-xl border border-slate-700 bg-slate-950 p-1">
       {#each tabs as tab}
         {#if pathname !== undefined}
@@ -35,7 +36,7 @@
                 event.preventDefault()
               }
             }}
-            class={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition ${tab.path === pathname ? 'bg-cyan-500 text-slate-950' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
+            class={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition motion-reduce:transition-none ${tab.path === pathname ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
             {tab.label}
           </a>
         {:else}
@@ -43,7 +44,7 @@
             type="button"
             aria-pressed={tab.path === activeTab?.path}
             onclick={() => (activePath = tab.path)}
-            class={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition ${tab.path === activeTab?.path ? 'bg-cyan-500 text-slate-950' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
+            class={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition motion-reduce:transition-none ${tab.path === activeTab?.path ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
             {tab.label}
           </button>
         {/if}
