@@ -33,6 +33,15 @@ function renderDialog(overrides: Partial<Props> = {}) {
   return { ...rendered, onClose, onApply }
 }
 
+// The overlay dismiss button shares the dialog close button's accessible
+// name; select the dialog's own close affordance, never the overlay.
+function getDialogCloseButton(queries: { getAllByLabelText: (label: string) => HTMLElement[] }) {
+  const buttons = queries
+    .getAllByLabelText('Close dialog')
+    .filter(button => !button.hasAttribute('data-testid'))
+  return buttons[buttons.length - 1]
+}
+
 describe('ShareDialog', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})
@@ -64,9 +73,10 @@ describe('ShareDialog', () => {
 
   it('closes immediately when dismissed without changes', () => {
     const onClose = vi.fn()
-    const { getByLabelText, queryByText } = renderDialog({ onClose })
+    const queries = renderDialog({ onClose })
+    const { queryByText } = queries
 
-    fireEvent.click(getByLabelText('Close dialog'))
+    fireEvent.click(getDialogCloseButton(queries))
 
     expect(onClose).toHaveBeenCalled()
     expect(queryByText('Discard unsaved changes?')).toBeNull()
@@ -74,10 +84,11 @@ describe('ShareDialog', () => {
 
   it('prompts to discard when dismissed with unsaved changes', () => {
     const onClose = vi.fn()
-    const { getByLabelText, getByText } = renderDialog({ onClose })
+    const queries = renderDialog({ onClose })
+    const { getByLabelText, getByText } = queries
 
     fireEvent.click(getByLabelText('Anyone with the link can view'))
-    fireEvent.click(getByLabelText('Close dialog'))
+    fireEvent.click(getDialogCloseButton(queries))
 
     expect(getByText('Discard unsaved changes?')).toBeTruthy()
     expect(onClose).not.toHaveBeenCalled()
@@ -85,10 +96,11 @@ describe('ShareDialog', () => {
 
   it('closes after confirming the discard', () => {
     const onClose = vi.fn()
-    const { getByLabelText, getByText } = renderDialog({ onClose })
+    const queries = renderDialog({ onClose })
+    const { getByLabelText, getByText } = queries
 
     fireEvent.click(getByLabelText('Anyone with the link can view'))
-    fireEvent.click(getByLabelText('Close dialog'))
+    fireEvent.click(getDialogCloseButton(queries))
     fireEvent.click(getByText('Discard'))
 
     expect(onClose).toHaveBeenCalled()
@@ -96,13 +108,13 @@ describe('ShareDialog', () => {
 
   it('returns to the form when cancelling the discard confirm', () => {
     const onClose = vi.fn()
-    const { getAllByLabelText, getByLabelText, queryByText } = renderDialog({ onClose })
+    const queries = renderDialog({ onClose })
+    const { getByLabelText, queryByText } = queries
 
     fireEvent.click(getByLabelText('Anyone with the link can view'))
-    fireEvent.click(getByLabelText('Close dialog'))
+    fireEvent.click(getDialogCloseButton(queries))
 
-    const closeButtons = getAllByLabelText('Close dialog')
-    fireEvent.click(closeButtons[closeButtons.length - 1])
+    fireEvent.click(getDialogCloseButton(queries))
 
     expect(onClose).not.toHaveBeenCalled()
     expect(queryByText('Discard unsaved changes?')).toBeNull()

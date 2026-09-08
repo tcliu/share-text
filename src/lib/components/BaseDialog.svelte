@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte'
+  import { onDestroy, onMount, tick } from 'svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -12,7 +12,8 @@
     title?: string
     titleClass?: string
     className?: string
-    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
+    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'fit' | 'wide'
+    height?: 'auto' | 'fixed' | 'tall'
     pending?: boolean
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
@@ -27,6 +28,7 @@
     titleClass = '',
     className = '',
     maxWidth = 'md',
+    height = 'auto',
     pending = false,
     allowPendingCancel = false,
     dismissKeydownCapture = true,
@@ -47,10 +49,11 @@
     titleId = `share-text-dialog-title-${dialogIndex}`
 
     previouslyFocused = document.activeElement
-    requestAnimationFrame(() => {
-      if (dialogRef && !dialogRef.contains(document.activeElement)) {
-        dialogRef.focus()
-      }
+    void tick().then(() => {
+      const firstInput = dialogRef?.querySelector<HTMLElement>(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [autofocus]',
+      )
+      ;(firstInput ?? dialogRef)?.focus()
     })
   })
 
@@ -125,18 +128,34 @@
     }
   }
 
-  const maxWidthClasses: Record<string, string> = {
+  const maxWidthClasses = {
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
     '3xl': 'max-w-3xl',
     '4xl': 'max-w-4xl',
-  }
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
+    fit: 'w-fit max-w-[90vw]',
+    wide: 'w-[min(96vw,96rem)] max-w-[96rem]',
+  } as const
 
-  const sizeClass = $derived(
-    maxWidth === 'fit' ? 'w-fit max-w-[90vw]' : `w-full max-w-[90vw] ${maxWidthClasses[maxWidth] ?? 'max-w-md'}`,
-  )
+  const heightClasses = {
+    auto: '',
+    fixed: 'h-[min(78vh,640px)] min-h-[480px] sm:min-h-[520px]',
+    tall: 'h-[min(88vh,860px)]',
+  } as const
+
+  const sizeClass = $derived.by(() => {
+    const widthClass =
+      maxWidth === 'fit' || maxWidth === 'wide'
+        ? maxWidthClasses[maxWidth]
+        : `w-full ${maxWidthClasses[maxWidth] ?? maxWidthClasses.md}`
+    const hClass = heightClasses[height ?? 'auto']
+    return [widthClass, hClass].filter(Boolean).join(' ')
+  })
   $effect(() => {
     if (!dismissKeydownCapture) {
       return
@@ -149,15 +168,19 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-  data-testid="dialog-overlay"
-  class="fixed inset-0 z-40 {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80 px-4 py-6'}"
-  onclick={handleCancelRequest}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class={fullscreen ? 'h-full' : 'flex min-h-full items-center justify-center'} onclick={e => e.stopPropagation()}>
+<div class="fixed inset-0 z-40 @container">
+  <button
+    type="button"
+    data-testid="dialog-overlay"
+    aria-label={i18n.t('common.closeDialog')}
+    tabindex="-1"
+    disabled={cancelDisabled}
+    class="absolute inset-0 outline-none {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80'} disabled:cursor-default"
+    onclick={handleCancelRequest}></button>
+  <div
+    class={fullscreen
+      ? 'relative h-full'
+      : 'relative flex min-h-full items-center justify-center px-4 py-6 @max-md:p-0'}>
     <div
       bind:this={dialogRef}
       role="dialog"
@@ -166,7 +189,7 @@
       tabindex="-1"
       class="relative flex flex-col overflow-y-auto outline-none {fullscreen
         ? 'h-full w-full bg-slate-900 p-5.5'
-        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur ${sizeClass}`} {className}">
+        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass}`} {className}">
       <button
         type="button"
         aria-label={i18n.t('common.closeDialog')}
@@ -182,7 +205,7 @@
           {title}
         </h2>
       {/if}
-      <div class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto outline-none">
         {@render children?.()}
       </div>
     </div>

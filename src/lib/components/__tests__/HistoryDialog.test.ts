@@ -180,7 +180,9 @@ describe('HistoryDialog', () => {
 
     const overlay = getByTestId('dialog-overlay')
     expect(overlay.className).toContain('bg-slate-950/80')
-    expect(overlay.className).toContain('px-4')
+    // The overlay is a bare dismiss button; desktop padding lives on the
+    // sibling centering wrapper.
+    expect(overlay.nextElementSibling?.className).toContain('px-4')
   })
 
   it('gives the content pane a fixed height so the dialog does not resize across versions', async () => {
