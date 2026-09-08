@@ -17,7 +17,8 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
@@ -283,20 +284,20 @@
 <div class="flex h-dvh overflow-hidden">
   {#if !isMobile && leftPaneCollapsed}
     <div class="flex w-11 shrink-0 flex-col items-center border-r border-slate-800 bg-slate-900/50 py-2">
-      <Button size="sm" ariaLabel={t('list.showDocumentList')} tooltip={t('list.showDocumentList')} ariaExpanded={!leftPaneCollapsed} onClick={toggleLeftPane}>
+      <Button size="sm" ariaLabel={i18n.t('list.showDocumentList')} tooltip={i18n.t('list.showDocumentList')} ariaExpanded={!leftPaneCollapsed} onClick={toggleLeftPane}>
         {#snippet icon()}
           <ChevronsRightIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel={t('list.newDocument')} tooltip={t('list.newDocument')} onClick={handleNew}>
+      <Button size="sm" ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={handleNew}>
         {#snippet icon()}
           <PlusIcon />
         {/snippet}
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('list.refresh')}
-        tooltip={t('list.refresh')}
+        ariaLabel={i18n.t('list.refresh')}
+        tooltip={i18n.t('list.refresh')}
         onClick={handleRefresh}
         disabled={documentsState.loadingDocuments}>
         {#snippet icon()}
@@ -307,8 +308,8 @@
         <LanguageMenu />
         <Button
           size="sm"
-          ariaLabel={t('list.settings')}
-          tooltip={t('list.settingsWith', { name: profileIdentity.username })}
+          ariaLabel={i18n.t('list.settings')}
+          tooltip={i18n.t('list.settingsWith', { name: profileIdentity.username })}
           onClick={handleSettings}>
           {#snippet icon()}
             <SettingsIcon />
@@ -316,8 +317,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('list.signOut')}
-          tooltip={t('list.signedInAs', { name: profileIdentity.username })}
+          ariaLabel={i18n.t('list.signOut')}
+          tooltip={i18n.t('list.signedInAs', { name: profileIdentity.username })}
           onClick={handleSignOutClick}>
           {#snippet icon()}
             <SignOutIcon />
@@ -325,7 +326,7 @@
         </Button>
       {:else}
         <LanguageMenu />
-        <Button size="sm" ariaLabel={t('list.login')} tooltip={t('list.login')} onClick={() => goto('/login')}>
+        <Button size="sm" ariaLabel={i18n.t('list.login')} tooltip={i18n.t('list.login')} onClick={() => goto('/login')}>
           {#snippet icon()}
             <PersonIcon />
           {/snippet}
@@ -363,9 +364,9 @@
 
 {#if editorGuardState.discardDialogOpen}
   <ConfirmDialog
-    title={t('discard.title')}
-    message={t('discard.message')}
-    confirmLabel={t('common.ok')}
+    title={i18n.t('discard.title')}
+    message={i18n.t('discard.message')}
+    confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
     onConfirm={handleConfirmDiscard}
     onCancel={editorGuardState.handleCancelDiscard} />
@@ -373,9 +374,9 @@
 
 {#if deleteTarget !== null}
   <ConfirmDialog
-    title={t('delete.title')}
-    message={t('delete.message')}
-    confirmLabel={t('common.delete')}
+    title={i18n.t('delete.title')}
+    message={i18n.t('delete.message')}
+    confirmLabel={i18n.t('common.delete')}
     confirmColor="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />

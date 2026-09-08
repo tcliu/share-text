@@ -2,14 +2,15 @@
   import DataGrid from './DataGrid.svelte'
   import type { PreviewProps } from '$lib/document-types'
   import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()
 
   function parseRows(text: string): { rows: string[][]; error: string | null } {
     const parsed = parseProperties(text)
     if (!parsed.ok) {
-      return { rows: [], error: parsed.error ?? t('properties.invalid') }
+      return { rows: [], error: parsed.error ?? i18n.t('properties.invalid') }
     }
     return {
       rows: Object.entries(parsed.value ?? {}).map(([key, value]) => [key, value]),
@@ -62,7 +63,7 @@
 
 {#if parseError}
   <div data-testid="properties-preview" class="h-full overflow-auto p-4 text-slate-300">
-    <div class="text-sm text-red-400">{t('structure.unableToParse', { error: parseError })}</div>
+    <div class="text-sm text-red-400">{i18n.t('structure.unableToParse', { error: parseError })}</div>
   </div>
 {:else}
   <DataGrid
@@ -70,7 +71,7 @@
     onChange={handleChange}
     {editable}
     maxColumns={2}
-    columnLabels={[t('properties.key'), t('properties.value')]}
+    columnLabels={[i18n.t('properties.key'), i18n.t('properties.value')]}
     showHeaders={false}
     hideHeaderToggle
     initialColumnWidths={['35%', '65%']}

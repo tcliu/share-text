@@ -13,7 +13,8 @@
     tagRemoveBtnStyle,
     type Tag,
   } from '$lib/tag-colors'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     value: Tag[]
@@ -86,7 +87,7 @@
 <Combobox
   bind:this={comboboxRef}
   {id}
-  placeholder={placeholder ?? t('tags.placeholder')}
+  placeholder={placeholder ?? i18n.t('tags.placeholder')}
   selected={tagOptions}
   suggestions={filteredTags}
   onQueryChange={query => (inputQuery = query)}
@@ -99,7 +100,7 @@
       style={tagChipStyle(colorFor(item.value))}
       removeButtonClass={tagRemoveBtnClass()}
       removeButtonStyle={tagRemoveBtnStyle(colorFor(item.value))}
-      ariaLabel={t('combobox.remove', { name: item.label })}
+      ariaLabel={i18n.t('combobox.remove', { name: item.label })}
       onRemove={() => remove(item.value)} />
   {/snippet}
   {#snippet option(tag: ComboboxOption)}

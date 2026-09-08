@@ -14,7 +14,8 @@
   import { buildSideBySideRows } from '$lib/version-diff'
   import CompareIcon from '$lib/icons/CompareIcon.svelte'
   import RestoreIcon from '$lib/icons/RestoreIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     open: boolean
@@ -103,7 +104,7 @@
         void selectVersion(versions[0])
       }
     } catch (error) {
-      loadError = error instanceof Error ? error.message : t('history.toast.loadFailed')
+      loadError = error instanceof Error ? error.message : i18n.t('history.toast.loadFailed')
     } finally {
       loading = false
     }
@@ -123,7 +124,7 @@
       }
     } catch (error) {
       if (seq !== selectSeq) return
-      toast.error(error instanceof Error ? error.message : t('history.toast.versionFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('history.toast.versionFailed'))
     } finally {
       if (seq === selectSeq) {
         selectedLoading = false
@@ -162,21 +163,21 @@
 
 {#if open}
   <BaseDialog
-    title={t('history.title')}
+    title={i18n.t('history.title')}
     maxWidth="3xl"
     fullscreen={isMobile}
     onCancel={onClose}
     dismissKeydownCapture={!restorePromptOpen}>
     <div class="flex min-h-0 flex-col gap-3">
       <p class="text-xs text-slate-400">
-        {t('history.description')}
+        {i18n.t('history.description')}
       </p>
 
       <div class="flex items-center gap-1">
         <Button
           size="sm"
-          ariaLabel={t('history.compareWithCurrent')}
-          tooltip={actionsDisabled ? undefined : t('history.compareWithCurrent')}
+          ariaLabel={i18n.t('history.compareWithCurrent')}
+          tooltip={actionsDisabled ? undefined : i18n.t('history.compareWithCurrent')}
           tooltipAlign="right"
           variant={compare ? 'outline' : 'secondary'}
           ariaPressed={compare}
@@ -188,8 +189,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('history.restoreVersion')}
-          tooltip={actionsDisabled ? undefined : t('history.restore')}
+          ariaLabel={i18n.t('history.restoreVersion')}
+          tooltip={actionsDisabled ? undefined : i18n.t('history.restore')}
           tooltipAlign="right"
           variant="primary"
           accent="cyan"
@@ -220,7 +221,7 @@
                 onclick={() => selectVersion(version)}>
                 <div class="text-xs font-medium text-slate-200">{formatTimestamp(version.createdAt)}</div>
                 <div class="mt-0.5 truncate text-xs text-slate-400">
-                  {version.updatedBy} · {t('history.chars', { count: version.contentSize })}
+                  {version.updatedBy} · {i18n.t('history.chars', { count: version.contentSize })}
                 </div>
               </button>
             {/each}
@@ -245,7 +246,7 @@
                   <div class="grid grid-cols-2 gap-2">
                     <div class="flex min-w-0 items-center gap-2">
                       <span class="truncate text-xs font-medium text-slate-400">
-                        {t('history.selected')} · {formatTimestamp(selected.createdAt)}
+                        {i18n.t('history.selected')} · {formatTimestamp(selected.createdAt)}
                       </span>
                       <span
                         class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
@@ -253,7 +254,7 @@
                       </span>
                     </div>
                     <div class="flex min-w-0 items-center gap-2">
-                      <span class="text-xs font-medium text-slate-400">{t('history.current')}</span>
+                      <span class="text-xs font-medium text-slate-400">{i18n.t('history.current')}</span>
                       <span
                         class="rounded-full border border-slate-700 bg-slate-950 px-2 py-0.5 text-xs text-slate-400">
                         {currentType}
@@ -294,11 +295,11 @@
               {:else}
                 <pre
                   class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5">{selected.content ||
-                    t('history.empty')}</pre>
+                    i18n.t('history.empty')}</pre>
               {/if}
             {:else}
               <div class="flex flex-1 items-center justify-center text-sm text-slate-400">
-                {t('history.selectVersion')}
+                {i18n.t('history.selectVersion')}
               </div>
             {/if}
           </div>
@@ -310,9 +311,9 @@
 
 {#if restorePromptOpen}
   <ConfirmDialog
-    title={t('history.restoreTitle')}
-    message={t('history.restoreMessage')}
-    confirmLabel={t('history.restore')}
+    title={i18n.t('history.restoreTitle')}
+    message={i18n.t('history.restoreMessage')}
+    confirmLabel={i18n.t('history.restore')}
     confirmColor="cyan"
     onConfirm={confirmRestore}
     onCancel={cancelRestore} />

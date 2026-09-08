@@ -1,12 +1,13 @@
 import { goto } from '$app/navigation'
 import { toast } from 'svelte-sonner'
 import { clearDraft } from './document-drafts'
-import { t } from './i18n.svelte'
+import { getI18nContext } from './i18n.svelte'
 import { fetchOwnedDocuments, OwnedDocumentsAuthError } from './owned-documents'
 import { useAdminDocumentsSearch } from './use-admin-documents-search.svelte'
 import type { AdminDocumentSummary } from './admin'
 
 export function useOwnedDocuments(onSignedOut: () => void) {
+  const i18n = getI18nContext()
   let documents = $state<AdminDocumentSummary[]>([])
   let loaded = $state(false)
   let total = $state(0)
@@ -65,7 +66,7 @@ export function useOwnedDocuments(onSignedOut: () => void) {
         offset: (page - 1) * pageSize,
         sortBy: searchState.sortBy,
         order: searchState.sortDir,
-      })
+      }, i18n)
       documents = response.documents
       total = response.total
       loaded = true
@@ -76,7 +77,7 @@ export function useOwnedDocuments(onSignedOut: () => void) {
       }
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.loadDocuments'))
+        toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.loadDocuments'))
       }
     } finally {
       loading = false
@@ -132,11 +133,11 @@ export function useOwnedDocuments(onSignedOut: () => void) {
         ids.map(async id => {
           const response = await fetch(`/api/user/documents/${id}`, { method: 'DELETE' })
           if (response.status === 401) {
-            throw new OwnedDocumentsAuthError()
+            throw new OwnedDocumentsAuthError(i18n.t('admin.auth.required'))
           }
           if (!response.ok) {
             const body = await response.json().catch(() => ({}))
-            throw new Error(typeof body.error === 'string' ? body.error : t('admin.auth.toast.deleteDocuments'))
+            throw new Error(typeof body.error === 'string' ? body.error : i18n.t('admin.auth.toast.deleteDocuments'))
           }
         }),
       )
@@ -146,13 +147,13 @@ export function useOwnedDocuments(onSignedOut: () => void) {
       selectedIds = new Set()
       toast.success(
         ids.length === 1
-          ? t('admin.documents.deleted', { count: ids.length })
-          : t('admin.documents.deletedPlural', { count: ids.length }),
+          ? i18n.t('admin.documents.deleted', { count: ids.length })
+          : i18n.t('admin.documents.deletedPlural', { count: ids.length }),
       )
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.deleteDocuments'))
+        toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.deleteDocuments'))
       }
     } finally {
       bulkDeletePending = false
@@ -180,16 +181,16 @@ export function useOwnedDocuments(onSignedOut: () => void) {
       })
       const body = await response.json().catch(() => ({}))
       if (response.status === 401) {
-        throw new OwnedDocumentsAuthError()
+        throw new OwnedDocumentsAuthError(i18n.t('admin.auth.required'))
       }
       if (!response.ok) {
-        throw new Error(typeof body.error === 'string' ? body.error : t('admin.auth.toast.renameDocument'))
+        throw new Error(typeof body.error === 'string' ? body.error : i18n.t('admin.auth.toast.renameDocument'))
       }
-      toast.success(t('admin.documents.renamed'))
+      toast.success(i18n.t('admin.documents.renamed'))
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
-        toast.error(error instanceof Error ? error.message : t('admin.auth.toast.renameDocument'))
+        toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.renameDocument'))
       }
     }
   }

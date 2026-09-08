@@ -11,7 +11,8 @@
   import ShareeCombobox from './ShareeCombobox.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { arraysEqualUnordered } from '$lib/array-utils'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     open: boolean
@@ -99,21 +100,21 @@
 
 {#if open}
   <BaseDialog
-    title={t('share.title')}
+    title={i18n.t('share.title')}
     maxWidth="lg"
     onCancel={handleCancelRequest}
     dismissKeydownCapture={!discardPromptOpen}
     {pending}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-      <Checkbox bind:checked={draftIsPublic} name="isPublic" label={t('share.anyoneWithLink')} />
+      <Checkbox bind:checked={draftIsPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
 
-      <FormField label={t('share.sharedWith')} htmlFor="share-user-input">
+      <FormField label={i18n.t('share.sharedWith')} htmlFor="share-user-input">
         <ShareeCombobox
           bind:this={comboboxRef}
           bind:selected={draftSharees}
           search={isAdmin ? searchUsers : recentShareesSearch}
           id="share-user-input"
-          placeholder={t('share.addByUsernameOrEmail')}
+          placeholder={i18n.t('share.addByUsernameOrEmail')}
           selfUsername={isAdmin ? undefined : currentUser?.username}
           seedOnMount={!isAdmin}
           searchOnEmpty={!isAdmin}
@@ -122,8 +123,8 @@
 
       <Buttons>
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} {pending}>{t('common.ok')}</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{t('common.reset')}</Button>
+          <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} {pending}>{i18n.t('common.ok')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
         {/snippet}
       </Buttons>
     </div>
@@ -132,9 +133,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title={t('share.discardTitle')}
-    message={t('share.discardMessage')}
-    confirmLabel={t('share.discard')}
+    title={i18n.t('share.discardTitle')}
+    message={i18n.t('share.discardMessage')}
+    confirmLabel={i18n.t('share.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

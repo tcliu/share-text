@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
 import type { Locale, MessageKey } from './i18n.svelte'
-import { t } from './i18n.svelte'
+import { getI18nContext } from './i18n.svelte'
 import {
   fetchUserPreferences,
   saveUserPreferences,
@@ -9,6 +9,7 @@ import {
 } from './user-settings'
 
 export function useUserSettings(onSignedOut: () => void) {
+  const i18n = getI18nContext()
   let saved = $state<UserPreferences | null>(null)
   let draft = $state<UserPreferences>({ preferredLanguage: 'en' })
   let loading = $state(false)
@@ -24,7 +25,7 @@ export function useUserSettings(onSignedOut: () => void) {
       onSignedOut()
       return true
     }
-    toast.error(error instanceof Error ? error.message : t(fallbackKey))
+    toast.error(error instanceof Error ? error.message : i18n.t(fallbackKey))
     return false
   }
 
@@ -50,7 +51,7 @@ export function useUserSettings(onSignedOut: () => void) {
       const updated = await saveUserPreferences(draft)
       saved = updated
       draft = { preferredLanguage: updated.preferredLanguage }
-      toast.success(t('settings.toast.saved'))
+      toast.success(i18n.t('settings.toast.saved'))
     } catch (error) {
       handleError(error, 'settings.toast.saveFailed')
     } finally {

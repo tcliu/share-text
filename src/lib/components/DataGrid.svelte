@@ -19,7 +19,8 @@
   import RedoIcon from '$lib/icons/RedoIcon.svelte'
   import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
   import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     value?: string[][]
@@ -570,7 +571,7 @@
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-1">
       {#if !hideHeaderToggle}
-        <Button size="sm" ariaLabel={t('grid.toggleHeader')} tooltip={t('grid.toggleHeader')} ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)} disabled={!editable}>
+        <Button size="sm" ariaLabel={i18n.t('grid.toggleHeader')} tooltip={i18n.t('grid.toggleHeader')} ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)} disabled={!editable}>
           {#snippet icon()}
             <TableIcon />
           {/snippet}
@@ -578,8 +579,8 @@
       {/if}
       <Button
         size="sm"
-        ariaLabel={t('grid.insertRowAbove')}
-        tooltip={t('grid.insertRowAbove')}
+        ariaLabel={i18n.t('grid.insertRowAbove')}
+        tooltip={i18n.t('grid.insertRowAbove')}
         onClick={() => sel.insertRowAt(sel.actionRow, false)}
         disabled={mutationDisabled(sel.rowInsertDisabled)}>
         {#snippet icon()}
@@ -588,8 +589,8 @@
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('grid.insertRowBelow')}
-        tooltip={t('grid.insertRowBelow')}
+        ariaLabel={i18n.t('grid.insertRowBelow')}
+        tooltip={i18n.t('grid.insertRowBelow')}
         onClick={() => (sel.noSelection ? sel.addRow() : sel.insertRowAt(sel.actionRow, true))}
         disabled={!editable}>
         {#snippet icon()}
@@ -599,8 +600,8 @@
       {#if maxColumns == null}
         <Button
           size="sm"
-          ariaLabel={t('grid.insertColumnBefore')}
-          tooltip={t('grid.insertColumnBefore')}
+          ariaLabel={i18n.t('grid.insertColumnBefore')}
+          tooltip={i18n.t('grid.insertColumnBefore')}
           onClick={() => sel.insertColumnAt(sel.actionCol, true)}
           disabled={mutationDisabled(sel.colInsertDisabled)}>
           {#snippet icon()}
@@ -609,8 +610,8 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={t('grid.insertColumnAfter')}
-          tooltip={t('grid.insertColumnAfter')}
+          ariaLabel={i18n.t('grid.insertColumnAfter')}
+          tooltip={i18n.t('grid.insertColumnAfter')}
           onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}
           disabled={!editable}>
           {#snippet icon()}
@@ -620,8 +621,8 @@
       {/if}
       <Button
         size="sm"
-        ariaLabel={t('grid.deleteRows')}
-        tooltip={t('grid.deleteRows')}
+        ariaLabel={i18n.t('grid.deleteRows')}
+        tooltip={i18n.t('grid.deleteRows')}
         onClick={() => sel.deleteSelectedRows()}
         disabled={mutationDisabled(selState.selectedRows.size === 0)}>
         {#snippet icon()}
@@ -631,8 +632,8 @@
       {#if maxColumns == null}
         <Button
           size="sm"
-          ariaLabel={t('grid.deleteColumns')}
-          tooltip={t('grid.deleteColumns')}
+          ariaLabel={i18n.t('grid.deleteColumns')}
+          tooltip={i18n.t('grid.deleteColumns')}
           onClick={() => sel.deleteSelectedColumns()}
           disabled={mutationDisabled(selState.selectedCols.size === 0)}>
           {#snippet icon()}
@@ -642,8 +643,8 @@
       {/if}
       <Button
         size="sm"
-        ariaLabel={t('grid.trimTrailing')}
-        tooltip={t('grid.trimTrailing')}
+        ariaLabel={i18n.t('grid.trimTrailing')}
+        tooltip={i18n.t('grid.trimTrailing')}
         onClick={handleTrim}
         disabled={mutationDisabled(!model.needsTrim)}>
         {#snippet icon()}
@@ -652,8 +653,8 @@
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('grid.undo')}
-        tooltip={t('grid.undo')}
+        ariaLabel={i18n.t('grid.undo')}
+        tooltip={i18n.t('grid.undo')}
         onClick={() => {
           model.undo()
           restoreFocusAfterHistoryChange()
@@ -665,8 +666,8 @@
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('grid.redo')}
-        tooltip={t('grid.redo')}
+        ariaLabel={i18n.t('grid.redo')}
+        tooltip={i18n.t('grid.redo')}
         onClick={() => {
           model.redo()
           restoreFocusAfterHistoryChange()
@@ -677,14 +678,14 @@
         {/snippet}
       </Button>
     </div>
-    <span class="text-xs text-slate-400">{t('grid.rowColCount', { rows: model.rowCount, columns: model.columnCount })}</span>
+    <span class="text-xs text-slate-400">{i18n.t('grid.rowColCount', { rows: model.rowCount, columns: model.columnCount })}</span>
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md" bind:this={rootEl}>
     <div class="flex-none overflow-hidden" bind:this={headerWrapper}>
       <table
         role="grid"
-        aria-label={t('grid.spreadsheet')}
+        aria-label={i18n.t('grid.spreadsheet')}
         aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
         aria-colcount={model.columnCount}
         class="border-separate border-spacing-0 border-t border-l border-slate-800 text-sm"
@@ -703,7 +704,7 @@
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <th
                 role="columnheader"
-                aria-label={t('grid.selectAll')}
+                aria-label={i18n.t('grid.selectAll')}
                 class="sticky left-0 top-0 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
                 style="min-width:2.25rem;max-width:2.25rem;{sel.selectAllBorderStyle()}"
                 data-select-all
@@ -733,7 +734,7 @@
                       <button
                         type="button"
                         class="leading-none outline-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                        aria-label={t('grid.sortAsc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
+                        aria-label={i18n.t('grid.sortAsc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'asc')}
                         disabled={!editable}>
@@ -742,7 +743,7 @@
                       <button
                         type="button"
                         class="-mt-1 leading-none outline-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                        aria-label={t('grid.sortDesc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
+                        aria-label={i18n.t('grid.sortDesc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'desc')}
                         disabled={!editable}>
@@ -755,7 +756,7 @@
                       type="button"
                       class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                       style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
-                      aria-label={t('grid.resizeColumn', { index: ci + 1 })}
+                      aria-label={i18n.t('grid.resizeColumn', { index: ci + 1 })}
                       onmousedown={event => resize.startColumnResize(event, ci)}
                       onkeydown={event => resize.handleResizeKeydown(event, ci)}
                       ></button>
@@ -813,7 +814,7 @@
       <div class="min-h-0 flex-1 overflow-auto" bind:this={gridContainer}>
         <table
           role="grid"
-          aria-label={t('grid.spreadsheet')}
+          aria-label={i18n.t('grid.spreadsheet')}
           aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
           aria-colcount={model.columnCount}
 class="border-separate border-spacing-0 border-l border-slate-800 text-sm"

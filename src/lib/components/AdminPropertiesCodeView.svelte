@@ -1,6 +1,7 @@
 <script lang="ts">
   import LazyCodeEditor from './LazyCodeEditor.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
   import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
 
   interface Props {
@@ -23,6 +24,6 @@
       editable={!settingsState.pending}
       containerClass="h-full"
       editorClass="h-full rounded-lg border border-slate-700 bg-slate-950"
-      editorAriaLabel={t('admin.settingsContent')} />
+      editorAriaLabel={i18n.t('admin.settingsContent')} />
   </div>
 </div>

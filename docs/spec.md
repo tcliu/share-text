@@ -580,29 +580,33 @@ assistive tech via `aria-activedescendant`.
 
 Both the browser app and the admin console are localized through
 `$lib/i18n.svelte`; the admin console has its own `admin.*` key namespace and
-uses `t()` throughout (tabs, toolbars, DataTable headers, dialogs, login
-panel, admin hooks).
+uses the shared i18n store throughout (tabs, toolbars, DataTable headers,
+dialogs, login panel, admin hooks).
 
 - `LOCALES` is the closed set `en`, `zh-CN` (Simplified Chinese), `zh-TW`
   (Traditional Chinese), each with a native label for the picker. The `en`
   dictionary is the source (`as const`); `zh-CN`/`zh-TW` are typed
   `Record<MessageKey, string>` so every key must be translated or the build
-  fails. `t(key, params?)` reads the module-level `$state` locale and
-  interpolates `{name}` placeholders, so template/`$derived` calls re-render on
-  locale change.
+  fails. `createI18nStore(dictionaries, defaultLocale, storageKey)` builds a
+  rune-backed store (`{ get locale(), setLocale(next), t(key, params?) }`)
+  with `{name}` interpolation and English fallback. The root `+layout.svelte`
+  creates one store per load via `setI18nContext(createShareTextI18n())` —
+  SSR-safe, since each request gets a fresh English-defaulted instance —
+  and components/composables read it via `getI18nContext()`, so
+  template/`$derived` calls re-render on locale change.
 - The locale is a pure client-side preference: `setLocale` persists it to
   `localStorage` (`share-text:locale`) and sets `document.documentElement.lang`;
-  `initLocale()` applies a saved non-default locale and is called from the root
-  `+layout.svelte` `$effect`. SSR always renders English, so the server HTML and
-  the first client render match (a one-frame English flash occurs when a saved
-  locale is applied after mount) and there is no hydration mismatch.
-- `t()` is called in templates and `$derived`; never in a `$props()` default
-  (prop defaults evaluate once and would not react to a locale change). Shared
-  components with default labels (`CopyButton`, `Copyable`, `Chip`, `Splitter`,
-  `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`, `TagInput`, `Combobox`,
-  `SelectDropdown`, `DataTable`) keep the prop optional and resolve the fallback
-  via `$derived(prop ?? t('key'))` or an inline `??` at the call site. Toast
-  text in event handlers and async code uses the current locale at call time.
+  store creation eagerly applies the saved browser locale. SSR always renders
+  English; the client applies the saved locale during layout initialization.
+- `i18n.t()` is called in templates and `$derived`; never in a `$props()`
+  default (prop defaults evaluate once and would not react to a locale change).
+  Shared components with default labels (`CopyButton`, `Copyable`, `Chip`,
+  `Splitter`, `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`, `TagInput`,
+  `Combobox`, `SelectDropdown`, `DataTable`) keep the prop optional and resolve
+  the fallback via `$derived(prop ?? i18n.t('key'))` or an inline `??` at the
+  call site. Toast text in event handlers and async code uses the current locale
+  at call time via the captured store; plain `.ts` API helpers (`admin.ts`,
+  `owned-documents.ts`) receive the store explicitly as `i18n`.
 - English count-based pluralization (e.g. "{n} document(s)") is expressed as
   singular/plural key pairs (`admin.documents.deleted`/`...Plural`); the caller
   picks the key on `count === 1`. Chinese has no plural forms, so both keys map
@@ -615,7 +619,7 @@ panel, admin hooks).
   `settingDescription` helpers (`$lib/i18n.svelte`, `setting.<key>` /
   `setting.<key>Description` message pairs) — `AdminPropertiesView` and the
   `useAdminSettings` validation/revert toasts resolve
-  `settingLabel(key) ?? setting.label`. Messages produced by the server (API
+  `settingLabel(i18n, key) ?? setting.label`. Messages produced by the server (API
   `error` fields) remain English; only client-side UI text is translated.
 - Document type labels and format titles (e.g. "JSON", "Format JSON") are
   technical format names and stay untranslated.

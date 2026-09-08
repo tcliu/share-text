@@ -8,7 +8,8 @@
   import Tabs from './Tabs.svelte'
   import HelpIcon from '$lib/icons/HelpIcon.svelte'
   import UploadIcon from '$lib/icons/UploadIcon.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     kind: 'documents' | 'users'
@@ -27,7 +28,7 @@
     kind === 'documents'
       ? {
           single: {
-            label: t('admin.import.singleDocument'),
+            label: i18n.t('admin.import.singleDocument'),
             json: `{
   "key": "abc123",
   "name": "Meeting notes",
@@ -38,7 +39,7 @@
 }`,
           },
           multiple: {
-            label: t('admin.import.multipleDocuments'),
+            label: i18n.t('admin.import.multipleDocuments'),
             json: `[
   { "name": "Report", "content": "Draft", "documentType": "text" },
   { "name": "Data", "content": "{\\"a\\": 1}", "documentType": "json", "isPublic": false }
@@ -47,7 +48,7 @@
         }
       : {
           single: {
-            label: t('admin.import.singleUser'),
+            label: i18n.t('admin.import.singleUser'),
             json: `{
   "username": "alice",
   "email": "alice@example.com",
@@ -56,7 +57,7 @@
 }`,
           },
           multiple: {
-            label: t('admin.import.multipleUsers'),
+            label: i18n.t('admin.import.multipleUsers'),
             json: `[
   { "username": "alice", "email": "alice@example.com", "password": "s3cret" },
   { "username": "bob", "email": "bob@example.com", "password": "s3cret", "status": "inactive" }
@@ -78,7 +79,7 @@
     try {
       content = await file.text()
     } catch {
-      toast.error(t('admin.import.fileReadFailed'))
+      toast.error(i18n.t('admin.import.fileReadFailed'))
     } finally {
       input.value = ''
     }
@@ -98,22 +99,22 @@
     } catch (error) {
       toast.error(
         error instanceof Error
-          ? t('admin.import.invalidJsonWith', { error: error.message })
-          : t('admin.import.invalidJson'),
+          ? i18n.t('admin.import.invalidJsonWith', { error: error.message })
+          : i18n.t('admin.import.invalidJson'),
       )
       return
     }
     let records: unknown[]
     if (Array.isArray(parsed)) {
       if (parsed.length === 0) {
-        toast.error(t('admin.import.noRecords'))
+        toast.error(i18n.t('admin.import.noRecords'))
         return
       }
       records = parsed
     } else if (typeof parsed === 'object' && parsed !== null) {
       records = [parsed]
     } else {
-      toast.error(t('admin.import.mustBeObject'))
+      toast.error(i18n.t('admin.import.mustBeObject'))
       return
     }
     onImport(records)
@@ -121,7 +122,7 @@
 </script>
 
 <BaseDialog
-  title={kind === 'documents' ? t('admin.import.documentsTitle') : t('admin.import.usersTitle')}
+  title={kind === 'documents' ? i18n.t('admin.import.documentsTitle') : i18n.t('admin.import.usersTitle')}
   maxWidth="3xl"
   onCancel={onClose}
   {pending}>
@@ -129,16 +130,16 @@
     <div class="flex min-h-0 flex-col gap-1">
       <div class="flex items-start justify-between gap-3">
         <p class="text-sm text-slate-400">
-          {t('admin.import.description', {
-            kind: kind === 'documents' ? t('admin.kind.document') : t('admin.kind.user'),
+          {i18n.t('admin.import.description', {
+            kind: kind === 'documents' ? i18n.t('admin.kind.document') : i18n.t('admin.kind.user'),
           })}
         </p>
         <div class="flex items-center gap-1.5">
           <Button
             size="sm"
             variant="ghost"
-            ariaLabel={t('admin.import.uploadAria')}
-            tooltip={t('editor.upload')}
+            ariaLabel={i18n.t('admin.import.uploadAria')}
+            tooltip={i18n.t('editor.upload')}
             disabled={pending}
             onClick={handleUpload}>
             {#snippet icon()}
@@ -148,8 +149,8 @@
           <Button
             size="sm"
             variant="ghost"
-            ariaLabel={t('admin.import.showSamples')}
-            tooltip={t('admin.import.showSamples')}
+            ariaLabel={i18n.t('admin.import.showSamples')}
+            tooltip={i18n.t('admin.import.showSamples')}
             onClick={() => (samplesOpen = true)}>
             {#snippet icon()}
               <HelpIcon />
@@ -164,13 +165,13 @@
           autoFocus
           containerClass="h-full"
           editorClass="h-full rounded-lg border border-slate-700 bg-slate-950"
-          editorAriaLabel={t('admin.import.contentAria')} />
+          editorAriaLabel={i18n.t('admin.import.contentAria')} />
       </div>
     </div>
     <Buttons>
       {#snippet children()}
-        <Button variant="primary" accent="cyan" onClick={handleOk} {pending}>{t('common.ok')}</Button>
-        <Button variant="outline" onClick={handleReset} disabled={!content || pending}>{t('common.reset')}</Button>
+        <Button variant="primary" accent="cyan" onClick={handleOk} {pending}>{i18n.t('common.ok')}</Button>
+        <Button variant="outline" onClick={handleReset} disabled={!content || pending}>{i18n.t('common.reset')}</Button>
       {/snippet}
     </Buttons>
     <input
@@ -183,18 +184,18 @@
 </BaseDialog>
 
 {#if samplesOpen}
-  <BaseDialog title={t('admin.import.samples')} maxWidth="2xl" onCancel={() => (samplesOpen = false)}>
+  <BaseDialog title={i18n.t('admin.import.samples')} maxWidth="2xl" onCancel={() => (samplesOpen = false)}>
     <div class="flex min-h-0 flex-col gap-4">
       <p class="text-sm text-slate-400">
-        {t('admin.import.samplesHint')}
+        {i18n.t('admin.import.samplesHint')}
       </p>
       <Tabs
         tabs={[
-          { label: t('admin.import.single'), path: 'single', content: singleSample },
-          { label: t('admin.import.multiple'), path: 'multiple', content: multipleSample },
+          { label: i18n.t('admin.import.single'), path: 'single', content: singleSample },
+          { label: i18n.t('admin.import.multiple'), path: 'multiple', content: multipleSample },
         ]}
         state={{}}
-        ariaLabel={t('admin.import.sampleTypes')}
+        ariaLabel={i18n.t('admin.import.sampleTypes')}
         class="bg-slate-950" />
     </div>
   </BaseDialog>
@@ -203,8 +204,8 @@
 {#snippet sampleCard(sample: { label: string; json: string })}
   <Copyable
     copyText={sample.json}
-    copyAriaLabel={t('admin.import.copySampleAria', { name: sample.label })}
-    copyTooltip={t('admin.import.copySample')}
+    copyAriaLabel={i18n.t('admin.import.copySampleAria', { name: sample.label })}
+    copyTooltip={i18n.t('admin.import.copySample')}
     copyPosition="top-right"
     containerClass="overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
     <pre

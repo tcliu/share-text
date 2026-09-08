@@ -10,7 +10,8 @@
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import type { AdminUser } from '$lib/admin'
   import type { UserDialogInput } from '$lib/use-admin-users.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     mode: 'add' | 'edit'
@@ -92,13 +93,13 @@
 </script>
 
 <BaseDialog
-  title={mode === 'add' ? t('admin.dialog.addUser') : t('admin.dialog.editUser')}
+  title={mode === 'add' ? i18n.t('admin.dialog.addUser') : i18n.t('admin.dialog.editUser')}
   maxWidth="md"
   onCancel={handleCancelRequest}
   dismissKeydownCapture={!discardPromptOpen}
   pending={pending}>
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
-    <FormField label={t('admin.users.username')} htmlFor="user-username">
+    <FormField label={i18n.t('admin.users.username')} htmlFor="user-username">
       <input
         id="user-username"
         bind:this={usernameInput}
@@ -107,7 +108,7 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label={t('admin.users.email')} htmlFor="user-email">
+    <FormField label={i18n.t('admin.users.email')} htmlFor="user-email">
       <input
         id="user-email"
         bind:value={email}
@@ -115,30 +116,30 @@
         autocomplete="off"
         class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
     </FormField>
-    <FormField label={t('auth.password')} htmlFor="user-password">
+    <FormField label={i18n.t('auth.password')} htmlFor="user-password">
       <PasswordInput id="user-password" bind:value={password} disabled={pending} />
       {#if mode === 'edit'}
-        <p class="mt-1 text-xs text-slate-400">{t('admin.users.passwordHint')}</p>
+        <p class="mt-1 text-xs text-slate-400">{i18n.t('admin.users.passwordHint')}</p>
       {/if}
     </FormField>
-    <FormField label={t('admin.users.status')}>
+    <FormField label={i18n.t('admin.users.status')}>
       <SelectDropdown
-        buttonLabel={active ? t('admin.active') : t('admin.inactive')}
+        buttonLabel={active ? i18n.t('admin.active') : i18n.t('admin.inactive')}
         options={[
-          { value: 'active', label: t('admin.active') },
-          { value: 'inactive', label: t('admin.inactive') },
+          { value: 'active', label: i18n.t('admin.active') },
+          { value: 'inactive', label: i18n.t('admin.inactive') },
         ]}
         activeValue={active ? 'active' : 'inactive'}
-        ariaLabel={t('admin.users.status')}
+        ariaLabel={i18n.t('admin.users.status')}
         onSelect={value => (active = value === 'active')} />
     </FormField>
     <Buttons>
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} pending={pending}>
-          {mode === 'add' ? t('admin.dialog.create') : t('common.ok')}
+          {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
         </Button>
         {#if mode === 'edit'}
-          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{t('common.reset')}</Button>
+          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{i18n.t('common.reset')}</Button>
         {/if}
       {/snippet}
     </Buttons>
@@ -147,9 +148,9 @@
 
 {#if discardPromptOpen}
   <ConfirmDialog
-    title={t('admin.dialog.discardTitle')}
-    message={t('admin.dialog.discardUser')}
-    confirmLabel={t('admin.discard')}
+    title={i18n.t('admin.dialog.discardTitle')}
+    message={i18n.t('admin.dialog.discardUser')}
+    confirmLabel={i18n.t('admin.discard')}
     onConfirm={handleDiscard}
     onCancel={() => (discardPromptOpen = false)} />
 {/if}

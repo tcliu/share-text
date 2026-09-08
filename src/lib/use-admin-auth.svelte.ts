@@ -2,11 +2,12 @@ import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
 import { AdminAuthError, fetchAdminSession, logout } from '$lib/admin'
-import { t } from '$lib/i18n.svelte'
+import { getI18nContext } from '$lib/i18n.svelte'
 
 export type AdminAuthState = 'checking' | 'unauthenticated' | 'authenticated' | 'error'
 
 export function useAdminAuth(params: { onSignedOut: () => void }) {
+  const i18n = getI18nContext()
   const { onSignedOut } = params
 
   let state = $state<AdminAuthState>('checking')
@@ -26,16 +27,16 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
 
   async function handleLogout() {
     try {
-      await logout()
+      await logout(i18n)
     } catch {
-      toast.error(t('auth.toast.signOutFailed'))
+      toast.error(i18n.t('auth.toast.signOutFailed'))
     }
     handleSignedOut()
   }
 
   async function checkSession() {
     try {
-      const session = await fetchAdminSession()
+      const session = await fetchAdminSession(i18n)
       if (session.authenticated) {
         state = 'authenticated'
         sessionError = ''
@@ -50,7 +51,7 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
       // Transient failure (network, 5xx): don't bounce an authenticated user to
       // /login — show a retryable error instead. The server-side layout guard
       // already rejected genuinely unauthenticated sessions before render.
-      sessionError = error instanceof Error ? error.message : t('admin.auth.toast.checkFailed')
+      sessionError = error instanceof Error ? error.message : i18n.t('admin.auth.toast.checkFailed')
       state = 'error'
       return
     }

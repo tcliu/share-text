@@ -13,7 +13,8 @@
   import { formatTimestamp } from '$lib/date-format'
   import type { Tag } from '$lib/tag-colors'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     documentsState: ReturnType<typeof useAdminDocuments>
@@ -37,7 +38,7 @@
   const columns = $derived.by<DataTableColumn<AdminDocumentSummary>[]>(() => [
     {
       key: 'id',
-      header: t('admin.documents.key'),
+      header: i18n.t('admin.documents.key'),
       width: '10%',
       minWidth: 160,
       cellClass: 'max-w-0',
@@ -47,7 +48,7 @@
     },
     {
       key: 'name',
-      header: t('admin.documents.name'),
+      header: i18n.t('admin.documents.name'),
       width: '17%',
       minWidth: 160,
       cellClass: 'max-w-0',
@@ -57,7 +58,7 @@
     },
     {
       key: 'documentType',
-      header: t('admin.documents.type'),
+      header: i18n.t('admin.documents.type'),
       width: '9%',
       sortable: true,
       searchable: true,
@@ -65,7 +66,7 @@
     },
     {
       key: 'tags',
-      header: t('editor.tags'),
+      header: i18n.t('editor.tags'),
       width: '14%',
       cellClass: 'max-w-0',
       searchable: true,
@@ -73,7 +74,7 @@
     },
     {
       key: 'length',
-      header: t('admin.documents.length'),
+      header: i18n.t('admin.documents.length'),
       width: '8%',
       cellClass: 'text-slate-400',
       sortable: true,
@@ -81,7 +82,7 @@
     },
     {
       key: 'createdBy',
-      header: t('admin.documents.createdBy'),
+      header: i18n.t('admin.documents.createdBy'),
       width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -91,7 +92,7 @@
     },
     {
       key: 'updatedBy',
-      header: t('admin.documents.updatedBy'),
+      header: i18n.t('admin.documents.updatedBy'),
       width: '12%',
       minWidth: 144,
       cellClass: 'max-w-0',
@@ -101,14 +102,14 @@
     },
     {
       key: 'access',
-      header: t('admin.documents.access'),
+      header: i18n.t('admin.documents.access'),
       width: '8%',
       minWidth: 96,
       cell: accessCell,
     },
     {
       key: 'updatedAt',
-      header: t('admin.documents.updatedTime'),
+      header: i18n.t('admin.documents.updatedTime'),
       width: '12%',
       minWidth: 144,
       cellClass: 'text-slate-400',
@@ -123,12 +124,12 @@
   rowId={document => document.id}
   {columns}
   loading={documentsState.loading}
-  emptyMessage={documentsState.searchQuery ? t('admin.documents.noMatches') : t('admin.documents.empty')}
+  emptyMessage={documentsState.searchQuery ? i18n.t('admin.documents.noMatches') : i18n.t('admin.documents.empty')}
   bind:searchValue={() => documentsState.searchInput, value => (documentsState.searchInput = value)}
   onSearchInput={() => documentsState.handleSearchInput()}
   onSearchKeydown={event => documentsState.handleSearchKeydown(event)}
-  searchAriaLabel={t('admin.documents.searchAria')}
-  searchPlaceholder={t('list.searchDocumentsPlaceholder')}
+  searchAriaLabel={i18n.t('admin.documents.searchAria')}
+  searchPlaceholder={i18n.t('list.searchDocumentsPlaceholder')}
   bind:searchKeys={() => documentsState.searchKeys, keys => (documentsState.searchKeys = keys)}
   selectable
   selectedIds={documentsState.selectedIds}
@@ -136,8 +137,8 @@
   onToggleAll={() => documentsState.toggleAllOnCurrentPage()}
   allSelected={documentsState.currentPageAllSelected}
   someSelected={documentsState.currentPageSomeSelected}
-  rowSelectAriaLabel={document => t('admin.selectDocument', { name: document.name })}
-  selectAllAriaLabel={t('admin.documents.selectAll')}
+  rowSelectAriaLabel={document => i18n.t('admin.selectDocument', { name: document.name })}
+  selectAllAriaLabel={i18n.t('admin.documents.selectAll')}
   total={documentsState.total}
   pageSize={documentsState.pageSize}
   currentPage={documentsState.page}
@@ -182,7 +183,7 @@
     <Copyable
       text={document.documentType}
       className="text-slate-400 capitalize"
-      copyAriaLabel={t('admin.copyDocumentType', { name: document.documentType })} />
+      copyAriaLabel={i18n.t('admin.copyDocumentType', { name: document.documentType })} />
   {:else}
     <PlainCell value={document.documentType} className="capitalize text-slate-400" />
   {/if}
@@ -202,7 +203,7 @@
       <Copyable
         text={formatTags(document.tags)}
         className="block text-slate-400"
-        copyAriaLabel={t('admin.copyTagsFor', { name: document.name })}>
+        copyAriaLabel={i18n.t('admin.copyTagsFor', { name: document.name })}>
         {@render tagsChips(document)}
       </Copyable>
     {:else}
@@ -220,7 +221,7 @@
     <Copyable
       text={document.createdBy}
       className="block truncate text-slate-400"
-      copyAriaLabel={t('admin.copyCreatedBy', { name: document.createdBy })} />
+      copyAriaLabel={i18n.t('admin.copyCreatedBy', { name: document.createdBy })} />
   {:else}
     <PlainCell value={document.createdBy} className="text-slate-400" />
   {/if}
@@ -231,7 +232,7 @@
     <Copyable
       text={document.updatedBy}
       className="block truncate text-slate-400"
-      copyAriaLabel={t('admin.copyUpdatedBy', { name: document.updatedBy })} />
+      copyAriaLabel={i18n.t('admin.copyUpdatedBy', { name: document.updatedBy })} />
   {:else}
     <PlainCell value={document.updatedBy} className="text-slate-400" />
   {/if}
@@ -244,7 +245,7 @@
         ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-200'
         : 'border-slate-700 bg-slate-950 text-slate-400'
     }`}>
-    {document.isPublic ? t('common.public') : t('list.private')}
+    {document.isPublic ? i18n.t('common.public') : i18n.t('list.private')}
   </span>
 {/snippet}
 
@@ -276,10 +277,10 @@
 {#if documentsState.bulkDeleteOpen}
   <ConfirmDialog
     title={documentsState.selectedCount === 1
-      ? t('admin.deleteDocumentsTitle', { count: documentsState.selectedCount })
-      : t('admin.deleteDocumentsTitlePlural', { count: documentsState.selectedCount })}
-    message={t('admin.deleteDocumentsMessage')}
-    confirmLabel={t('common.delete')}
+      ? i18n.t('admin.deleteDocumentsTitle', { count: documentsState.selectedCount })
+      : i18n.t('admin.deleteDocumentsTitlePlural', { count: documentsState.selectedCount })}
+    message={i18n.t('admin.deleteDocumentsMessage')}
+    confirmLabel={i18n.t('common.delete')}
     confirmColor="rose"
     onConfirm={() => void documentsState.confirmBulkDelete()}
     onCancel={() => (documentsState.bulkDeleteOpen = false)} />

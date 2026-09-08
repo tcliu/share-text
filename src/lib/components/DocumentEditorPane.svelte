@@ -38,7 +38,8 @@
   import { useFormat } from './use-format.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))
 
@@ -177,17 +178,17 @@
       const text = await file.text()
       const byteSize = new TextEncoder().encode(text).byteLength
       if (byteSize > 1024 * 1024) {
-        toast.error(t('editor.toast.fileTooLarge'))
+        toast.error(i18n.t('editor.toast.fileTooLarge'))
         return
       }
       if (maxContentLength > 0 && text.length > maxContentLength) {
-        toast.error(t('editor.toast.fileTooLong', { limit: maxContentLength }))
+        toast.error(i18n.t('editor.toast.fileTooLong', { limit: maxContentLength }))
         return
       }
       content = text
-      toast.success(t('editor.toast.fileUploaded'))
+      toast.success(i18n.t('editor.toast.fileUploaded'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('editor.toast.fileReadFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.fileReadFailed'))
     } finally {
       if (fileInputRef) {
         fileInputRef.value = ''
@@ -203,9 +204,9 @@
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(content)
-      toast.success(t('editor.toast.copied'))
+      toast.success(i18n.t('editor.toast.copied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
     }
   }
 
@@ -216,9 +217,9 @@
       url.search = ''
       url.hash = ''
       await navigator.clipboard.writeText(url.toString())
-      toast.success(t('editor.toast.linkCopied'))
+      toast.success(i18n.t('editor.toast.linkCopied'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('editor.toast.copyFailed'))
+      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
     }
   }
 
@@ -243,7 +244,7 @@
     if (fromType.convertTo?.target === value) {
       const result = await fromType.convertTo.convert(content)
       if (!result.ok) {
-        toast.error(t('editor.toast.cannotConvert', { error: result.error ?? t('editor.toast.invalidContent') }))
+        toast.error(i18n.t('editor.toast.cannotConvert', { error: result.error ?? i18n.t('editor.toast.invalidContent') }))
         return
       }
       content = result.value ?? ''
@@ -282,7 +283,7 @@
           buttonLabel={activeTypeLabel}
           options={DOCUMENT_TYPE_OPTIONS}
           activeValue={docType}
-          ariaLabel={t('editor.documentType')}
+          ariaLabel={i18n.t('editor.documentType')}
           filterable={true}
           size="sm"
           onSelect={handleTypeSelect}
@@ -310,8 +311,8 @@
   {#snippet previewToggles()}
     <Button
       size="sm"
-      ariaLabel={t('editor.editorView')}
-      tooltip={t('editor.editorView')}
+      ariaLabel={i18n.t('editor.editorView')}
+      tooltip={i18n.t('editor.editorView')}
       variant={previewState.editorActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.editorActive}
       disabled={previewState.editorDisabled}
@@ -327,8 +328,8 @@
     </Button>
     <Button
       size="sm"
-      ariaLabel={t('editor.previewView')}
-      tooltip={t('editor.previewView')}
+      ariaLabel={i18n.t('editor.previewView')}
+      tooltip={i18n.t('editor.previewView')}
       variant={previewState.previewActive ? 'outline' : 'secondary'}
       ariaPressed={previewState.previewActive}
       disabled={previewState.previewDisabled}
@@ -358,8 +359,8 @@
     {/if}
     <Button
       size="sm"
-      ariaLabel={t('common.copy')}
-      tooltip={t('common.copy')}
+      ariaLabel={i18n.t('common.copy')}
+      tooltip={i18n.t('common.copy')}
       onClick={handleCopy}
       disabled={content.length === 0}>
       {#snippet icon()}
@@ -370,8 +371,8 @@
       {#if editable}
         <Button
           size="sm"
-          ariaLabel={t('editor.upload')}
-          tooltip={t('editor.upload')}
+          ariaLabel={i18n.t('editor.upload')}
+          tooltip={i18n.t('editor.upload')}
           onClick={handleUploadClick}>
           {#snippet icon()}
             {@render uploadIcon()}
@@ -380,8 +381,8 @@
       {/if}
       <Button
         size="sm"
-        ariaLabel={t('editor.export')}
-        tooltip={t('editor.export')}
+        ariaLabel={i18n.t('editor.export')}
+        tooltip={i18n.t('editor.export')}
         onClick={handleExport}
         disabled={content.length === 0}>
         {#snippet icon()}
@@ -392,7 +393,7 @@
         <Button
           size="sm"
           ariaLabel={currentType.format.title}
-          tooltip={t('editor.format')}
+          tooltip={i18n.t('editor.format')}
           onClick={formatState.openDialog}
           disabled={!editable}>
           {#snippet icon()}
@@ -402,13 +403,13 @@
       {/if}
       {#if (onClone || cloneDisabled) || (onTagsSave && editable) || versionCount >= 2}
         <KebabMenu
-          ariaLabel={t('editor.moreActions')}
+          ariaLabel={i18n.t('editor.moreActions')}
           items={[
             ...(onClone || cloneDisabled
               ? [
                   {
                     id: 'clone',
-                    label: t('editor.clone'),
+                    label: i18n.t('editor.clone'),
                     onClick: onClone ?? (() => {}),
                     disabled: cloneDisabled || content.length === 0,
                     icon: cloneIcon,
@@ -419,13 +420,13 @@
               ? [
                   {
                     id: 'tags',
-                    label: t('editor.tags'),
+                    label: i18n.t('editor.tags'),
                     onClick: () => (tagsOpen = true),
                     icon: tagsIcon,
                   },
                   {
                     id: 'copy-link',
-                    label: t('editor.copyLink'),
+                    label: i18n.t('editor.copyLink'),
                     onClick: handleCopyLink,
                     icon: linkIcon,
                   },
@@ -435,7 +436,7 @@
               ? [
                   {
                     id: 'history',
-                    label: t('editor.history'),
+                    label: i18n.t('editor.history'),
                     onClick: () => (historyOpen = true),
                     icon: historyIcon,
                   },
@@ -446,8 +447,8 @@
     {:else if onClone || cloneDisabled}
       <Button
         size="sm"
-        ariaLabel={t('editor.cloneDocument')}
-        tooltip={t('editor.clone')}
+        ariaLabel={i18n.t('editor.cloneDocument')}
+        tooltip={i18n.t('editor.clone')}
         onClick={onClone}
         disabled={cloneDisabled || content.length === 0}>
         {#snippet icon()}
@@ -456,7 +457,7 @@
       </Button>
     {/if}
     {#if onShare}
-      <Button size="sm" ariaLabel={t('editor.share')} tooltip={t('editor.share')} onClick={onShare}>
+      <Button size="sm" ariaLabel={i18n.t('editor.share')} tooltip={i18n.t('editor.share')} onClick={onShare}>
         {#snippet icon()}
           <ShareIcon />
         {/snippet}
@@ -465,8 +466,8 @@
     {#if onDelete}
       <Button
         size="sm"
-        ariaLabel={t('list.deleteDocument')}
-        tooltip={t('common.delete')}
+        ariaLabel={i18n.t('list.deleteDocument')}
+        tooltip={i18n.t('common.delete')}
         onClick={() => onDelete(document.id)}
         className="text-slate-400 hover:border-rose-500 hover:text-rose-300">
         {#snippet icon()}
@@ -475,15 +476,15 @@
       </Button>
     {/if}
     {#if editable}
-      <Button size="sm" ariaLabel={t('editor.reset')} tooltip={t('editor.reset')} onClick={handleResetClick} disabled={!dirty || saving}>
+      <Button size="sm" ariaLabel={i18n.t('editor.reset')} tooltip={i18n.t('editor.reset')} onClick={handleResetClick} disabled={!dirty || saving}>
         {#snippet icon()}
           <RefreshIcon />
         {/snippet}
       </Button>
       <Button
         size="sm"
-        ariaLabel={t('editor.save')}
-        tooltip={t('editor.save')}
+        ariaLabel={i18n.t('editor.save')}
+        tooltip={i18n.t('editor.save')}
         onClick={handleSave}
         disabled={!dirty || saving}
         variant="primary"
@@ -534,8 +535,8 @@
         <div class="flex min-w-[min(12rem,60%)] flex-1 items-center gap-2">
           <Button
             size="sm"
-            ariaLabel={t('editor.openDocumentList')}
-            tooltip={t('editor.documentList')}
+            ariaLabel={i18n.t('editor.openDocumentList')}
+            tooltip={i18n.t('editor.documentList')}
             className="shrink-0"
             preventFocusSteal
             onClick={context.openMobileDrawer}>
@@ -554,13 +555,13 @@
       {/if}
       <div class="flex flex-wrap items-center gap-1" data-testid="editor-actions">
         <KebabMenu
-          ariaLabel={t('editor.moreActions')}
+          ariaLabel={i18n.t('editor.moreActions')}
           items={[
             ...(editable
               ? [
                   {
                     id: 'upload',
-                    label: t('editor.upload'),
+                    label: i18n.t('editor.upload'),
                     onClick: handleUploadClick,
                     icon: uploadIcon,
                   },
@@ -568,7 +569,7 @@
               : []),
             {
               id: 'export',
-              label: t('editor.export'),
+              label: i18n.t('editor.export'),
               onClick: handleExport,
               disabled: content.length === 0,
               icon: exportIcon,
@@ -577,7 +578,7 @@
               ? [
                   {
                     id: 'history',
-                    label: t('editor.history'),
+                    label: i18n.t('editor.history'),
                     onClick: () => (historyOpen = true),
                     icon: historyIcon,
                   },
@@ -642,7 +643,7 @@
         orientation={context.isMobile ? 'horizontal' : 'vertical'}
         lineClass={context.isMobile ? 'border-t border-slate-700' : 'border-l border-slate-700'}
         onChange={(value: number) => (previewState.editorWidthPct = value)}
-        ariaLabel={t('editor.resizePanes')} />
+        ariaLabel={i18n.t('editor.resizePanes')} />
     {/if}
     {#if previewState.showPreview && currentType.preview}
       <div class="min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -667,32 +668,32 @@
   <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}
       <span class="min-w-0">
-        {t('editor.lastUpdated')}
+        {i18n.t('editor.lastUpdated')}
         <span class="text-slate-300">{formattedTimestamp}</span>
         {#if document.updatedBy}
           <span>
-            {t('editor.by')} <span class="text-slate-300">{document.updatedBy}</span>
+            {i18n.t('editor.by')} <span class="text-slate-300">{document.updatedBy}</span>
           </span>
         {/if}
       </span>
     {/if}
     <span class="flex items-center gap-3">
       {#if !editable}
-        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">{t('editor.readOnly')}</span>
+        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">{i18n.t('editor.readOnly')}</span>
       {/if}
       {#if refreshing}
-        <span class="text-slate-400">{t('editor.refreshing')}</span>
+        <span class="text-slate-400">{i18n.t('editor.refreshing')}</span>
       {/if}
-      <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} {t('editor.chars')}</span>
+      <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} {i18n.t('editor.chars')}</span>
     </span>
   </div>
 </section>
 
 {#if uploadConfirmOpen}
   <ConfirmDialog
-    title={t('editor.uploadConfirmTitle')}
-    message={t('editor.uploadConfirmMessage')}
-    confirmLabel={t('common.ok')}
+    title={i18n.t('editor.uploadConfirmTitle')}
+    message={i18n.t('editor.uploadConfirmMessage')}
+    confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
     onConfirm={handleUploadConfirm}
     onCancel={() => (uploadConfirmOpen = false)} />
@@ -730,7 +731,7 @@
       docType = version.documentType
       historyOpen = false
       if (content !== document.content || docType !== document.documentType) {
-        toast.success(t('editor.toast.versionRestored'))
+        toast.success(i18n.t('editor.toast.versionRestored'))
       }
     }} />
 {/if}

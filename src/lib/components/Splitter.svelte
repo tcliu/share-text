@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { t } from '$lib/i18n.svelte'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  const i18n = getI18nContext()
 
   interface Props {
     value: number
@@ -27,7 +28,7 @@
     orientation = 'vertical',
   }: Props = $props()
 
-  const resolvedAriaLabel = $derived(ariaLabel ?? t('splitter.resize'))
+  const resolvedAriaLabel = $derived(ariaLabel ?? i18n.t('splitter.resize'))
 
   let handleRef = $state<HTMLElement | null>(null)
   let dragging = $state(false)
