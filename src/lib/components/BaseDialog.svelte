@@ -152,7 +152,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   data-testid="dialog-overlay"
-  class="fixed inset-0 z-50 {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80 px-4 py-6'}"
+  class="fixed inset-0 z-40 {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80 px-4 py-6'}"
   onclick={handleCancelRequest}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->

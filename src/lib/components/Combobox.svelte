@@ -206,7 +206,7 @@
       aria-label={placeholder}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => dropdownOpen })}
       data-escape-capture
-      class="fixed left-0 top-0 z-50 w-64 will-change-transform max-h-52 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur">
+      class="fixed left-0 top-0 z-40 w-64 will-change-transform max-h-52 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur">
       {#each suggestions as suggestion, index}
         <button
           type="button"

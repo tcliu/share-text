@@ -5,6 +5,8 @@
   --text-sm: 0.8125rem; /* 13px */
   --text-md: 0.9375rem; /* 15px */
   --text-lg: 1.125rem; /* 18px */
+
+  --color-onaccent: rgb(2 6 23);
 }
 
 @source inline("text-xs text-sm text-md text-lg");
@@ -32,6 +34,6 @@ button:disabled {
 }
 
 .st-tooltip {
-  @apply pointer-events-none fixed z-[60] whitespace-nowrap rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 shadow-lg transition-opacity duration-150;
+  @apply pointer-events-none fixed z-40 whitespace-nowrap rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 shadow-lg transition-opacity duration-150;
   opacity: 0;
 }

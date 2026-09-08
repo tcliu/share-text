@@ -268,7 +268,7 @@
       role="listbox"
       aria-label={ariaLabel}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
-      class={`fixed left-0 top-0 z-50 will-change-transform ${panelClass}`}>
+      class={`fixed left-0 top-0 z-40 will-change-transform ${panelClass}`}>
       {#if filteredOptions.length === 0}
         <div class={emptyClass}>{t('dropdown.noOptions')}</div>
       {/if}
