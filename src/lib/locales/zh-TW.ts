@@ -15,6 +15,18 @@ export const zhTW: Record<MessageKey, string> = {
   'language.label': '語言',
   'language.select': '選擇語言',
 
+  'theme.label': '主題',
+  'theme.dark': '深色',
+  'theme.light': '淺色',
+  'theme.ember': '暮色',
+  'theme.nebula': '星雲',
+  'theme.sky': '天藍',
+  'theme.sepia': '暖色',
+  'theme.forest': '森林',
+  'theme.midnight': '午夜',
+  'theme.mint': '薄荷',
+  'theme.lavender': '薰衣草',
+
   'list.collapse': '摺疊文件清單',
   'list.showDocumentList': '顯示文件清單',
   'list.newDocument': '新增文件',

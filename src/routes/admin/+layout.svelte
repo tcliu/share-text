@@ -24,6 +24,7 @@
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
+  import ThemeMenu from '$lib/components/ThemeMenu.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -115,24 +116,23 @@
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
-  {#if authState.state === 'authenticated'}
-    <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
-      <h1 class="text-md font-semibold text-slate-200">{i18n.t('admin.title')}</h1>
-      <div class="flex items-center gap-2">
-        <LanguageMenu />
-        <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
-          {#snippet icon()}
-            <DocumentIcon />
-          {/snippet}
-        </Button>
-        <Button size="sm" ariaLabel={i18n.t('list.signOut')} tooltip={i18n.t('list.signOut')} onClick={() => void authState.handleLogout()}>
-          {#snippet icon()}
-            <SignOutIcon />
-          {/snippet}
-        </Button>
-      </div>
-    </header>
-  {/if}
+  <header class="flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4">
+    <h1 class="text-base font-semibold tracking-tight text-slate-200 sm:text-lg">{i18n.t('admin.title')}</h1>
+    <div class="flex items-center gap-2">
+      <ThemeMenu align="right" />
+      <LanguageMenu align="right" />
+      <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
+        {#snippet icon()}
+          <DocumentIcon />
+        {/snippet}
+      </Button>
+      <Button size="sm" ariaLabel={i18n.t('list.signOut')} tooltip={i18n.t('list.signOut')} onClick={() => void authState.handleLogout()}>
+        {#snippet icon()}
+          <SignOutIcon />
+        {/snippet}
+      </Button>
+    </div>
+  </header>
   <main class="min-h-0 flex-1">
     {#if authState.state === 'checking'}
       <div class="flex h-full items-center justify-center">
@@ -305,13 +305,12 @@
           content: usersContent,
         },
       ] satisfies Tab<AdminState>[]}
-      <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 py-4">
+      <div class="mx-auto flex h-full max-w-[96rem] flex-col gap-3 px-4 pb-4">
         <Tabs
           tabs={adminTabs}
           state={{ preferencesState, settingsState, documentsState, usersState }}
           pathname={page.url.pathname}
-          ariaLabel={i18n.t('admin.sections')}
-          class="bg-slate-950" />
+          ariaLabel={i18n.t('admin.sections')} />
       </div>
     {/if}
     {#if children}{@render children()}{/if}

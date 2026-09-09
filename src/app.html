@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Share Text</title>
+    <script>
+      // Apply the persisted theme before first paint to avoid a dark flash
+      // for non-default-theme users; must stay in sync with use-theme.
+      try {
+        var stored = localStorage.getItem('share-text:theme')
+        var themes = ['light', 'ember', 'sepia', 'nebula', 'sky', 'forest', 'midnight', 'mint', 'lavender']
+        if (themes.indexOf(stored) !== -1) {
+          document.documentElement.dataset.theme = stored
+        }
+      } catch {
+        /* unreadable storage falls back to the default dark palette */
+      }
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover">

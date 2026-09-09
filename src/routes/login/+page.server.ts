@@ -10,4 +10,7 @@ export const load: PageServerLoad = ({ cookies }) => {
   if (isUserSession({ cookies })) {
     throw redirect(307, '/')
   }
+  // No standalone form remains: unauthenticated visitors land on the browser
+  // page with the login dialog auto-opened.
+  throw redirect(307, '/?login=1')
 }

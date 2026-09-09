@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Pool } from '@neondatabase/serverless'
 import { parseEnvFile } from './env-file.mjs'
 
@@ -17,11 +19,6 @@ export function getDatabaseURL(env = process.env) {
   return (loadedEnv.DATABASE_URL || '').trim()
 }
 
-export function getAppBaseURL(env = process.env) {
-  const loadedEnv = loadScriptEnv(env)
-  return (loadedEnv.APP_BASE_URL || '').trim()
-}
-
 export function resolveScriptProfile(env = process.env) {
   const explicit = (env.PROFILE || '').trim().toLowerCase()
   if (explicit === 'dev' || explicit === 'prod') return explicit
@@ -34,9 +31,8 @@ export function resolveScriptProfile(env = process.env) {
 
 export function getSqlitePath(env = process.env) {
   const loadedEnv = loadScriptEnv(env)
-  return (loadedEnv.SQLITE_PATH || '.data/share-text-dev.sqlite').trim()
+  return (loadedEnv.SQLITE_PATH || '.data/dev.sqlite').trim()
 }
-
 export function getSchemaName(env = process.env) {
   const loadedEnv = loadScriptEnv(env)
   return (loadedEnv.SCHEMA_NAME || '').trim()

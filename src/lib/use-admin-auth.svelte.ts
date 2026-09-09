@@ -31,7 +31,13 @@ export function useAdminAuth(params: { onSignedOut: () => void }) {
     } catch {
       toast.error(i18n.t('auth.toast.signOutFailed'))
     }
-    handleSignedOut()
+    onSignedOut()
+    state = 'unauthenticated'
+    // Explicit sign-out lands on the browser page; expired sessions keep the
+    // /login redirect (now landing + dialog) via handleSignedOut.
+    if (page.url.pathname !== '/') {
+      void goto('/')
+    }
   }
 
   async function checkSession() {

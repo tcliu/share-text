@@ -1,17 +1,13 @@
 <script lang="ts">
-  import type { OwnedDocumentSummary, ProfileIdentity } from '$lib/documents'
+  import type { OwnedDocumentSummary } from '$lib/documents'
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Button from './Button.svelte'
-  import PersonIcon from '$lib/icons/PersonIcon.svelte'
-  import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
-  import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
   import LockIcon from '$lib/icons/LockIcon.svelte'
   import SearchInput from './SearchInput.svelte'
   import Chip from './Chip.svelte'
-  import LanguageMenu from './LanguageMenu.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
   import { getDocumentType } from '$lib/document-types'
@@ -29,10 +25,6 @@
     onSearchKeydown?: (event: KeyboardEvent) => void
     onNew: () => void
     onRefresh: () => void
-    onLogin: () => void
-    onSettings?: () => void
-    onSignOut?: () => void
-    user?: ProfileIdentity | null
     onLoadMore: () => void
     onToggleCollapse?: () => void
     width?: number
@@ -51,10 +43,6 @@
     onSearchKeydown,
     onNew,
     onRefresh,
-    onLogin,
-    onSettings,
-    onSignOut,
-    user = null,
     onLoadMore,
     onToggleCollapse,
     width,
@@ -106,61 +94,32 @@
 
 <aside
   aria-label={i18n.t('editor.documentList')}
-  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 md:w-[var(--aside-w,100%)]"
+  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 lg:w-[var(--aside-w,100%)]"
   style={width !== undefined ? `--aside-w: ${width}px` : undefined}>
-  <div bind:this={headerRef} class="flex items-center justify-between px-2 pt-2">
-    <div class="flex items-center gap-1">
-      <span class="p-1 text-md font-semibold text-slate-200">{i18n.t('app.name')}</span>
-    </div>
-    <div class="flex items-center gap-1">
-      {#if onToggleCollapse}
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('list.collapse')}
-          tooltip={i18n.t('list.collapse')}
-          ariaExpanded={true}
-          preventFocusSteal
-          onClick={onToggleCollapse}>
-          {#snippet icon()}
-            <ChevronsLeftIcon />
-          {/snippet}
-        </Button>
-      {/if}
-      <Button size="sm" ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={onNew}>
+  <div bind:this={headerRef} class="flex items-center gap-1 px-2 pt-2">
+    {#if onToggleCollapse}
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('list.collapse')}
+        tooltip={i18n.t('list.collapse')}
+        ariaExpanded={true}
+        preventFocusSteal
+        onClick={onToggleCollapse}>
         {#snippet icon()}
-          <PlusIcon />
+          <ChevronsLeftIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel={i18n.t('list.refresh')} tooltip={i18n.t('list.refresh')} onClick={onRefresh} disabled={loading}>
-        {#snippet icon()}
-          <RefreshIcon />
-        {/snippet}
-      </Button>
-      {#if user}
-        <LanguageMenu />
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('list.settings')}
-          tooltip={i18n.t('list.settingsWith', { name: user.username })}
-          onClick={onSettings}>
-          {#snippet icon()}
-            <SettingsIcon />
-          {/snippet}
-        </Button>
-        <Button size="sm" ariaLabel={i18n.t('list.signOut')} tooltip={i18n.t('list.signOut')} onClick={onSignOut}>
-          {#snippet icon()}
-            <SignOutIcon />
-          {/snippet}
-        </Button>
-      {:else}
-        <LanguageMenu />
-        <Button size="sm" ariaLabel={i18n.t('list.login')} tooltip={i18n.t('list.login')} onClick={onLogin}>
-          {#snippet icon()}
-            <PersonIcon />
-          {/snippet}
-        </Button>
-      {/if}
-    </div>
+    {/if}
+    <Button size="sm" ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={onNew}>
+      {#snippet icon()}
+        <PlusIcon />
+      {/snippet}
+    </Button>
+    <Button size="sm" ariaLabel={i18n.t('list.refresh')} tooltip={i18n.t('list.refresh')} onClick={onRefresh} disabled={loading}>
+      {#snippet icon()}
+        <RefreshIcon />
+      {/snippet}
+    </Button>
   </div>
 
   <SearchInput

@@ -15,6 +15,18 @@ export const zhCN: Record<MessageKey, string> = {
   'language.label': '语言',
   'language.select': '选择语言',
 
+  'theme.label': '主题',
+  'theme.dark': '深色',
+  'theme.light': '浅色',
+  'theme.ember': '暮色',
+  'theme.nebula': '星云',
+  'theme.sky': '天蓝',
+  'theme.sepia': '暖色',
+  'theme.forest': '森林',
+  'theme.midnight': '午夜',
+  'theme.mint': '薄荷',
+  'theme.lavender': '薰衣草',
+
   'list.collapse': '折叠文档列表',
   'list.showDocumentList': '显示文档列表',
   'list.newDocument': '新建文档',

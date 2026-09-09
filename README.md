@@ -44,7 +44,7 @@ an explicit `PROFILE=dev|prod` wins; otherwise `NODE_ENV=production` resolves to
 
 | Profile | Backend | Database |
 |---|---|---|
-| `dev` | SQLite (`better-sqlite3`) | `.data/share-text-dev.sqlite`, auto-created |
+| `dev` | SQLite (`better-sqlite3`) | `.data/dev.sqlite`, auto-created |
 | `prod` | PostgreSQL (`@neondatabase/serverless`) | `DATABASE_URL` (Neon) |
 
 `PROFILE=prod npm run dev` runs the prod profile locally against Postgres, and
@@ -57,7 +57,7 @@ Keys:
 | `PROFILE` | `dev` (default) or `prod` |
 | `APP_BASE_URL` | Public URL the app is reachable at |
 | `DATABASE_URL` | PostgreSQL connection string (required only for `prod`) |
-| `SQLITE_PATH` | Dev SQLite file (default `.data/share-text-dev.sqlite`) |
+| `SQLITE_PATH` | Dev SQLite file (default `.data/dev.sqlite`) |
 | `MAX_DOCUMENTS_PER_IP` | Max documents a single client IP can create (default 10) |
 | `MAX_CONTENT_LENGTH` | Max document content length in chars (editor + uploads, default 1048576), subject to a separate hard 1 MiB UTF-8 byte cap |
 | `ADMIN_USERNAME` | Admin login username (default `admin`) |
@@ -101,7 +101,7 @@ The row delete button appears only for documents you own (created anonymously
 from your client IP, or claimed by your account after sign-in). The admin
 **Documents** tab can delete any document.
 No `DATABASE_URL` is needed — documents are stored in a local SQLite file at
-`.data/share-text-dev.sqlite` (created on first run). The **Login** button in
+`.data/dev.sqlite` (created on first run). The **Login** button in
 the list header opens `/login`, where visitors can sign in or create an account.
 
 ## Admin

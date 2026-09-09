@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { fade, fly } from 'svelte/transition'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -16,6 +17,17 @@
 
   let panelRef = $state<HTMLElement | null>(null)
   let previouslyFocused: Element | null = null
+
+  let reduceMotion = $state(false)
+
+  $effect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => (reduceMotion = media.matches)
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  })
 
   $effect(() => {
     if (open) {
@@ -77,6 +89,7 @@
   <div
     data-testid="mobile-drawer-overlay"
     class="fixed inset-0 z-40 flex bg-slate-950/80"
+    transition:fade={{ duration: reduceMotion ? 0 : 150 }}
     onclick={onClose}>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -87,6 +100,7 @@
       aria-label={resolvedAriaLabel}
       tabindex="-1"
       class="h-full w-full max-w-sm overflow-hidden border-r border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 outline-none"
+      transition:fly={{ x: '-100%', duration: reduceMotion ? 0 : 200 }}
       onclick={event => event.stopPropagation()}>
       {@render children?.()}
     </div>

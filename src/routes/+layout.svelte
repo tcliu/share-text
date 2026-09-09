@@ -1,13 +1,19 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte'
+  import { onMount, type Snippet } from 'svelte'
+  import type { LayoutData } from './$types'
   import '../styles.css'
   import { Toaster, toast } from 'svelte-sonner'
-  import type { LayoutData } from './$types'
   import { createShareTextI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { useTheme } from '$lib/use-theme.svelte'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
   setI18nContext(createShareTextI18n())
+  const themeState = useTheme()
+
+  onMount(() => {
+    themeState.hydrate()
+  })
 
   $effect(() => {
     function handleKeydown(event: KeyboardEvent) {

@@ -67,7 +67,7 @@ The page is split into two vertical panes.
 
 ### Responsive layout
 
-On screens narrower than the `md` breakpoint (767px) the two panes stop being
+On screens narrower than the `lg` breakpoint (1023px) the two panes stop being
 side by side and become full-screen pages: the document list occupies the whole
 screen on `/`, and opening a document (or `/new`) hides the list and shows the
 editor full screen. From the editor, a hamburger button before the document
@@ -83,11 +83,10 @@ document name and type selector, then the tag chips, then the action buttons —
 ## Language
 
 - The interface can be shown in English (default), Simplified Chinese, or
-  Traditional Chinese. The **Language** (globe) button in the document-list
-  header (also on the collapsed rail) opens a menu listing the three languages
-  in their own script; the active one is marked. When signed in, the globe sits
-  immediately before **Settings**; when signed out it sits immediately before
-  **Login**.
+  Traditional Chinese. The **Language** (globe) button in the full-width app
+  header opens a menu listing the three languages
+  in their own script; the active one is marked. The globe sits
+  immediately before **Settings**/**Login**, right after the **Theme** (palette) button.
 - The choice is remembered on the device: the next visit opens in the selected
   language. Both the browser app and the admin console are translated, so
   switching the language also switches the admin tabs, toolbars, dialogs, and

@@ -18,8 +18,8 @@
 body {
   margin: 0;
   min-height: 100dvh;
-  background: #020617;
-  color: #e2e8f0;
+  background: var(--color-slate-950);
+  color: var(--color-slate-200);
   font-family: system-ui, -apple-system, sans-serif;
 }
 
@@ -36,4 +36,235 @@ button:disabled {
 .st-tooltip {
   @apply pointer-events-none fixed z-40 whitespace-nowrap rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 shadow-lg transition-opacity duration-150 motion-reduce:transition-none;
   opacity: 0;
+}
+
+/*
+ * Alternate themes (ported from the tts project: keep the per-theme slate /
+ * accent mappings in sync).
+ *
+ * Components keep their literal default-theme utility classes; because
+ * Tailwind v4 compiles every palette utility to a `var(--color-<name>-<grade>)`
+ * reference, overriding those variables under [data-theme='…'] re-themes the
+ * whole app centrally. Mapping rules per theme:
+ *   - Light themes ('light', 'sepia', 'sky', 'mint', 'lavender') mirror the
+ *     slate scale around its midpoint so surface/border/text roles invert
+ *     (slate-900 becomes white so panels read raised on the canvas), and
+ *     darken accent grades 100–400 so text/hover roles keep AA contrast on
+ *     light surfaces.
+ *   - Dark variants ('ember', 'nebula', 'forest', 'midnight') shift surface
+ *     and text hues; text grades stay light and hover fills brighten past
+ *     the base.
+ *   - 'sepia' and 'ember' remap cyan to amber so the accent family matches
+ *     their warm palettes; 'nebula' and 'lavender' remap cyan to violet;
+ *     'forest' and 'mint' remap cyan to emerald; 'midnight' remaps it to
+ *     sky-blue.
+ * Grade 500+ accents are otherwise untouched: vivid accent fills work on both
+ * dark and light surfaces. When introducing new colors, prefer grades these
+ * mappings already cover so components theme automatically. Colored shadows
+ * (shadow-slate-950/*) intentionally flatten to faint glows on light canvases;
+ * panels rely on borders for definition there.
+ */
+[data-theme='light'],
+[data-theme='sepia'],
+[data-theme='sky'],
+[data-theme='mint'],
+[data-theme='lavender'] {
+  color-scheme: light;
+
+  --color-cyan-100: #164e63;
+  --color-cyan-200: #155e75;
+  --color-cyan-300: #0e7490;
+  --color-cyan-400: #0891b2;
+
+  --color-rose-100: #881337;
+  --color-rose-200: #9f1239;
+  --color-rose-300: #be123c;
+  --color-rose-400: #e11d48;
+
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-400: #059669;
+
+  --color-amber-100: #78350f;
+  --color-amber-200: #92400e;
+  --color-amber-400: #d97706;
+
+  --color-violet-100: #4c1d95;
+  --color-violet-200: #5b21b6;
+  --color-violet-400: #6d28d9;
+}
+
+[data-theme='light'] {
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+  --color-slate-400: #475569;
+  --color-slate-500: #64748b;
+  --color-slate-600: #94a3b8;
+  --color-slate-700: #cbd5e1;
+  --color-slate-800: #e2e8f0;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f8fafc;
+}
+
+[data-theme='sepia'] {
+  /* Warm stone ramp mirroring the slate roles. */
+  --color-slate-100: #2c2416;
+  --color-slate-200: #40372a;
+  --color-slate-300: #574c36;
+  --color-slate-400: #6f6249;
+  --color-slate-500: #7d7159;
+  --color-slate-600: #a89a7e;
+  --color-slate-700: #d6caab;
+  --color-slate-800: #e5dcc6;
+  --color-slate-900: #fffcf5;
+  --color-slate-950: #f6f1e7;
+
+  /* Accent family shifts from cyan to amber. */
+  --color-cyan-100: #78350f;
+  --color-cyan-200: #92400e;
+  --color-cyan-300: #b45309;
+  --color-cyan-400: #d97706;
+  --color-cyan-500: #f59e0b;
+}
+
+[data-theme='ember'] {
+  /* Warm hearth-dark ramp: red-brown surfaces and warm text neutrals. */
+  --color-slate-100: #f5efe9;
+  --color-slate-200: #eae0d6;
+  --color-slate-300: #d6c8bb;
+  --color-slate-400: #a99f93;
+  --color-slate-500: #857769;
+  --color-slate-600: #5f5348;
+  --color-slate-700: #452f27;
+  --color-slate-800: #33241f;
+  --color-slate-900: #211714;
+  --color-slate-950: #180f0d;
+
+  /* Accent family shifts from cyan to amber, keeping the dark-theme grade
+     direction: text grades stay light, hover fills brighten past the base. */
+  --color-cyan-100: #fef3c7;
+  --color-cyan-200: #fde68a;
+  --color-cyan-300: #fcd34d;
+  --color-cyan-400: #fbbf24;
+  --color-cyan-500: #f59e0b;
+}
+
+[data-theme='nebula'] {
+  /* Violet-charcoal ramp with lavender text neutrals. */
+  --color-slate-100: #f3f1fa;
+  --color-slate-200: #e7e3f2;
+  --color-slate-300: #cdc6e2;
+  --color-slate-400: #a79ec4;
+  --color-slate-500: #857ba6;
+  --color-slate-600: #5d5378;
+  --color-slate-700: #322751;
+  --color-slate-800: #241c38;
+  --color-slate-900: #171223;
+  --color-slate-950: #100c18;
+
+  /* Accent family shifts from cyan to violet, keeping the dark-theme grade
+     direction. */
+  --color-cyan-100: #ede9fe;
+  --color-cyan-200: #ddd6fe;
+  --color-cyan-300: #c4b5fd;
+  --color-cyan-400: #a78bfa;
+  --color-cyan-500: #8b5cf6;
+}
+
+[data-theme='sky'] {
+  /* Cool blue-white ramp mirroring the light roles; the shared light-family
+      rule already darkens the cyan accents. */
+  --color-slate-100: #14263c;
+  --color-slate-200: #24374f;
+  --color-slate-300: #3c516b;
+  --color-slate-400: #4d647c;
+  --color-slate-500: #556a80;
+  --color-slate-600: #93a7bb;
+  --color-slate-700: #bcd0e0;
+  --color-slate-800: #d3e2ee;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #eff5fa;
+}
+
+[data-theme='mint'] {
+  /* Fresh mint ramp mirroring the light roles; cyan shifts to emerald. */
+  --color-slate-100: #152a1f;
+  --color-slate-200: #1e3a2e;
+  --color-slate-300: #355244;
+  --color-slate-400: #4d6b5c;
+  --color-slate-500: #587269;
+  --color-slate-600: #8da99b;
+  --color-slate-700: #b9d1c3;
+  --color-slate-800: #d5e8dd;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #effaf3;
+
+  --color-cyan-100: #064e3b;
+  --color-cyan-200: #065f46;
+  --color-cyan-300: #047857;
+  --color-cyan-400: #059669;
+  --color-cyan-500: #10b981;
+}
+
+[data-theme='lavender'] {
+  /* Soft lavender ramp mirroring the light roles; cyan shifts to violet. */
+  --color-slate-100: #201a33;
+  --color-slate-200: #322b4a;
+  --color-slate-300: #4a4066;
+  --color-slate-400: #645c83;
+  --color-slate-500: #706a84;
+  --color-slate-600: #9e96ba;
+  --color-slate-700: #c4bdd9;
+  --color-slate-800: #ddd8ea;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f5f3ff;
+
+  --color-cyan-100: #4c1d95;
+  --color-cyan-200: #5b21b6;
+  --color-cyan-300: #6d28d9;
+  --color-cyan-400: #7c3aed;
+  --color-cyan-500: #8b5cf6;
+}
+
+[data-theme='forest'] {
+  /* Deep forest dark ramp: green-black surfaces and sage text neutrals. */
+  --color-slate-100: #eef5ef;
+  --color-slate-200: #d6e3d6;
+  --color-slate-300: #b8cabb;
+  --color-slate-400: #92a69a;
+  --color-slate-500: #75847a;
+  --color-slate-600: #55635a;
+  --color-slate-700: #2f3d33;
+  --color-slate-800: #233028;
+  --color-slate-900: #17201c;
+  --color-slate-950: #0f1812;
+
+  /* Accent family shifts from cyan to emerald, keeping the dark-theme grade direction. */
+  --color-cyan-100: #d1fae5;
+  --color-cyan-200: #a7f3d0;
+  --color-cyan-300: #6ee7b7;
+  --color-cyan-400: #34d399;
+  --color-cyan-500: #10b981;
+}
+
+[data-theme='midnight'] {
+  /* Deep midnight dark ramp: blue-black surfaces and cool text neutrals. */
+  --color-slate-100: #eef2ff;
+  --color-slate-200: #d6ddf5;
+  --color-slate-300: #b9c2e2;
+  --color-slate-400: #94a0c2;
+  --color-slate-500: #7a86a6;
+  --color-slate-600: #555e7a;
+  --color-slate-700: #2b324d;
+  --color-slate-800: #1d2439;
+  --color-slate-900: #151a2b;
+  --color-slate-950: #0e1120;
+
+  /* Accent family shifts from cyan to sky-blue, keeping the dark-theme grade direction. */
+  --color-cyan-100: #dbeafe;
+  --color-cyan-200: #bfdbfe;
+  --color-cyan-300: #93c5fd;
+  --color-cyan-400: #60a5fa;
+  --color-cyan-500: #3b82f6;
 }

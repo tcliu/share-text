@@ -13,6 +13,18 @@ export const en = {
   'language.label': 'Language',
   'language.select': 'Select language',
 
+  'theme.label': 'Theme',
+  'theme.dark': 'Dark',
+  'theme.light': 'Light',
+  'theme.ember': 'Ember',
+  'theme.nebula': 'Nebula',
+  'theme.sky': 'Sky',
+  'theme.sepia': 'Sepia',
+  'theme.forest': 'Forest',
+  'theme.midnight': 'Midnight',
+  'theme.mint': 'Mint',
+  'theme.lavender': 'Lavender',
+
   'list.collapse': 'Collapse document list',
   'list.showDocumentList': 'Show document list',
   'list.newDocument': 'New document',

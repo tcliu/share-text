@@ -624,10 +624,27 @@ dialogs, login panel, admin hooks).
 - Document type labels and format titles (e.g. "JSON", "Format JSON") are
   technical format names and stay untranslated.
 
+### UI Themes
+
+Ten themes (`dark` default plus `light`, `ember`, `sepia`, `nebula`, `sky`,
+`forest`, `midnight`, `mint`, `lavender`) re-theme the app centrally:
+components keep literal default-palette utilities, which Tailwind v4 compiles
+to `var(--color-<name>-<grade>)` references, and `src/styles.css` overrides
+those variables under `[data-theme='<name>']` (light themes mirror the slate
+scale and darken text-grade accents; dark variants shift surface/text hues;
+`sepia`/`ember` remap cyan to amber, `nebula`/`lavender` to violet,
+`forest`/`mint` to emerald, `midnight` to sky-blue). `use-theme.svelte.ts`
+holds the closed `UiTheme` union, persists the selection to `localStorage`
+(`share-text:theme`), and applies it via `documentElement.dataset.theme`
+(`dark` leaves the attribute absent so SSR needs no coordination); the root
+layout hydrates it on mount and `app.html` pre-paints it before first paint.
+`src/lib/page/theme.ts` maps options to icons, `ThemeMenu` is the header
+selector, and `theme-parity.test.ts` keeps the union, stored-value validation,
+pre-paint allowlist, CSS blocks, and menu options in lockstep.
+
 ### Responsive Layout
 
-Below the `md` breakpoint (767px, driven by a `matchMedia`-backed `isMobile`
-`$state` exposed through the share-text context) the split panes collapse into
+Below the `lg` breakpoint (1023px, driven by a `matchMedia`-backed `isMobile`
 full-screen pages with no splitter: the document list occupies the whole screen
 when no editor is open (on `/`), and opening a document (route `/[id]` or
 `/new`) hides the list and shows the editor full screen. The document list is
@@ -637,7 +654,8 @@ header shows a hamburger button before the filename that opens it
 `mobileDrawerOpen` state), and the drawer renders the same shared `documentList`
 snippet the layout uses on the list route. The drawer is a `fixed inset-0 z-40`
 overlay whose dark backdrop closes on click, whose panel (`w-full max-w-sm`)
-hosts the list, and which closes on the collapse button, on Escape, and on any
+slides in from the left (`fly` x `-100%`, 200ms) over a fading backdrop and
+which closes on the collapse button, on Escape, and on any
 client-side navigation via `afterNavigate`. The panel is exposed as
 `role="dialog"`/`aria-modal` with a `tabindex="-1"` ref: opening it moves focus
 to the panel, Tab is trapped within it, and closing restores focus to the
@@ -669,27 +687,34 @@ and the type selector is a separate right-anchored item, so when the pane
 narrows enough that the button panel would crowd the type selector the panel
 wraps to its own row (left-aligned, since the shared row is kept flush-right by
 the name group filling the space) and the type selector stays right-aligned at
-the end of the first row; the buttons can themselves span multiple rows. The
-`DocumentList` header shows a single collapse button (double-chevron-left icon)
-before the New button; it renders only when the layout passes
-`onToggleCollapse`, and the layout's derived `handleListCollapse` wires it to
-toggle the desktop pane (`leftPaneCollapsed`, whose `w-11` rail with Show-list,
-New, Refresh, Login buttons expands back with a double-chevron-right icon) and
-to close the mobile drawer (so the button is absent on the mobile list route
-where there is nothing to collapse). Collapsing or re-expanding the desktop
-pane restores the registered editor focus so the visitor keeps editing after
-the list gives way.
-`DocumentList` sizes itself full-width on mobile via `w-full` (the inline
-`width` style is only set on desktop). The left
-pane header shows a Login button after the Refresh button that navigates to
-`/login`, where visitors sign in or create an account (the account form also
-  accepts admin credentials when the identifier matches `ADMIN_USERNAME`). A
-  signed-in registered user sees a Settings button (a gear icon) and a Sign out
-  button; the Settings button navigates to `/settings` for a normal user and to
-  `/admin` for an admin session. `/api/auth/session` reports the
-  signed-in `user` and, when an admin session is present, an `admin: { username }`
-  identity so the browser app can render the account entry point;
-  `/api/auth/logout` clears both the user and admin session cookies.
+the end of the first row; the buttons can themselves span multiple rows.
+
+The browser, admin, and settings layouts share a full-width app header: title
+left; `ThemeMenu` + `LanguageMenu` + identity actions right. The browser header
+adds the desktop list-collapse toggle (hamburger `MenuIcon`, `aria-expanded`,
+`preventFocusSteal` since collapsing restores editor focus)
+before the title; it is hidden on mobile, where the editor toolbar's drawer
+button opens the list instead. `DocumentList` owns only a list toolbar (New,
+Refresh, search): its header collapse button renders only when the layout
+passes `onToggleCollapse`, i.e. solely as the mobile-drawer close affordance —
+it is absent on desktop and on the mobile list route where there is nothing to
+collapse. Collapsing hides the pane entirely (no collapsed rail, matching tts);
+the header toggle reopens it with a width slide (200ms, instant under
+`prefers-reduced-motion`), and either transition restores the registered
+editor focus. Identity actions live in the browser header: a Login button
+opening the sign-in dialog (embedded `UserAuthPanel`, no navigation, so drafts
+and editor state survive; the form also accepts admin credentials when the
+identifier matches `ADMIN_USERNAME` — a normal-user sign-in stays on the browser
+page while an admin sign-in redirects to `/admin/general`), and for a signed-in session a
+Settings button (gear icon, to `/settings` for a normal user and `/admin` for
+an admin session) plus Sign out (explicit sign-out lands on `/`; only expired
+sessions redirect to `/login`, which serves no form — unauthenticated visitors
+are redirected to `/?login=1`, auto-opening the dialog once). The admin header
+adds back-to-documents and sign-out beside the menus and renders in every auth
+state; the settings header follows the same row. `/api/auth/session` reports
+the signed-in `user` and, when an admin session is present, an
+`admin: { username }` identity so the browser app can render the account entry
+point; `/api/auth/logout` clears both the user and admin session cookies.
 
 ## Editor
 
@@ -1004,5 +1029,5 @@ Writes are last-write-wins with no conflict detection or merge.
   the SQLite SQL rewrite for scripts.
 - `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel`, upserts the set
   to Vercel production env vars, and removes stale ones.
-- `scripts/deploy.sh` deploys to Vercel, waits for `READY`, and syncs the
+- `scripts/deploy.mjs` deploys to Vercel, waits for `READY`, and syncs the
   project's production domain to `APP_BASE_URL`.

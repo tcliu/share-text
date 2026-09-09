@@ -7,6 +7,7 @@
   import Buttons from '$lib/components/Buttons.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
+  import ThemeMenu from '$lib/components/ThemeMenu.svelte'
   import OwnedDocumentsView from '$lib/components/OwnedDocumentsView.svelte'
   import SettingsGeneralView from '$lib/components/SettingsGeneralView.svelte'
   import SettingsProfileView from '$lib/components/SettingsProfileView.svelte'
@@ -39,11 +40,15 @@
   let pendingNavigateUrl = $state<string | null>(null)
 
   const userAuthState = useUserAuth()
-  const settingsState = useUserSettings(() => void handleSignedOut())
-  const documentsState = useOwnedDocuments(() => void handleSignedOut())
+  const settingsState = useUserSettings(() => void handleExpiredSession())
+  const documentsState = useOwnedDocuments(() => void handleExpiredSession())
+
+  // Explicit sign-out navigates to the landing page via handleSignedOut; this
+  // effect only covers expired sessions (kept on /login = landing + dialog).
+  let suppressSignedOutRedirect = false
 
   $effect(() => {
-    if (userAuthState.state === 'signedOut') {
+    if (userAuthState.state === 'signedOut' && !suppressSignedOutRedirect) {
       void goto('/login')
     }
   })
@@ -76,10 +81,22 @@
   }
 
   async function handleSignedOut() {
+    suppressSignedOutRedirect = true
+    try {
+      if (userAuthState.state === 'signedIn') {
+        await userAuthState.signOut()
+      }
+      await goto('/')
+    } finally {
+      suppressSignedOutRedirect = false
+    }
+  }
+
+  async function handleExpiredSession() {
     if (userAuthState.state === 'signedIn') {
       await userAuthState.signOut()
     }
-    await goto('/login')
+    // The signedOut effect above routes to /login (landing + dialog).
   }
 
   beforeNavigate(navigation => {
@@ -106,10 +123,11 @@
 </svelte:head>
 
 <div class="flex h-dvh flex-col overflow-hidden bg-slate-950 text-slate-200">
-  <header class="flex flex-none items-center justify-between border-b border-slate-800 px-4 py-2">
-    <h1 class="text-md font-semibold text-slate-200">{i18n.t('settings.title')}</h1>
+  <header class="flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4">
+    <h1 class="text-base font-semibold tracking-tight text-slate-200 sm:text-lg">{i18n.t('settings.title')}</h1>
     <div class="flex items-center gap-2">
-      <LanguageMenu />
+      <ThemeMenu align="right" />
+      <LanguageMenu align="right" />
       <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
         {#snippet icon()}
           <DocumentIcon />

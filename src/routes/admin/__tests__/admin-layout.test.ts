@@ -99,9 +99,12 @@ describe('admin layout route tabs', () => {
     })
   })
 
-  it('shows the top header row only when authenticated', async () => {
-    const { getByLabelText } = render(Layout)
+  it('shows the top header row with theme, language, and navigation controls', async () => {
+    const { getByLabelText, getByRole } = render(Layout)
 
+    expect(getByRole('heading', { name: 'Admin' })).toBeTruthy()
+    expect(getByLabelText('Theme')).toBeTruthy()
+    expect(getByLabelText('Language')).toBeTruthy()
     await waitFor(() => {
       expect(getByLabelText('Sign out')).toBeTruthy()
       expect(getByLabelText('Go to Documents')).toBeTruthy()

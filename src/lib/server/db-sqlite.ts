@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import type { Database } from 'better-sqlite3'
 import type { Db, DbQuery, DbResult } from './db-types'
 
-export const DEFAULT_SQLITE_PATH = '.data/share-text-dev.sqlite'
+export const DEFAULT_SQLITE_PATH = '.data/dev.sqlite'
 
 function isRowsReturningSql(sql: string) {
   return /^\s*(select|with\b)/i.test(sql) || /returning\b/i.test(sql)
