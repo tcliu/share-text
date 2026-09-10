@@ -99,7 +99,7 @@
     ariaLabel={i18n.t('admin.propertiesViews')}
     class="bg-slate-950" />
 
-  <Buttons>
+    <Buttons align="right">
     {#snippet children()}
       <Button
         variant="primary"

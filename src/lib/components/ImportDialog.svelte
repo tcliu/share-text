@@ -168,7 +168,7 @@
           editorAriaLabel={i18n.t('admin.import.contentAria')} />
       </div>
     </div>
-    <Buttons>
+    <Buttons align="right">
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleOk} {pending}>{i18n.t('common.ok')}</Button>
         <Button variant="outline" onClick={handleReset} disabled={!content || pending}>{i18n.t('common.reset')}</Button>

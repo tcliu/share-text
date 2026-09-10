@@ -181,7 +181,7 @@
           ? i18n.t('admin.users.setStatusFor', { count: usersState.selectedCount })
           : i18n.t('admin.users.setStatusForPlural', { count: usersState.selectedCount })}
       </p>
-      <Buttons>
+      <Buttons align="right">
         {#snippet children()}
           <Button
             variant="primary"

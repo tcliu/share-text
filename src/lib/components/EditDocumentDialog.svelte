@@ -286,7 +286,7 @@
         </section>
       </div>
     </div>
-    <Buttons>
+    <Buttons align="right">
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
           {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}

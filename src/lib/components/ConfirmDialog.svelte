@@ -33,7 +33,7 @@
 <BaseDialog {title} {className} {maxWidth} {onCancel} {dismissKeydownCapture}>
   <div class="flex flex-col gap-4">
     <p class="text-sm leading-6 text-slate-400">{message}</p>
-    <Buttons>
+    <Buttons align="right">
       {#snippet children()}
         <Button variant="primary" accent={confirmColor} {pending} onClick={onConfirm}>
           {confirmLabel}

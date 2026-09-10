@@ -224,7 +224,7 @@
           ariaLabel={i18n.t('settings.title')}
           class="bg-slate-950" />
         {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
-          <Buttons>
+          <Buttons align="right">
             {#snippet children()}
               <Button
                 variant="primary"

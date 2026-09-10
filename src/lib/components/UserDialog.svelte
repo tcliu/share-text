@@ -133,7 +133,7 @@
         ariaLabel={i18n.t('admin.users.status')}
         onSelect={value => (active = value === 'active')} />
     </FormField>
-    <Buttons>
+    <Buttons align="right">
       {#snippet children()}
         <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} pending={pending}>
           {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}

@@ -121,7 +121,7 @@
           debounceMs={isAdmin ? 250 : 0} />
       </FormField>
 
-      <Buttons>
+      <Buttons align="right">
         {#snippet children()}
           <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} {pending}>{i18n.t('common.ok')}</Button>
           <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>

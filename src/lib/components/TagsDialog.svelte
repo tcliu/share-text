@@ -86,7 +86,7 @@
         <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>
 
-      <Buttons>
+    <Buttons align="right">
         {#snippet children()}
           <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{i18n.t('common.ok')}</Button>
           <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>

@@ -34,7 +34,7 @@
         onSelect={value => preferencesState.setPreferredLanguage(value as Locale)} />
     </div>
   </div>
-  <Buttons>
+  <Buttons align="right">
     {#snippet children()}
       <Button
         variant="primary"

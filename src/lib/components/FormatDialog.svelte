@@ -71,7 +71,7 @@
             className="w-24 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100 outline-none transition focus:border-cyan-500" />
         </FormField>
       {/if}
-      <Buttons>
+      <Buttons align="right">
         {#snippet children()}
           <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel ?? i18n.t('format.apply')}</Button>
           <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
