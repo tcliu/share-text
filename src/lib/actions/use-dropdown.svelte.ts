@@ -16,15 +16,20 @@ export interface UseDropdownOptions {
   onEscape: (event: KeyboardEvent) => boolean | void
   /**
    * Reactive accessor for the floating panel element. Clicks on it count as
-   * inside (needed because positionPanel portals it to document.body).
+   * "inside", so the panel can be portalled outside the container DOM tree
+   * (see positionPanel) and still survive outside-click detection. Also
+   * excluded from scroll-close so an open panel scrolling its own option
+   * list does not dismiss itself.
    */
   panel?: () => HTMLElement | null
   /** Reactive accessor for the container the outside-click helper watches. */
   container: () => HTMLElement | null
   /**
    * Called when the trigger becomes hidden (out of viewport or clipped by
-   * an overflow ancestor) after a scroll. Omit to keep the dropdown open
-   * across scrolls.
+   * an ancestor scroll container) after a scroll while open. The panel is
+   * portalled to `body`, so hiding avoids a detached floating panel.
+   * Scrolling the panel's own list or an unrelated surface where the
+   * trigger stays visible does not dismiss. Omit to opt out.
    */
   onScrollClose?: () => void
 }

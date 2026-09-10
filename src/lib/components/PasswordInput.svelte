@@ -14,6 +14,8 @@
     autocomplete?: HTMLInputAttributes['autocomplete']
     disabled?: boolean
     required?: boolean
+    showLabel?: string
+    hideLabel?: string
     className?: string
     oninput?: (event: Event) => void
   }
@@ -26,9 +28,15 @@
     autocomplete = 'current-password',
     disabled = false,
     required = false,
+    showLabel,
+    hideLabel,
     className = '',
     oninput,
   }: Props = $props()
+
+  // Derived (not plain consts) so locale switches re-resolve the labels.
+  const resolvedShowLabel = $derived(showLabel ?? i18n.t('password.show'))
+  const resolvedHideLabel = $derived(hideLabel ?? i18n.t('password.hide'))
 
   let visible = $state(false)
   let input = $state<HTMLInputElement>()
@@ -61,7 +69,7 @@
   <button
     bind:this={toggleBtn}
     onclick={toggleVisibility}
-    aria-label={visible ? i18n.t('password.hide') : i18n.t('password.show')}
+    aria-label={visible ? resolvedHideLabel : resolvedShowLabel}
     type="button"
     {disabled}
     class="absolute inset-y-0 right-1 my-1 inline-flex w-9 items-center justify-center rounded-md text-slate-400 outline-none transition hover:bg-slate-800 hover:text-cyan-300 focus:bg-slate-800 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40">
@@ -70,6 +78,6 @@
     {:else}
       <EyeIcon className="h-5 w-5" />
     {/if}
-    <Tooltip trigger={toggleBtn}>{visible ? i18n.t('password.hide') : i18n.t('password.show')}</Tooltip>
+    <Tooltip trigger={toggleBtn}>{visible ? resolvedHideLabel : resolvedShowLabel}</Tooltip>
   </button>
 </div>

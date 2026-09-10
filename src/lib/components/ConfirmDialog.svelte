@@ -10,6 +10,7 @@
     className?: string
     maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     confirmColor?: 'rose' | 'amber' | 'emerald' | 'cyan'
+    pending?: boolean
     dismissKeydownCapture?: boolean
     onConfirm: () => void
     onCancel: () => void
@@ -22,6 +23,7 @@
     className = '',
     maxWidth = 'md',
     confirmColor = 'rose',
+    pending = false,
     dismissKeydownCapture = false,
     onConfirm,
     onCancel,
@@ -33,7 +35,7 @@
     <p class="text-sm leading-6 text-slate-400">{message}</p>
     <Buttons>
       {#snippet children()}
-        <Button variant="primary" accent={confirmColor} onClick={onConfirm}>
+        <Button variant="primary" accent={confirmColor} {pending} onClick={onConfirm}>
           {confirmLabel}
         </Button>
       {/snippet}

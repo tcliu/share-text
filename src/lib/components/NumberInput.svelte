@@ -15,6 +15,8 @@
     showControls?: boolean
     id?: string
     ariaLabel: string
+    incrementLabel?: string
+    decrementLabel?: string
     onkeydown?: (event: KeyboardEvent) => void
     oninput?: (event: Event) => void
     onblur?: (event: FocusEvent) => void
@@ -31,10 +33,16 @@
     showControls = true,
     id,
     ariaLabel,
+    incrementLabel,
+    decrementLabel,
     onkeydown,
     oninput,
     onblur,
   }: Props = $props()
+
+  // Derived (not plain consts) so locale switches re-resolve the labels.
+  const resolvedIncrementLabel = $derived(incrementLabel ?? i18n.t('number.increment'))
+  const resolvedDecrementLabel = $derived(decrementLabel ?? i18n.t('number.decrement'))
 
   let inputEl = $state<HTMLInputElement | null>(null)
 
@@ -176,7 +184,7 @@
         onclick={() => adjust(1)}
         disabled={disabled || isAtMax}
         tabindex="-1"
-        aria-label={i18n.t('number.increment')}
+        aria-label={resolvedIncrementLabel}
         class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 outline-none transition motion-reduce:transition-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40">
         <ChevronUpSmallIcon className="h-3 w-3" />
       </button>
@@ -185,7 +193,7 @@
         onclick={() => adjust(-1)}
         disabled={disabled || isAtMin}
         tabindex="-1"
-        aria-label={i18n.t('number.decrement')}
+        aria-label={resolvedDecrementLabel}
         class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 outline-none transition motion-reduce:transition-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40">
         <ChevronDownSmallIcon className="h-3 w-3" />
       </button>

@@ -8,9 +8,14 @@
     trigger?: HTMLElement | null
   }
 
-  let { children, align = 'center', class: extraClass = '', trigger = null }: Props = $props()
+  let { children, align = 'center', class: extraClass = '', trigger: triggerProp = null }: Props = $props()
 
   let anchor = $state<HTMLElement | null>(null)
+  // Explicit trigger (e.g. Menu positioning) wins; otherwise fall back to the
+  // anchor span's parent, preserving existing anchor-based call sites.
+  function resolveTrigger(): HTMLElement | null {
+    return triggerProp ?? anchor?.parentElement ?? null
+  }
   let tooltipEl = $state<HTMLElement | null>(null)
   let visible = $state(false)
   let top = $state(0)
@@ -19,16 +24,12 @@
   const VIEWPORT_MARGIN = 8
   const PLACEMENT_GAP = 8
 
-  function currentTrigger(): HTMLElement | null {
-    return trigger ?? anchor?.parentElement ?? null
-  }
-
   function place() {
-    const current = currentTrigger()
-    if (!current) {
+    const trigger = resolveTrigger()
+    if (!trigger) {
       return
     }
-    const rect = current.getBoundingClientRect()
+    const rect = trigger.getBoundingClientRect()
     // Size is unknown on the very first pass; the follow-up placement corrects
     // both axes once rendered dimensions are measurable.
     const measured = tooltipEl?.isConnected ? tooltipEl : null
@@ -122,27 +123,27 @@
   }
 
   $effect(() => {
-    const current = currentTrigger()
-    if (!current || !supportsHover) {
+    const trigger = resolveTrigger()
+    if (!trigger || !supportsHover) {
       return
     }
     const enter = () => show()
     const leave = () => hide()
-    current.addEventListener('mouseenter', enter)
-    current.addEventListener('mouseleave', leave)
-    current.addEventListener('focusin', enter)
-    current.addEventListener('focusout', leave)
+    trigger.addEventListener('mouseenter', enter)
+    trigger.addEventListener('mouseleave', leave)
+    trigger.addEventListener('focusin', enter)
+    trigger.addEventListener('focusout', leave)
     return () => {
-      current.removeEventListener('mouseenter', enter)
-      current.removeEventListener('mouseleave', leave)
-      current.removeEventListener('focusin', enter)
-      current.removeEventListener('focusout', leave)
+      trigger.removeEventListener('mouseenter', enter)
+      trigger.removeEventListener('mouseleave', leave)
+      trigger.removeEventListener('focusin', enter)
+      trigger.removeEventListener('focusout', leave)
     }
   })
 
   $effect(() => {
-    const current = currentTrigger()
-    if (!current) {
+    const trigger = resolveTrigger()
+    if (!trigger) {
       return
     }
     const startPress = (event: PointerEvent) => {
@@ -168,15 +169,15 @@
       }, LONG_PRESS_MS)
     }
     const cancelPress = () => clearPressTimer()
-    current.addEventListener('pointerdown', startPress)
-    current.addEventListener('pointerup', cancelPress)
-    current.addEventListener('pointercancel', cancelPress)
-    current.addEventListener('pointerleave', cancelPress)
+    trigger.addEventListener('pointerdown', startPress)
+    trigger.addEventListener('pointerup', cancelPress)
+    trigger.addEventListener('pointercancel', cancelPress)
+    trigger.addEventListener('pointerleave', cancelPress)
     return () => {
-      current.removeEventListener('pointerdown', startPress)
-      current.removeEventListener('pointerup', cancelPress)
-      current.removeEventListener('pointercancel', cancelPress)
-      current.removeEventListener('pointerleave', cancelPress)
+      trigger.removeEventListener('pointerdown', startPress)
+      trigger.removeEventListener('pointerup', cancelPress)
+      trigger.removeEventListener('pointercancel', cancelPress)
+      trigger.removeEventListener('pointerleave', cancelPress)
       clearPressTimer()
       clearDismissTimer()
     }
@@ -186,10 +187,10 @@
     if (!visible) {
       return
     }
-    const current = currentTrigger()
+    const trigger = resolveTrigger()
     const reposition = () => place()
     const hideWhenAway = (event: PointerEvent) => {
-      if (!current || (event.target instanceof Node && current.contains(event.target))) {
+      if (!trigger || (event.target instanceof Node && trigger.contains(event.target))) {
         return
       }
       hide()

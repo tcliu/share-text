@@ -19,7 +19,9 @@ export interface DropdownPanelProps extends DropdownPositionProps {
 }
 
 /**
- * Phone-sheet viewport cutoff shared by `Menu` bottom sheets.
+ * Phone-sheet viewport cutoff shared by `Menu` bottom sheets and the
+ * `SelectDropdown` phone row-height variant (single shared value: keep the
+ * `max-[…]` class in `SelectDropdown` on `PHONE_SHEET_MAX`).
  * Mirrors `BaseDialog` sheet mode (Tailwind container token `md` = 28rem);
  * keep the two in sync or phone menus and phone dialogs diverge.
  */

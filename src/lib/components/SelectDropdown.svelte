@@ -6,6 +6,7 @@
   import { useListSelection, revealInScrollport } from '$lib/actions/use-list-selection.svelte'
   import { TEXT_SIZE, type TextSize } from '$lib/text-size'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
+  import type { DropdownPanelProps } from '$lib/dropdown-chrome'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -14,13 +15,11 @@
     label: string
   }
 
-  interface Props {
+  interface Props extends DropdownPanelProps {
     buttonLabel: string
     options: Option[]
     activeValue?: string
     ariaLabel?: string
-    align?: 'left' | 'right'
-    autoPlace?: boolean
     filterable?: boolean
     size?: TextSize
     onSelect: (value: string) => void
@@ -28,7 +27,6 @@
     controlClass?: string
     optionClass?: string
     emptyLabel?: string
-    panelClass?: string
   }
   let id = $props.id()
   const panelId = `${id}-panel`
@@ -70,6 +68,8 @@
   // Phone viewports get a 44px minimum row height via pure CSS so in-dialog
   // dropdowns (e.g. Settings Voices) stay thumb-friendly without switching
   // to a bottom sheet, which must never stack inside a dialog.
+  // Cutoff mirrors PHONE_SHEET_MAX in dropdown-chrome (single shared value);
+  // the literal stays inline so Tailwind can see the class — keep them in sync.
   const optionRowClass = $derived(
     optionClass ??
       `flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
