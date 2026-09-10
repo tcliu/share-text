@@ -13,6 +13,11 @@
     size?: 'xs' | 'sm' | 'md' | 'lg'
     className?: string
     pageSizeOptions?: number[]
+    previousLabel?: string
+    nextLabel?: string
+    pageSizeLabel?: string
+    currentPageLabel?: string
+    paginationLabel?: string
     onPageChange: (page: number) => void
     onPageSizeChange: (size: number) => void
   }
@@ -24,9 +29,21 @@
     size = 'sm',
     className = '',
     pageSizeOptions = [10, 20, 50],
+    previousLabel,
+    nextLabel,
+    pageSizeLabel,
+    currentPageLabel,
+    paginationLabel,
     onPageChange,
     onPageSizeChange,
   }: Props = $props()
+
+  // Derived (not plain consts) so locale switches re-resolve the labels.
+  const resolvedPreviousLabel = $derived(previousLabel ?? i18n.t('admin.pagination.previous'))
+  const resolvedNextLabel = $derived(nextLabel ?? i18n.t('admin.pagination.next'))
+  const resolvedPageSizeLabel = $derived(pageSizeLabel ?? i18n.t('admin.pagination.pageSize'))
+  const resolvedCurrentPageLabel = $derived(currentPageLabel ?? i18n.t('admin.pagination.current'))
+  const resolvedPaginationLabel = $derived(paginationLabel ?? i18n.t('admin.pagination.label'))
 
   const PAGE_JUMP_DELTA = 2
 
@@ -137,10 +154,10 @@
   }
 </script>
 
-<nav aria-label={i18n.t('admin.pagination.label')} class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
+<nav aria-label={resolvedPaginationLabel} class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
   <button
     type="button"
-    aria-label={i18n.t('admin.pagination.previous')}
+    aria-label={resolvedPreviousLabel}
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
@@ -160,7 +177,7 @@
         max={totalPages}
         onblur={clampPageInput}
         onkeydown={handlePageInputKeydown}
-        ariaLabel={i18n.t('admin.pagination.current')}
+        ariaLabel={resolvedCurrentPageLabel}
         showControls={false}
         className={`inline-flex ${SIZE_CLASS[size].pageInput} items-center justify-center rounded-md border border-cyan-500 bg-slate-950 text-center ${SIZE_CLASS[size].text} font-semibold text-cyan-300 outline-none focus-visible:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-500/40`} />
     {:else}
@@ -175,7 +192,7 @@
 
   <button
     type="button"
-    aria-label={i18n.t('admin.pagination.next')}
+    aria-label={resolvedNextLabel}
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
@@ -183,12 +200,12 @@
   </button>
 
   <div class="flex items-center gap-1.5">
-    <span>{i18n.t('admin.pagination.pageSize')}</span>
+    <span>{resolvedPageSizeLabel}</span>
     <div class="relative">
       <SelectDropdown
         buttonLabel={String(pageSize)}
         activeValue={String(pageSize)}
-        ariaLabel={i18n.t('admin.pagination.pageSize')}
+        ariaLabel={resolvedPageSizeLabel}
         size={size}
         options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
         onSelect={handlePageSizeChange} />

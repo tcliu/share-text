@@ -18,6 +18,9 @@
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
     fullscreen?: boolean
+    // Overrides the i18n close-dialog label (used by catalog-style callers
+    // that pass their own strings); defaults to the shared locale label.
+    closeLabel?: string
     onCancel: () => void
     header?: import('svelte').Snippet
     children?: import('svelte').Snippet
@@ -33,11 +36,14 @@
     allowPendingCancel = false,
     dismissKeydownCapture = true,
     fullscreen = false,
+    closeLabel,
     onCancel,
     header,
     children,
   }: Props = $props()
 
+  // Derived (not a plain const) so locale switches re-resolve the label.
+  const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
   let dialogIndex = 0
   let dialogRef = $state<HTMLElement | null>(null)
   let titleId = $state('')
@@ -172,7 +178,7 @@
   <button
     type="button"
     data-testid="dialog-overlay"
-    aria-label={i18n.t('common.closeDialog')}
+    aria-label={resolvedCloseLabel}
     tabindex="-1"
     disabled={cancelDisabled}
     class="absolute inset-0 outline-none {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80'} disabled:cursor-default"
@@ -192,7 +198,7 @@
         : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass}`} {className}">
       <button
         type="button"
-        aria-label={i18n.t('common.closeDialog')}
+        aria-label={resolvedCloseLabel}
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
         class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none hover:text-slate-200 focus:text-slate-200 before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">

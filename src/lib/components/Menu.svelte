@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts" generics="T">
+  // Menu owns the icon-trigger dropdown (desktop popover, phone bottom sheet).
   import { flushSync, onMount, tick } from 'svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
   import { createFocusoutClose } from '$lib/actions/use-focusout-close'
@@ -85,6 +86,10 @@
   let sheetDragging = $state(false)
   let reduceMotion = $state(false)
   const usePhoneSheet = $derived(phoneSheetTitle !== undefined && isPhoneViewport)
+
+  // isPhoneViewport only resolves via matchMedia after mount, so phones first
+  // paint the popover branch before swapping to the sheet — accepted flash,
+  // the cheapest stable option (no SSR viewport guess, no forced sheet).
 
   onMount(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return
@@ -254,6 +259,9 @@
   })
 
   $effect(() => {
+    // bind:this grows itemRefs but never shrinks it; drop stale tail refs
+    // so a shrinking item list can't focus a detached button.
+    if (itemRefs.length > items.length) itemRefs = itemRefs.slice(0, items.length)
     if (!open) return
     selection.clamp(items.length)
   })
