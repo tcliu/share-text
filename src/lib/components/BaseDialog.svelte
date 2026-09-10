@@ -193,9 +193,9 @@
       aria-modal="true"
       aria-labelledby={!header && title ? titleId : undefined}
       tabindex="-1"
-      class="relative flex flex-col overflow-y-auto outline-none {fullscreen
+      class="relative flex flex-col overflow-hidden outline-none {fullscreen
         ? 'h-full w-full bg-slate-900 p-5.5'
-        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 p-5.5 shadow-2xl shadow-slate-950/60 backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass}`} {className}">
+        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass}`} {className}">
       <button
         type="button"
         aria-label={resolvedCloseLabel}
@@ -205,13 +205,13 @@
         <CloseIcon className="h-4 w-4" />
       </button>
       {#if header}
-        {@render header()}
+        <div class="px-5.5 pt-5.5">{@render header()}</div>
       {:else if title}
-        <h2 id={titleId} class="text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
+        <h2 id={titleId} class="px-5.5 pt-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
           {title}
         </h2>
       {/if}
-      <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto outline-none">
+      <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pb-5.5 outline-none">
         {@render children?.()}
       </div>
     </div>
