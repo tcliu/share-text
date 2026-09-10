@@ -3,8 +3,7 @@
 export const CATALOG_APP_ID = 'share-text'
 export const CATALOG_APP_NAME = 'Share Text'
 export const CATALOG_APP_ICON: string | null = null
-export const CATALOG_APP_SUMMARY = 'Public shared-text webapp for creating, editing, saving, and deleting documents.'
-export const CATALOG_APP_DESCRIPTION = 'Documents are public by default; registered accounts can own, share, and make documents private.'
+export const CATALOG_APP_DESCRIPTION = 'Public shared-text webapp for creating, editing, saving, and deleting documents.'
 export const CATALOG_APP_FRAMEWORK = 'sveltekit'
 export const CATALOG_APP_REPO: string | null = null
 export const CATALOG_APP_STATUS = 'Active'
