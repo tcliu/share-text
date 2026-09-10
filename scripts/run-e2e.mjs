@@ -8,7 +8,7 @@
 // 3. Run Playwright against the resolved URL (E2E_BASE_URL), then stop the
 //    server only when this script started it.
 //
-// Defaults: project `tts`, branch = this checkout's git branch.
+// Defaults: project `share-text`, branch = this checkout's git branch.
 
 import { execFileSync, spawn } from 'node:child_process';
 import net from 'node:net';
@@ -86,7 +86,7 @@ const ownArgs = (sep === -1 ? process.argv.slice(2) : process.argv.slice(2, sep)
 	(a) => !a.startsWith('-')
 );
 const playArgs = sep === -1 ? [] : process.argv.slice(sep + 1);
-const project = ownArgs[0] ?? 'tts';
+const project = ownArgs[0] ?? 'share-text';
 const branch = ownArgs[1] ?? currentBranch();
 const host = '127.0.0.1';
 
