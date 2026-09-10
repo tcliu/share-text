@@ -2,23 +2,16 @@ import path from 'node:path'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig } from 'vite'
-import { parseEnvFile } from './scripts/db-config.mjs'
+import { defineConfig, loadEnv } from 'vite'
 
-const DEV_ENV_FILES = ['.env', '.env.local']
-
-function loadDevEnv() {
-  const merged: Record<string, string> = {}
-  for (const file of DEV_ENV_FILES) {
-    const entries = Object.entries(parseEnvFile(path.resolve(process.cwd(), file))) as [
-      string,
-      string,
-    ][]
-    for (const [key, value] of entries) {
-      merged[key] = value
-    }
-  }
-  for (const [key, value] of Object.entries(merged)) {
+// Vite exposes only VITE_* to the client and never puts dotenv values into
+// the server's process.env, but server code reads process.env directly.
+// Fill missing keys from the dotenv files (`loadEnv` handles .env,
+// .env.local, .env.[mode], .env.[mode].local precedence) for `vite dev`
+// only; real environment always wins.
+function loadDevEnv(mode: string) {
+  const fileValues = loadEnv(mode, process.cwd(), '')
+  for (const [key, value] of Object.entries(fileValues)) {
     if (process.env[key] === undefined) {
       process.env[key] = value
     }
@@ -27,7 +20,7 @@ function loadDevEnv() {
 
 export default defineConfig(async ({ command, mode }) => {
   if (command === 'serve' && mode === 'development') {
-    loadDevEnv()
+    loadDevEnv(mode)
   }
   const isTest = process.env.VITEST === 'true'
   let plugins = isTest ? [svelte({ compilerOptions: { dev: true } }), tailwindcss()] : [sveltekit(), tailwindcss()]
