@@ -25,8 +25,7 @@ npm install
 Runtime configuration comes from environment variables. For local development,
 keep the defaults in `.env` and optional local overrides in `.env.local`.
 `.env.local` holds dev-specific overrides (it wins over `.env`); real shell
-environment variables always take precedence. A legacy `.env.dev` file is
-migrated into `.env.local` automatically by the worktree tooling.
+environment variables always take precedence.
 
 Some scripts also merge env files directly:
 
