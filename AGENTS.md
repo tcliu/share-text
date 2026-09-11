@@ -1,7 +1,7 @@
 # Share Text Agent Conventions
 ## Agent progress
 
-- Apply the `agent-progress` skill for bounded, observable progress and repeated-approach control.
+- Follow `~/.agents/references/agent-progress.md` for bounded, observable progress and repeated-approach control.
 
 ## Skill routing
 
@@ -22,12 +22,12 @@ When modifying files, make edits using the smallest possible range.
 
 ## Development Guide
 
-Read this `AGENTS.md` and the applicable shared reference files under `$AI_CONFIG_DIR/references/*.md` before writing or reviewing code. When reviewing code, follow the `code-review` skill definition, reporting findings with severity, location, rule, and fix. When instructions are ambiguous about what to change or how to approach a task, ask the user to clarify or present up to three concrete options before making changes, to avoid unwanted edits. This includes how an element is displayed: if the rendering convention for a value is not established (e.g. the document type shown to visitors), ask before guessing a visual style.
+Read this `AGENTS.md` and the applicable shared reference files under `$AI_CONFIG_DIR/references/*.md` before writing or reviewing code. When reviewing code, follow the `review` skill definition, reporting findings with severity, location, rule, and fix. When instructions are ambiguous about what to change or how to approach a task, ask the user to clarify or present up to three concrete options before making changes, to avoid unwanted edits. This includes how an element is displayed: if the rendering convention for a value is not established (e.g. the document type shown to visitors), ask before guessing a visual style.
 
 ## Project conventions
 
-- Code changes are applied in a separate git branch and worktree under `.worktrees/` per the shared `references/git.md` worktree practice, unless the user opts to apply them on top of the current worktree. Create worktrees with `node scripts/create-worktree.mjs <branch>` from the default worktree; it copies the gitignored local dev files (`.env.local` and all files under `.data/`, migrating a legacy `.env.dev` when present) and sets `DEV_TAG=<branch>` in the new worktree's `.env.local` so the bottom-left worktree-tag block identifies the branch.
-- Server persistence goes through the `Db` interface (`src/lib/server/db-types.ts`), writing engine-agnostic SQL with `$n` placeholders and `current_timestamp` so DDL stays portable across adapters. Follow the SQL conventions in `references/sql.md` (including binding a placeholder once per occurrence). Multi-statement writes that must be atomic go through `db.transaction(fn)`, running every statement against the injected query (never `getDb().query`) so the sequence stays on one connection; the SQLite adapter serializes all statements so a transaction cannot be interleaved.
+- Code changes are applied in a separate git branch and worktree under `.worktrees/` per the shared `~/.agents/references/git.md` worktree practice, unless the user opts to apply them on top of the current worktree. Create worktrees with `node scripts/create-worktree.mjs <branch>` from the default worktree; it copies the gitignored local dev files (`.env.local` and all files under `.data/`, migrating a legacy `.env.dev` when present) and sets `DEV_TAG=<branch>` in the new worktree's `.env.local` so the bottom-left worktree-tag block identifies the branch.
+- Server persistence goes through the `Db` interface (`src/lib/server/db-types.ts`), writing engine-agnostic SQL with `$n` placeholders and `current_timestamp` so DDL stays portable across adapters. Follow the SQL conventions in `~/.agents/references/sql.md` (including binding a placeholder once per occurrence). Multi-statement writes that must be atomic go through `db.transaction(fn)`, running every statement against the injected query (never `getDb().query`) so the sequence stays on one connection; the SQLite adapter serializes all statements so a transaction cannot be interleaved.
 - Mutations are logged via `$lib/server/logging` with key identifying info (document id, name, size, IP, `elapsed_ms`).
 - Document tags are stored as a JSON array of `{ name, color }` objects in the `documents.tags` column; `color` must be one of the hex `TAG_COLORS` in `src/lib/tag-colors.ts`, and chips/dropdowns render via the `tagChipStyle`/`tagDotStyle` inline-style helpers there (class helpers `tagChipClass`/`tagDotClass` carry the non-colour base styles). Tag badges render with the `Chip` component (`src/lib/components/Chip.svelte`).
 - Document types follow the shared `type-registry` reference: the closed value set lives in `src/lib/document-type-values.ts`, the type definitions (language extensions, validators, formatters, converters, preview, toolbar actions) in `src/lib/document-types.ts`, and pure parse/format utilities in `src/lib/document-type-utils.ts`. Each type entry lazy-loads heavy dependencies (language modes, parsers) via dynamic `import()` inside the definition so they are not in the initial bundle. Consumers dispatch through `getDocumentType(value)` and never branch on specific type values.
@@ -65,7 +65,7 @@ Per-account preferences persist through the login-gated `GET`/`PUT /api/user/pre
 
 - When a code change establishes or revises a project-specific convention, update this `AGENTS.md` in the same change.
 - When a code change establishes or revises a generic reusable convention, update the appropriate file under `$AI_CONFIG_DIR/references/` in the same change rather than duplicating it here.
-- Shared reference files under `$AI_CONFIG_DIR/references/` must remain generic and implementation-agnostic. Do not include project-specific file paths, component names, routes, or other internal identifiers in those references — put project-level details in this `AGENTS.md` instead. See `ai/references/README.md` for the brief style guide.
+- Shared reference files under `$AI_CONFIG_DIR/references/` must remain generic and implementation-agnostic. Do not include project-specific file paths, component names, routes, or other internal identifiers in those references — put project-level details in this `AGENTS.md` instead. See `~/.agents/references/conventions-extraction.md` for the brief style guide.
 - This `AGENTS.md` holds project-specific *development conventions* — rules an agent must follow when writing code — not feature descriptions, implementation narratives, or user-facing behavior. Keep each bullet to the rule plus the briefest rationale. Implementation/architecture detail belongs in `docs/spec.md` and user-facing behavior in `docs/design.md`; generic reusable rules belong in `$AI_CONFIG_DIR/references/`.
 - When the user corrects a mistake, approves a fix, or states a new convention, invoke the `learn` skill so the lesson is not repeated.
 
@@ -79,4 +79,4 @@ npm run build
 npm test
 ```
 
-Then review the change with the `code-review` skill — reporting findings with severity, location, rule, and fix — before presenting it as done.
+Then review the change with the `review` skill — reporting findings with severity, location, rule, and fix — before presenting it as done.
