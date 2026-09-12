@@ -4,7 +4,9 @@ import { createDbPool, getSchemaName, resolveScriptProfile } from './db-config.m
 const profile = resolveScriptProfile()
 
 if (profile !== 'prod') {
-  console.error('recreate-schema.mjs only supports PROFILE=prod. For dev, delete the SQLite file and restart the server.')
+  console.error(
+    'recreate-schema.mjs only supports PROFILE=prod. For dev, delete the SQLite file and restart the server.',
+  )
   process.exit(1)
 }
 
