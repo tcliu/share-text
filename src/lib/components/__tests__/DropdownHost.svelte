@@ -16,5 +16,6 @@
   {options}
   activeValue={docType}
   filterable={true}
+  emptyLabel="No options"
   onSelect={value => (docType = value)}
 />

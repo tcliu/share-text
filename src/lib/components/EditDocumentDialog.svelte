@@ -206,7 +206,8 @@
         activeValue={documentType}
         ariaLabel={i18n.t('editor.documentType')}
         filterable={true}
-        onSelect={value => (documentType = value)} />
+        onSelect={value => (documentType = value)}
+        emptyLabel={i18n.t('dropdown.noOptions')} />
     </FormField>
     {#if mode === 'edit'}
       <FormField label={i18n.t('admin.documents.createdBy')} htmlFor="document-created-by">

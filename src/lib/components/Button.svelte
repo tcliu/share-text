@@ -16,6 +16,7 @@
     preventFocusSteal?: boolean
     ariaLabel?: string
     ariaExpanded?: boolean
+    dataTip?: string
     tooltip?: string
     tooltipAlign?: 'center' | 'left' | 'right'
     badge?: string | number
@@ -36,13 +37,14 @@
     onKeyDown,
     preventFocusSteal = false,
     ariaLabel,
+    ariaPressed,
+    ariaExpanded,
+    dataTip,
     tooltip,
     tooltipAlign = 'center',
     badge,
     icon,
     children,
-    ariaPressed,
-    ariaExpanded,
     buttonEl = $bindable<HTMLButtonElement | null>(null),
   }: Props = $props()
 
@@ -77,17 +79,21 @@
   }
 
   // Count pill overhanging the button's top-right corner; omit the prop to hide it.
+  // The pill is `min-h-5` at `-top-2`, so it sticks 8px out above the button's box:
+  // the enclosing scroll/clip container must give it that much room inside its
+  // scrollport, or the clip line shaves the pill's top.
   const hasBadge = $derived(badge !== undefined && badge !== null && badge !== '')
 
   const isIconOnly = $derived(!!icon && !children)
 
-  // `relative` anchors the `before:-inset-*` hit-area expansion on `sm` buttons: do not remove it,
-  // and callers must not pass position utilities via `className` (`relative` outranks `absolute` in the
+  // `relative` anchors the `before:` hit-area expansion that brings every size
+  // to the 44px touch target: do not remove it, and callers must not pass
+  // position utilities via `className` (`relative` outranks `absolute` in the
   // stylesheet, so the override silently loses). Position the Button with a wrapper or in-flow layout instead.
   const baseClass = $derived.by(() => {
     const common = isIconOnly
-      ? `${size === 'sm' ? 'p-2 relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-[\'\']' : 'inline-flex items-center justify-center rounded-lg p-3'} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
-      : `${size === 'sm' ? 'px-2.5 py-1.5 text-sm relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-[\'\']' : 'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold'} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
+      ? `${size === 'sm' ? 'p-1.5 relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-[\'\']' : 'relative inline-flex items-center justify-center rounded-lg p-2.5 before:absolute before:-inset-0.5 before:content-[\'\']'} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
+      : `${size === 'sm' ? 'px-2.5 py-1.5 text-sm relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-[\'\']' : 'relative inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold before:absolute before:-inset-0.5 before:content-[\'\']'} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
     if (variant === 'primary') {
       return `${common} ${primaryClasses[accent]}`
     }
@@ -125,10 +131,13 @@
 {/snippet}
 
   {#snippet buttonElement()}
-    <button bind:this={buttonEl} {type} aria-label={ariaLabel} aria-pressed={ariaPressed} aria-expanded={ariaExpanded} onclick={onClick} onkeydown={onKeyDown} onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined} disabled={disabledState} class={`${baseClass} ${hasBadge ? 'relative' : ''} ${className}`}>
+    <!-- Two tooltip systems, applied independently: `dataTip` renders the
+      `data-tip` custom-tooltip attribute, `tooltip` wraps the button with the
+      positioned Tooltip component. Existing callers use one or the other. -->
+    <button bind:this={buttonEl} {type} aria-label={ariaLabel} aria-pressed={ariaPressed} aria-expanded={ariaExpanded} data-tip={dataTip} onclick={onClick} onkeydown={onKeyDown} onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined} disabled={disabledState} class={`${baseClass} ${hasBadge ? 'relative' : ''} ${className}`}>
       {@render buttonInner()}
       {#if hasBadge}
-        <span class={`absolute -top-2 -right-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold text-slate-950 ${badgeClasses[accent]}`}>{badge}</span>
+        <span class={`absolute -top-2 -right-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold text-onaccent ${badgeClasses[accent]}`}>{badge}</span>
       {/if}
     </button>
   {/snippet}

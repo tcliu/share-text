@@ -32,6 +32,15 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
     if (!originalParent) {
       return
     }
+    // The `{#if}` block that owns this panel removes the node itself, and the
+    // portal detached it from that parent: re-inserting a node Svelte has
+    // already dropped would resurrect it as a hidden orphan (one leaked node,
+    // with a duplicate panel id, per close). Restore only while still attached.
+    if (!node.isConnected) {
+      originalParent = null
+      nextSibling = null
+      return
+    }
     if (nextSibling && nextSibling.parentNode === originalParent) {
       originalParent.insertBefore(node, nextSibling)
     } else {
@@ -42,13 +51,13 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
   }
 
   function findScrollableAncestor(start: HTMLElement | null): HTMLElement | null {
-    let el: HTMLElement | null = start
-    while (el && el !== document.body) {
-      const overflowY = getComputedStyle(el).overflowY
+    let element: HTMLElement | null = start
+    while (element && element !== document.body) {
+      const overflowY = getComputedStyle(element).overflowY
       if (overflowY === 'auto' || overflowY === 'scroll') {
-        return el
+        return element
       }
-      el = el.parentElement
+      element = element.parentElement
     }
     return null
   }

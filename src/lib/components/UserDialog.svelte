@@ -131,7 +131,8 @@
         ]}
         activeValue={active ? 'active' : 'inactive'}
         ariaLabel={i18n.t('admin.users.status')}
-        onSelect={value => (active = value === 'active')} />
+        onSelect={value => (active = value === 'active')}
+        emptyLabel={i18n.t('dropdown.noOptions')} />
     </FormField>
     <Buttons align="right">
       {#snippet children()}
