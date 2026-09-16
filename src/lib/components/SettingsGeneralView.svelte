@@ -31,6 +31,7 @@
       options={languageOptions}
       activeValue={settingsState.draft.preferredLanguage}
       ariaLabel={i18n.t('settings.general.preferredLanguage')}
-      onSelect={value => settingsState.setPreferredLanguage(value as Locale)} />
+      onSelect={value => settingsState.setPreferredLanguage(value as Locale)}
+      emptyLabel={i18n.t('dropdown.noOptions')} />
   </div>
 </div>

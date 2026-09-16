@@ -208,7 +208,8 @@
         ariaLabel={resolvedPageSizeLabel}
         size={size}
         options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-        onSelect={handlePageSizeChange} />
+        onSelect={handlePageSizeChange}
+        emptyLabel={i18n.t('dropdown.noOptions')} />
     </div>
   </div>
 </nav>

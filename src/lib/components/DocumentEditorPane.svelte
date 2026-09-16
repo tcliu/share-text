@@ -288,6 +288,7 @@
           size="sm"
           onSelect={handleTypeSelect}
           align="right"
+          emptyLabel={i18n.t('dropdown.noOptions')}
           autoPlace={true} />
       {:else}
         <Chip

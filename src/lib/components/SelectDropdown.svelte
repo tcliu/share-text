@@ -1,14 +1,12 @@
 <script lang="ts">
   import { flushSync, tick } from 'svelte'
-  import { positionPanel } from '$lib/position-panel.svelte'
   import { createFocusoutClose } from '$lib/actions/use-focusout-close'
   import { useDropdown } from '$lib/actions/use-dropdown.svelte'
   import { useListSelection, revealInScrollport } from '$lib/actions/use-list-selection.svelte'
+  import { positionPanel } from '$lib/position-panel.svelte'
   import { TEXT_SIZE, type TextSize } from '$lib/text-size'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import type { DropdownPanelProps } from '$lib/dropdown-chrome'
-  import { getI18nContext } from '$lib/i18n.svelte'
-  const i18n = getI18nContext()
 
   interface Option {
     value: string
@@ -28,8 +26,6 @@
     optionClass?: string
     emptyLabel?: string
   }
-  let id = $props.id()
-  const panelId = `${id}-panel`
 
   let {
     buttonLabel,
@@ -48,35 +44,43 @@
     panelClass = 'w-max max-w-xs max-h-[min(50vh,20rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
   }: Props = $props()
 
+  let id = $props.id()
+  const panelId = `${id}-panel`
+
   const SIZE_CLASS = {
     xs: { pad: 'py-1', minW: 'min-w-16' },
-    sm: { pad: 'py-2', minW: 'min-w-24' },
+    sm: { pad: 'py-2', minW: 'min-w-16' },
     md: { pad: 'py-2.5', minW: 'min-w-24' },
     lg: { pad: 'py-3', minW: 'min-w-28' },
   } as const
 
+  // The trailing `!` keeps the size-driven font on the control and the
+  // option rows: the legacy viewer stylesheet sets `font:inherit` on bare
+  // `button`/`input` elements, and unlayered author CSS beats Tailwind's
+  // layered utilities, so without it every size would inherit 14px.
+  const fontSizeClass = $derived(`${TEXT_SIZE[size]}!`)
+
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex ${SIZE_CLASS[size].minW} cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `inline-flex ${SIZE_CLASS[size].minW} cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-3 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${fontSizeClass}`,
   )
 
   const resolvedControlClass = $derived(
     controlClass ??
-      `${SIZE_CLASS[size].minW} field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `${SIZE_CLASS[size].minW} field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-8 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${fontSizeClass}`,
   )
 
   // Phone viewports get a 44px minimum row height via pure CSS so in-dialog
-  // dropdowns (e.g. Settings Voices) stay thumb-friendly without switching
-  // to a bottom sheet, which must never stack inside a dialog.
+  // dropdowns stay thumb-friendly without switching to a bottom sheet,
+  // which must never stack inside a dialog.
   // Cutoff mirrors PHONE_SHEET_MAX in dropdown-chrome (single shared value);
   // the literal stays inline so Tailwind can see the class — keep them in sync.
   const optionRowClass = $derived(
     optionClass ??
-      `flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${fontSizeClass}`,
   )
 
-  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-500`)
-
+  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${fontSizeClass} text-slate-500`)
   let open = $state(false)
   const selection = useListSelection()
   let containerRef = $state<HTMLDivElement | null>(null)
@@ -147,6 +151,12 @@
     // Highlight the committed value on open; hover/arrows move from there.
     selection.syncToActive(filteredOptions, option => option.value === activeValue)
     open = true
+    // A long list would otherwise open with the highlighted row scrolled out of
+    // sight: the option never receives focus (aria-activedescendant pattern), so
+    // nothing else brings it into view, and a native select always shows the
+    // selected row. Reveal after the flush, once `positionPanel` has portaled
+    // and shown the panel — an effect here runs too early to scroll it.
+    void tick().then(() => revealActive())
   }
 
   function handleControlFocus() {
@@ -226,7 +236,6 @@
       }
     }
   }
-
   const handleFocusOut = createFocusoutClose(
     () => open,
     () => ({ container: containerRef, panel: panelRef }),
@@ -253,7 +262,8 @@
   class="relative"
   bind:this={containerRef}
   data-escape-capture={open ? '' : null}
-  onfocusout={handleFocusOut}>
+  onfocusout={handleFocusOut}
+>
   {#if filterable}
     <div class="relative w-fit" bind:this={controlRef}>
       <input
@@ -289,8 +299,8 @@
       onclick={toggle}
       onkeydown={handleControlKeydown}
       class={resolvedButtonClass}>
-      <span>{buttonLabel}</span>
-      <ChevronDownIcon className="h-4 w-4 text-slate-500" />
+      <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
+      <ChevronDownIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
     </button>
   {/if}
   {#if open}
@@ -301,8 +311,8 @@
       aria-label={ariaLabel}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
       class={`fixed left-0 top-0 z-40 will-change-transform ${panelClass}`}>
-      {#if filteredOptions.length === 0}
-        <div class={emptyClass}>{emptyLabel ?? i18n.t('dropdown.noOptions')}</div>
+      {#if emptyLabel && filteredOptions.length === 0}
+        <div class={emptyClass}>{emptyLabel}</div>
       {/if}
       {#each filteredOptions as option, index}
         <button
