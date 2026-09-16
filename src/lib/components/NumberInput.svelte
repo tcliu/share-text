@@ -45,9 +45,23 @@
   const resolvedDecrementLabel = $derived(decrementLabel ?? i18n.t('number.decrement'))
 
   let inputEl = $state<HTMLInputElement | null>(null)
+  let pointerFocused = false
 
   export function focus() {
     inputEl?.focus()
+  }
+
+  function moveCaretToEndIfKeyboardFocus(event: FocusEvent) {
+    const input = event.currentTarget as HTMLInputElement
+    if (pointerFocused) {
+      pointerFocused = false
+      return
+    }
+    queueMicrotask(() => {
+      if (document.activeElement !== input) return
+      const end = input.value.length
+      input.setSelectionRange(end, end)
+    })
   }
 
   const currentValue = $derived(Number.parseFloat(value))
@@ -170,6 +184,18 @@
     {disabled}
     aria-label={ariaLabel}
     {value}
+    onpointerdown={() => {
+      pointerFocused = true
+    }}
+    onpointerup={() => {
+      queueMicrotask(() => {
+        pointerFocused = false
+      })
+    }}
+    onpointercancel={() => {
+      pointerFocused = false
+    }}
+    onfocus={moveCaretToEndIfKeyboardFocus}
     oninput={e => {
       handleInput(e)
       oninput?.(e)
