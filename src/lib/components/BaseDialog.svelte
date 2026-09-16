@@ -3,6 +3,7 @@
 </script>
 
 <script lang="ts">
+  import { browser } from '$app/environment'
   import { onDestroy, onMount, tick } from 'svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -44,16 +45,49 @@
 
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
+
+  // While a pending operation runs the dialog stops dismissing unless the
+  // caller opts into cancel-during-pending.
+  const cancelDisabled = $derived(pending && !allowPendingCancel)
+
   let dialogIndex = 0
   let dialogRef = $state<HTMLElement | null>(null)
   let titleId = $state('')
   let previouslyFocused: Element | null = null
 
+  const maxWidthClasses = {
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
+    fit: 'w-fit max-w-[90vw]',
+    wide: 'w-[min(96vw,96rem)] max-w-[96rem]',
+  } as const
+
+  const heightClasses = {
+    auto: '',
+    fixed: 'h-[min(78vh,640px)] min-h-[480px] sm:min-h-[520px]',
+    tall: 'h-[min(88vh,860px)]',
+  } as const
+
+  const sizeClass = $derived.by(() => {
+    const widthClass =
+      maxWidth === 'fit' || maxWidth === 'wide'
+        ? maxWidthClasses[maxWidth]
+        : `w-full ${maxWidthClasses[maxWidth] ?? maxWidthClasses.md}`
+    const hClass = heightClasses[height ?? 'auto']
+    return [widthClass, hClass].filter(Boolean).join(' ')
+  })
+
   onMount(() => {
     openDialogCount += 1
     dialogIndex = openDialogCount
     titleId = `share-text-dialog-title-${dialogIndex}`
-
     previouslyFocused = document.activeElement
     void tick().then(() => {
       const firstInput = dialogRef?.querySelector<HTMLElement>(
@@ -65,21 +99,19 @@
 
   onDestroy(() => {
     openDialogCount -= 1
-    if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+    if (browser && previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
       previouslyFocused.focus()
     }
   })
 
-  const cancelDisabled = $derived(pending && !allowPendingCancel)
+  function isTopmostDialog() {
+    return dialogIndex === openDialogCount
+  }
 
   function handleCancelRequest() {
     if (!cancelDisabled) {
       onCancel()
     }
-  }
-
-  function isTopmostDialog() {
-    return dialogIndex === openDialogCount
   }
 
   function trapFocus(event: KeyboardEvent) {
@@ -134,39 +166,10 @@
     }
   }
 
-  const maxWidthClasses = {
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-    '5xl': 'max-w-5xl',
-    '6xl': 'max-w-6xl',
-    '7xl': 'max-w-7xl',
-    fit: 'w-fit max-w-[90vw]',
-    wide: 'w-[min(96vw,96rem)] max-w-[96rem]',
-  } as const
-
-  const heightClasses = {
-    auto: '',
-    fixed: 'h-[min(78vh,640px)] min-h-[480px] sm:min-h-[520px]',
-    tall: 'h-[min(88vh,860px)]',
-  } as const
-
-  const sizeClass = $derived.by(() => {
-    const widthClass =
-      maxWidth === 'fit' || maxWidth === 'wide'
-        ? maxWidthClasses[maxWidth]
-        : `w-full ${maxWidthClasses[maxWidth] ?? maxWidthClasses.md}`
-    const hClass = heightClasses[height ?? 'auto']
-    return [widthClass, hClass].filter(Boolean).join(' ')
-  })
   $effect(() => {
     if (!dismissKeydownCapture) {
       return
     }
-
     document.addEventListener('keydown', handleWindowKeydown, true)
     return () => document.removeEventListener('keydown', handleWindowKeydown, true)
   })
@@ -193,23 +196,21 @@
       aria-modal="true"
       aria-labelledby={!header && title ? titleId : undefined}
       tabindex="-1"
-      class="relative flex flex-col overflow-hidden outline-none {fullscreen
-        ? 'h-full w-full bg-slate-900 p-5.5'
-        : `max-h-[90vh] rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass}`} {className}">
+      class={fullscreen
+        ? `relative flex h-full w-full flex-col overflow-y-auto bg-slate-900 p-5.5 outline-none ${className}`
+        : `relative flex max-h-[90vh] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 outline-none backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass} ${className}`}>
       <button
         type="button"
         aria-label={resolvedCloseLabel}
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
-        class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none hover:text-slate-200 focus:text-slate-200 before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">
+        class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 outline-none transition hover:text-slate-200 focus:text-slate-200 motion-reduce:transition-none before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">
         <CloseIcon className="h-4 w-4" />
       </button>
       {#if header}
         <div class="px-5.5 pt-5.5">{@render header()}</div>
       {:else if title}
-        <h2 id={titleId} class="px-5.5 pt-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
-          {title}
-        </h2>
+        <h2 id={titleId} class="pl-5.5 pr-12 pt-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">{title}</h2>
       {/if}
       <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pb-5.5 outline-none">
         {@render children?.()}
