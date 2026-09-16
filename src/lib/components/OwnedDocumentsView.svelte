@@ -122,6 +122,11 @@
   sortKey={documentsState.sortBy}
   sortDirection={documentsState.sortDir}
   onSort={(key, direction) => documentsState.handleSort(key, direction)}
+  sortAriaLabel={(column, direction) =>
+    direction === 'asc'
+      ? i18n.t('admin.dataTable.sortAsc', { name: column.header })
+      : i18n.t('admin.dataTable.sortDesc', { name: column.header })}
+  resizeAriaLabel={column => i18n.t('admin.dataTable.resize', { name: column.header })}
   fillHeight
   resizable
   storageKey="settings-documents" />
