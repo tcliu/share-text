@@ -8,7 +8,7 @@
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "deploy": "node scripts/deploy.mjs",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/check-scripts.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "node scripts/run-e2e.mjs",

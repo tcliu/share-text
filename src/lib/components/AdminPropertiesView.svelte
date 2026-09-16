@@ -97,7 +97,7 @@
     ]}
     state={{}}
     ariaLabel={i18n.t('admin.propertiesViews')}
-    class="bg-slate-950" />
+    headerClass="sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-slate-950 pb-3" />
 
     <Buttons align="right">
     {#snippet children()}
