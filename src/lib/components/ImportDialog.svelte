@@ -195,7 +195,8 @@
           { label: i18n.t('admin.import.multiple'), path: 'multiple', content: multipleSample },
         ]}
         state={{}}
-        ariaLabel={i18n.t('admin.import.sampleTypes')} />
+        ariaLabel={i18n.t('admin.import.sampleTypes')}
+        headerClass="sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-slate-900/95 pb-3 backdrop-blur" />
     </div>
   </BaseDialog>
 {/if}
