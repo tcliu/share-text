@@ -8,6 +8,8 @@ export const en = {
   'common.delete': 'Delete',
   'common.edit': 'Edit',
   'common.closeDialog': 'Close dialog',
+  'tabs.label': 'Tabs',
+  'search.placeholder': 'Search...',
   'common.close': 'Close',
 
   'language.label': 'Language',

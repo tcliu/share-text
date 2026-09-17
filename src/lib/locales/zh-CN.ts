@@ -10,6 +10,8 @@ export const zhCN: Record<MessageKey, string> = {
   'common.delete': '删除',
   'common.edit': '编辑',
   'common.closeDialog': '关闭对话框',
+  'tabs.label': '标签页',
+  'search.placeholder': '搜索...',
   'common.close': '关闭',
 
   'language.label': '语言',

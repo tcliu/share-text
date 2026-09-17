@@ -10,6 +10,8 @@ export const zhTW: Record<MessageKey, string> = {
   'common.delete': '刪除',
   'common.edit': '編輯',
   'common.closeDialog': '關閉對話框',
+  'tabs.label': '頁籤',
+  'search.placeholder': '搜尋...',
   'common.close': '關閉',
 
   'language.label': '語言',
