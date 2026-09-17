@@ -7,7 +7,6 @@
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
   import { search, searchKeymap } from '@codemirror/search'
   import { githubDark } from '@uiw/codemirror-theme-github'
-  import { getDocumentType } from '$lib/document-types'
   import { maxContentLengthFilter } from './code-editor-max-content'
 
   interface Props {
@@ -39,6 +38,21 @@
     onAutoFocused,
     onContentChange,
   }: Props = $props()
+
+  // Language packs are loaded on demand, one chunk per document type, so the
+  // editor never bundles the languages a given document does not use.
+  const LANGUAGE_LOADERS: Record<string, () => Promise<Extension | null>> = {
+    html: () => import('@codemirror/lang-html').then(m => m.html()),
+    javascript: () => import('@codemirror/lang-javascript').then(m => m.javascript()),
+    json: () => import('@codemirror/lang-json').then(m => m.json()),
+    markdown: () => import('@codemirror/lang-markdown').then(m => m.markdown()),
+    xml: () => import('@codemirror/lang-xml').then(m => m.xml()),
+    yaml: () => import('@codemirror/lang-yaml').then(m => m.yaml()),
+  }
+
+  function loadEditorLanguage(documentType: string): Promise<Extension | null> {
+    return LANGUAGE_LOADERS[documentType]?.() ?? Promise.resolve(null)
+  }
 
   let editorContainerRef = $state<HTMLDivElement | null>(null)
   let editorView = $state<EditorView | null>(null)
@@ -168,7 +182,7 @@
           editorView = null
           return
         }
-        const languageExtension = await getDocumentType(docType).editorLanguage()
+        const languageExtension = await loadEditorLanguage(docType)
         if (cancelled) {
           return
         }
