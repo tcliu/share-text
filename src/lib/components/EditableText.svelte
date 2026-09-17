@@ -3,7 +3,6 @@
   import Button from './Button.svelte'
   import CopyButton from './CopyButton.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
-  import { SPLIT_PANE_MAX_WIDTH } from '$lib/split-pane'
   import { TEXT_SIZE, type TextSize } from '$lib/text-size'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -30,7 +29,7 @@
     size = 'md',
     className = 'text-slate-200',
     onActivate,
-    maxWidth = SPLIT_PANE_MAX_WIDTH,
+    maxWidth = 480,
     copyable = false,
   }: Props = $props()
 
