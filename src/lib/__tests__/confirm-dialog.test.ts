@@ -34,4 +34,40 @@ describe('ConfirmDialog', () => {
     expect(onCancel).toHaveBeenCalled()
     expect(onConfirm).not.toHaveBeenCalled()
   })
+
+  // ui-patterns.md says "the confirm's own dismiss affordances confirm the
+  // discard"; share-text instead wires every dismiss affordance to onCancel,
+  // which only closes the confirm and returns to the form. These assert the
+  // observed behavior so the conflict is visible rather than silent.
+  it('calls onCancel (returns to the form) when Escape is pressed, not onConfirm', async () => {
+    const onConfirm = vi.fn()
+    const onCancel = vi.fn()
+    render(ConfirmDialog, {
+      title: 'Discard unsaved changes?',
+      message: 'msg',
+      confirmLabel: 'OK',
+      onConfirm,
+      onCancel,
+    })
+    await fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('calls onCancel (returns to the form) when the close button is clicked, not onConfirm', async () => {
+    const onConfirm = vi.fn()
+    const onCancel = vi.fn()
+    render(ConfirmDialog, {
+      title: 'Discard unsaved changes?',
+      message: 'msg',
+      confirmLabel: 'OK',
+      onConfirm,
+      onCancel,
+    })
+    const closeButton = screen.getByRole('dialog').querySelector('button[aria-label="Close dialog"]')
+    expect(closeButton).toBeTruthy()
+    await fireEvent.click(closeButton as HTMLButtonElement)
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
 })

@@ -5,7 +5,7 @@
   import Button from './Button.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import FormField from './FormField.svelte'
-  import TagInput from './TagInput.svelte'
+  import ColorTagInput from './ColorTagInput.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
   import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -30,7 +30,7 @@
 
   let draftTags = $state<Tag[]>([])
   let discardPromptOpen = $state(false)
-  let tagInputRef = $state<ReturnType<typeof TagInput> | null>(null)
+  let tagInputRef = $state<ReturnType<typeof ColorTagInput> | null>(null)
 
   $effect(() => {
     if (!open) return
@@ -83,7 +83,7 @@
   <BaseDialog title={i18n.t('tags.title')} maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
-        <TagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
+        <ColorTagInput bind:this={tagInputRef} id="document-tags-input" bind:value={draftTags} {availableTags} />
       </FormField>
 
     <Buttons align="right">
