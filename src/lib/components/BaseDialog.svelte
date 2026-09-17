@@ -19,8 +19,8 @@
     allowPendingCancel?: boolean
     dismissKeydownCapture?: boolean
     fullscreen?: boolean
-    // Overrides the i18n close-dialog label (used by catalog-style callers
-    // that pass their own strings); defaults to the shared locale label.
+    // Overrides the i18n close-dialog label (callers that pass their own
+    // strings keep working); defaults to the shared locale label.
     closeLabel?: string
     onCancel: () => void
     header?: import('svelte').Snippet
@@ -136,11 +136,13 @@
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
+    // Cooperates with sibling overlays (drawers, nested dialogs): whoever
+    // handles the key first marks it so the other listeners stand down.
     const handledEvent = event as KeyboardEvent & {
-      shareTextDialogHandled?: boolean
+      dialogHandled?: boolean
     }
 
-    if (handledEvent.shareTextDialogHandled) {
+    if (handledEvent.dialogHandled) {
       return
     }
 
@@ -157,7 +159,7 @@
       if (target instanceof Element && target.closest('[data-escape-capture]')) {
         return
       }
-      handledEvent.shareTextDialogHandled = true
+      handledEvent.dialogHandled = true
       event.stopImmediatePropagation()
       event.preventDefault()
       onCancel()

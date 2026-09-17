@@ -419,6 +419,11 @@ export const zhCN: Record<MessageKey, string> = {
   'admin.pagination.next': '下一页',
   'admin.pagination.current': '当前页',
   'admin.pagination.pageSize': '每页条数',
+  'pagination.previous': '上一页',
+  'pagination.next': '下一页',
+  'pagination.pageSize': '每页条数',
+  'pagination.current': '当前页',
+  'pagination.label': '分页',
 
   'admin.auth.toast.checkFailed': '检查管理会话失败',
   'admin.auth.required': '需要管理员身份验证',

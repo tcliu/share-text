@@ -419,6 +419,11 @@ export const zhTW: Record<MessageKey, string> = {
   'admin.pagination.next': '下一頁',
   'admin.pagination.current': '目前頁',
   'admin.pagination.pageSize': '每頁筆數',
+  'pagination.previous': '上一頁',
+  'pagination.next': '下一頁',
+  'pagination.pageSize': '每頁筆數',
+  'pagination.current': '目前頁',
+  'pagination.label': '分頁',
 
   'admin.auth.toast.checkFailed': '檢查管理工作階段失敗',
   'admin.auth.required': '需要管理員驗證',

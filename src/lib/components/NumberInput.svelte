@@ -46,9 +46,24 @@
 
   let inputEl = $state<HTMLInputElement | null>(null)
   let pointerFocused = false
+  let focused = false
+  let wheelDelta = 0
+
+  // Wheel deltas arrive as pixels (deltaMode 0), lines (1), or pages (2);
+  // normalize the latter two to a pixel-equivalent scale.
+  const WHEEL_PIXELS_PER_UNIT = 100
+  // Accumulate to a threshold so a trackpad's stream of small deltas steps
+  // once per gesture instead of racing through values, while a single mouse
+  // notch (100px) steps once.
+  const WHEEL_DELTA_THRESHOLD = 50
 
   export function focus() {
     inputEl?.focus()
+  }
+
+  function handleFocus(event: FocusEvent) {
+    focused = true
+    moveCaretToEndIfKeyboardFocus(event)
   }
 
   function moveCaretToEndIfKeyboardFocus(event: FocusEvent) {
@@ -85,8 +100,7 @@
     const decimals = stepDecimals()
     const steps = Math.round((val - min) / step)
     const snapped = min + steps * step
-    const clampedSnap =
-      max !== undefined ? Math.min(max, Math.max(min, snapped)) : snapped
+    const clampedSnap = max !== undefined ? Math.min(max, Math.max(min, snapped)) : snapped
     return Number(clampedSnap.toFixed(decimals))
   }
 
@@ -112,6 +126,8 @@
   }
 
   function handleBlur(event: FocusEvent) {
+    focused = false
+    wheelDelta = 0
     const input = event.target as HTMLInputElement
     const numValue = Number.parseFloat(input.value)
     if (input.value === '' || Number.isNaN(numValue)) {
@@ -171,9 +187,25 @@
     }
     onkeydown?.(event)
   }
+
+  function handleWheel(event: WheelEvent) {
+    if (!focused || disabled) return
+    // Pinch-zoom arrives as a ctrl-modified wheel, and shift-scroll as a
+    // horizontal delta; leave both to the browser.
+    if (event.ctrlKey || event.deltaY === 0) return
+    // Own the wheel while focused so the page does not scroll instead of the
+    // field stepping.
+    event.preventDefault()
+    wheelDelta += event.deltaMode === 0 ? event.deltaY : event.deltaY * WHEEL_PIXELS_PER_UNIT
+    if (Math.abs(wheelDelta) < WHEEL_DELTA_THRESHOLD) return
+    const direction = wheelDelta < 0 ? 1 : -1
+    wheelDelta = 0
+    adjust(direction)
+  }
 </script>
 
 <div
+  onwheel={handleWheel}
   class={`flex items-stretch ${showControls ? 'overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition motion-reduce:transition-none focus-within:border-cyan-500' : ''}`}>
   <input
     bind:this={inputEl}
@@ -195,7 +227,7 @@
     onpointercancel={() => {
       pointerFocused = false
     }}
-    onfocus={moveCaretToEndIfKeyboardFocus}
+    onfocus={handleFocus}
     oninput={e => {
       handleInput(e)
       oninput?.(e)

@@ -422,6 +422,11 @@ export const en = {
   'admin.pagination.next': 'Next page',
   'admin.pagination.current': 'Current page',
   'admin.pagination.pageSize': 'Page size',
+  'pagination.previous': 'Previous page',
+  'pagination.next': 'Next page',
+  'pagination.pageSize': 'Page size',
+  'pagination.current': 'Current page',
+  'pagination.label': 'Pagination',
 
   'admin.auth.toast.checkFailed': 'Failed to check admin session',
   'admin.auth.required': 'Admin authentication required',

@@ -64,9 +64,9 @@
     if (!open) return
     if (event.key === 'Escape') {
       if (event.defaultPrevented) return
-      const handledEvent = event as KeyboardEvent & { shareTextDialogHandled?: boolean }
-      if (handledEvent.shareTextDialogHandled) return
-      handledEvent.shareTextDialogHandled = true
+      const handledEvent = event as KeyboardEvent & { dialogHandled?: boolean }
+      if (handledEvent.dialogHandled) return
+      handledEvent.dialogHandled = true
       event.preventDefault()
       event.stopImmediatePropagation()
       onClose()

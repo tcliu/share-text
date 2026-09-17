@@ -13,13 +13,13 @@
     size?: 'xs' | 'sm' | 'md' | 'lg'
     className?: string
     pageSizeOptions?: number[]
+    onPageChange: (page: number) => void
+    onPageSizeChange: (size: number) => void
     previousLabel?: string
     nextLabel?: string
     pageSizeLabel?: string
     currentPageLabel?: string
     paginationLabel?: string
-    onPageChange: (page: number) => void
-    onPageSizeChange: (size: number) => void
   }
 
   let {
@@ -29,21 +29,21 @@
     size = 'sm',
     className = '',
     pageSizeOptions = [10, 20, 50],
+    onPageChange,
+    onPageSizeChange,
     previousLabel,
     nextLabel,
     pageSizeLabel,
     currentPageLabel,
     paginationLabel,
-    onPageChange,
-    onPageSizeChange,
   }: Props = $props()
 
   // Derived (not plain consts) so locale switches re-resolve the labels.
-  const resolvedPreviousLabel = $derived(previousLabel ?? i18n.t('admin.pagination.previous'))
-  const resolvedNextLabel = $derived(nextLabel ?? i18n.t('admin.pagination.next'))
-  const resolvedPageSizeLabel = $derived(pageSizeLabel ?? i18n.t('admin.pagination.pageSize'))
-  const resolvedCurrentPageLabel = $derived(currentPageLabel ?? i18n.t('admin.pagination.current'))
-  const resolvedPaginationLabel = $derived(paginationLabel ?? i18n.t('admin.pagination.label'))
+  const resolvedPreviousLabel = $derived(previousLabel ?? i18n.t('pagination.previous'))
+  const resolvedNextLabel = $derived(nextLabel ?? i18n.t('pagination.next'))
+  const resolvedPageSizeLabel = $derived(pageSizeLabel ?? i18n.t('pagination.pageSize'))
+  const resolvedCurrentPageLabel = $derived(currentPageLabel ?? i18n.t('pagination.current'))
+  const resolvedPaginationLabel = $derived(paginationLabel ?? i18n.t('pagination.label'))
 
   const PAGE_JUMP_DELTA = 2
 
@@ -203,13 +203,13 @@
     <span>{resolvedPageSizeLabel}</span>
     <div class="relative">
       <SelectDropdown
-        buttonLabel={String(pageSize)}
-        activeValue={String(pageSize)}
-        ariaLabel={resolvedPageSizeLabel}
-        size={size}
-        options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-        onSelect={handlePageSizeChange}
-        emptyLabel={i18n.t('dropdown.noOptions')} />
+      buttonLabel={String(pageSize)}
+      activeValue={String(pageSize)}
+      ariaLabel={resolvedPageSizeLabel}
+      size={size}
+      options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
+      onSelect={handlePageSizeChange}
+      emptyLabel={i18n.t('dropdown.noOptions')} />
     </div>
   </div>
 </nav>
