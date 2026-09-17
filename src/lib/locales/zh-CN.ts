@@ -194,6 +194,8 @@ export const zhCN: Record<MessageKey, string> = {
 
   'combobox.placeholder': '选择或输入...',
   'combobox.remove': '移除 {name}',
+  'tagInput.suggestions': '标签建议',
+  'tagInput.remove': '移除 {name}',
 
   'dropdown.noOptions': '没有选项',
 

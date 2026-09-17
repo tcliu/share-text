@@ -106,7 +106,7 @@ describe('ShareDialog', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('returns to the form when cancelling the discard confirm', () => {
+  it('discards when the discard confirm is dismissed', () => {
     const onClose = vi.fn()
     const queries = renderDialog({ onClose })
     const { getByLabelText, queryByText } = queries
@@ -116,7 +116,7 @@ describe('ShareDialog', () => {
 
     fireEvent.click(getDialogCloseButton(queries))
 
-    expect(onClose).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
     expect(queryByText('Discard unsaved changes?')).toBeNull()
   })
 

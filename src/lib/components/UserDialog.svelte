@@ -153,5 +153,5 @@
     message={i18n.t('admin.dialog.discardUser')}
     confirmLabel={i18n.t('admin.discard')}
     onConfirm={handleDiscard}
-    onCancel={() => (discardPromptOpen = false)} />
+    confirmOnDismiss />
 {/if}

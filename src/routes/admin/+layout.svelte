@@ -100,12 +100,6 @@
     void goto(url)
   }
 
-  function handleCancelDiscard() {
-    pendingNavigateUrl = null
-    discardPromptOpen = false
-  }
-
-
   onMount(() => {
     void authState.checkSession()
   })
@@ -325,5 +319,5 @@
     confirmLabel={i18n.t('admin.discard')}
     confirmColor="amber"
     onConfirm={handleDiscardAndNavigate}
-    onCancel={handleCancelDiscard} />
+    confirmOnDismiss />
 {/if}

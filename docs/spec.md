@@ -601,7 +601,7 @@ dialogs, login panel, admin hooks).
 - `i18n.t()` is called in templates and `$derived`; never in a `$props()`
   default (prop defaults evaluate once and would not react to a locale change).
   Shared components with default labels (`CopyButton`, `Copyable`, `Chip`,
-  `Splitter`, `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`, `ColorTagInput`,
+  `Splitter`, `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`,
   `Combobox`, `SelectDropdown`, `DataTable`) keep the prop optional and resolve
   the fallback via `$derived(prop ?? i18n.t('key'))` or an inline `??` at the
   call site. Toast text in event handlers and async code uses the current locale

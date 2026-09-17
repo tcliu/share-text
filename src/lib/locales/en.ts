@@ -195,6 +195,8 @@ export const en = {
 
   'combobox.placeholder': 'Select or type...',
   'combobox.remove': 'Remove {name}',
+  'tagInput.suggestions': 'Tag suggestions',
+  'tagInput.remove': 'Remove {name}',
 
   'dropdown.noOptions': 'No options',
 

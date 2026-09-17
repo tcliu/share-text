@@ -51,11 +51,6 @@ export function useEditorGuard() {
     return action
   }
 
-  function handleCancelDiscard() {
-    discardDialogOpen = false
-    pendingAction = null
-  }
-
   function requestDiscard(action: PendingAction) {
     pendingAction = action
     discardDialogOpen = true
@@ -83,7 +78,6 @@ export function useEditorGuard() {
     unregisterEditorGuard,
     canLeaveCurrentDocument,
     handleConfirmDiscard,
-    handleCancelDiscard,
     requestDiscard,
   }
 }

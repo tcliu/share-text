@@ -137,5 +137,5 @@
     message={i18n.t('share.discardMessage')}
     confirmLabel={i18n.t('share.discard')}
     onConfirm={handleDiscard}
-    onCancel={() => (discardPromptOpen = false)} />
+    confirmOnDismiss />
 {/if}

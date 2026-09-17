@@ -75,11 +75,6 @@
     void goto(url)
   }
 
-  function handleCancelDiscard() {
-    pendingNavigateUrl = null
-    discardPromptOpen = false
-  }
-
   async function handleSignedOut() {
     suppressSignedOutRedirect = true
     try {
@@ -258,5 +253,5 @@
     confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
     onConfirm={handleDiscardAndNavigate}
-    onCancel={handleCancelDiscard} />
+    confirmOnDismiss />
 {/if}

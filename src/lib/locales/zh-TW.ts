@@ -194,6 +194,8 @@ export const zhTW: Record<MessageKey, string> = {
 
   'combobox.placeholder': '選擇或輸入...',
   'combobox.remove': '移除 {name}',
+  'tagInput.suggestions': '標籤建議',
+  'tagInput.remove': '移除 {name}',
 
   'dropdown.noOptions': '沒有選項',
 

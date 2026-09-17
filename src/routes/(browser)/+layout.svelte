@@ -408,7 +408,7 @@
     confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
     onConfirm={handleConfirmDiscard}
-    onCancel={editorGuardState.handleCancelDiscard} />
+    confirmOnDismiss />
 {/if}
 
 {#if deleteTarget !== null}
