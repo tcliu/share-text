@@ -222,7 +222,7 @@
           state={{ settingsState, documentsState }}
           pathname={page.url.pathname}
           ariaLabel={i18n.t('settings.title')}
-          class="bg-slate-950" />
+          class="pt-4" />
         {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
           <Buttons align="right">
             {#snippet children()}

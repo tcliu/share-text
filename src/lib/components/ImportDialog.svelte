@@ -195,8 +195,7 @@
           { label: i18n.t('admin.import.multiple'), path: 'multiple', content: multipleSample },
         ]}
         state={{}}
-        ariaLabel={i18n.t('admin.import.sampleTypes')}
-        class="bg-slate-950" />
+        ariaLabel={i18n.t('admin.import.sampleTypes')} />
     </div>
   </BaseDialog>
 {/if}

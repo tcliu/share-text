@@ -96,8 +96,7 @@
       { label: i18n.t('admin.tab.properties'), path: 'properties', content: codeContent },
     ]}
     state={{}}
-    ariaLabel={i18n.t('admin.propertiesViews')}
-    headerClass="sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-slate-950 pb-3" />
+    ariaLabel={i18n.t('admin.propertiesViews')} />
 
     <Buttons align="right">
     {#snippet children()}

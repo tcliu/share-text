@@ -310,7 +310,8 @@
           tabs={adminTabs}
           state={{ preferencesState, settingsState, documentsState, usersState }}
           pathname={page.url.pathname}
-          ariaLabel={i18n.t('admin.sections')} />
+          ariaLabel={i18n.t('admin.sections')}
+          class="pt-4" />
       </div>
     {/if}
     {#if children}{@render children()}{/if}
