@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { browser } from '$app/environment'
+  import { browser } from '$app/environment';
   import { onDestroy, onMount, tick } from 'svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -27,21 +27,7 @@
     children?: import('svelte').Snippet
   }
 
-  let {
-    title,
-    titleClass = '',
-    className = '',
-    maxWidth = 'md',
-    height = 'auto',
-    pending = false,
-    allowPendingCancel = false,
-    dismissKeydownCapture = true,
-    fullscreen = false,
-    closeLabel,
-    onCancel,
-    header,
-    children,
-  }: Props = $props()
+  let { title, titleClass = '', className = '', maxWidth = 'md', height = 'auto', pending = false, allowPendingCancel = false, dismissKeydownCapture = true, fullscreen = false, closeLabel, onCancel, header, children }: Props = $props()
 
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
@@ -87,7 +73,7 @@
   onMount(() => {
     openDialogCount += 1
     dialogIndex = openDialogCount
-    titleId = `share-text-dialog-title-${dialogIndex}`
+    titleId = `dialog-title-${dialogIndex}`
     previouslyFocused = document.activeElement
     void tick().then(() => {
       const firstInput = dialogRef?.querySelector<HTMLElement>(
@@ -136,6 +122,9 @@
   }
 
   function handleWindowKeydown(event: KeyboardEvent) {
+    if (!dismissKeydownCapture) {
+      return
+    }
     // Cooperates with sibling overlays (drawers, nested dialogs): whoever
     // handles the key first marks it so the other listeners stand down.
     const handledEvent = event as KeyboardEvent & {
@@ -177,9 +166,7 @@
   })
 </script>
 
-<svelte:window onkeydown={handleWindowKeydown} />
-
-<div class="fixed inset-0 z-40 @container">
+<div class="fixed inset-0 z-40 @container dialog">
   <button
     type="button"
     data-testid="dialog-overlay"
