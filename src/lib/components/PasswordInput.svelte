@@ -65,7 +65,7 @@
     {required}
     type={visible ? 'text' : 'password'}
     {oninput}
-    class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pr-12 pl-3 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 {className}" />
+    class="w-full rounded-lg border border-slate-700 bg-slate-950 py-2 pr-12 pl-3 text-base text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40 {className}" />
   <button
     bind:this={toggleBtn}
     onclick={toggleVisibility}
