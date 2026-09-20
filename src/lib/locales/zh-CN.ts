@@ -197,9 +197,19 @@ export const zhCN: Record<MessageKey, string> = {
   'tagInput.suggestions': '标签建议',
   'tagInput.remove': '移除 {name}',
 
+  'range.selectDates': '选择日期',
+  'range.calendar': '选择日期范围',
+  'range.prevMonth': '上个月',
+  'range.nextMonth': '下个月',
+  'range.clear': '清除日期',
+
   'dropdown.noOptions': '没有选项',
 
   'splitter.resize': '调整窗格大小',
+
+  'appShell.showPane': '显示面板',
+  'appShell.hidePane': '隐藏面板',
+  'appShell.resize': '调整面板大小',
 
   'number.increment': '增加',
   'number.decrement': '减少',

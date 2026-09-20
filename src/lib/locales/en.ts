@@ -198,9 +198,19 @@ export const en = {
   'tagInput.suggestions': 'Tag suggestions',
   'tagInput.remove': 'Remove {name}',
 
+  'range.selectDates': 'Select dates',
+  'range.calendar': 'Choose a date range',
+  'range.prevMonth': 'Previous month',
+  'range.nextMonth': 'Next month',
+  'range.clear': 'Clear dates',
+
   'dropdown.noOptions': 'No options',
 
   'splitter.resize': 'Resize split panes',
+
+  'appShell.showPane': 'Show pane',
+  'appShell.hidePane': 'Hide pane',
+  'appShell.resize': 'Resize pane',
 
   'number.increment': 'Increment',
   'number.decrement': 'Decrement',

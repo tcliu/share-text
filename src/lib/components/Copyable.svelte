@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import CopyButton from './CopyButton.svelte'
+  import CopyButton from '$lib/components/CopyButton.svelte'
 
   interface Props {
     text?: string

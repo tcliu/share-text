@@ -197,9 +197,19 @@ export const zhTW: Record<MessageKey, string> = {
   'tagInput.suggestions': '標籤建議',
   'tagInput.remove': '移除 {name}',
 
+  'range.selectDates': '選擇日期',
+  'range.calendar': '選擇日期範圍',
+  'range.prevMonth': '上個月',
+  'range.nextMonth': '下個月',
+  'range.clear': '清除日期',
+
   'dropdown.noOptions': '沒有選項',
 
   'splitter.resize': '調整窗格大小',
+
+  'appShell.showPane': '顯示面板',
+  'appShell.hidePane': '隱藏面板',
+  'appShell.resize': '調整面板大小',
 
   'number.increment': '增加',
   'number.decrement': '減少',
