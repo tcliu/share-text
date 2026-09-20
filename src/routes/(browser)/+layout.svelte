@@ -322,8 +322,10 @@
   <header class="flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4">
     <div class="flex items-center gap-2">
       {#if !isMobile}
+        <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
         <Button
           size="sm"
+          className="-ml-1"
           ariaLabel={leftPaneCollapsed ? i18n.t('list.showDocumentList') : i18n.t('list.collapse')}
           tooltip={leftPaneCollapsed ? i18n.t('list.showDocumentList') : i18n.t('list.collapse')}
           ariaExpanded={!leftPaneCollapsed}
