@@ -132,7 +132,13 @@ npm test
 ## Deploy to Vercel
 
 1. Install the Vercel CLI (`npm i -g vercel`) and log in: `vercel login`.
-2. Link the project: `vercel pull --yes`.
+2. Link the project: `vercel pull --yes`. Or skip the manual step: set
+   `VERCEL_PROJECT=share-text` in `.env.vercel` (or pass
+   `npm run deploy -- --project share-text`) and the deploy links an unlinked
+   checkout automatically — prompting when the name is unknown and saving the
+   answer to `.env.vercel` before syncing env. Updating the slug and
+   redeploying switches the link interactively after confirmation; a
+   non-interactive run requires an explicit `--project <name>` to opt in.
 3. Set the real production values in `.env.vercel`:
    - `PROFILE=prod`
    - `APP_BASE_URL=https://<your-alias>.vercel.app`
