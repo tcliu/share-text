@@ -8,12 +8,14 @@
     "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "deploy": "node scripts/deploy.mjs",
+    "heartbeat": "node scripts/heartbeat.mjs",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/check-scripts.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "node scripts/run-e2e.mjs",
     "format": "prettier --write '**/*.{js,ts,svelte}'",
     "env:sync:vercel": "node ./scripts/sync-vercel-env.mjs",
+    "env:sync:cloudflare": "node ./scripts/sync-cloudflare-env.mjs",
     "schema:apply": "node ./scripts/apply-schema.mjs",
     "schema:recreate": "node ./scripts/recreate-schema.mjs"
   },
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@sveltejs/adapter-cloudflare": "^7.2.9",
     "@sveltejs/adapter-vercel": "^6.3.4",
     "@sveltejs/kit": "^2.61.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",

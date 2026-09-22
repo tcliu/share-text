@@ -15,3 +15,6 @@ node_modules/
 !.env.example
 !.env.*.example
 .worktrees/
+
+# Generated Cloudflare Pages config (npm run env:sync:cloudflare); never commit.
+wrangler.toml
