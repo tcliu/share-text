@@ -53,28 +53,36 @@
     clearable = false,
     clearLabel,
     onClear,
-    panelClass = 'w-max max-w-xs max-h-[min(50vh,20rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur',
+    panelClass,
   }: Props = $props()
 
   let id = $props.id()
   const panelId = `${id}-panel`
 
   const SIZE_CLASS = {
-    xs: { pad: 'py-1', minW: 'min-w-16' },
-    sm: { pad: 'py-2', minW: 'min-w-16' },
-    md: { pad: 'py-2.5', minW: 'min-w-24' },
-    lg: { pad: 'py-3', minW: 'min-w-28' },
+    xs: { pad: 'py-1', minW: 'min-w-24' },
+    sm: { pad: 'py-2', minW: 'min-w-32' },
+    md: { pad: 'py-2.5', minW: 'min-w-40' },
+    lg: { pad: 'py-3', minW: 'min-w-48' },
   } as const
+
+  // Default floating panel chrome; a `panelClass` override replaces it. The
+  // per-size min-width lives on the option rows (see optionRowClass), because
+  // the positioner floors the panel root to the trigger width via inline style.
+  const DEFAULT_PANEL_CLASS =
+    'w-max max-w-xs max-h-[min(50vh,20rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur'
 
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex ${SIZE_CLASS[size].minW} cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 pl-3 pr-2 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 pl-3 pr-2 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
   const resolvedControlClass = $derived(
     controlClass ??
-      `${SIZE_CLASS[size].minW} field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-7 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-7 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
+
+  const resolvedPanelClass = $derived(panelClass ?? DEFAULT_PANEL_CLASS)
 
   // Phone viewports get a 44px minimum row height via pure CSS so in-dialog
   // dropdowns stay thumb-friendly without switching to a bottom sheet,
@@ -83,10 +91,10 @@
   // the literal stays inline so Tailwind can see the class — keep them in sync.
   const optionRowClass = $derived(
     optionClass ??
-      `flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `${SIZE_CLASS[size].minW} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
-  const emptyClass = $derived(`px-3 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-400`)
+  const emptyClass = $derived(`${SIZE_CLASS[size].minW} px-3 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-400`)
   const resolvedClearLabel = $derived(clearLabel ?? 'Clear selection')
   let open = $state(false)
   const selection = useListSelection()
@@ -103,7 +111,14 @@
     }
     const query = filterText.startsWith(buttonLabel) ? filterText.slice(buttonLabel.length) : filterText
     const needle = query.trim().toLowerCase()
-    if (needle === '') {
+    // An empty query shows every option. A query that exactly matches an
+    // option's value or label is treated the same way: the user typed a whole
+    // value rather than a partial search, so the full list stays available
+    // instead of the panel narrowing to a single row.
+    const fullMatch =
+      needle !== '' &&
+      options.some(option => option.label.toLowerCase() === needle || option.value.toLowerCase() === needle)
+    if (needle === '' || fullMatch) {
       return options
     }
     return options.filter(
@@ -174,7 +189,36 @@
     openPanel()
   }
 
-  function handleControlClick() {
+  function handleControlClick(event: MouseEvent) {
+    if (!open) {
+      openPanel()
+    }
+    // A single click into the prefilled combobox should land the caret after
+    // the current value rather than with the whole label selected (a browser
+    // may select all when the input gains focus), so the next keystroke
+    // appends to the filter instead of replacing it. A non-collapsed selection
+    // that is not the whole value is a deliberate drag-select and is left
+    // alone; defer a frame so it wins over the browser's own selection.
+    if (event.detail !== 1 || !inputRef) {
+      return
+    }
+    requestAnimationFrame(() => {
+      const input = inputRef
+      if (!input || document.activeElement !== input) return
+      const { selectionStart, selectionEnd, value } = input
+      if (value.length === 0) return
+      const collapsed = selectionStart === selectionEnd
+      const wholeValue = selectionStart === 0 && selectionEnd === value.length
+      if (!collapsed && !wholeValue) return
+      const end = value.length
+      input.setSelectionRange(end, end)
+    })
+  }
+
+  // Typing into the closed combobox reopens the panel so the edited query
+  // filters live. After Enter confirms a value the input keeps focus, so no
+  // focus (or click) event fires to open it again.
+  function handleControlInput() {
     if (!open) {
       openPanel()
     }
@@ -246,9 +290,12 @@
       }
     } else if (event.key === 'Enter') {
       if (!open) {
-        if (filterable) {
-          event.preventDefault()
-        }
+        // Enter on the closed control reopens the panel, so a value that was
+        // just confirmed can be changed again without reaching for the mouse.
+        event.preventDefault()
+        flushSync(() => {
+          openPanel()
+        })
         return
       }
       event.preventDefault()
@@ -303,6 +350,7 @@
             : undefined}
           onfocus={handleControlFocus}
           onclick={handleControlClick}
+          oninput={handleControlInput}
           onkeydown={handleControlKeydown}
           class={resolvedControlClass} />
         <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -350,7 +398,7 @@
       role="listbox"
       aria-label={ariaLabel}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
-      class={`fixed left-0 top-0 z-40 will-change-transform ${panelClass}`}>
+      class={`fixed left-0 top-0 z-40 will-change-transform ${resolvedPanelClass}`}>
       {#if emptyLabel && filteredOptions.length === 0}
         <div role="presentation" class={emptyClass}>{emptyLabel}</div>
       {/if}
