@@ -1,5 +1,5 @@
 import type { AdminDocumentSummary } from './admin'
-import type { ShareTextI18n } from './i18n.svelte'
+import type { I18nStore } from './i18n.svelte'
 
 export interface OwnedDocumentListResponse {
   documents: AdminDocumentSummary[]
@@ -14,7 +14,7 @@ export class OwnedDocumentsAuthError extends Error {
   }
 }
 
-async function parseResponse<T>(response: Response, fallback: string, i18n: ShareTextI18n): Promise<T> {
+async function parseResponse<T>(response: Response, fallback: string, i18n: I18nStore): Promise<T> {
   const body = await response.json().catch(() => ({}))
   if (response.status === 401) {
     throw new OwnedDocumentsAuthError(i18n.t('admin.auth.required'))
@@ -34,7 +34,7 @@ export async function fetchOwnedDocuments(
     sortBy?: string
     order?: 'asc' | 'desc'
   } = {},
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<OwnedDocumentListResponse> {
   const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()

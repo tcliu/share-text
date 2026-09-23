@@ -2,11 +2,11 @@
 import { render, fireEvent } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LanguageMenuTestHost from './LanguageMenuTestHost.svelte'
-import type { ShareTextI18n } from '$lib/i18n.svelte'
+import type { I18nStore } from '$lib/i18n.svelte'
 
 Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})
 
-let i18n: ShareTextI18n
+let i18n: I18nStore
 
 function stubViewport(phone: boolean) {
   // Layer on the vitest-setup baseline (hover capable, no reduced motion);

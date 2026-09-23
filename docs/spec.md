@@ -584,13 +584,16 @@ uses the shared i18n store throughout (tabs, toolbars, DataTable headers,
 dialogs, login panel, admin hooks).
 
 - `LOCALES` is the closed set `en`, `zh-CN` (Simplified Chinese), `zh-TW`
-  (Traditional Chinese), each with a native label for the picker. The `en`
-  dictionary is the source (`as const`); `zh-CN`/`zh-TW` are typed
-  `Record<MessageKey, string>` so every key must be translated or the build
-  fails. `createI18nStore(dictionaries, defaultLocale, storageKey)` builds a
-  rune-backed store (`{ get locale(), setLocale(next), t(key, params?) }`)
-  with `{name}` interpolation and English fallback. The root `+layout.svelte`
-  creates one store per load via `setI18nContext(createShareTextI18n())` —
+  (Traditional Chinese), each with a native label for the picker. The locale
+  dictionaries are nested trees (`src/lib/locales/{en,zh-CN,zh-TW}.ts`,
+  `as const`) grouped by feature with dotted-path keys; `en` defines the key set
+  (`MessageKey` is its recursive dotted-path union) and every other locale is
+  typed `LocaleMessages<typeof en>`, so every key must be translated or the
+  build fails. `createI18nStore(dictionaries, defaultLocale, storageKey)` builds
+  a rune-backed store (`{ get locale(), setLocale(next), t(key, params?) }`)
+  with `{name}` interpolation and English fallback; `createAppI18n()` binds the
+  app dictionary map. The root `+layout.svelte` creates one store per load via
+  `setI18nContext(createAppI18n())` —
   SSR-safe, since each request gets a fresh English-defaulted instance —
   and components/composables read it via `getI18nContext()`, so
   template/`$derived` calls re-render on locale change.

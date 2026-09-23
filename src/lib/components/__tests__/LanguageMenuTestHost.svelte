@@ -1,14 +1,14 @@
 <script lang="ts">
   import LanguageMenu from '../LanguageMenu.svelte'
-  import { createShareTextI18n, setI18nContext, type ShareTextI18n } from '$lib/i18n.svelte'
+  import { createAppI18n, setI18nContext, type I18nStore } from '$lib/i18n.svelte'
 
   interface Props {
-    onReady: (i18n: ShareTextI18n) => void
+    onReady: (i18n: I18nStore) => void
   }
 
   let { onReady }: Props = $props()
 
-  const i18n = setI18nContext(createShareTextI18n())
+  const i18n = setI18nContext(createAppI18n())
 
   let once = false
   $effect(() => {

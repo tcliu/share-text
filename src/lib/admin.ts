@@ -1,5 +1,5 @@
 import type { Tag } from './tag-colors'
-import type { ShareTextI18n } from './i18n.svelte'
+import type { I18nStore } from './i18n.svelte'
 
 export class AdminAuthError extends Error {
   constructor(message: string) {
@@ -97,7 +97,7 @@ export interface AdminSessionInfo {
 
 const BASE_PATH = '/api/admin'
 
-async function parseResponse<T>(response: Response, fallback: string, i18n: ShareTextI18n): Promise<T> {
+async function parseResponse<T>(response: Response, fallback: string, i18n: I18nStore): Promise<T> {
   const body = await response.json().catch(() => ({}))
   if (response.status === 401) {
     throw new AdminAuthError(i18n.t('admin.auth.required'))
@@ -112,7 +112,7 @@ export async function login(
   username: string,
   password: string,
   rememberMe = false,
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<void> {
   const response = await fetch(`${BASE_PATH}/login`, {
     method: 'POST',
@@ -122,17 +122,17 @@ export async function login(
   await parseResponse<{ ok: boolean }>(response, i18n.t('auth.toast.signInFailed'), i18n)
 }
 
-export async function fetchAdminSession(i18n: ShareTextI18n): Promise<AdminSessionInfo> {
+export async function fetchAdminSession(i18n: I18nStore): Promise<AdminSessionInfo> {
   const response = await fetch(`${BASE_PATH}/session`)
   return parseResponse<AdminSessionInfo>(response, i18n.t('admin.auth.toast.checkFailed'), i18n)
 }
 
-export async function logout(i18n: ShareTextI18n): Promise<void> {
+export async function logout(i18n: I18nStore): Promise<void> {
   const response = await fetch(`${BASE_PATH}/logout`, { method: 'POST' })
   await parseResponse<{ ok: boolean }>(response, i18n.t('auth.toast.signOutFailed'), i18n)
 }
 
-export async function fetchAdminSettings(i18n: ShareTextI18n): Promise<AdminSetting[]> {
+export async function fetchAdminSettings(i18n: I18nStore): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`)
   const body = await parseResponse<{ settings: AdminSetting[] }>(response, i18n.t('admin.auth.toast.loadSettings'), i18n)
   return body.settings
@@ -140,7 +140,7 @@ export async function fetchAdminSettings(i18n: ShareTextI18n): Promise<AdminSett
 
 export async function updateAdminSettings(
   settings: Array<{ key: string; value: number | string | null }>,
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`, {
     method: 'PUT',
@@ -151,7 +151,7 @@ export async function updateAdminSettings(
   return body.settings
 }
 
-export async function resetAdminSetting(key: string, i18n: ShareTextI18n): Promise<AdminSetting[]> {
+export async function resetAdminSetting(key: string, i18n: I18nStore): Promise<AdminSetting[]> {
   return updateAdminSettings([{ key, value: null }], i18n)
 }
 
@@ -164,7 +164,7 @@ export async function fetchAdminDocuments(
     sortBy?: string
     order?: 'asc' | 'desc'
   } = {},
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminDocumentListResponse> {
   const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()
@@ -207,7 +207,7 @@ export async function updateAdminDocument(
     documentType?: string
     sharedWith?: string[]
   },
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, {
     method: 'PUT',
@@ -224,7 +224,7 @@ export async function createAdminDocument(
     content: string
     documentType?: string
   },
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminDocument> {
   const response = await fetch(`${BASE_PATH}/documents`, {
     method: 'POST',
@@ -235,18 +235,18 @@ export async function createAdminDocument(
   return body.document
 }
 
-export async function fetchAdminDocument(id: string, i18n: ShareTextI18n): Promise<AdminDocumentDetail> {
+export async function fetchAdminDocument(id: string, i18n: I18nStore): Promise<AdminDocumentDetail> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`)
   const body = await parseResponse<{ document: AdminDocumentDetail }>(response, i18n.t('admin.auth.toast.loadDocument'), i18n)
   return body.document
 }
 
-export async function deleteAdminDocument(id: string, i18n: ShareTextI18n): Promise<void> {
+export async function deleteAdminDocument(id: string, i18n: I18nStore): Promise<void> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`, { method: 'DELETE' })
   await parseResponse(response, i18n.t('admin.auth.toast.deleteDocument'), i18n)
 }
 
-export async function importAdminDocuments(records: unknown[], i18n: ShareTextI18n): Promise<AdminDocumentSummary[]> {
+export async function importAdminDocuments(records: unknown[], i18n: I18nStore): Promise<AdminDocumentSummary[]> {
   const response = await fetch(`${BASE_PATH}/documents`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -265,7 +265,7 @@ export async function fetchAdminUsers(
     sortBy?: string
     order?: 'asc' | 'desc'
   } = {},
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminUserListResponse> {
   const { search, searchKeys, limit, offset = 0, sortBy, order } = options
   const params = new URLSearchParams()
@@ -303,7 +303,7 @@ export async function createAdminUser(
     password: string
     status?: AdminUserStatus
   },
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminUser> {
   const response = await fetch(`${BASE_PATH}/users`, {
     method: 'POST',
@@ -317,7 +317,7 @@ export async function createAdminUser(
 export async function updateAdminUser(
   id: number,
   changes: { username?: string; email?: string; password?: string; status?: AdminUserStatus },
-  i18n: ShareTextI18n,
+  i18n: I18nStore,
 ): Promise<AdminUser> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, {
     method: 'PUT',
@@ -328,12 +328,12 @@ export async function updateAdminUser(
   return body.user
 }
 
-export async function deleteAdminUser(id: number, i18n: ShareTextI18n): Promise<void> {
+export async function deleteAdminUser(id: number, i18n: I18nStore): Promise<void> {
   const response = await fetch(`${BASE_PATH}/users/${id}`, { method: 'DELETE' })
   await parseResponse(response, i18n.t('admin.auth.toast.deleteUser'), i18n)
 }
 
-export async function importAdminUsers(records: unknown[], i18n: ShareTextI18n): Promise<AdminUser[]> {
+export async function importAdminUsers(records: unknown[], i18n: I18nStore): Promise<AdminUser[]> {
   const response = await fetch(`${BASE_PATH}/users`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -343,7 +343,7 @@ export async function importAdminUsers(records: unknown[], i18n: ShareTextI18n):
   return body.users
 }
 
-export async function exportAdminDocuments(ids: string[] | undefined, i18n: ShareTextI18n): Promise<AdminDocumentExportRecord[]> {
+export async function exportAdminDocuments(ids: string[] | undefined, i18n: I18nStore): Promise<AdminDocumentExportRecord[]> {
   const params = new URLSearchParams()
   if (ids && ids.length > 0) {
     params.set('ids', ids.join(','))
@@ -355,7 +355,7 @@ export async function exportAdminDocuments(ids: string[] | undefined, i18n: Shar
   return parseResponse<AdminDocumentExportRecord[]>(response, i18n.t('admin.auth.toast.exportDocuments'), i18n)
 }
 
-export async function exportAdminUsers(ids: number[] | undefined, i18n: ShareTextI18n): Promise<AdminUserExportRecord[]> {
+export async function exportAdminUsers(ids: number[] | undefined, i18n: I18nStore): Promise<AdminUserExportRecord[]> {
   const params = new URLSearchParams()
   if (ids && ids.length > 0) {
     params.set('ids', ids.join(','))

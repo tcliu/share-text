@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { useAdminSettings } from '$lib/use-admin-settings.svelte'
-  import { createShareTextI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
 
   type AdminSettingsState = ReturnType<typeof useAdminSettings>
 
@@ -12,7 +12,7 @@
 
   let { onReady, loadOnMount = true }: Props = $props()
 
-  setI18nContext(createShareTextI18n())
+  setI18nContext(createAppI18n())
   const settingsState = useAdminSettings(() => {})
 
   let once = false

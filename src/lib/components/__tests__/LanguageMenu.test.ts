@@ -2,11 +2,11 @@
 import { render, fireEvent } from '@testing-library/svelte'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import LanguageMenuTestHost from './LanguageMenuTestHost.svelte'
-import type { ShareTextI18n } from '$lib/i18n.svelte'
+import type { I18nStore } from '$lib/i18n.svelte'
 
 Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})
 
-let i18n: ShareTextI18n
+let i18n: I18nStore
 
 beforeEach(() => {
   localStorage.clear()

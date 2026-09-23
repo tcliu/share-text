@@ -3,12 +3,12 @@
   import type { LayoutData } from './$types'
   import '../styles.css'
   import { Toaster, toast } from 'svelte-sonner'
-  import { createShareTextI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
   import { useTheme } from '$lib/use-theme.svelte'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
-  setI18nContext(createShareTextI18n())
+  setI18nContext(createAppI18n())
   const themeState = useTheme()
 
   onMount(() => {

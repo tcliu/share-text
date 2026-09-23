@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   createI18nStore,
-  createShareTextI18n,
+  createAppI18n,
   settingDescription,
   settingLabel,
-  type ShareTextI18n,
+  type I18nStore,
 } from '$lib/i18n.svelte'
 
 describe('i18n', () => {
-  let i18n: ShareTextI18n
+  let i18n: I18nStore
 
   beforeEach(() => {
     localStorage.clear()
     document.documentElement.lang = ''
-    i18n = createShareTextI18n()
+    i18n = createAppI18n()
   })
 
   it('defaults to English', () => {
@@ -30,7 +30,7 @@ describe('i18n', () => {
   })
 
   it('keeps store instances independent', () => {
-    const other = createShareTextI18n()
+    const other = createAppI18n()
     i18n.setLocale('zh-CN')
     expect(other.locale).toBe('en')
     expect(other.t('list.login')).toBe('Login')
@@ -81,16 +81,16 @@ describe('i18n', () => {
 
   it('applies a saved locale at creation', () => {
     localStorage.setItem('share-text:locale', 'zh-CN')
-    expect(createShareTextI18n().locale).toBe('zh-CN')
+    expect(createAppI18n().locale).toBe('zh-CN')
   })
 
   it('ignores invalid saved values at creation', () => {
     localStorage.setItem('share-text:locale', 'fr')
-    expect(createShareTextI18n().locale).toBe('en')
+    expect(createAppI18n().locale).toBe('en')
   })
 
   it('supports a null storage key without persisting', () => {
-    const ephemeral = createI18nStore({ en: { hello: 'Hello' } }, 'en', null)
+    const ephemeral = createI18nStore<'hello', 'en'>({ en: { hello: 'Hello' } }, 'en', null)
     ephemeral.setLocale('en')
     expect(localStorage.getItem('share-text:locale')).toBeNull()
     expect(ephemeral.t('hello')).toBe('Hello')
