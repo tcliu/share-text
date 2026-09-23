@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import Chip from './Chip.svelte'
+  import Chip from '$lib/components/Chip.svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -44,7 +44,7 @@
   let inputRef = $state<HTMLInputElement | null>(null)
   let internalUpdate = false
 
-  const listboxId = $derived(`${id ? `${id}-` : 'share-text-combobox-'}listbox`)
+  const listboxId = $derived(`${id ? `${id}-` : 'combobox-'}listbox`)
   const optionId = (index: number) => `${listboxId}-option-${index}`
   const activeOptionId = $derived(
     dropdownOpen && suggestions.length > 0 ? optionId(activeIndex) : undefined,
