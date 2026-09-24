@@ -266,9 +266,8 @@ export function changesFullscreenGeometry({ cols, rows }) {
 export const SIDE_BY_SIDE_MIN_RIGHT_W = 24
 
 // One before/after row pair of a unified diff. Kinds drive the cell colors:
-// `del`/`add` for changed lines, `context` for shared lines, `meta` for
-// headers (`diff`, `index`, `---`/`+++`, `@@`), `blank` for the empty half of
-// an unpaired change.
+// `del`/`add` for changed lines, `context` for shared lines, `meta` for the
+// `@@` hunk marker, `blank` for the empty half of an unpaired change.
 function isDelLine(line) {
   return line.startsWith('-') && !line.startsWith('--- ')
 }
@@ -290,17 +289,18 @@ export function pairDiffLines(diffLines = []) {
   let i = 0
   while (i < diffLines.length) {
     const line = diffLines[i]
-    if (line.startsWith('--- ') && i + 1 < diffLines.length && diffLines[i + 1].startsWith('+++ ')) {
-      rows.push({ before: line, after: diffLines[i + 1], beforeKind: 'meta', afterKind: 'meta' })
-      i += 2
-    } else if (
+    // File-level headers (`diff --git`, `index`, `--- a/…`, `+++ b/…`,
+    // `Binary …`) carry no per-line content and only clutter the before/after
+    // panes, so they are dropped here; the `@@` hunk marker is kept.
+    if (
       line.startsWith('--- ') ||
       line.startsWith('+++ ') ||
       line.startsWith('diff ') ||
       line.startsWith('index ') ||
-      line.startsWith('@@') ||
       line.startsWith('Binary ')
     ) {
+      i += 1
+    } else if (line.startsWith('@@')) {
       rows.push({ before: line, after: '', beforeKind: 'meta', afterKind: 'blank' })
       i += 1
     } else if (isDelLine(line) || isAddLine(line)) {
