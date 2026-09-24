@@ -212,7 +212,6 @@ function refreshList() {
     const row = byPath.get(key)
     if (!row) {
       paneKillChild(proc)
-      clearTimeout(proc.escalate)
       state.procs.delete(key)
     } else {
       proc.row = row
@@ -520,15 +519,16 @@ function runInWorktree(cmd, row) {
     }
   })
   child.on('close', code => {
-    const p = state.pane
-    if (!p || p.child !== child) return
-    p.running = false
-    p.exit = code
-    if (p.escalate) {
-      clearTimeout(p.escalate)
-      p.escalate = null
+    // Record on the proc that owns the child, not `state.pane`: the user may
+    // have detached (or opened another pane) before the child exits.
+    if (pane.child !== child) return
+    pane.running = false
+    pane.exit = code
+    if (pane.escalate) {
+      clearTimeout(pane.escalate)
+      pane.escalate = null
     }
-    p.dirty = true
+    pane.dirty = true
     draw()
   })
   redraw()
