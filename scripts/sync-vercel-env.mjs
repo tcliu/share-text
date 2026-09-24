@@ -1,68 +1,44 @@
 #!/usr/bin/env node
-// Syncs the unified target env (.env.prod, overlaid by .env.vercel) to the
-// Vercel production env.
-// An empty merged value is skipped so the remote value survives — blank a key
+// Syncs the keys in SOURCE_FILES (.env.vercel) to the Vercel production env.
+// An empty local value is skipped so the remote value survives — blank a key
 // in the Vercel dashboard instead. Pass --prune to remove remote keys that
-// are absent from both files.
+// are absent from .env.vercel.
 //
-// Trade-off: values are passed with `--value`, so they appear in the process
-// argv while the command runs. `vercel env add` also accepts the value on
-// stdin, but the CLI always stores secrets encrypted, so that form cannot be
-// verified to preserve the value byte-for-byte (a trailing newline would
-// silently break password/session secrets). Keep --value; this script runs
-// interactively on the operator's machine, not in CI.
+// Values are fed to `vercel env add` on stdin, never on the command line, so
+// they never appear in the process argv where other local processes can read
+// them.
 
 import { spawn } from 'node:child_process'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { LOCAL_ONLY_ENV_KEYS, parseEnvFile } from './env-file.mjs'
-import { logEvent } from './log-event.mjs'
-import { formatCommand } from './_terminal.mjs'
-import { runWithConcurrency } from './lib/concurrency.mjs'
-import { loadTargetFileEnv } from './lib/target-env.mjs'
+import { echoCommand } from './_run.mjs'
+import { parseEnvFile } from './env-file.mjs'
+import { errorMessage, logEvent } from './log-event.mjs'
 
-// Strict flag parsing: an unknown flag is a clean exit-2 error, not a silently
-// ignored argument.
 let PRUNE = false
 try {
   PRUNE = Boolean(
     parseArgs({ args: process.argv.slice(2), options: { prune: { type: 'boolean' } }, strict: true }).values.prune,
   )
 } catch (error) {
-  console.error(error?.message || error)
+  console.error(errorMessage(error))
   process.exit(2)
 }
 
 const TARGET = 'production'
-// Changed-key upserts are independent (one key per `env add`), so a small
-// worker pool hides per-invocation CLI/API latency without hammering the API.
-const UPSERT_CONCURRENCY = 4
+const SOURCE_FILES = ['.env.vercel']
+const STARTED_AT = Date.now()
 
 function loadDesiredEnv() {
-  // Files-only merge: `.env.prod` overlaid by `.env.vercel` (see
-  // loadTargetFileEnv). `.env`/`.env.local`/shell are excluded so local keys
-  // are never invented into the synced set.
-  const merged = loadTargetFileEnv('vercel', process.cwd())
-  // Local-only tooling keys are never managed: dropping them here also marks
-  // them as prune candidates, so `--prune` cleans up values synced before
-  // the exclusion existed.
-  for (const key of LOCAL_ONLY_ENV_KEYS) {
-    if (key in merged) {
-      logEvent({ action: 'vercel_env_local_skip', details: { key } })
-      delete merged[key]
-    }
-  }
-  return merged
+  return SOURCE_FILES.reduce((merged, file) => ({ ...merged, ...parseEnvFile(join(process.cwd(), file)) }), {})
 }
 
-function spawnVercelBin(bin, args) {
+function spawnVercelBin(bin, args, { input } = {}) {
+  echoCommand(bin, args)
   return new Promise((resolve, reject) => {
-    console.log(formatCommand(bin, args))
     const child = spawn(bin, args, {
       cwd: process.cwd(),
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
       env: process.env,
     })
 
@@ -85,16 +61,22 @@ function spawnVercelBin(bin, args) {
         reject(new Error(message))
       }
     })
+
+    if (input !== undefined) {
+      // A closed stdin (spawn failure) surfaces on the child 'error' event.
+      child.stdin.on('error', () => {})
+      child.stdin.end(input)
+    }
   })
 }
 
-async function runVercelCommand(args) {
+async function runVercelCommand(args, options) {
   try {
-    return await spawnVercelBin('vercel', args)
+    return await spawnVercelBin('vercel', args, options)
   } catch (error) {
     if (error.code === 'ENOENT') {
       const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-      return await spawnVercelBin(npx, ['vercel@latest', ...args])
+      return await spawnVercelBin(npx, ['vercel@latest', ...args], options)
     }
     throw error
   }
@@ -106,23 +88,9 @@ async function listVercelEnvKeys() {
   return new Set((parsed.envs || []).map(entry => entry.key))
 }
 
-// Decrypted remote values for the diff below. The pull file lives in a
-// private temp dir and is removed before returning, so secrets only ever
-// rest on the operator's machine next to the source .env files. Values are
-// never printed; only key names reach the log.
-async function pullVercelEnv() {
-  const dir = mkdtempSync(join(tmpdir(), 'vercel-env-'))
-  try {
-    const file = join(dir, '.env.production.local')
-    await runVercelCommand(['env', 'pull', file, '--environment', TARGET, '--yes'])
-    return parseEnvFile(file)
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
-}
-
 async function upsertVercelEnv(key, value) {
-  await runVercelCommand(['env', 'add', key, TARGET, '--value', value, '--force', '--yes'])
+  // The value goes on stdin: `--value` would expose it in the process argv.
+  await runVercelCommand(['env', 'add', key, TARGET, '--force', '--yes'], { input: value })
 }
 
 async function removeVercelEnv(key) {
@@ -130,80 +98,61 @@ async function removeVercelEnv(key) {
 }
 
 async function main() {
-  const startedAt = Date.now()
-  logEvent({ action: 'vercel_env_sync_start', details: { target: TARGET } })
   const desiredEnv = loadDesiredEnv()
   const desiredKeys = new Set(Object.keys(desiredEnv))
+  logEvent({
+    action: 'env_sync_start',
+    details: { target: TARGET, source: SOURCE_FILES.join(', '), keys: desiredKeys.size },
+  })
   const existingKeys = await listVercelEnvKeys()
 
-  // Pull once and write only what drifted: a no-change deploy costs one
-  // pull instead of N `env add` invocations. A failed pull falls back to
-  // the legacy full upsert, so CLI differences never break the sync; a
-  // parse miss on the pulled side only costs an extra upsert, never a skip
-  // (a remotely-changed value always differs from the desired one).
-  let remote = null
-  try {
-    remote = await pullVercelEnv()
-  } catch (error) {
-    logEvent({
-      action: 'vercel_env_pull_fallback',
-      details: { error: error?.message || error, level: 'WARN' },
-    })
-  }
-
-  const pending = []
-  let unchangedCount = 0
+  let syncedCount = 0
   for (const [key, value] of Object.entries(desiredEnv)) {
-    // Empty merged values never blank the remote: fill the key in
-    // .env.prod (shared) or .env.vercel (Vercel-only) and re-run the sync.
+    // Empty local values never blank the remote: fill the key in
+    // .env.vercel and re-run the sync.
     if (!value) {
-      logEvent({ action: 'vercel_env_empty_skip', details: { key } })
+      console.log(`skipped ${key} (empty in .env.vercel; remote value kept)`)
       continue
     }
-    if (remote && remote[key] === value) {
-      unchangedCount += 1
-      continue
-    }
-    pending.push([key, value])
+    await upsertVercelEnv(key, value)
+    console.log(`synced ${key}`)
+    syncedCount += 1
   }
-  await runWithConcurrency(
-    pending.map(
-      ([key, value]) =>
-        async () => {
-          await upsertVercelEnv(key, value)
-          logEvent({ action: 'vercel_env_synced', details: { key } })
-          return key
-        },
-    ),
-    UPSERT_CONCURRENCY,
-  )
-  const syncedCount = pending.length
 
   const orphans = [...existingKeys].filter(key => !desiredKeys.has(key))
+  let removedCount = 0
 
   if (PRUNE) {
-    await runWithConcurrency(
-      orphans.map(
-        key =>
-          async () => {
-            await removeVercelEnv(key)
-            logEvent({ action: 'vercel_env_removed', details: { key } })
-            return key
-          },
-      ),
-      UPSERT_CONCURRENCY,
-    )
+    for (const key of orphans) {
+      await removeVercelEnv(key)
+      console.log(`removed ${key}`)
+      removedCount += 1
+    }
   } else if (orphans.length > 0) {
-    logEvent({ action: 'vercel_env_prune_skip', details: { keys: orphans, hint: 're-run with --prune to remove them' } })
+    console.log(
+      `Skipped ${orphans.length} unmanaged env var(s) (${orphans.join(', ')}). ` +
+        'Re-run with --prune to remove them.',
+    )
   }
 
+  console.log(`Synced ${syncedCount} of ${desiredKeys.size} env vars to Vercel ${TARGET}`)
   logEvent({
-    action: 'vercel_env_sync_end',
-    details: { target: TARGET, synced: syncedCount, total: desiredKeys.size, unchanged: unchangedCount, elapsed_ms: Date.now() - startedAt },
+    action: 'env_sync_end',
+    details: {
+      target: TARGET,
+      elapsed_ms: Date.now() - STARTED_AT,
+      synced: syncedCount,
+      skipped: desiredKeys.size - syncedCount,
+      removed: removedCount,
+    },
   })
 }
 
 main().catch(error => {
+  logEvent({
+    action: 'env_sync_error',
+    details: { target: TARGET, elapsed_ms: Date.now() - STARTED_AT, error: errorMessage(error) },
+  })
   console.error(error?.message || error)
   process.exit(1)
 })

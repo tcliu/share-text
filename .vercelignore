@@ -6,11 +6,12 @@
 !.env.*.example
 
 # Local-only data and dev artifacts
-.data/
 .tmp/
+.commandcode/
 .worktrees/
 archive/
 node_modules/
+.vercel/
 
 # Build artifacts generated locally (Vercel runs its own build)
 .svelte-kit/

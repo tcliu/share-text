@@ -1032,5 +1032,6 @@ Writes are last-write-wins with no conflict detection or merge.
   the SQLite SQL rewrite for scripts.
 - `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel`, upserts the set
   to Vercel production env vars, and removes stale ones.
-- `scripts/deploy.mjs` deploys to Vercel, waits for `READY`, and syncs the
-  project's production domain to `APP_BASE_URL`.
+- `scripts/deploy.mjs` is the deploy entry (Vercel by default, or Cloudflare
+  Pages via `--target`); it runs each selected target's steps in slot order and
+  syncs the Vercel project's production domain to `APP_BASE_URL`.

@@ -89,7 +89,7 @@ function projectEntry(project, output) {
 
 // Production hostname for a Pages project, from `pages project list --json`
 // (authoritative: the account may suffix the subdomain, e.g.
-// project-catalog-b1s.pages.dev for project-catalog). Bare hostname, or ''
+// `<project>-<hash>.pages.dev`). Bare hostname, or ''
 // when unresolvable.
 export function getPagesProjectDomain(project, runner = defaultWranglerRunner, cwd = process.cwd()) {
   let output = ''
@@ -225,7 +225,6 @@ export function resolveCloudflareAppUrl({ root = process.cwd(), runner = default
 // keep the remote value. Shared by sync-cloudflare-env.mjs and deploy.mjs
 // (auth-step generation) so the split cannot drift.
 export const CLOUDFLARE_SECRET_KEYS = new Set([
-  'PROJECT_CATALOG_DATABASE_URL',
   'DATABASE_URL',
   'ADMIN_PASSWORD',
   'ADMIN_PASSWORD_HASH',
@@ -234,7 +233,7 @@ export const CLOUDFLARE_SECRET_KEYS = new Set([
   'CLOUDFLARE_SCAN_TOKEN',
   'CLOUDFLARE_ACCOUNT_ID',
   'VERCEL_TOKEN',
-  'VERCEL_PROJECT_CATALOG_ACCOUNTS',
+  'VERCEL_ACCOUNTS',
   'VERCEL_ACCOUNT_NAME',
   'VERCEL_TEAM_ID',
   'VERCEL_TEAM_SLUG',
@@ -242,19 +241,32 @@ export const CLOUDFLARE_SECRET_KEYS = new Set([
 
 // Keys that must never exist on the Cloudflare Pages project, whatever the
 // app: a synced Neon URL silently wins over the D1 binding, and synced Vercel
-// credentials would re-couple the Cloudflare target to Vercel. The union
-// covers every sibling's key names; names an app never sets are harmless
-// no-ops. The env sync removes them; deploy.mjs re-reads to prove it before
-// deploying.
+// credentials would re-couple the Cloudflare target to Vercel. Add an app's
+// own database/credential key names here. The env sync removes them;
+// deploy.mjs re-reads to prove it before deploying.
 export const CLOUDFLARE_FORBIDDEN_KEYS = new Set([
-  'PROJECT_CATALOG_DATABASE_URL',
   'DATABASE_URL',
   'VERCEL_TOKEN',
-  'VERCEL_PROJECT_CATALOG_ACCOUNTS',
+  'VERCEL_ACCOUNTS',
   'VERCEL_ACCOUNT_NAME',
   'VERCEL_TEAM_ID',
   'VERCEL_TEAM_SLUG',
 ])
+
+// Forbidden keys outside D1 mode: Vercel credentials must never exist on the
+// Pages project, but the Neon URL is the backend there. Derived by suffix so
+// no per-app database key name lives in shared code.
+export const NEON_MODE_FORBIDDEN_KEYS = new Set(
+  [...CLOUDFLARE_FORBIDDEN_KEYS].filter(key => !key.endsWith('DATABASE_URL')),
+)
+
+// Isolation policy for the Cloudflare target, by backend: a D1-backed app must
+// never carry the Neon URL (it silently wins over the D1 binding), so the full
+// set applies; a Neon-backed app keeps DATABASE_URL in sync and forbids only
+// Vercel credentials. Shared by the deploy flow and the env sync so both agree.
+export function cloudflareForbiddenKeys(d1Mode) {
+  return d1Mode ? CLOUDFLARE_FORBIDDEN_KEYS : NEON_MODE_FORBIDDEN_KEYS
+}
 
 export const CLOUDFLARE_LOCAL_ONLY_KEYS = LOCAL_ONLY_ENV_KEYS
 

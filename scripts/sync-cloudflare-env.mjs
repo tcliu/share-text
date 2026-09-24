@@ -19,24 +19,27 @@
 //               every secret so rotations always land.
 //   * `--prune` removes remote secrets absent from the .env files,
 //               mirroring `sync-vercel-env.mjs --prune`.
-//   * forbidden keys (Vercel creds here — NEON_BACKEND_FORBIDDEN_KEYS below;
-//               the canonical set also covers the Neon URL for D1-backed apps)
-//               are always removed: a surviving Vercel credential would
-//               re-couple this target to Vercel.
+//   * forbidden keys are always removed, per backend: a D1-backed app forbids
+//               the Neon URL (a synced Neon URL silently wins over the D1
+//               binding) and Vercel creds; a Neon-backed app forbids only
+//               Vercel creds, since the Neon URL is its backend.
 // `--dry-run` reports the plan without writing. Empty local values are skipped
 // (the remote value survives); local-only keys are never synced.
 import { spawn } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseEnvFile } from './env-file.mjs'
 import { logEvent } from './log-event.mjs'
 import {
   CLOUDFLARE_LOCAL_ONLY_KEYS,
+  cloudflareForbiddenKeys,
   desiredPagesVars,
   ensurePagesProject,
   GENERATED_WRANGLER_CONFIG,
+  generatedWranglerProjectName,
   renderWranglerConfig,
+  resolveD1DatabaseName,
   splitCloudflareEnv,
   wranglerBin,
 } from './lib/cloudflare.mjs'
@@ -48,7 +51,7 @@ import {
   patchPagesEnvVars,
 } from './lib/cloudflare-pages-env.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
-import { loadTargetFileEnv } from './lib/target-env.mjs'
+import { loadTargetEnv, loadTargetFileEnv } from './lib/target-env.mjs'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(SCRIPT_DIR, '..')
@@ -59,16 +62,6 @@ const SOURCE_FILES = ['.env.prod', '.env.cloudflare']
 const GENERATED_FILE = join(ROOT_DIR, GENERATED_WRANGLER_CONFIG)
 const SECRET_CONCURRENCY = 4
 const SECRET_MODES = ['always', 'missing']
-// share-text serves Cloudflare from Neon (no D1 backend), so DATABASE_URL
-// must sync: only Vercel credentials are forbidden here. (Divergence from
-// the canonical sync: documented parity exception for the Neon backend.)
-const NEON_BACKEND_FORBIDDEN_KEYS = new Set([
-  'VERCEL_TOKEN',
-  'VERCEL_PROJECT_CATALOG_ACCOUNTS',
-  'VERCEL_ACCOUNT_NAME',
-  'VERCEL_TEAM_ID',
-  'VERCEL_TEAM_SLUG',
-])
 
 function fail(message) {
   console.error(message)
@@ -95,16 +88,6 @@ function parseFlags(argv) {
     fail(`Unknown --secrets mode: ${secrets} (expected ${SECRET_MODES.join('|')}).`)
   }
   return { dryRun, prune, secrets }
-}
-
-// Project name from the last generated config: fallback so a checkout that
-// predates CLOUDFLARE_PROJECT keeps working.
-function generatedProjectName() {
-  if (!existsSync(GENERATED_FILE)) {
-    return ''
-  }
-  const match = /^name\s*=\s*"([^"]+)"/m.exec(readFileSync(GENERATED_FILE, 'utf8'))
-  return match ? match[1] : ''
 }
 
 function runWranglerAsync(args, { input } = {}) {
@@ -155,10 +138,16 @@ async function main() {
       process.env[key] = String(local[key]).trim()
     }
   }
+  // Isolation policy follows the backend, matching the deploy flow: a D1-backed
+  // target forbids the Neon URL (it would silently win over the binding); a
+  // Neon-backed target keeps DATABASE_URL in sync and forbids only Vercel
+  // creds. Detection uses the shell-aware merge so a shell override agrees with
+  // what the deploy sees.
+  const d1Mode = resolveD1DatabaseName(loadTargetEnv('cloudflare', ROOT_DIR)) !== ''
+  const forbiddenKeys = cloudflareForbiddenKeys(d1Mode)
   // Split shared with deploy.mjs (splitCloudflareEnv): local-only keys log as
   // skipped, empty values keep the remote value, secrets go to the store.
-  // NEON_BACKEND_FORBIDDEN_KEYS above: DATABASE_URL must sync on this app.
-  const { project: overlayProject, vars, secrets } = splitCloudflareEnv(raw, { forbidden: NEON_BACKEND_FORBIDDEN_KEYS })
+  const { project: overlayProject, vars, secrets } = splitCloudflareEnv(raw, { forbidden: forbiddenKeys })
   for (const key of Object.keys(raw)) {
     if (CLOUDFLARE_LOCAL_ONLY_KEYS.has(key)) {
       logEvent({ action: 'cloudflare_env_local_skip', details: { key } })
@@ -166,7 +155,7 @@ async function main() {
       logEvent({ action: 'cloudflare_env_empty_skip', details: { key } })
     }
   }
-  const project = overlayProject || generatedProjectName()
+  const project = overlayProject || generatedWranglerProjectName(ROOT_DIR)
   if (!project) {
     fail('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Pages project name.')
   }
@@ -266,15 +255,14 @@ async function main() {
     )
   }
 
-  // Forbidden keys (Vercel creds here; DATABASE_URL must sync on this Neon
-  // backend) must never exist on the Pages project. Remove them
-  // unconditionally, unlike the opt-in --prune below.
-  const forbidden = remote ? Object.keys(remote.envVars).filter(key => NEON_BACKEND_FORBIDDEN_KEYS.has(key)) : []
+  // Forbidden keys for this backend must never exist on the Pages project.
+  // Remove them unconditionally, unlike the opt-in --prune below.
+  const forbidden = remote ? Object.keys(remote.envVars).filter(key => forbiddenKeys.has(key)) : []
   // Prune: remote secrets no longer in the .env universe (opt-in, like the
   // Vercel sync). Forbidden keys are excluded here — they are always removed.
   const unmanaged = remote
     ? findOrphanKeys(remote.envVars, desiredKeys).filter(
-        key => remote.envVars[key]?.type !== 'plain_text' && !NEON_BACKEND_FORBIDDEN_KEYS.has(key),
+        key => remote.envVars[key]?.type !== 'plain_text' && !forbiddenKeys.has(key),
       )
     : []
   if (forbidden.length > 0) {
