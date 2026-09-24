@@ -9,7 +9,6 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
@@ -736,8 +735,8 @@ export function registerWorktree(root, worktreePath, branch) {
   })
 }
 
-// Upper bound for `git worktree remove --force` before the rmSync fallback
-// takes over: a hung remove must never freeze the manager's synchronous batch
+// Upper bound for `git worktree remove --force` before the prune-and-retry
+// fallback takes over: a hung remove must never freeze the manager's synchronous batch
 // delete with the confirm dialog still on screen.
 export const REMOVE_TIMEOUT_MS = 120_000
 
@@ -758,7 +757,13 @@ export function removeWorktree(root, worktree, options = {}) {
     return true
   } catch {
     try {
-      rmSync(worktree.path, { recursive: true, force: true })
+      execFileSync('git', ['worktree', 'prune'], { cwd: root, encoding: 'utf-8', stdio: 'pipe' })
+      execFileSync('git', ['worktree', 'remove', '--force', worktree.path], {
+        cwd: root,
+        encoding: 'utf-8',
+        stdio: 'pipe',
+        timeout: timeoutMs,
+      })
       return true
     } catch {
       return false

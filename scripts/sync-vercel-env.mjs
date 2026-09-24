@@ -16,11 +16,24 @@ import { spawn } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { parseArgs } from 'node:util'
 import { LOCAL_ONLY_ENV_KEYS, parseEnvFile } from './env-file.mjs'
 import { logEvent } from './log-event.mjs'
 import { formatCommand } from './_terminal.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
 import { loadTargetFileEnv } from './lib/target-env.mjs'
+
+// Strict flag parsing: an unknown flag is a clean exit-2 error, not a silently
+// ignored argument.
+let PRUNE = false
+try {
+  PRUNE = Boolean(
+    parseArgs({ args: process.argv.slice(2), options: { prune: { type: 'boolean' } }, strict: true }).values.prune,
+  )
+} catch (error) {
+  console.error(error?.message || error)
+  process.exit(2)
+}
 
 const TARGET = 'production'
 // Changed-key upserts are independent (one key per `env add`), so a small
@@ -168,7 +181,7 @@ async function main() {
 
   const orphans = [...existingKeys].filter(key => !desiredKeys.has(key))
 
-  if (process.argv.includes('--prune')) {
+  if (PRUNE) {
     await runWithConcurrency(
       orphans.map(
         key =>
