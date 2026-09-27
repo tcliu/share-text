@@ -1,4 +1,4 @@
-// Static app props for GET /api/catalog (project-catalog scanner).
+// Static app props for GET /api/info (project-catalog scanner).
 // One prop per response field; the route serves them as-is.
 export const CATALOG_APP_ID = 'share-text'
 export const CATALOG_APP_NAME = 'Share Text'

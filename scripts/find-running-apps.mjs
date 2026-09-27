@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// List running dev-server apps by probing GET /api/catalog across a port
+// List running dev-server apps by probing GET /api/info across a port
 // range and reporting every responder as a JSON array.
 //
 // Usage:
@@ -8,7 +8,7 @@
 //     [--port-start 5173] [--max-ports 10]
 //
 // Prints `[{ project, branch, port }]`. With no --project/--branch filter,
-// every port whose GET /api/catalog returns 200 OK with a parsable body is
+// every port whose GET /api/info returns 200 OK with a parsable body is
 // listed. Range honors the scanner env overrides CATALOG_SCAN_DEV_BASE_PORT
 // (5173) and CATALOG_SCAN_DEV_PORT_COUNT (10); explicit flags win over env.
 // Timeout honors CATALOG_SCAN_REQUEST_TIMEOUT_MS (1500).
@@ -26,7 +26,7 @@ function numEnv(name, fallback, min, max) {
 }
 
 /**
- * Probe `GET /api/catalog` from portStart through
+ * Probe `GET /api/info` from portStart through
  * `portStart + maxPorts - 1` and return every responder as
  * `{ project, branch, port }`, filtered by `project`/`branch` when given.
  */
@@ -44,7 +44,7 @@ export async function findRunningApps({
     const port = portStart + i
     let payload
     try {
-      const res = await fetchImpl(`http://${host}:${port}/api/catalog`, {
+      const res = await fetchImpl(`http://${host}:${port}/api/info`, {
         signal: AbortSignal.timeout(timeoutMs),
       })
       if (!res.ok) continue

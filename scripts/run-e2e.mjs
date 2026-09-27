@@ -4,11 +4,11 @@
 //
 // 1. Scan for a running dev server via find-running-apps.mjs (identity + branch).
 // 2. If none matches, start `npm run dev` on the first free port in range and
-//    wait until its /api/catalog answers.
+//    wait until its /api/info answers.
 // 3. Run Playwright against the resolved URL (E2E_BASE_URL), then stop the
 //    server only when this script started it.
 //
-// Defaults: project from package.json `name` (/api/catalog id),
+// Defaults: project from package.json `name` (/api/info id),
 // branch = this checkout's git branch.
 
 import { execFileSync, spawn } from 'node:child_process'
@@ -21,7 +21,7 @@ const START_TIMEOUT_MS = 120_000
 const POLL_MS = 500
 
 // App props from the manifest: the default e2e project is this package's
-// `name` (it matches the app's /api/catalog id), and `e2eEnv` carries extra
+// `name` (it matches the app's /api/info id), and `e2eEnv` carries extra
 // environment for a spawned dev server. session-catalog ships
 // `SESSIONS_LIVE=0` there so e2e serves the deterministic bundled payload
 // instead of whatever sessions exist on the machine; the hook is inert for
@@ -59,7 +59,7 @@ async function waitForCatalog(url, project, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   for (;;) {
     try {
-      const res = await fetch(`${url}/api/catalog`, { signal: AbortSignal.timeout(1500) })
+      const res = await fetch(`${url}/api/info`, { signal: AbortSignal.timeout(1500) })
       if (res.ok) {
         const payload = await res.json().catch(() => null)
         if (payload && typeof payload === 'object' && payload.id === project) return payload
@@ -98,7 +98,7 @@ function stopServer(child) {
 
 // Resolve the dev server to test: reuse the running one for this
 // project+branch, otherwise start the first free port in range and wait for
-// its /api/catalog to answer. Returns { url, branch, server } where `server`
+// its /api/info to answer. Returns { url, branch, server } where `server`
 // is non-null only when this script started it (and must stop it again).
 async function resolveBaseUrl({ project, branch, host }) {
   const apps = await findRunningApps({ project, branch, host })
