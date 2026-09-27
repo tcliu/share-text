@@ -188,8 +188,7 @@
 
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
 
-  const FILL_CONTAINER_CLASS =
-    'min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
+  const FILL_CONTAINER_CLASS = 'min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
 
   // Split header/body mode: the header lives in a fixed band outside the
   // scrollport and only the body wrapper scrolls (requires fillHeight, which
@@ -308,10 +307,8 @@
   function addedColumnWidth(key: string): number {
     const index = columns.findIndex(c => c.key === key)
     const declared = columns[index]?.width
-    const pct =
-      typeof declared === 'string' && declared.endsWith('%') ? Number.parseFloat(declared) : NaN
-    const basis =
-      tableContainer?.clientWidth ?? columnWidths.reduce((sum, w) => sum + w, 0)
+    const pct = typeof declared === 'string' && declared.endsWith('%') ? Number.parseFloat(declared) : NaN
+    const basis = tableContainer?.clientWidth ?? columnWidths.reduce((sum, w) => sum + w, 0)
     const computed = !Number.isNaN(pct) && basis > 0 ? Math.round((basis * pct) / 100) : 128
     return Math.max(computed, index >= 0 ? columnMinWidth(index) : MIN_COLUMN_WIDTH)
   }
@@ -390,7 +387,7 @@
 
 <svelte:window onmouseup={resize.handleResizeMouseUp} onmousemove={resize.handleResizeMouseMove} />
 
-<div class="flex min-w-0 w-full flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
+<div class="flex w-full min-w-0 flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
   {#if showSearch || chooserColumns}
     <div class="flex flex-wrap items-center gap-2 {fillHeight ? 'shrink-0' : ''}">
       {#if showSearch}
@@ -461,8 +458,12 @@
           {/if}
           {#each resolvedColumns as column (column.key)}
             <td
-              class="border-b border-slate-800/50 px-3 py-2 {managedWidths ? '' : column.minWidthClass} {column.cellClass}"
-              style={[managedWidths ? '' : column.minWidthStyle, dense ? 'padding: 4px 8px; font-size: 12px' : ''].filter(Boolean).join('; ')}>
+              class="border-b border-slate-800/50 px-3 py-2 {managedWidths
+                ? ''
+                : column.minWidthClass} {column.cellClass}"
+              style={[managedWidths ? '' : column.minWidthStyle, dense ? 'padding: 4px 8px; font-size: 12px' : '']
+                .filter(Boolean)
+                .join('; ')}>
               {@render column.cell?.(row)}
               {#if !column.cell && renderCellHtml}{@html renderCellHtml(column.key, row)}{/if}
             </td>
@@ -472,74 +473,96 @@
     {/if}
   {/snippet}
 
-      {#snippet headerRow()}
-        <tr class="text-left text-sm font-medium text-slate-400">
-          {#if selectable}
-            <th
-              class="sticky top-0 z-10 w-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur">
-              <Checkbox
-                checked={allSelected}
-                indeterminate={someSelected && !allSelected}
-                ariaLabel={resolvedSelectAllAriaLabel}
-                disabled={rows.length === 0}
-                onChange={() => onToggleAll?.()} />
-            </th>
-          {/if}
-          {#each resolvedColumns as column, i (column.key)}
-            {@const isActive = sortKey === column.key}
-            {@const isAsc = isActive && sortDirection === 'asc'}
-            {@const isDesc = isActive && sortDirection === 'desc'}
-            {@const headerAlignStyle =
-              column.headerAlign === 'center' ? 'text-align: center'
-              : column.headerAlign === 'right' ? 'text-align: right'
-              : column.headerAlign === 'left' ? 'text-align: left'
-              : ''}
-            {@const centerHeader = column.headerAlign === 'center'}
-            <th
-              bind:this={headerEls[i]}
-              class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.sortable ? 'group' : ''} {column.num ? 'num' : ''} {managedWidths ? '' : column.widthClass} {managedWidths ? '' : column.minWidthClass}"
-              style={[headerAlignStyle, managedWidths ? '' : column.widthStyle, managedWidths ? '' : column.minWidthStyle, dense ? 'padding: 4px 8px; font-size: 12px' : ''].filter(Boolean).join('; ')}
-              data-col-index={i}
-              data-tip={column.headerTip ?? undefined}
-              data-tip-place={column.headerTip ? (headerTipPlace ?? undefined) : undefined}
-              aria-sort={isActive ? (isAsc ? 'ascending' : 'descending') : undefined}>
-              {#if column.sortable}
-                <span class="flex w-full items-center gap-2 text-left {centerHeader ? 'relative justify-center px-1' : ''}">
-                  <span class={centerHeader ? 'min-w-0 overflow-hidden text-ellipsis break-words' : ''}>{column.header}</span>
-                  <span
-                    class="{centerHeader ? 'absolute right-0 top-1/2 flex -translate-y-1/2 flex-col' : 'flex flex-col'} text-slate-400 transition-opacity {isActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 group-focus-within:opacity-100">
-                    <button
-                      type="button"
-                      class="leading-none outline-none transition-colors {isAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column, 'asc') ?? `Sort ${column.header} ascending`}
-                      onclick={() => handleSortClick(column, 'asc')}>
-                      <SortAscIcon className="h-2.5 w-2.5" />
-                    </button>
-                    <button
-                      type="button"
-                      class="-mt-1 leading-none outline-none transition-colors {isDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
-                      aria-label={sortAriaLabel?.(column, 'desc') ?? `Sort ${column.header} descending`}
-                      onclick={() => handleSortClick(column, 'desc')}>
-                      <SortDescIcon className="h-2.5 w-2.5" />
-                    </button>
-                  </span>
-                </span>
-              {:else}
-                {column.header}
-              {/if}
-              {#if resizable}
+  {#snippet headerRow()}
+    <tr class="text-left text-sm font-medium text-slate-400">
+      {#if selectable}
+        <th class="sticky top-0 z-10 w-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur">
+          <Checkbox
+            checked={allSelected}
+            indeterminate={someSelected && !allSelected}
+            ariaLabel={resolvedSelectAllAriaLabel}
+            disabled={rows.length === 0}
+            onChange={() => onToggleAll?.()} />
+        </th>
+      {/if}
+      {#each resolvedColumns as column, i (column.key)}
+        {@const isActive = sortKey === column.key}
+        {@const isAsc = isActive && sortDirection === 'asc'}
+        {@const isDesc = isActive && sortDirection === 'desc'}
+        {@const headerAlignStyle =
+          column.headerAlign === 'center'
+            ? 'text-align: center'
+            : column.headerAlign === 'right'
+              ? 'text-align: right'
+              : column.headerAlign === 'left'
+                ? 'text-align: left'
+                : ''}
+        {@const centerHeader = column.headerAlign === 'center'}
+        <th
+          bind:this={headerEls[i]}
+          class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.sortable
+            ? 'group'
+            : ''} {column.num ? 'num' : ''} {managedWidths ? '' : column.widthClass} {managedWidths
+            ? ''
+            : column.minWidthClass}"
+          style={[
+            headerAlignStyle,
+            managedWidths ? '' : column.widthStyle,
+            managedWidths ? '' : column.minWidthStyle,
+            dense ? 'padding: 4px 8px; font-size: 12px' : '',
+          ]
+            .filter(Boolean)
+            .join('; ')}
+          data-col-index={i}
+          data-tip={column.headerTip ?? undefined}
+          data-tip-place={column.headerTip ? (headerTipPlace ?? undefined) : undefined}
+          aria-sort={isActive ? (isAsc ? 'ascending' : 'descending') : undefined}>
+          {#if column.sortable}
+            <span class="flex w-full items-center gap-2 text-left {centerHeader ? 'relative justify-center px-1' : ''}">
+              <span class={centerHeader ? 'min-w-0 overflow-hidden break-words text-ellipsis' : ''}
+                >{column.header}</span>
+              <span
+                class="flex flex-col {centerHeader
+                  ? 'absolute top-1/2 right-0 -translate-y-1/2'
+                  : ''} text-slate-400 transition-opacity {isActive
+                  ? 'opacity-100'
+                  : '[@media(hover:hover)]:opacity-0'} group-focus-within:opacity-100 group-hover:opacity-100">
                 <button
                   type="button"
-                  class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
-                  style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
-                  aria-label={resizeAriaLabel?.(column) ?? `Resize ${column.header}`}
-                  onmousedown={event => resize.startColumnResize(event, i)}
-                  onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
-              {/if}
-            </th>
-          {/each}
-        </tr>
-      {/snippet}
+                  class="leading-none transition-colors outline-none {isAsc
+                    ? 'text-cyan-400'
+                    : 'hover:text-cyan-300 focus:text-cyan-300'}"
+                  aria-label={sortAriaLabel?.(column, 'asc') ?? `Sort ${column.header} ascending`}
+                  onclick={() => handleSortClick(column, 'asc')}>
+                  <SortAscIcon className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  class="-mt-1 leading-none transition-colors outline-none {isDesc
+                    ? 'text-cyan-400'
+                    : 'hover:text-cyan-300 focus:text-cyan-300'}"
+                  aria-label={sortAriaLabel?.(column, 'desc') ?? `Sort ${column.header} descending`}
+                  onclick={() => handleSortClick(column, 'desc')}>
+                  <SortDescIcon className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            </span>
+          {:else}
+            {column.header}
+          {/if}
+          {#if resizable}
+            <button
+              type="button"
+              class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+              style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
+              aria-label={resizeAriaLabel?.(column) ?? `Resize ${column.header}`}
+              onmousedown={event => resize.startColumnResize(event, i)}
+              onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
+          {/if}
+        </th>
+      {/each}
+    </tr>
+  {/snippet}
 
   {#if splitHeader}
     <div class={SPLIT_FRAME_CLASS}>
@@ -565,9 +588,14 @@
       </div>
     </div>
   {:else}
-    <div tabindex="-1" class={`${fillHeight ? FILL_CONTAINER_CLASS : containerClass} outline-none`} bind:this={tableContainer}>
+    <div
+      tabindex="-1"
+      class={`${fillHeight ? FILL_CONTAINER_CLASS : containerClass} outline-none`}
+      bind:this={tableContainer}>
       <table
-        class="border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {managedWidths ? 'min-w-full' : `w-full ${tableClass}`}"
+        class="border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {managedWidths
+          ? 'min-w-full'
+          : `w-full ${tableClass}`}"
         style={managedWidths ? `table-layout:fixed;min-width:100%;width:${totalWidth}px;` : ''}>
         {@render tableColgroup()}
         <thead>
@@ -585,14 +613,14 @@
       <Pagination
         {total}
         {pageSize}
-        currentPage={currentPage}
+        {currentPage}
         {onPageChange}
         {onPageSizeChange}
         previousLabel={paginationPreviousLabel}
         nextLabel={paginationNextLabel}
         pageSizeLabel={paginationPageSizeLabel}
         currentPageLabel={paginationCurrentLabel}
-        paginationLabel={paginationLabel}
+        {paginationLabel}
         trailing={paginationTrailing} />
     </div>
   {/if}

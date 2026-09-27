@@ -5,8 +5,7 @@
 // layout, diff-based line redraw, windowed cursor, centered dialog overlay, SGR
 // mouse, and exact terminal restore on quit.
 // Mouse: left-click focuses a row, the [ ] box toggles selection, right-click
-// opens the menu, and the wheel scrolls. The changes dialog releases mouse
-// reporting while it is open so its diff text can be selected natively.
+// opens the menu, and the wheel scrolls the list, menus, and command output.
 // Keys n opens a branch-name prompt that creates a worktree (same setup as
 // scripts/create-worktree.mjs); d checks every row already merged into the
 // base branch with a clean working tree ([merged] badge) so Del reviews them
@@ -212,6 +211,7 @@ function refreshList() {
     const row = byPath.get(key)
     if (!row) {
       paneKillChild(proc)
+      clearTimeout(proc.escalate)
       state.procs.delete(key)
     } else {
       proc.row = row
@@ -519,16 +519,15 @@ function runInWorktree(cmd, row) {
     }
   })
   child.on('close', code => {
-    // Record on the proc that owns the child, not `state.pane`: the user may
-    // have detached (or opened another pane) before the child exits.
-    if (pane.child !== child) return
-    pane.running = false
-    pane.exit = code
-    if (pane.escalate) {
-      clearTimeout(pane.escalate)
-      pane.escalate = null
+    const p = state.pane
+    if (!p || p.child !== child) return
+    p.running = false
+    p.exit = code
+    if (p.escalate) {
+      clearTimeout(p.escalate)
+      p.escalate = null
     }
-    pane.dirty = true
+    p.dirty = true
     draw()
   })
   redraw()
@@ -610,9 +609,6 @@ function openChangesView(row = state.rows[state.cursor]) {
     activePane: 'entries',
     viewMode: 'unified',
   }
-  // The dialog is a read-only diff: release the mouse so its text can be
-  // selected/copied natively, and restore it when the dialog closes.
-  setMouseCapture(false)
   loadChangesDiff()
   state.fullClear = true
   redraw()
@@ -715,17 +711,6 @@ function toggleChangesView() {
   redraw()
 }
 
-// `enabled` restores mouse reporting (`1002h/1006h`); otherwise every mouse
-// mode is released (`1000l/1002l/1003l/1006l/1015l`) so the terminal — or tmux
-// in front of it — owns the mouse for native text selection.
-function setMouseCapture(enabled) {
-  process.stdout.write(
-    enabled
-      ? '\x1b[?1002h\x1b[?1006h'
-      : '\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1015l',
-  )
-}
-
 function setChangesPane(pane) {
   const view = state.changes
   if (!view || view.activePane === pane) return
@@ -779,7 +764,6 @@ function reloadChangesView() {
 }
 
 function closeChangesView() {
-  setMouseCapture(true)
   state.mode = 'list'
   state.changes = null
   state.fullClear = true
