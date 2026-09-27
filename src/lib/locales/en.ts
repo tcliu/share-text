@@ -264,9 +264,11 @@ export const en = {
     resize: 'Resize split panes',
   },
   appShell: {
-    showPane: 'Show pane',
-    hidePane: 'Hide pane',
+    closePane: 'Close pane',
+    leftPane: 'Left pane',
+    rightPane: 'Right pane',
     resize: 'Resize pane',
+    resizeRight: 'Resize right pane',
   },
   number: {
     increment: 'Increment',

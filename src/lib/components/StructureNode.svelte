@@ -285,7 +285,7 @@
                   tooltip={i18n.t('structure.editKey', { name: entry.key })}
                   onClick={(e) => { e.stopPropagation(); startEditValue(entry) }}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-                  className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
+                  className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300"
                 >
                   {#snippet icon()}
                     <EditIcon />
@@ -301,7 +301,7 @@
                 tooltip={i18n.t('structure.copyValue', { name: entry.key })}
                 onClick={(e) => { e.stopPropagation(); void handleCopy(copyValue(entry.value)) }}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-                className="bg-transparent p-1 h-auto w-auto text-slate-400 hover:text-cyan-300"
+                className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300"
               >
                 {#snippet icon()}
                   <CopyIcon />

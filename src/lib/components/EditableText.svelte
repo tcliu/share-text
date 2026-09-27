@@ -189,7 +189,7 @@
         tooltip={i18n.t('edit.edit')}
         onClick={(e) => { e.stopPropagation(); startEdit() }}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-        className="bg-transparent p-0 text-slate-400 hover:text-cyan-300">
+        className="bg-transparent text-slate-400 hover:text-cyan-300">
         {#snippet icon()}
           <EditIcon />
         {/snippet}

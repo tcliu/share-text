@@ -261,9 +261,11 @@ export const zhCN = {
     resize: '调整窗格大小',
   },
   appShell: {
-    showPane: '显示面板',
-    hidePane: '隐藏面板',
+    closePane: '关闭面板',
+    leftPane: '左侧面板',
+    rightPane: '右侧面板',
     resize: '调整面板大小',
+    resizeRight: '调整右侧面板大小',
   },
   number: {
     increment: '增加',

@@ -75,7 +75,7 @@
     <div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
       {@render children?.()}
     </div>
-    <Buttons>
+    <Buttons align="right">
       <Button variant="primary" accent="cyan" type="submit" disabled={pending || saveDisabled} {pending}
         >{saveLabel}</Button>
       {#if showReset}

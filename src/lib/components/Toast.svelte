@@ -81,7 +81,7 @@
   class={`fixed z-40 flex items-start gap-3 rounded-md px-4 py-3 shadow-lg shadow-slate-950/25 backdrop-blur-sm ${typeClasses[type]} ${positionClasses[position]}`}>
   <p class={`min-w-0 flex-1 font-medium ${sizeClasses[size]}`}>{message}</p>
   {#if actionLabel && onAction}
-    <Button variant="ghost" size="sm" onClick={onAction} className="shrink-0 font-semibold">
+    <Button variant="ghost" size="sm" onClick={onAction} className="shrink-0 px-2.5 py-1.5 font-semibold">
       {actionLabel}
     </Button>
   {/if}

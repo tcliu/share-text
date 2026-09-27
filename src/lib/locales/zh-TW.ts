@@ -261,9 +261,11 @@ export const zhTW = {
     resize: '調整窗格大小',
   },
   appShell: {
-    showPane: '顯示面板',
-    hidePane: '隱藏面板',
+    closePane: '關閉面板',
+    leftPane: '左側面板',
+    rightPane: '右側面板',
     resize: '調整面板大小',
+    resizeRight: '調整右側面板大小',
   },
   number: {
     increment: '增加',

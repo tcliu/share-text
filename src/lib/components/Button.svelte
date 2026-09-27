@@ -10,12 +10,6 @@
     pending?: boolean
     type?: 'button' | 'submit' | 'reset'
     className?: string
-    /**
-     * Drop the size-class padding for tight inline icon buttons. Uses an
-     * important `p-0` because Tailwind emits the size class's `p-*` after it,
-     * so a plain `p-0` would lose the cascade.
-     */
-    unpadded?: boolean
     ariaPressed?: boolean
     onClick?: (event: MouseEvent) => void
     onKeyDown?: (event: KeyboardEvent) => void
@@ -41,7 +35,6 @@
     pending = false,
     type = 'button',
     className = '',
-    unpadded = false,
     onClick,
     onKeyDown,
     preventFocusSteal = false,
@@ -79,35 +72,46 @@
   // Full xs–lg scale with literal classes (never interpolated) so the
   // Tailwind scanner emits every size. sm/md reproduce the original sizing
   // exactly; xs compacts below sm and lg expands past md. Hit-area insets
-  // mirror the nearest original tier.
+  // mirror the nearest original tier. Padding lives in its own key so the
+  // `ghost` variant can drop it by selecting no pad class instead of
+  // overriding with an important `p-0` (which would also block callers from
+  // restoring padding via `className`).
   const SIZE_CLASS = {
     xs: {
       iconBox: 'h-3 w-3',
       iconOnly:
-        "p-1 relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
+      iconOnlyPad: 'p-1',
       withChildren:
-        "px-2 py-1 text-xs relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
+        "text-xs relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
+      withChildrenPad: 'px-2 py-1',
     },
     sm: {
       iconBox: 'h-4 w-4',
       iconOnly:
-        "p-1.5 relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
+      iconOnlyPad: 'p-1.5',
       withChildren:
-        "px-2.5 py-1.5 text-sm relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
+        "text-sm relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
+      withChildrenPad: 'px-2.5 py-1.5',
     },
     md: {
       iconBox: 'h-5 w-5',
       iconOnly:
-        "relative inline-flex items-center justify-center rounded-lg p-2.5 before:absolute before:-inset-0.5 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-lg before:absolute before:-inset-0.5 before:content-['']",
+      iconOnlyPad: 'p-2.5',
       withChildren:
-        "relative inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold before:absolute before:-inset-0.5 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-lg text-sm font-semibold before:absolute before:-inset-0.5 before:content-['']",
+      withChildrenPad: 'px-4 py-2.5',
     },
     lg: {
       iconBox: 'h-6 w-6',
       iconOnly:
-        "relative inline-flex items-center justify-center rounded-lg p-3 before:absolute before:-inset-0.5 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-lg before:absolute before:-inset-0.5 before:content-['']",
+      iconOnlyPad: 'p-3',
       withChildren:
-        "relative inline-flex items-center justify-center rounded-lg px-5 py-3 text-base font-semibold before:absolute before:-inset-0.5 before:content-['']",
+        "relative inline-flex items-center justify-center rounded-lg text-base font-semibold before:absolute before:-inset-0.5 before:content-['']",
+      withChildrenPad: 'px-5 py-3',
     },
   } as const
 
@@ -131,12 +135,17 @@
 
   const isIconOnly = $derived(!!icon && !children)
 
+  // Ghost buttons carry no padding (tight inline actions for either icons
+  // or text); text labels restore breathing room through `className`.
   // `relative` anchors the `before:` hit-area expansion that brings every size
   // to the 44px touch target: do not remove it, and callers must not pass
   // position utilities via `className` (`relative` outranks `absolute` in the
   // stylesheet, so the override silently loses). Position the Button with a wrapper or in-flow layout instead.
   const baseClass = $derived.by(() => {
-    const common = `${isIconOnly ? SIZE_CLASS[size].iconOnly : SIZE_CLASS[size].withChildren}${unpadded ? ' p-0!' : ''} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
+    const sizeClasses = SIZE_CLASS[size]
+    const boxClass = isIconOnly ? sizeClasses.iconOnly : sizeClasses.withChildren
+    const padClass = variant === 'ghost' ? '' : isIconOnly ? sizeClasses.iconOnlyPad : sizeClasses.withChildrenPad
+    const common = `${[boxClass, padClass].filter(Boolean).join(' ')} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
     if (variant === 'primary') {
       return `${common} ${primaryClasses[accent]}`
     }
