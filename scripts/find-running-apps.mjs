@@ -4,14 +4,14 @@
 // range and reporting every responder as a JSON array.
 //
 // Usage:
-//   node scripts/find-running-apps.mjs [--project <catalog-id>] [--branch main]
+//   node scripts/find-running-apps.mjs [--project <project-id>] [--branch main]
 //     [--port-start 5173] [--max-ports 10]
 //
 // Prints `[{ project, branch, port }]`. With no --project/--branch filter,
 // every port whose GET /api/info returns 200 OK with a parsable body is
-// listed. Range honors the scanner env overrides CATALOG_SCAN_DEV_BASE_PORT
-// (5173) and CATALOG_SCAN_DEV_PORT_COUNT (10); explicit flags win over env.
-// Timeout honors CATALOG_SCAN_REQUEST_TIMEOUT_MS (1500).
+// listed. Range honors the scanner env overrides APP_SCAN_DEV_BASE_PORT
+// (5173) and APP_SCAN_DEV_PORT_COUNT (10); explicit flags win over env.
+// Timeout honors APP_SCAN_REQUEST_TIMEOUT_MS (1500).
 import { parseArgs as parseCliArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
 
@@ -33,9 +33,9 @@ function numEnv(name, fallback, min, max) {
 export async function findRunningApps({
   project = null,
   branch = null,
-  portStart = numEnv('CATALOG_SCAN_DEV_BASE_PORT', DEFAULT_PORT_START, 1, 65535),
-  maxPorts = numEnv('CATALOG_SCAN_DEV_PORT_COUNT', DEFAULT_MAX_PORTS, 1, 100),
-  timeoutMs = numEnv('CATALOG_SCAN_REQUEST_TIMEOUT_MS', DEFAULT_TIMEOUT_MS, 100, 30000),
+  portStart = numEnv('APP_SCAN_DEV_BASE_PORT', DEFAULT_PORT_START, 1, 65535),
+  maxPorts = numEnv('APP_SCAN_DEV_PORT_COUNT', DEFAULT_MAX_PORTS, 1, 100),
+  timeoutMs = numEnv('APP_SCAN_REQUEST_TIMEOUT_MS', DEFAULT_TIMEOUT_MS, 100, 30000),
   host = '127.0.0.1',
   fetchImpl = fetch,
 } = {}) {

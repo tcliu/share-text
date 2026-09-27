@@ -55,7 +55,7 @@ function isPortFree(port, host) {
   })
 }
 
-async function waitForCatalog(url, project, timeoutMs) {
+async function waitForInfo(url, project, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   for (;;) {
     try {
@@ -113,8 +113,8 @@ async function resolveBaseUrl({ project, branch, host }) {
     )
     process.exit(1)
   }
-  const base = Number(process.env.CATALOG_SCAN_DEV_BASE_PORT) || 5173
-  const count = Number(process.env.CATALOG_SCAN_DEV_PORT_COUNT) || 10
+  const base = Number(process.env.APP_SCAN_DEV_BASE_PORT) || 5173
+  const count = Number(process.env.APP_SCAN_DEV_PORT_COUNT) || 10
   for (let i = 0; i < count; i++) {
     const port = base + i
     if (!(await isPortFree(port, host))) continue
@@ -128,7 +128,7 @@ async function resolveBaseUrl({ project, branch, host }) {
     })
     child.stdout.on('data', d => process.stdout.write(`[dev:${port}] ${d}`))
     child.stderr.on('data', d => process.stderr.write(`[dev:${port}] ${d}`))
-    const payload = await waitForCatalog(url, project, START_TIMEOUT_MS)
+    const payload = await waitForInfo(url, project, START_TIMEOUT_MS)
     if (!payload) {
       console.error(`e2e: dev server on ${port} did not answer in time`)
       await stopServer(child)
