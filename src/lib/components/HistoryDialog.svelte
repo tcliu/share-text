@@ -215,7 +215,7 @@
               <button
                 type="button"
                 aria-pressed={selected?.id === version.id}
-                class="rounded-lg border px-3 py-2 text-left outline-none transition {selected?.id === version.id
+                class="rounded-lg border px-3 py-2 text-left transition outline-none {selected?.id === version.id
                   ? 'border-cyan-500/60 bg-cyan-500/10'
                   : 'border-slate-700 bg-slate-950 hover:border-slate-500 focus:border-slate-500'}"
                 onclick={() => selectVersion(version)}>
@@ -226,9 +226,7 @@
               </button>
             {/each}
           </div>
-          <div
-            data-testid="history-content-pane"
-            class="flex h-[60vh] min-h-0 min-w-0 flex-1 flex-col gap-2 md:h-full">
+          <div data-testid="history-content-pane" class="flex h-[60vh] min-h-0 min-w-0 flex-1 flex-col gap-2 md:h-full">
             {#if selectedLoading}
               <div class="flex flex-1 items-center justify-center">
                 <Spinner className="h-6 w-6" />
@@ -264,26 +262,28 @@
                   {#if diffRows}
                     <div
                       data-testid="history-diff"
-                      class="grid max-h-[70vh] min-w-0 flex-1 grid-cols-2 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 font-mono text-xs leading-5">
+                      class="grid max-h-[70vh] min-w-0 flex-1 grid-cols-2 overflow-auto rounded-lg border border-slate-700 bg-slate-950 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
                       {#each diffRows as row}
                         <div
                           class="min-h-5 min-w-0 border-r border-slate-800 px-3 py-0.5 {row.leftKind === 'removed'
                             ? 'bg-rose-500/10 text-rose-300'
                             : row.leftKind === 'context'
                               ? 'text-slate-300'
-                              : ''}"><span class="inline-block w-3 shrink-0 select-none">{row.leftKind ===
-                            'removed'
-                            ? '-'
-                            : ''}</span>{row.left}</div>
+                              : ''}">
+                          <span class="inline-block w-3 shrink-0 select-none"
+                            >{row.leftKind === 'removed' ? '-' : ''}</span
+                          >{row.left}
+                        </div>
                         <div
                           class="min-h-5 min-w-0 px-3 py-0.5 {row.rightKind === 'added'
                             ? 'bg-emerald-500/10 text-emerald-300'
                             : row.rightKind === 'context'
                               ? 'text-slate-300'
-                              : ''}"><span class="inline-block w-3 shrink-0 select-none">{row.rightKind ===
-                            'added'
-                            ? '+'
-                            : ''}</span>{row.right}</div>
+                              : ''}">
+                          <span class="inline-block w-3 shrink-0 select-none"
+                            >{row.rightKind === 'added' ? '+' : ''}</span
+                          >{row.right}
+                        </div>
                       {/each}
                     </div>
                   {:else}
@@ -294,7 +294,7 @@
                 </div>
               {:else}
                 <pre
-                  class="max-h-[70vh] flex-1 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5">{selected.content ||
+                  class="max-h-[70vh] flex-1 overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">{selected.content ||
                     i18n.t('history.empty')}</pre>
               {/if}
             {:else}

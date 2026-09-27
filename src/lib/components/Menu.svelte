@@ -40,7 +40,8 @@
   // A sheet title opts into the phone bottom-sheet presentation and must
   // carry its own close label so the dismiss button is never announced with
   // the menu's name by accident.
-  type Props = MenuBaseProps & ({ phoneSheetTitle?: undefined; closeLabel?: string } | { phoneSheetTitle: string; closeLabel: string })
+  type Props = MenuBaseProps &
+    ({ phoneSheetTitle?: undefined; closeLabel?: string } | { phoneSheetTitle: string; closeLabel: string })
 
   let {
     items,
@@ -297,7 +298,7 @@
     aria-controls={open ? menuId : undefined}
     onclick={toggle}
     onkeydown={handleTriggerKeydown}
-    class={`inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 outline-none transition motion-reduce:transition-none hover:border-cyan-500 hover:text-cyan-300 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500 ${triggerClass}`}>
+    class={`inline-flex items-center justify-center rounded-md border border-slate-700 bg-slate-950 text-slate-200 transition outline-none hover:border-cyan-500 hover:text-cyan-300 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500 motion-reduce:transition-none ${triggerClass}`}>
     {@render icon()}
   </button>
 {/snippet}
@@ -355,9 +356,9 @@
           style:transition={sheetTransition}
           style:animation={sheetDragging ? 'none' : undefined}
           style:will-change={sheetDragging ? 'transform' : undefined}
-          class="menu-sheet-enter relative flex w-full max-h-[min(75dvh,32rem)] flex-col overflow-hidden rounded-t-2xl border border-slate-800 border-b-0 border-x-0 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur transition-transform duration-200 ease-out motion-reduce:transition-none">
+          class="menu-sheet-enter relative flex max-h-[min(75dvh,32rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-x-0 border-b-0 border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur transition-transform duration-200 ease-out motion-reduce:transition-none">
           <div
-            class="relative flex flex-none cursor-grab touch-pan-x items-start justify-between gap-3 border-b border-slate-800 px-4 pb-3 pt-4 active:cursor-grabbing"
+            class="relative flex flex-none cursor-grab touch-pan-x items-start justify-between gap-3 border-b border-slate-800 px-4 pt-4 pb-3 active:cursor-grabbing"
             use:dragCloseDown={{
               isEnabled: () => usePhoneSheet && open,
               onDragUpdate: (offset, active) => {
@@ -366,13 +367,16 @@
               },
               onClose: () => close(),
             }}>
-            <div aria-hidden="true" class="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-full bg-slate-700"></div>
-            <h2 id={sheetTitleId} class="pt-3 text-base font-semibold tracking-tight text-slate-100">{phoneSheetTitle}</h2>
+            <div aria-hidden="true" class="absolute top-2 left-1/2 h-1 w-10 -translate-x-1/2 rounded-full bg-slate-700">
+            </div>
+            <h2 id={sheetTitleId} class="pt-3 text-base font-semibold tracking-tight text-slate-100">
+              {phoneSheetTitle}
+            </h2>
             <button
               type="button"
               aria-label={sheetCloseLabel}
               onclick={() => close()}
-              class="relative shrink-0 rounded-md p-2.5 text-slate-500 outline-none transition hover:text-slate-100 focus-visible:text-slate-100 motion-reduce:transition-none before:absolute before:-inset-1.5 before:content-['']">
+              class="relative shrink-0 rounded-md p-2.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-100 focus-visible:text-slate-100 motion-reduce:transition-none">
               <CloseIcon className="h-4 w-4" />
             </button>
           </div>
@@ -382,7 +386,7 @@
             tabindex="-1"
             aria-label={ariaLabel}
             onkeydown={handlePanelKeydown}
-            class="min-h-0 overflow-y-auto px-2 py-2 outline-none pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+            class="min-h-0 overflow-y-auto px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] outline-none">
             {@render menuOptions()}
           </div>
         </div>
@@ -397,7 +401,7 @@
         onfocusout={handleFocusOut}
         onkeydown={handlePanelKeydown}
         use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
-        class={`fixed left-0 top-0 z-40 will-change-transform overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur ${panelClass}`}>
+        class={`fixed top-0 left-0 z-40 overflow-hidden rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur will-change-transform ${panelClass}`}>
         {@render menuOptions()}
       </div>
     {/if}

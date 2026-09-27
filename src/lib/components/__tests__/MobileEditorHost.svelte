@@ -69,7 +69,7 @@
 </script>
 
 <DocumentEditorPane
-  document={document}
+  {document}
   bind:content
   {docType}
   saving={false}
@@ -79,5 +79,5 @@
   onTypeChange={() => {}}
   {editable}
   {versionCount}
-  onClone={withClone ? onClone ?? (() => {}) : undefined}
+  onClone={withClone ? (onClone ?? (() => {})) : undefined}
   onTagsSave={() => {}} />

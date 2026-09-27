@@ -26,7 +26,11 @@ export function useFormat(options: {
     if (result.ok) {
       options.setContent(result.value ?? '')
     } else {
-      toast.error(i18n.t('editor.toast.cannotFormat', { error: result.error ?? i18n.t('doc.toast.invalidType', { label: options.label() }) }))
+      toast.error(
+        i18n.t('editor.toast.cannotFormat', {
+          error: result.error ?? i18n.t('doc.toast.invalidType', { label: options.label() }),
+        }),
+      )
     }
     open = false
   }

@@ -143,9 +143,7 @@ describe('DataTable resizable columns', () => {
     expect(container.querySelector('button[aria-label^="Resize"]')).toBeNull()
 
     const resizable = render(DataTable<Row>, { props: { ...baseProps(), resizable: true } })
-    const handles = Array.from(
-      resizable.container.querySelectorAll('button[aria-label^="Resize "]'),
-    )
+    const handles = Array.from(resizable.container.querySelectorAll('button[aria-label^="Resize "]'))
     expect(handles).toHaveLength(2)
     expect(handles.every(h => h.className.includes('cursor-col-resize'))).toBe(true)
   })
@@ -167,7 +165,9 @@ describe('DataTable resizable columns', () => {
 
   it('persists resized column widths to localStorage under the storageKey', async () => {
     localStorage.clear()
-    const { container } = render(DataTable<Row>, { props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' } })
+    const { container } = render(DataTable<Row>, {
+      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' },
+    })
     const ths = Array.from(container.querySelectorAll('th[data-col-index]'))
     Object.defineProperty(ths[0], 'offsetWidth', { configurable: true, value: 200 })
     Object.defineProperty(ths[1], 'offsetWidth', { configurable: true, value: 250 })
@@ -185,12 +185,16 @@ describe('DataTable resizable columns', () => {
   it('restores persisted column widths on mount', async () => {
     localStorage.clear()
     localStorage.setItem('share-text:column-widths:admin-documents', JSON.stringify([220, 160]))
-    const { container } = render(DataTable<Row>, { props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' } })
+    const { container } = render(DataTable<Row>, {
+      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' },
+    })
     await vi.waitFor(() => {
       const cols = container.querySelectorAll('colgroup col')
       expect(cols).toHaveLength(2)
     })
-    const widths = Array.from(container.querySelectorAll('colgroup col')).map(c => parseInt((c as HTMLElement).style.width, 10))
+    const widths = Array.from(container.querySelectorAll('colgroup col')).map(c =>
+      parseInt((c as HTMLElement).style.width, 10),
+    )
     expect(widths).toEqual([220, 160])
     localStorage.clear()
   })

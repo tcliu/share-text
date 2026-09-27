@@ -92,9 +92,7 @@
   }: Props = $props()
 
   const dirty = $derived(
-    content !== document.content ||
-      docType !== document.documentType ||
-      document.name !== (savedName ?? document.name),
+    content !== document.content || docType !== document.documentType || document.name !== (savedName ?? document.name),
   )
 
   let editorRef = $state<{
@@ -152,7 +150,10 @@
     label: () => currentType.label,
   })
 
-  const previewContent = usePreviewContent(() => content, () => document.id)
+  const previewContent = usePreviewContent(
+    () => content,
+    () => document.id,
+  )
 
   function openFilePicker() {
     fileInputRef?.click()
@@ -236,7 +237,6 @@
     URL.revokeObjectURL(url)
   }
 
-
   async function handleTypeSelect(value: string) {
     if (value === docType) return
     const fromType = getDocumentType(docType)
@@ -244,7 +244,9 @@
     if (fromType.convertTo?.target === value) {
       const result = await fromType.convertTo.convert(content)
       if (!result.ok) {
-        toast.error(i18n.t('editor.toast.cannotConvert', { error: result.error ?? i18n.t('editor.toast.invalidContent') }))
+        toast.error(
+          i18n.t('editor.toast.cannotConvert', { error: result.error ?? i18n.t('editor.toast.invalidContent') }),
+        )
         return
       }
       content = result.value ?? ''
@@ -262,10 +264,7 @@
 <section aria-label={document.name} class="flex h-full min-w-0 flex-1 flex-col p-4">
   {#snippet nameField()}
     {#if onRename && editable}
-      <EditableText
-        text={document.name}
-        className="font-semibold text-slate-200"
-        onChange={onRename} />
+      <EditableText text={document.name} className="font-semibold text-slate-200" onChange={onRename} />
     {:else}
       <Copyable
         text={document.name}
@@ -291,10 +290,7 @@
           emptyLabel={i18n.t('dropdown.noOptions')}
           autoPlace={true} />
       {:else}
-        <Chip
-          label={activeTypeLabel}
-          chipClass={tagChipClass()}
-          style={tagChipStyle(currentType.chipColor)} />
+        <Chip label={activeTypeLabel} chipClass={tagChipClass()} style={tagChipStyle(currentType.chipColor)} />
       {/if}
     </div>
   {/snippet}
@@ -352,10 +348,7 @@
     {/if}
     {#if currentType.actions && !context.isMobile && editable}
       {#await currentType.actions() then Actions}
-        <Actions
-          type={currentType}
-          content={content}
-          onContentChange={(value: string) => (content = value)} />
+        <Actions type={currentType} {content} onContentChange={(value: string) => (content = value)} />
       {/await}
     {/if}
     <Button
@@ -402,7 +395,7 @@
           {/snippet}
         </Button>
       {/if}
-      {#if (onClone || cloneDisabled) || (onTagsSave && editable) || versionCount >= 2}
+      {#if onClone || cloneDisabled || (onTagsSave && editable) || versionCount >= 2}
         <KebabMenu
           ariaLabel={i18n.t('editor.moreActions')}
           items={[
@@ -477,7 +470,12 @@
       </Button>
     {/if}
     {#if editable}
-      <Button size="sm" ariaLabel={i18n.t('editor.reset')} tooltip={i18n.t('editor.reset')} onClick={handleResetClick} disabled={!dirty || saving}>
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('editor.reset')}
+        tooltip={i18n.t('editor.reset')}
+        onClick={handleResetClick}
+        disabled={!dirty || saving}>
         {#snippet icon()}
           <RefreshIcon />
         {/snippet}
@@ -528,7 +526,6 @@
   {#snippet menuIcon()}
     <MenuIcon />
   {/snippet}
-
 
   {#if context.isMobile}
     <div class="flex flex-col gap-2">
@@ -609,7 +606,7 @@
         {@render tagChips()}
       </div>
       {@render typeSelector()}
-      <div class="flex shrink min-w-0 flex-wrap items-center gap-1">
+      <div class="flex min-w-0 shrink flex-wrap items-center gap-1">
         {@render actionButtons()}
       </div>
     </div>
@@ -619,16 +616,18 @@
     class={`mt-3 flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500 ${previewState.previewMode === 'split' && previewState.showPreview && context.isMobile ? 'flex-col' : ''}`}>
     {#if !previewState.previewOnly}
       <div
-        style={previewState.previewMode === 'split' && previewState.showPreview ? `flex-basis: ${previewState.editorWidthPct}%` : 'flex: 1'}
+        style={previewState.previewMode === 'split' && previewState.showPreview
+          ? `flex-basis: ${previewState.editorWidthPct}%`
+          : 'flex: 1'}
         class="min-h-0 min-w-0 overflow-hidden">
         <LazyCodeEditor
           bind:this={editorRef}
           bind:content
           {docType}
-{editable}
+          {editable}
           autoFocus={focusOnMount || refocusEditor}
           onAutoFocused={() => (refocusEditor = false)}
-          onReady={() => (editorReady++)}
+          onReady={() => editorReady++}
           recreateKey={document.id}
           {maxContentLength}
           containerClass="h-full"
@@ -665,7 +664,6 @@
     class="hidden"
     onchange={handleFileChange} />
 
-
   <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}
       <span class="min-w-0">
@@ -680,12 +678,16 @@
     {/if}
     <span class="flex items-center gap-3">
       {#if !editable}
-        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400">{i18n.t('editor.readOnly')}</span>
+        <span class="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs text-slate-400"
+          >{i18n.t('editor.readOnly')}</span>
       {/if}
       {#if refreshing}
         <span class="text-slate-400">{i18n.t('editor.refreshing')}</span>
       {/if}
-      <span>{content.length} {#if maxContentLength > 0}/ {maxContentLength}{/if} {i18n.t('editor.chars')}</span>
+      <span
+        >{content.length}
+        {#if maxContentLength > 0}/ {maxContentLength}{/if}
+        {i18n.t('editor.chars')}</span>
     </span>
   </div>
 </section>

@@ -133,12 +133,15 @@
 
 {#snippet idCell(document: AdminDocumentSummary)}
   {#if supportsHover.value}
-    <Copyable text={document.id} className="font-mono text-slate-400" copyAriaLabel={i18n.t('admin.copyDocumentKey', { id: document.id })}>
+    <Copyable
+      text={document.id}
+      className="font-mono text-slate-400"
+      copyAriaLabel={i18n.t('admin.copyDocumentKey', { id: document.id })}>
       <a
         href={`/${document.id}`}
         target="_blank"
         rel="noopener noreferrer"
-        class="font-mono text-slate-400 outline-none transition hover:text-cyan-300 focus:text-cyan-300">
+        class="font-mono text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300">
         {document.id}
       </a>
     </Copyable>

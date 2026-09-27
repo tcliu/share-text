@@ -83,10 +83,10 @@ describe('setting resolution', () => {
 
   it('ignores out-of-range database overrides and falls back to env/default', async () => {
     const db = await getDb()
-    await db.query(
-      'insert into app_config (key, value, updated_at) values ($1, $2, current_timestamp)',
-      ['document_key_length', '99'],
-    )
+    await db.query('insert into app_config (key, value, updated_at) values ($1, $2, current_timestamp)', [
+      'document_key_length',
+      '99',
+    ])
 
     expect(await getDocumentKeyLength()).toBe(6)
 
@@ -116,8 +116,6 @@ describe('setting resolution', () => {
     expect(await getSettingValue('max_content_length')).toBe(1024 * 1024)
   })
 })
-
-
 
 describe('setting validation', () => {
   it('accepts in-range integers', () => {

@@ -92,14 +92,17 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   async function load() {
     loading = true
     try {
-      const response = await fetchAdminUsers({
-        search: searchState.searchQuery,
-        searchKeys: searchState.searchKeys,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-        sortBy: searchState.sortBy,
-        order: searchState.sortDir,
-      }, i18n)
+      const response = await fetchAdminUsers(
+        {
+          search: searchState.searchQuery,
+          searchKeys: searchState.searchKeys,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          sortBy: searchState.sortBy,
+          order: searchState.sortDir,
+        },
+        i18n,
+      )
       users = response.users
       total = response.total
       loaded = true
@@ -202,24 +205,31 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     saving = true
     try {
       if (dialogMode === 'add') {
-        await createAdminUser({
-          username: input.username,
-          email: input.email,
-          password: input.password,
-          status: input.status,
-        }, i18n)
+        await createAdminUser(
+          {
+            username: input.username,
+            email: input.email,
+            password: input.password,
+            status: input.status,
+          },
+          i18n,
+        )
         toast.success(i18n.t('admin.users.userCreated'))
       } else {
         const id = dialogUser?.id
         if (id === undefined) {
           return
         }
-        await updateAdminUser(id, {
-          username: input.username,
-          email: input.email,
-          password: input.password || undefined,
-          status: input.status,
-        }, i18n)
+        await updateAdminUser(
+          id,
+          {
+            username: input.username,
+            email: input.email,
+            password: input.password || undefined,
+            status: input.status,
+          },
+          i18n,
+        )
         toast.success(i18n.t('admin.users.updated'))
       }
       dialogOpen = false

@@ -12,12 +12,7 @@
     alwaysVisible?: boolean
   }
 
-  let {
-    text,
-    copyAriaLabel,
-    copyTooltip,
-    alwaysVisible = false,
-  }: Props = $props()
+  let { text, copyAriaLabel, copyTooltip, alwaysVisible = false }: Props = $props()
 
   const ariaLabel = $derived(copyAriaLabel ?? i18n.t('copy.toClipboard'))
   const tooltip = $derived(copyTooltip ?? i18n.t('common.copy'))
@@ -33,14 +28,21 @@
 </script>
 
 <!-- Reveals on hover/focus via a `group` ancestor on hover-capable devices (hidden state gated behind `(hover: hover)`), always visible on touch devices; must not be portalled -->
-<span class={`shrink-0 ${alwaysVisible ? '' : '[@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100'}`}>
+<span
+  class={`shrink-0 ${alwaysVisible ? '' : 'transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0'}`}>
   <Button
     size="sm"
     variant="ghost"
-    ariaLabel={ariaLabel}
-    tooltip={tooltip}
-    onClick={(e) => { e.preventDefault(); e.stopPropagation(); void handleCopy() }}
-    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
+    {ariaLabel}
+    {tooltip}
+    onClick={e => {
+      e.preventDefault()
+      e.stopPropagation()
+      void handleCopy()
+    }}
+    onKeyDown={e => {
+      if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+    }}
     className="bg-transparent text-slate-400 hover:text-cyan-300">
     {#snippet icon()}
       <CopyIcon />

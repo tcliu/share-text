@@ -10,9 +10,7 @@
 
   let { settingsState }: Props = $props()
 
-  const languageOptions = $derived(
-    [...LOCALES].map(locale => ({ value: locale.code, label: locale.label })),
-  )
+  const languageOptions = $derived([...LOCALES].map(locale => ({ value: locale.code, label: locale.label })))
 
   const currentLabel = $derived(
     languageOptions.find(option => option.value === settingsState.draft.preferredLanguage)?.label ??

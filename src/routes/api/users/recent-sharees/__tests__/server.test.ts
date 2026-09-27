@@ -30,7 +30,13 @@ describe('GET /api/users/recent-sharees', () => {
   })
 
   it('rejects requests without a user session', async () => {
-    viewerMocks.resolveViewer.mockResolvedValue({ type: 'anonymous', userId: null, username: null, ip: '127.0.0.1', name: '127.0.0.1' })
+    viewerMocks.resolveViewer.mockResolvedValue({
+      type: 'anonymous',
+      userId: null,
+      username: null,
+      ip: '127.0.0.1',
+      name: '127.0.0.1',
+    })
 
     const response = await GET(event())
 
@@ -39,7 +45,13 @@ describe('GET /api/users/recent-sharees', () => {
   })
 
   it('returns the users the current user has previously shared with', async () => {
-    viewerMocks.resolveViewer.mockResolvedValue({ type: 'user', userId: 1, username: 'alice', ip: '127.0.0.1', name: 'alice' })
+    viewerMocks.resolveViewer.mockResolvedValue({
+      type: 'user',
+      userId: 1,
+      username: 'alice',
+      ip: '127.0.0.1',
+      name: 'alice',
+    })
     usersMocks.listRecentSharees.mockResolvedValue([
       { id: 2, username: 'bob', email: 'bob@example.com', status: 'active' },
     ])

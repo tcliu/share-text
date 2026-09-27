@@ -3,7 +3,7 @@ const STORAGE_KEY_PREFIX = 'share-text:column-widths:'
 const DEFAULT_WIDTH = 128
 
 function clampWidths(widths: number[]): number[] {
-  return widths.map((w) => {
+  return widths.map(w => {
     if (!Number.isFinite(w) || w < 0) {
       return DEFAULT_WIDTH
     }

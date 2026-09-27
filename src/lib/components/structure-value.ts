@@ -101,5 +101,8 @@ export function renameKeyAtPath(root: unknown, path: string[], oldKey: string, n
     next[index] = renameKeyAtPath(root[index], rest, oldKey, newKey)
     return next
   }
-  return { ...(root as Record<string, unknown>), [head]: renameKeyAtPath((root as Record<string, unknown>)[head], rest, oldKey, newKey) }
+  return {
+    ...(root as Record<string, unknown>),
+    [head]: renameKeyAtPath((root as Record<string, unknown>)[head], rest, oldKey, newKey),
+  }
 }

@@ -19,10 +19,7 @@ const FAST_SWIPE_MIN_DISTANCE_PX = 40
  * on form controls or buttons stay taps and are never tracked, so an
  * embedded close button keeps working on touch.
  */
-export function dragCloseDown(
-  element: HTMLElement,
-  options: DragCloseDownOptions,
-): ActionReturn<DragCloseDownOptions> {
+export function dragCloseDown(element: HTMLElement, options: DragCloseDownOptions): ActionReturn<DragCloseDownOptions> {
   let current = options
   let startX: number | null = null
   let startY: number | null = null

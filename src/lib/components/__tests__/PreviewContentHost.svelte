@@ -8,7 +8,11 @@
 
   let { content, documentId }: Props = $props()
 
-  const preview = usePreviewContent(() => content, () => documentId, { debounceMs: 300 })
+  const preview = usePreviewContent(
+    () => content,
+    () => documentId,
+    { debounceMs: 300 },
+  )
 </script>
 
 <span data-testid="preview-content">{preview.value}</span>

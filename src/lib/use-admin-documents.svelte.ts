@@ -98,14 +98,17 @@ export function useAdminDocuments(params: {
   async function load() {
     loading = true
     try {
-      const response = await fetchAdminDocuments({
-        search: searchState.searchQuery,
-        searchKeys: searchState.searchKeys,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-        sortBy: searchState.sortBy,
-        order: searchState.sortDir,
-      }, i18n)
+      const response = await fetchAdminDocuments(
+        {
+          search: searchState.searchQuery,
+          searchKeys: searchState.searchKeys,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          sortBy: searchState.sortBy,
+          order: searchState.sortDir,
+        },
+        i18n,
+      )
       documents = response.documents
       total = response.total
       loaded = true
@@ -327,11 +330,14 @@ export function useAdminDocuments(params: {
     saving = true
     try {
       if (dialogMode === 'add') {
-        await createAdminDocument({
-          name: input.name,
-          content: input.content,
-          documentType: input.documentType,
-        }, i18n)
+        await createAdminDocument(
+          {
+            name: input.name,
+            content: input.content,
+            documentType: input.documentType,
+          },
+          i18n,
+        )
         toast.success(i18n.t('admin.documents.created'))
       } else {
         const target = editTarget
@@ -345,16 +351,20 @@ export function useAdminDocuments(params: {
             editSharedWith.map(user => user.username),
           )
         const visibilityChanged = input.isPublic !== undefined && input.isPublic !== target.isPublic
-        await updateAdminDocument(target.id, {
-          name: input.name,
-          key: input.key,
-          createdBy: input.createdBy,
-          updatedBy: input.updatedBy,
-          content: input.content,
-          documentType: input.documentType,
-          ...(visibilityChanged ? { isPublic: input.isPublic } : {}),
-          ...(sharesChanged ? { sharedWith: input.sharedWith } : {}),
-        }, i18n)
+        await updateAdminDocument(
+          target.id,
+          {
+            name: input.name,
+            key: input.key,
+            createdBy: input.createdBy,
+            updatedBy: input.updatedBy,
+            content: input.content,
+            documentType: input.documentType,
+            ...(visibilityChanged ? { isPublic: input.isPublic } : {}),
+            ...(sharesChanged ? { sharedWith: input.sharedWith } : {}),
+          },
+          i18n,
+        )
         toast.success(i18n.t('admin.documents.updated'))
       }
       dialogOpen = false

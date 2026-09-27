@@ -1,11 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  createI18nStore,
-  createAppI18n,
-  settingDescription,
-  settingLabel,
-  type I18nStore,
-} from '$lib/i18n.svelte'
+import { createI18nStore, createAppI18n, settingDescription, settingLabel, type I18nStore } from '$lib/i18n.svelte'
 
 describe('i18n', () => {
   let i18n: I18nStore

@@ -3,10 +3,8 @@
   import LayoutFocusTarget from './LayoutFocusTarget.svelte'
   import DirtyGuardHost from './DirtyGuardHost.svelte'
 
-  let {
-    withDirtyGuard = false,
-    confirmDiscard = () => {},
-  }: { withDirtyGuard?: boolean; confirmDiscard?: () => void } = $props()
+  let { withDirtyGuard = false, confirmDiscard = () => {} }: { withDirtyGuard?: boolean; confirmDiscard?: () => void } =
+    $props()
 </script>
 
 <Layout>

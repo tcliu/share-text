@@ -209,7 +209,7 @@
     copyPosition="top-right"
     containerClass="overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
     <pre
-      class="max-h-64 min-w-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-xs leading-relaxed text-slate-300">{sample.json}</pre>
+      class="max-h-64 min-w-0 flex-1 overflow-auto p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap text-slate-300">{sample.json}</pre>
   </Copyable>
 {/snippet}
 

@@ -9,10 +9,7 @@
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()
 
-  type State =
-    | { status: 'loading' }
-    | { status: 'error'; error: string }
-    | { status: 'ok'; value?: unknown }
+  type State = { status: 'loading' } | { status: 'error'; error: string } | { status: 'ok'; value?: unknown }
 
   let state = $state<State>({ status: 'loading' })
   let format: 'json' | 'yaml' | 'xml' | null = null
@@ -32,7 +29,10 @@
       })
       .catch(error => {
         if (!cancelled) {
-          state = { status: 'error', error: error instanceof Error ? error.message : i18n.t('structure.invalidContent') }
+          state = {
+            status: 'error',
+            error: error instanceof Error ? error.message : i18n.t('structure.invalidContent'),
+          }
         }
       })
     return () => {
@@ -105,7 +105,6 @@
       value={state.value}
       {editable}
       onChange={onContentChange ? handleNodeChange : undefined}
-      onRenameKey={onContentChange ? handleRenameKey : undefined}
-    />
+      onRenameKey={onContentChange ? handleRenameKey : undefined} />
   {/if}
 </div>

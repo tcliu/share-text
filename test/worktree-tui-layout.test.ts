@@ -50,15 +50,7 @@ const SIZES: Array<[number, number]> = [
 // when open), the focused-row detail line, then status and the help block.
 // Keep this in step with `draw()`; `frameHeight` is the same count computed
 // from the layout budget, so a drift between budget and renderer fails here.
-function drawnLineCount({
-  rows,
-  cols,
-  paneOpen,
-}: {
-  rows: number
-  cols: number
-  paneOpen: boolean
-}) {
+function drawnLineCount({ rows, cols, paneOpen }: { rows: number; cols: number; paneOpen: boolean }) {
   const { boxH, helpLines } = layout({ termRows: rows, termCols: cols }) as LayoutResult
   const { listH, cmdH } = frameSplit({ boxH, paneOpen }) as SplitResult
   let lines = 2 // header + subheader
@@ -337,7 +329,17 @@ describe('changes overlay', () => {
   })
 
   it('marks the focused pane in the header row', () => {
-    const base = { context: 'wt', tab: 0, counts: [2, 0, 0], entries: files, cursor: 0, diffLines, scroll: 0, dialogW: 100, listH: 6 }
+    const base = {
+      context: 'wt',
+      tab: 0,
+      counts: [2, 0, 0],
+      entries: files,
+      cursor: 0,
+      diffLines,
+      scroll: 0,
+      dialogW: 100,
+      listH: 6,
+    }
     const left = buildChangesDialog({ ...base, activePane: 'entries' }) as ChangesDialog
     expect(left.lines[CHANGES_BODY_START].replace(ansi, '').startsWith('│ ▸ FILES')).toBe(true)
     const right = buildChangesDialog({ ...base, activePane: 'diff' }) as ChangesDialog
@@ -373,14 +375,21 @@ describe('changes overlay', () => {
   })
 
   it('reports the focused file and its diff size on the detail line', () => {
-    const detail = String(buildChangesDetail({ tab: 1, entries: branchFiles, cursor: 0, lineCount: 8, truncated: false }))
+    const detail = String(
+      buildChangesDetail({ tab: 1, entries: branchFiles, cursor: 0, lineCount: 8, truncated: false }),
+    )
     expect(detail.replace(ansi, '')).toContain('M src/hooks.server.ts')
     expect(detail.replace(ansi, '')).toContain('8 diff lines')
     expect(String(buildChangesDetail({ tab: 0, entries: [], cursor: 0 }))).toBe('')
   })
 
   it('sizes the fullscreen dialog to exactly the terminal', () => {
-    for (const [rows, cols] of [[24, 80], [20, 60], [30, 100], [40, 120]] as Array<[number, number]>) {
+    for (const [rows, cols] of [
+      [24, 80],
+      [20, 60],
+      [30, 100],
+      [40, 120],
+    ] as Array<[number, number]>) {
       const { dialogW, listH } = changesFullscreenGeometry({ cols, rows }) as { dialogW: number; listH: number }
       expect(dialogW).toBe(Math.max(60, cols))
       const dialog = buildChangesDialog({

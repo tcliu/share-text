@@ -73,7 +73,8 @@
       {/if}
       <Buttons align="right">
         {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleConfirm}>{buttonLabel ?? i18n.t('format.apply')}</Button>
+          <Button variant="primary" accent="cyan" onClick={handleConfirm}
+            >{buttonLabel ?? i18n.t('format.apply')}</Button>
           <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
         {/snippet}
       </Buttons>

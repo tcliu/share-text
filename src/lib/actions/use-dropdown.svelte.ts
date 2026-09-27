@@ -90,8 +90,7 @@ export function useDropdown(get: () => UseDropdownOptions): void {
 
     function isHostHidden(host: HTMLElement): boolean {
       if (!host.isConnected) return true
-      const checkVisibility = (host as unknown as { checkVisibility?: (opts?: unknown) => boolean })
-        .checkVisibility
+      const checkVisibility = (host as unknown as { checkVisibility?: (opts?: unknown) => boolean }).checkVisibility
       if (typeof checkVisibility === 'function') {
         // A throwing checkVisibility is inconclusive; fall through to the
         // rect/geometry checks below rather than swallowing the error.
@@ -105,14 +104,20 @@ export function useDropdown(get: () => UseDropdownOptions): void {
       }
       const rect = host.getBoundingClientRect()
       if (rect.width === 0 && rect.height === 0) return true
-      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) return true
+      if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth)
+        return true
       let el: HTMLElement | null = host.parentElement
       while (el) {
         const style = getComputedStyle(el)
         const overflow = `${style.overflow}${style.overflowX}${style.overflowY}`
         if (/(auto|scroll|hidden|clip)/.test(overflow)) {
           const parentRect = el.getBoundingClientRect()
-          if (rect.bottom < parentRect.top || rect.top > parentRect.bottom || rect.right < parentRect.left || rect.left > parentRect.right) {
+          if (
+            rect.bottom < parentRect.top ||
+            rect.top > parentRect.bottom ||
+            rect.right < parentRect.left ||
+            rect.left > parentRect.right
+          ) {
             return true
           }
         }

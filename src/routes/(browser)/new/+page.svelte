@@ -5,7 +5,14 @@
   import { goto } from '$app/navigation'
   import { getDocumentType } from '$lib/document-types'
   import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, loadDraftDocType, loadDraftName, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
+  import {
+    clearDraft,
+    loadDraft,
+    loadDraftDocType,
+    loadDraftName,
+    saveDraft,
+    NEW_DOCUMENT_DRAFT_ID,
+  } from '$lib/document-drafts'
   import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -103,7 +110,11 @@
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
-      toast.error(i18n.t('doc.toast.cannotSave', { error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }) }))
+      toast.error(
+        i18n.t('doc.toast.cannotSave', {
+          error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }),
+        }),
+      )
       return
     }
     saving = true
@@ -153,11 +164,11 @@
   refreshing={context.loadingDocuments}
   maxContentLength={data.maxContentLength}
   availableTags={[]}
-  savedName={savedName}
+  {savedName}
   onSave={handleSave}
   onReset={handleReset}
   onRename={handleRename}
   onTypeChange={(type: string) => (docType = type)}
   cloneDisabled
   focusOnReset
-  focusOnMount /> 
+  focusOnMount />

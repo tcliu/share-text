@@ -59,7 +59,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
       path: '/',
       maxAge: rememberMe ? ADMIN_SESSION_REMEMBER_MAX_AGE : ADMIN_SESSION_MAX_AGE,
     })
-    logEvent({ ip, action: 'admin_login', details: { username: adminUsername, remember_me: rememberMe, via: 'user-auth' } })
+    logEvent({
+      ip,
+      action: 'admin_login',
+      details: { username: adminUsername, remember_me: rememberMe, via: 'user-auth' },
+    })
     return json({ admin: true })
   }
 

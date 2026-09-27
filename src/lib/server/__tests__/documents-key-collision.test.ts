@@ -27,10 +27,13 @@ const D4E5F6 = [13, 4, 14, 5, 15, 6]
 
 async function seedCollidingKey(key: string) {
   const db = await getDb()
-  await db.query(
-    `insert into documents (key, name, content, created_by, updated_by) values ($1, $2, $3, $4, $5)`,
-    [key, 'existing', '', '10.0.0.200', '10.0.0.200'],
-  )
+  await db.query(`insert into documents (key, name, content, created_by, updated_by) values ($1, $2, $3, $4, $5)`, [
+    key,
+    'existing',
+    '',
+    '10.0.0.200',
+    '10.0.0.200',
+  ])
 }
 
 describe('insertDocument key collision retry', () => {

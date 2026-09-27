@@ -54,7 +54,10 @@ export async function logout(): Promise<void> {
 
 export async function fetchUserSession(): Promise<UserSessionInfo> {
   const response = await fetch(`${AUTH_PATH}/session`)
-  const body = await parseResponse<{ user?: User | null; admin?: AdminIdentity | null }>(response, 'Failed to check session')
+  const body = await parseResponse<{ user?: User | null; admin?: AdminIdentity | null }>(
+    response,
+    'Failed to check session',
+  )
   return { user: body.user ?? null, admin: body.admin ?? null }
 }
 

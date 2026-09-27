@@ -1,16 +1,7 @@
 import { browser } from '$app/environment'
 
 export type UiTheme =
-  | 'dark'
-  | 'light'
-  | 'ember'
-  | 'sepia'
-  | 'nebula'
-  | 'sky'
-  | 'forest'
-  | 'midnight'
-  | 'mint'
-  | 'lavender'
+  'dark' | 'light' | 'ember' | 'sepia' | 'nebula' | 'sky' | 'forest' | 'midnight' | 'mint' | 'lavender'
 
 const STORAGE_KEY = 'share-text:theme'
 

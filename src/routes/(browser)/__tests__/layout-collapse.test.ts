@@ -117,7 +117,9 @@ describe('Collapse document list focus', () => {
     await waitFor(() => {
       expect(getByText('Discard unsaved changes?')).toBeTruthy()
     })
-    expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes('/api/auth/logout') && init?.method === 'POST')).toBe(false)
+    expect(
+      fetchMock.mock.calls.some(([url, init]) => String(url).includes('/api/auth/logout') && init?.method === 'POST'),
+    ).toBe(false)
     expect(confirmDiscard).not.toHaveBeenCalled()
   })
 })

@@ -115,12 +115,20 @@
     <div class="flex items-center gap-2">
       <ThemeMenu align="right" />
       <LanguageMenu align="right" />
-      <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('auth.goToDocuments')}
+        tooltip={i18n.t('auth.goToDocuments')}
+        onClick={() => goto('/')}>
         {#snippet icon()}
           <DocumentIcon />
         {/snippet}
       </Button>
-      <Button size="sm" ariaLabel={i18n.t('list.signOut')} tooltip={i18n.t('list.signOut')} onClick={() => void authState.handleLogout()}>
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('list.signOut')}
+        tooltip={i18n.t('list.signOut')}
+        onClick={() => void authState.handleLogout()}>
         {#snippet icon()}
           <SignOutIcon />
         {/snippet}
@@ -219,12 +227,20 @@
         <AdminDocumentsView documentsState={state.documentsState} />
       {/snippet}
       {#snippet usersToolbar(state: AdminState)}
-        <Button size="sm" ariaLabel={i18n.t('admin.users.add')} tooltip={i18n.t('admin.users.add')} onClick={() => state.usersState.openAdd()}>
+        <Button
+          size="sm"
+          ariaLabel={i18n.t('admin.users.add')}
+          tooltip={i18n.t('admin.users.add')}
+          onClick={() => state.usersState.openAdd()}>
           {#snippet icon()}
             <PlusIcon />
           {/snippet}
         </Button>
-        <Button size="sm" ariaLabel={i18n.t('admin.users.import')} tooltip={i18n.t('admin.users.import')} onClick={() => state.usersState.openImport()}>
+        <Button
+          size="sm"
+          ariaLabel={i18n.t('admin.users.import')}
+          tooltip={i18n.t('admin.users.import')}
+          onClick={() => state.usersState.openImport()}>
           {#snippet icon()}
             <UploadIcon />
           {/snippet}
@@ -241,8 +257,12 @@
         </Button>
         <Button
           size="sm"
-          ariaLabel={state.usersState.selectedCount === 1 ? i18n.t('admin.users.editSelected') : i18n.t('admin.users.setStatus')}
-          tooltip={state.usersState.selectedCount === 1 ? i18n.t('admin.users.editSelected') : i18n.t('admin.users.setStatusFor')}
+          ariaLabel={state.usersState.selectedCount === 1
+            ? i18n.t('admin.users.editSelected')
+            : i18n.t('admin.users.setStatus')}
+          tooltip={state.usersState.selectedCount === 1
+            ? i18n.t('admin.users.editSelected')
+            : i18n.t('admin.users.setStatusFor')}
           disabled={state.usersState.selectedCount === 0}
           onClick={() => state.usersState.handleToolbarEdit()}>
           {#snippet icon()}

@@ -3,7 +3,7 @@
 </script>
 
 <script lang="ts">
-  import { browser } from '$app/environment';
+  import { browser } from '$app/environment'
   import { onDestroy, onMount, tick } from 'svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
@@ -28,7 +28,21 @@
     children?: import('svelte').Snippet
   }
 
-  let { title, titleClass = '', className = '', maxWidth = 'md', height = 'auto', pending = false, allowPendingCancel = false, dismissKeydownCapture = true, fullscreen = false, closeLabel, onCancel, header, children }: Props = $props()
+  let {
+    title,
+    titleClass = '',
+    className = '',
+    maxWidth = 'md',
+    height = 'auto',
+    pending = false,
+    allowPendingCancel = false,
+    dismissKeydownCapture = true,
+    fullscreen = false,
+    closeLabel,
+    onCancel,
+    header,
+    children,
+  }: Props = $props()
 
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
@@ -171,7 +185,7 @@
   row); the dialog stays mounted here for focus and teardown bookkeeping. -->
 <div
   use:positionPanel={() => ({ getTrigger: () => null, getOpen: () => true, presentation: 'sheet' })}
-  class="fixed inset-0 z-40 @container dialog">
+  class="dialog @container fixed inset-0 z-40">
   <button
     type="button"
     data-testid="dialog-overlay"
@@ -192,19 +206,21 @@
       tabindex="-1"
       class={fullscreen
         ? `relative flex h-full w-full flex-col overflow-y-auto bg-slate-900 p-5.5 outline-none ${className}`
-        : `relative flex max-h-[90vh] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 outline-none backdrop-blur @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass} ${className}`}>
+        : `relative flex max-h-[90vh] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur outline-none @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass} ${className}`}>
       <button
         type="button"
         aria-label={resolvedCloseLabel}
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
-        class="absolute right-4 top-4 flex items-center justify-center p-1.5 text-slate-500 outline-none transition hover:text-slate-200 focus:text-slate-200 motion-reduce:transition-none before:absolute before:-inset-1.5 before:content-[''] disabled:cursor-not-allowed disabled:opacity-40">
+        class="absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-200 focus:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
         <CloseIcon className="h-4 w-4" />
       </button>
       {#if header}
         <div class="px-5.5 pt-5.5">{@render header()}</div>
       {:else if title}
-        <h2 id={titleId} class="pl-5.5 pr-12 pt-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">{title}</h2>
+        <h2 id={titleId} class="pt-5.5 pr-12 pl-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
+          {title}
+        </h2>
       {/if}
       <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pb-5.5 outline-none">
         {@render children?.()}

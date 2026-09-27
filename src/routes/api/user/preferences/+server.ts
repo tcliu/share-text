@@ -33,10 +33,7 @@ export const PUT: RequestHandler = async event => {
   try {
     normalized = normalizePreferencesInput(preferences)
   } catch (err) {
-    return json(
-      { error: err instanceof Error ? err.message : 'Invalid preferences' },
-      { status: 400 },
-    )
+    return json({ error: err instanceof Error ? err.message : 'Invalid preferences' }, { status: 400 })
   }
   const saved = await saveUserPreferences(viewer, normalized)
   logAccess({

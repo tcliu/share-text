@@ -12,8 +12,4 @@
   )
 </script>
 
-<iframe
-  title={i18n.t('preview.html')}
-  sandbox=""
-  srcdoc={srcdoc}
-  class="h-full w-full bg-white"></iframe>
+<iframe title={i18n.t('preview.html')} sandbox="" {srcdoc} class="h-full w-full bg-white"></iframe>

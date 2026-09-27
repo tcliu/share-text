@@ -21,7 +21,11 @@ function mockFetch() {
       return Promise.resolve({ ok: true, status: 201, json: async () => ({ document: newDoc }) })
     }
     if (String(url).includes('limit')) {
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({ documents: [newDoc, existingDoc], hasMore: false }) })
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ documents: [newDoc, existingDoc], hasMore: false }),
+      })
     }
     return Promise.resolve({ ok: true, status: 200, json: async () => ({ documents: [existingDoc], hasMore: false }) })
   })

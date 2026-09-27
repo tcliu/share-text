@@ -18,26 +18,20 @@ function boxOf(root: HTMLElement, ri: number, ci: number): HTMLElement {
 function selectorCellOfRow(root: HTMLElement, cellText: string): HTMLElement {
   const rows = Array.from(root.querySelectorAll('thead tr, tbody tr') as NodeListOf<HTMLElement>)
   const row = rows.find(r =>
-    Array.from(r.querySelectorAll('textarea')).some(
-      i => (i as HTMLTextAreaElement).value === cellText,
-    ),
+    Array.from(r.querySelectorAll('textarea')).some(i => (i as HTMLTextAreaElement).value === cellText),
   )
   if (!row) throw new Error(`row with "${cellText}" not found`)
   return row.querySelector('td, th') as HTMLElement
 }
 
 function cellInput(root: HTMLElement, value: string): HTMLTextAreaElement {
-  const input = Array.from(root.querySelectorAll('textarea')).find(
-    i => (i as HTMLTextAreaElement).value === value,
-  )
+  const input = Array.from(root.querySelectorAll('textarea')).find(i => (i as HTMLTextAreaElement).value === value)
   if (!input) throw new Error(`input with value "${value}" not found`)
   return input as HTMLTextAreaElement
 }
 
 function hasCellValue(root: HTMLElement, value: string): boolean {
-  return Array.from(root.querySelectorAll('textarea')).some(
-    i => (i as HTMLTextAreaElement).value === value,
-  )
+  return Array.from(root.querySelectorAll('textarea')).some(i => (i as HTMLTextAreaElement).value === value)
 }
 
 function counter(root: HTMLElement): string {

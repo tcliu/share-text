@@ -44,9 +44,7 @@ describe('GET /api/users/search', () => {
 
   it('searches all users including inactive for an admin', async () => {
     authMocks.isAdminSession.mockReturnValue(true)
-    usersMocks.searchUsers.mockResolvedValue([
-      { id: 2, username: 'bob', email: 'bob@example.com', status: 'inactive' },
-    ])
+    usersMocks.searchUsers.mockResolvedValue([{ id: 2, username: 'bob', email: 'bob@example.com', status: 'inactive' }])
 
     const response = await GET(event('bob'))
 

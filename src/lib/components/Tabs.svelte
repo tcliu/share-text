@@ -20,7 +20,14 @@
     headerClass?: string
   }
 
-  let { tabs, state: tabState, pathname, ariaLabel, class: className = '', headerClass = 'sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-transparent pb-3' }: Props<TState> = $props()
+  let {
+    tabs,
+    state: tabState,
+    pathname,
+    ariaLabel,
+    class: className = '',
+    headerClass = 'sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-transparent pb-3',
+  }: Props<TState> = $props()
 
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedAriaLabel = $derived(ariaLabel ?? i18n.t('tabs.label'))
@@ -43,7 +50,7 @@
                 event.preventDefault()
               }
             }}
-            class={`rounded-lg px-3 py-2 text-sm font-medium outline-none transition motion-reduce:transition-none ${tab.path === pathname ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
+            class={`rounded-lg px-3 py-2 text-sm font-medium transition outline-none motion-reduce:transition-none ${tab.path === pathname ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
             {tab.label}
           </a>
         {:else}
@@ -51,7 +58,7 @@
             type="button"
             aria-pressed={tab.path === activeTab?.path}
             onclick={() => (activePath = tab.path)}
-            class={`rounded-lg px-3 py-2 text-sm font-medium outline-none transition motion-reduce:transition-none ${tab.path === activeTab?.path ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
+            class={`rounded-lg px-3 py-2 text-sm font-medium transition outline-none motion-reduce:transition-none ${tab.path === activeTab?.path ? 'bg-cyan-500 text-onaccent' : 'text-slate-300 hover:text-cyan-300 focus:text-cyan-300'}`}>
             {tab.label}
           </button>
         {/if}

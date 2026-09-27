@@ -1,6 +1,12 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { assertKnownSettingKey, deleteSettingValue, listSettings, setSettingValue, validateSettingValue } from '$lib/server/settings'
+import {
+  assertKnownSettingKey,
+  deleteSettingValue,
+  listSettings,
+  setSettingValue,
+  validateSettingValue,
+} from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord } from '$lib/server/request-utils'
 

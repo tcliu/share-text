@@ -89,13 +89,14 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   if (changes.password !== undefined) {
     details.password_reset = true
   }
-  const action = changes.status !== undefined
-    ? 'admin_user_update_status'
-    : changes.password !== undefined
-      ? 'admin_user_update_password'
-      : changes.username !== undefined
-        ? 'admin_user_update_username'
-        : 'admin_user_update_email'
+  const action =
+    changes.status !== undefined
+      ? 'admin_user_update_status'
+      : changes.password !== undefined
+        ? 'admin_user_update_password'
+        : changes.username !== undefined
+          ? 'admin_user_update_username'
+          : 'admin_user_update_email'
   logEvent({ ip: getClientAddress(), action, details })
 
   return json({ user: result })

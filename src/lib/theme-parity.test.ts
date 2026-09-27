@@ -46,9 +46,7 @@ describe('theme id parity across sync points', () => {
 
   it('allowlists every non-default theme in the app.html pre-paint script', () => {
     const arrayMatch = appHtml.match(/var themes = \[([^\]]+)\]/)
-    const allowed = new Set(
-      arrayMatch ? [...arrayMatch[1].matchAll(/'([a-z]+)'/g)].map(entry => entry[1]) : [],
-    )
+    const allowed = new Set(arrayMatch ? [...arrayMatch[1].matchAll(/'([a-z]+)'/g)].map(entry => entry[1]) : [])
     for (const theme of themes) {
       if (theme === 'dark') {
         expect(allowed.has(theme), 'dark is the no-attribute default').toBe(false)
@@ -80,9 +78,7 @@ describe('theme id parity across sync points', () => {
   })
 
   it('offers every theme in the header menu options', () => {
-    const options = new Set(
-      [...optionsSource.matchAll(/\{ value: '([a-z]+)' \},/g)].map(entry => entry[1]),
-    )
+    const options = new Set([...optionsSource.matchAll(/\{ value: '([a-z]+)' \},/g)].map(entry => entry[1]))
     for (const theme of themes) {
       expect(options.has(theme), `${theme} missing from THEME_MENU_OPTIONS`).toBe(true)
     }

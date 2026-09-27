@@ -1,12 +1,7 @@
 import { toast } from 'svelte-sonner'
 import type { Locale, MessageKey } from './i18n.svelte'
 import { getI18nContext } from './i18n.svelte'
-import {
-  fetchUserPreferences,
-  saveUserPreferences,
-  UserSettingsAuthError,
-  type UserPreferences,
-} from './user-settings'
+import { fetchUserPreferences, saveUserPreferences, UserSettingsAuthError, type UserPreferences } from './user-settings'
 
 export function useUserSettings(onSignedOut: () => void) {
   const i18n = getI18nContext()
@@ -15,10 +10,7 @@ export function useUserSettings(onSignedOut: () => void) {
   let loading = $state(false)
   let pending = $state(false)
 
-  const hasUnsavedChanges = $derived(
-    saved !== null && draft.preferredLanguage !== saved.preferredLanguage,
-  )
-
+  const hasUnsavedChanges = $derived(saved !== null && draft.preferredLanguage !== saved.preferredLanguage)
 
   function handleError(error: unknown, fallbackKey: MessageKey): boolean {
     if (error instanceof UserSettingsAuthError) {

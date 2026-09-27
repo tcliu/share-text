@@ -30,9 +30,7 @@ describe('filterable SelectDropdown', () => {
 
     await fireEvent.input(input, { target: { value: '' } })
 
-    const htmlOption = document.querySelector(
-      '[role="option"][id$="-option-1"]',
-    ) as HTMLElement
+    const htmlOption = document.querySelector('[role="option"][id$="-option-1"]') as HTMLElement
     await physicalClick(htmlOption)
 
     expect(input.value).toBe('HTML')
@@ -106,9 +104,7 @@ describe('filterable SelectDropdown', () => {
     const input = getByRole('combobox') as HTMLInputElement
     await fireEvent.focus(input)
 
-    const markdownOption = document.querySelector(
-      '[role="option"][id$="-option-0"]',
-    ) as HTMLElement
+    const markdownOption = document.querySelector('[role="option"][id$="-option-0"]') as HTMLElement
     const htmlOption = document.querySelector('[role="option"][id$="-option-1"]') as HTMLElement
 
     await fireEvent.mouseEnter(htmlOption)
@@ -122,9 +118,7 @@ describe('filterable SelectDropdown', () => {
     const { getByRole } = render(DropdownHost)
     const input = getByRole('combobox') as HTMLInputElement
     await fireEvent.focus(input)
-    const htmlOption = document.querySelector(
-      '[role="option"][id$="-option-1"]',
-    ) as HTMLElement
+    const htmlOption = document.querySelector('[role="option"][id$="-option-1"]') as HTMLElement
     await physicalClick(htmlOption)
     expect(input.value).toBe('HTML')
     expect(panelOpen()).toBe(false)

@@ -1,11 +1,7 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import { getAdminUsername } from '$lib/server/admin-auth'
-import {
-  getAdminPreferences,
-  normalizeAdminPreferencesInput,
-  saveAdminPreferences,
-} from '$lib/server/admin-config'
+import { getAdminPreferences, normalizeAdminPreferencesInput, saveAdminPreferences } from '$lib/server/admin-config'
 import { logEvent } from '$lib/server/logging'
 
 export const GET: RequestHandler = async () => {

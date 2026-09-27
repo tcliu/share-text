@@ -102,9 +102,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   }
 
   function updateDocumentSummary(id: string, changes: Partial<OwnedDocumentSummary>) {
-    documents = documents.map(document =>
-      document.id === id ? { ...document, ...changes } : document,
-    )
+    documents = documents.map(document => (document.id === id ? { ...document, ...changes } : document))
   }
 
   function loadMore() {

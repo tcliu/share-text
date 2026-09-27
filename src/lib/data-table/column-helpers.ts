@@ -37,9 +37,15 @@ export function realignColumnWidths(
   })
 }
 
-export function resolveColumnWidths<T extends { key: string; widthClass?: string; minWidthClass?: string; width?: string | number; minWidth?: string | number }>(
-  columns: T[],
-): ResolvedColumn<T>[] {
+export function resolveColumnWidths<
+  T extends {
+    key: string
+    widthClass?: string
+    minWidthClass?: string
+    width?: string | number
+    minWidth?: string | number
+  },
+>(columns: T[]): ResolvedColumn<T>[] {
   const pctWidthColumns = columns.filter(
     c =>
       c.widthClass === undefined &&
@@ -77,7 +83,10 @@ export function resolveColumnWidths<T extends { key: string; widthClass?: string
     if (column.minWidthClass === undefined && column.minWidth !== undefined) {
       if (typeof column.minWidth === 'number' && Number.isFinite(column.minWidth) && column.minWidth >= 0) {
         minWidthStyle = `min-width: ${column.minWidth}px`
-      } else if (typeof column.minWidth === 'string' && (column.minWidth.endsWith('%') || CSS_LENGTH_RE.test(column.minWidth))) {
+      } else if (
+        typeof column.minWidth === 'string' &&
+        (column.minWidth.endsWith('%') || CSS_LENGTH_RE.test(column.minWidth))
+      ) {
         minWidthStyle = `min-width: ${column.minWidth}`
       } else {
         invalidWidth(column.key, column.minWidth, 'min-width')

@@ -116,7 +116,6 @@ describe('PUT /api/user/preferences', () => {
     expect(userConfigMocks.saveUserPreferences).not.toHaveBeenCalled()
   })
 
-
   it('saves valid preferences and logs the mutation', async () => {
     const preferences = { preferredLanguage: 'zh-TW' }
     userConfigMocks.saveUserPreferences.mockResolvedValue(preferences)
@@ -145,4 +144,3 @@ describe('PUT /api/user/preferences', () => {
     )
   })
 })
-

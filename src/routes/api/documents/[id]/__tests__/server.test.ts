@@ -36,7 +36,15 @@ describe('PUT /api/documents/[id]', () => {
     settingsMocks.getDocumentKeyLength.mockResolvedValue(6)
     settingsMocks.getMaxContentLength.mockResolvedValue(1024 * 1024)
     documentsMocks.resolveDocumentAccess.mockResolvedValue({
-      document: { id: 'a1b2c3', name: 'Notes', content: 'body', documentType: 'text', tags: [], updatedAt: '', updatedBy: '' },
+      document: {
+        id: 'a1b2c3',
+        name: 'Notes',
+        content: 'body',
+        documentType: 'text',
+        tags: [],
+        updatedAt: '',
+        updatedBy: '',
+      },
       canView: true,
       canEdit: true,
       canDelete: true,
@@ -87,7 +95,9 @@ describe('PUT /api/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: 'Request body must include name, content, documentType, or tags' })
+    await expect(response.json()).resolves.toEqual({
+      error: 'Request body must include name, content, documentType, or tags',
+    })
     expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
   })
 

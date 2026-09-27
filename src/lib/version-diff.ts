@@ -26,15 +26,8 @@ function normalizeNewlineEnding(value: string): string {
 // non-empty inputs are normalized to end with a newline first, since jsdiff
 // otherwise reports a trailing-newline-only difference as a removed/added
 // pair of identical text.
-export function buildSideBySideRows(
-  oldContent: string,
-  newContent: string,
-  diffLib: typeof import('diff'),
-): DiffRow[] {
-  const parts = diffLib.diffLines(
-    normalizeNewlineEnding(oldContent),
-    normalizeNewlineEnding(newContent),
-  )
+export function buildSideBySideRows(oldContent: string, newContent: string, diffLib: typeof import('diff')): DiffRow[] {
+  const parts = diffLib.diffLines(normalizeNewlineEnding(oldContent), normalizeNewlineEnding(newContent))
   const rows: DiffRow[] = []
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]

@@ -62,7 +62,9 @@ describe('GET /api/admin/users', () => {
   })
 
   it('returns paginated users with total', async () => {
-    const response = await GET({ url: new URL('http://localhost/api/admin/users?search=ali&limit=20&offset=0') } as never)
+    const response = await GET({
+      url: new URL('http://localhost/api/admin/users?search=ali&limit=20&offset=0'),
+    } as never)
 
     expect(response.status).toBe(200)
     expect(usersMocks.listUsers).toHaveBeenCalledWith({
@@ -101,7 +103,9 @@ describe('POST /api/admin/users', () => {
   })
 
   it('creates an active user and returns the admin user', async () => {
-    const response = await POST(postEvent({ body: { username: 'alice', email: 'alice@example.com', password: 's3cret' } }))
+    const response = await POST(
+      postEvent({ body: { username: 'alice', email: 'alice@example.com', password: 's3cret' } }),
+    )
 
     expect(response.status).toBe(201)
     await expect(response.json()).resolves.toEqual({ user: adminUser })
@@ -132,7 +136,9 @@ describe('POST /api/admin/users', () => {
   })
 
   it('rejects an invalid status', async () => {
-    const response = await POST(postEvent({ body: { username: 'x', email: 'x@example.com', password: 'x', status: 'banned' } }))
+    const response = await POST(
+      postEvent({ body: { username: 'x', email: 'x@example.com', password: 'x', status: 'banned' } }),
+    )
 
     expect(response.status).toBe(400)
   })

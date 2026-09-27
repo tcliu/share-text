@@ -59,7 +59,7 @@
       {/if}
     </span>
     {#if hasCopyText()}
-      <CopyButton text={copyText ?? ''} {copyAriaLabel} {copyTooltip} alwaysVisible={alwaysVisible} />
+      <CopyButton text={copyText ?? ''} {copyAriaLabel} {copyTooltip} {alwaysVisible} />
     {/if}
   </div>
 {/if}

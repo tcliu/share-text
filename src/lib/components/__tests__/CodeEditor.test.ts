@@ -60,7 +60,7 @@ describe('CodeEditor syncing document content', () => {
     await settle()
 
     expect(getByTestId('content-length').textContent).toBe(String(SHORT_CONTENT.length))
-    expect(rejections.map(reason => reason instanceof Error ? reason.message : String(reason))).toEqual([])
+    expect(rejections.map(reason => (reason instanceof Error ? reason.message : String(reason)))).toEqual([])
   })
 })
 

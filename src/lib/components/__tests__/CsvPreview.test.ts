@@ -22,26 +22,20 @@ function headerCell(root: HTMLElement, text: string): HTMLElement {
 function selectorCellOfRow(root: HTMLElement, rowText: string): HTMLElement {
   const rows = Array.from(root.querySelectorAll('thead tr, tbody tr') as NodeListOf<HTMLElement>)
   const row = rows.find(r =>
-    Array.from(r.querySelectorAll('textarea')).some(
-      i => (i as HTMLTextAreaElement).value === rowText,
-    ),
+    Array.from(r.querySelectorAll('textarea')).some(i => (i as HTMLTextAreaElement).value === rowText),
   )
   if (!row) throw new Error(`row with "${rowText}" not found`)
   return row.querySelector('td, th') as HTMLElement
 }
 
 function cellInput(root: HTMLElement, value: string): HTMLTextAreaElement {
-  const input = Array.from(root.querySelectorAll('textarea')).find(
-    i => (i as HTMLTextAreaElement).value === value,
-  )
+  const input = Array.from(root.querySelectorAll('textarea')).find(i => (i as HTMLTextAreaElement).value === value)
   if (!input) throw new Error(`input with value "${value}" not found`)
   return input as HTMLTextAreaElement
 }
 
 function hasCellValue(root: HTMLElement, value: string): boolean {
-  return Array.from(root.querySelectorAll('textarea')).some(
-    i => (i as HTMLTextAreaElement).value === value,
-  )
+  return Array.from(root.querySelectorAll('textarea')).some(i => (i as HTMLTextAreaElement).value === value)
 }
 
 function allRows(root: HTMLElement): HTMLElement[] {
@@ -320,7 +314,8 @@ describe('CsvPreview (custom grid)', () => {
   it('navigates between cells with Tab / Shift+Tab', async () => {
     render(CsvPreview, { content: 'a,b,c\n1,2,3\n4,5,6' })
     const root = await screen.findByTestId('csv-preview')
-    const cell = (r: number, c: number) => root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLTextAreaElement
+    const cell = (r: number, c: number) =>
+      root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLTextAreaElement
 
     cell(0, 0).focus()
     fireEvent.keyDown(cell(0, 0), { key: 'Tab' })

@@ -6,7 +6,9 @@
   "singleQuote": true,
   "arrowParens": "avoid",
   "bracketSameLine": true,
-  "plugins": ["prettier-plugin-svelte"],
+  "plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "./src/styles.css",
+  "tailwindFunctions": ["clsx", "cn", "cva", "twMerge"],
   "overrides": [
     {
       "files": "*.svelte",

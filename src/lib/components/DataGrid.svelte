@@ -63,7 +63,7 @@
   const model = createGridModel({
     getValue: () => value,
     getHeaders: () => showHeaders,
-    onChange: (m) => onChange?.(m),
+    onChange: m => onChange?.(m),
     // Column cap is fixed config captured at grid creation.
     // svelte-ignore state_referenced_locally
     maxColumns,
@@ -88,8 +88,7 @@
   // the cell on every side — the base row's top/left grid lines come from the
   // neighboring cells, but the expanded area below the base row would otherwise
   // fall outside them.
-  const EDITOR_OVERLAY_STYLE =
-    `position:absolute;top:0;left:-1px;right:-1px;width:auto;border-left:1px solid ${RANGE_COLOR};border-right:1px solid ${RANGE_COLOR};border-bottom:1px solid ${RANGE_COLOR};`
+  const EDITOR_OVERLAY_STYLE = `position:absolute;top:0;left:-1px;right:-1px;width:auto;border-left:1px solid ${RANGE_COLOR};border-right:1px solid ${RANGE_COLOR};border-bottom:1px solid ${RANGE_COLOR};`
   // Appended to EDITOR_OVERLAY_STYLE when the editing value exceeds
   // EDITOR_MAX_LINES, so the overlay scrolls instead of growing further.
   const EDITOR_OVERLAY_SCROLL_STYLE = 'overflow-y:auto;'
@@ -111,10 +110,7 @@
   // inside the scroll area.
   const TABLE_LEFT_BORDER = 1
   function resolveInitialWidths(): number[] {
-    const available = Math.max(
-      0,
-      (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
-    )
+    const available = Math.max(0, (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER)
     const widths: number[] = []
     let sum = 0
     for (let i = 0; i < model.columnCount; i++) {
@@ -200,8 +196,12 @@
   }
 
   const focus = {
-    cellBox(ri: number, ci: number) { cellInputEl(ri, ci)?.closest<HTMLElement>('td, th')?.focus() },
-    cellInput(ri: number, ci: number) { cellInputEl(ri, ci)?.focus() },
+    cellBox(ri: number, ci: number) {
+      cellInputEl(ri, ci)?.closest<HTMLElement>('td, th')?.focus()
+    },
+    cellInput(ri: number, ci: number) {
+      cellInputEl(ri, ci)?.focus()
+    },
     cellInputAtEnd(ri: number, ci: number) {
       tick().then(() => {
         const input = cellInputEl(ri, ci)
@@ -224,9 +224,15 @@
       model.setValue(ri, ci, value)
       cellInputEl(ri, ci)?.focus()
     },
-    rowSelector(ri: number) { gridEl<HTMLElement>(`[data-row-selector="${ri}"]`)?.focus() },
-    columnSelector(ci: number) { gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)?.focus() },
-    isCellInputFocused(ri: number, ci: number) { return document.activeElement === cellInputEl(ri, ci) },
+    rowSelector(ri: number) {
+      gridEl<HTMLElement>(`[data-row-selector="${ri}"]`)?.focus()
+    },
+    columnSelector(ci: number) {
+      gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)?.focus()
+    },
+    isCellInputFocused(ri: number, ci: number) {
+      return document.activeElement === cellInputEl(ri, ci)
+    },
   }
 
   const clipboard = createGridClipboard()
@@ -265,8 +271,8 @@
     getContainer: () => gridContainer,
     isDragging: sel.isDragging,
     onCellHover: (ri, ci) => sel.handleCellMouseOver(ri, ci),
-    onRowHover: (ri) => sel.handleRowSelectorMouseOver(ri),
-    onColHover: (ci) => sel.handleColumnSelectorMouseOver(ci),
+    onRowHover: ri => sel.handleRowSelectorMouseOver(ri),
+    onColHover: ci => sel.handleColumnSelectorMouseOver(ci),
   })
 
   $effect(() => () => autoScroll.stop())
@@ -564,14 +570,28 @@
   }
 </script>
 
-<svelte:window onmouseup={handleWindowMouseUp} onmousemove={event => { autoScroll.onWindowMouseMove(event); resize.handleResizeMouseMove(event) }} />
+<svelte:window
+  onmouseup={handleWindowMouseUp}
+  onmousemove={event => {
+    autoScroll.onWindowMouseMove(event)
+    resize.handleResizeMouseMove(event)
+  }} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div data-testid={testId} onkeydown={handleHistoryKeydown} class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
+<div
+  data-testid={testId}
+  onkeydown={handleHistoryKeydown}
+  class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
   <div class="flex flex-none flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-1">
       {#if !hideHeaderToggle}
-        <Button size="sm" ariaLabel={i18n.t('grid.toggleHeader')} tooltip={i18n.t('grid.toggleHeader')} ariaPressed={showHeaders} onClick={() => (showHeaders = !showHeaders)} disabled={!editable}>
+        <Button
+          size="sm"
+          ariaLabel={i18n.t('grid.toggleHeader')}
+          tooltip={i18n.t('grid.toggleHeader')}
+          ariaPressed={showHeaders}
+          onClick={() => (showHeaders = !showHeaders)}
+          disabled={!editable}>
           {#snippet icon()}
             <TableIcon />
           {/snippet}
@@ -678,7 +698,8 @@
         {/snippet}
       </Button>
     </div>
-    <span class="text-xs text-slate-400">{i18n.t('grid.rowColCount', { rows: model.rowCount, columns: model.columnCount })}</span>
+    <span class="text-xs text-slate-400"
+      >{i18n.t('grid.rowColCount', { rows: model.rowCount, columns: model.columnCount })}</span>
   </div>
 
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md" bind:this={rootEl}>
@@ -692,9 +713,9 @@
         style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
         {#if renderedColumnWidths.length > 0}
           <colgroup>
-            <col style="width:2.25rem;">
+            <col style="width:2.25rem;" />
             {#each Array.from({ length: model.columnCount }) as _, ci}
-              <col style="width:{renderedColumnWidths[ci]}px;">
+              <col style="width:{renderedColumnWidths[ci]}px;" />
             {/each}
           </colgroup>
         {/if}
@@ -705,7 +726,7 @@
               <th
                 role="columnheader"
                 aria-label={i18n.t('grid.selectAll')}
-                class="sticky left-0 top-0 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
+                class="sticky top-0 left-0 z-30 w-9 border-r border-b border-r-slate-500 border-b-slate-600 bg-slate-900 p-0 text-center font-normal"
                 style="min-width:2.25rem;max-width:2.25rem;{sel.selectAllBorderStyle()}"
                 data-select-all
                 tabindex="-1"
@@ -730,10 +751,14 @@
                   <span class="flex w-full items-center justify-center gap-1.5 text-center">
                     <span>{columnLabels?.[ci] ?? columnLetter(ci)}</span>
                     <span
-                      class="flex flex-col text-slate-400 transition-opacity {isSortActive ? 'opacity-100' : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 focus-within:opacity-100">
+                      class="flex flex-col text-slate-400 transition-opacity {isSortActive
+                        ? 'opacity-100'
+                        : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 focus-within:opacity-100">
                       <button
                         type="button"
-                        class="leading-none outline-none transition-colors {isSortAsc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
+                        class="leading-none transition-colors outline-none {isSortAsc
+                          ? 'text-cyan-400'
+                          : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={i18n.t('grid.sortAsc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'asc')}
@@ -742,7 +767,9 @@
                       </button>
                       <button
                         type="button"
-                        class="-mt-1 leading-none outline-none transition-colors {isSortDesc ? 'text-cyan-400' : 'hover:text-cyan-300 focus:text-cyan-300'}"
+                        class="-mt-1 leading-none transition-colors outline-none {isSortDesc
+                          ? 'text-cyan-400'
+                          : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={i18n.t('grid.sortDesc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'desc')}
@@ -754,12 +781,11 @@
                   {#if editable}
                     <button
                       type="button"
-                      class="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
+                      class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
                       style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
                       aria-label={i18n.t('grid.resizeColumn', { index: ci + 1 })}
                       onmousedown={event => resize.startColumnResize(event, ci)}
-                      onkeydown={event => resize.handleResizeKeydown(event, ci)}
-                      ></button>
+                      onkeydown={event => resize.handleResizeKeydown(event, ci)}></button>
                   {/if}
                 </th>
               {/each}
@@ -768,16 +794,15 @@
               <tr aria-rowindex="2" class="sticky top-6 z-20 bg-slate-900">
                 <th
                   role="columnheader"
-                  class="sticky left-0 top-6 z-30 w-9 border-b border-r border-b-slate-600 border-r-slate-500 bg-slate-900 p-0 text-center font-normal"
-                  style="min-width:2.25rem;max-width:2.25rem;{sel.rowNumberBorderStyle(0)}"
-                ></th>
+                  class="sticky top-6 left-0 z-30 w-9 border-r border-b border-r-slate-500 border-b-slate-600 bg-slate-900 p-0 text-center font-normal"
+                  style="min-width:2.25rem;max-width:2.25rem;{sel.rowNumberBorderStyle(0)}"></th>
                 {#each model.rows[0].cells as cell, ci (cell.id)}
                   <th
                     role="columnheader"
                     aria-colindex={ci + 1}
                     aria-selected={sel.isCellSelected(0, ci)}
                     class={sel.cellClass(
-                      'min-w-32 border-b border-r border-b-slate-600 border-r-slate-800 p-0 font-semibold outline-none',
+                      'min-w-32 border-r border-b border-r-slate-800 border-b-slate-600 p-0 font-semibold outline-none',
                       0,
                       ci,
                     )}
@@ -809,95 +834,94 @@
             {/if}
           </thead>
         {/if}
-        </table>
-      </div>
-      <div class="min-h-0 flex-1 overflow-auto" bind:this={gridContainer}>
-        <table
-          role="grid"
-          aria-label={i18n.t('grid.spreadsheet')}
-          aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
-          aria-colcount={model.columnCount}
-class="border-separate border-spacing-0 border-l border-slate-800 text-sm"
+      </table>
+    </div>
+    <div class="min-h-0 flex-1 overflow-auto" bind:this={gridContainer}>
+      <table
+        role="grid"
+        aria-label={i18n.t('grid.spreadsheet')}
+        aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
+        aria-colcount={model.columnCount}
+        class="border-separate border-spacing-0 border-l border-slate-800 text-sm"
         style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
-          {#if renderedColumnWidths.length > 0}
-            <colgroup>
-              <col style="width:2.25rem;">
-              {#each Array.from({ length: model.columnCount }) as _, ci}
-                <col style="width:{renderedColumnWidths[ci]}px;">
-              {/each}
-            </colgroup>
-          {/if}
-          {#if model.rowCount > 0}
-            <tbody>
-              {#each showHeaders ? model.rows.slice(1) : model.rows as row, ri (row.id)}
-                {@const actualRi = showHeaders ? ri + 1 : ri}
-                <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
+        {#if renderedColumnWidths.length > 0}
+          <colgroup>
+            <col style="width:2.25rem;" />
+            {#each Array.from({ length: model.columnCount }) as _, ci}
+              <col style="width:{renderedColumnWidths[ci]}px;" />
+            {/each}
+          </colgroup>
+        {/if}
+        {#if model.rowCount > 0}
+          <tbody>
+            {#each showHeaders ? model.rows.slice(1) : model.rows as row, ri (row.id)}
+              {@const actualRi = showHeaders ? ri + 1 : ri}
+              <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
+                <!-- svelte-ignore a11y_no_static_element_interactions -->
+                <td
+                  role="rowheader"
+                  aria-rowindex={showHeaders ? ri + 3 : ri + 2}
+                  aria-selected={sel.selectedRows.has(actualRi)}
+                  class="select-none {sel.rowSelectorClass(actualRi)}"
+                  style={sel.rowNumberBorderStyle(actualRi)}
+                  data-row-selector={actualRi}
+                  tabindex="-1"
+                  onmousedown={event => sel.handleRowSelectorMousedown(event, actualRi)}
+                  onmouseenter={() => sel.handleRowSelectorMouseOver(actualRi)}
+                  onkeydown={event => sel.handleRowSelectorKeydown(event, actualRi)}>
+                  <span class="px-1.5 text-xs text-slate-500">{ri + 1}</span>
+                </td>
+                {#each row.cells as cell, ci (cell.id)}
+                  {@const lineCount = cell.value.split('\n').length}
+                  {@const expanded = isCellEditing(actualRi, ci) && lineCount > 1}
+                  {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <td
-                    role="rowheader"
-                    aria-rowindex={showHeaders ? ri + 3 : ri + 2}
-                    aria-selected={sel.selectedRows.has(actualRi)}
-                    class="select-none {sel.rowSelectorClass(actualRi)}"
-                    style={sel.rowNumberBorderStyle(actualRi)}
-                    data-row-selector={actualRi}
+                    role="gridcell"
+                    aria-colindex={ci + 1}
+                    aria-selected={sel.isCellSelected(actualRi, ci)}
+                    class={sel.cellClass('min-w-32 border-r border-b border-slate-800 p-0 outline-none', actualRi, ci)}
+                    style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci), expanded)}
                     tabindex="-1"
-                    onmousedown={event => sel.handleRowSelectorMousedown(event, actualRi)}
-                    onmouseenter={() => sel.handleRowSelectorMouseOver(actualRi)}
-                    onkeydown={event => sel.handleRowSelectorKeydown(event, actualRi)}>
-                    <span class="px-1.5 text-xs text-slate-500">{ri + 1}</span>
+                    onmousedown={event => sel.handleCellMousedown(event, actualRi, ci)}
+                    ondblclick={event => sel.handleCellDoubleClick(event, actualRi, ci)}
+                    onmouseenter={() => sel.handleCellMouseOver(actualRi, ci)}
+                    onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
+                    onpaste={event => handleBoxPaste(event, actualRi, ci)}>
+                    <textarea
+                      data-row={actualRi}
+                      data-col={ci}
+                      rows={expanded ? editorLines : 1}
+                      wrap="off"
+                      class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
+                      style={expanded
+                        ? EDITOR_OVERLAY_STYLE + (lineCount > EDITOR_MAX_LINES ? EDITOR_OVERLAY_SCROLL_STYLE : '')
+                        : ''}
+                      value={cell.value}
+                      readonly={!editable}
+                      oninput={event => editable && model.setValue(actualRi, ci, event.currentTarget.value)}
+                      onfocus={() => handleInputFocus(actualRi, ci)}
+                      onblur={() => handleBodyBlur()}
+                      onkeydown={event => editable && handleInputKeydown(event, actualRi, ci)}></textarea>
                   </td>
-                  {#each row.cells as cell, ci (cell.id)}
-                    {@const lineCount = cell.value.split('\n').length}
-                    {@const expanded = isCellEditing(actualRi, ci) && lineCount > 1}
-                    {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
-                    <!-- svelte-ignore a11y_no_static_element_interactions -->
-                    <td
-                      role="gridcell"
-                      aria-colindex={ci + 1}
-                      aria-selected={sel.isCellSelected(actualRi, ci)}
-                      class={sel.cellClass(
-                        'min-w-32 border-b border-r border-slate-800 p-0 outline-none',
-                        actualRi,
-                        ci,
-                      )}
-                      style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci), expanded)}
-                      tabindex="-1"
-                      onmousedown={event => sel.handleCellMousedown(event, actualRi, ci)}
-                      ondblclick={event => sel.handleCellDoubleClick(event, actualRi, ci)}
-                      onmouseenter={() => sel.handleCellMouseOver(actualRi, ci)}
-                      onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
-                      onpaste={event => handleBoxPaste(event, actualRi, ci)}>
-                      <textarea
-                        data-row={actualRi}
-                        data-col={ci}
-                        rows={expanded ? editorLines : 1}
-                        wrap="off"
-                        class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
-                        style={expanded
-                          ? EDITOR_OVERLAY_STYLE + (lineCount > EDITOR_MAX_LINES ? EDITOR_OVERLAY_SCROLL_STYLE : '')
-                          : ''}
-                        value={cell.value}
-                        readonly={!editable}
-                        oninput={event => editable && model.setValue(actualRi, ci, event.currentTarget.value)}
-                        onfocus={() => handleInputFocus(actualRi, ci)}
-                        onblur={() => handleBodyBlur()}
-                        onkeydown={event => editable && handleInputKeydown(event, actualRi, ci)}></textarea>
-                    </td>
-                  {/each}
-                </tr>
-              {/each}
-            </tbody>
-          {/if}
-        </table>
-
-        {#if model.rowCount === 0}
-          <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
-            <span>No content to preview</span>
-            <button class="rounded border border-slate-700 px-3 py-1 text-slate-300 outline-none transition hover:bg-slate-800 focus:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40" onclick={() => sel.addRow()} disabled={!editable}>
-              Add row
-            </button>
-          </div>
+                {/each}
+              </tr>
+            {/each}
+          </tbody>
         {/if}
-      </div>
+      </table>
+
+      {#if model.rowCount === 0}
+        <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
+          <span>No content to preview</span>
+          <button
+            class="rounded border border-slate-700 px-3 py-1 text-slate-300 transition outline-none hover:bg-slate-800 focus:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+            onclick={() => sel.addRow()}
+            disabled={!editable}>
+            Add row
+          </button>
+        </div>
+      {/if}
+    </div>
   </div>
 </div>

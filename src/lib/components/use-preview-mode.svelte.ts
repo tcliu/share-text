@@ -1,9 +1,6 @@
 import { replaceState } from '$app/navigation'
 import { page } from '$app/state'
-import {
-  loadEditorPreviewSplit,
-  saveEditorPreviewSplit,
-} from '$lib/editor-preview-split'
+import { loadEditorPreviewSplit, saveEditorPreviewSplit } from '$lib/editor-preview-split'
 
 export type PreviewMode = 'editor' | 'split' | 'preview'
 
@@ -59,14 +56,30 @@ export function usePreviewMode(hasPreview: () => boolean) {
   }
 
   return {
-    get previewMode() { return previewMode },
-    get showPreview() { return showPreview },
-    get previewOnly() { return previewOnly },
-    get editorActive() { return editorActive },
-    get previewActive() { return previewActive },
-    get editorDisabled() { return editorDisabled },
-    get previewDisabled() { return previewDisabled },
-    get editorWidthPct() { return editorWidthPct },
+    get previewMode() {
+      return previewMode
+    },
+    get showPreview() {
+      return showPreview
+    },
+    get previewOnly() {
+      return previewOnly
+    },
+    get editorActive() {
+      return editorActive
+    },
+    get previewActive() {
+      return previewActive
+    },
+    get editorDisabled() {
+      return editorDisabled
+    },
+    get previewDisabled() {
+      return previewDisabled
+    },
+    get editorWidthPct() {
+      return editorWidthPct
+    },
     set editorWidthPct(value: number) {
       editorWidthPct = value
       saveEditorPreviewSplit(value)

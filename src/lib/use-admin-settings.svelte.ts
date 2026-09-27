@@ -44,12 +44,12 @@ export function useAdminSettings(onSignedOut: () => void) {
   ): { ok: true; value: number } | { ok: false; error: string } {
     const parsed = parseNumberWithSeparators(raw)
     if (!Number.isInteger(parsed)) {
-      return { ok: false, error: i18n.t('admin.settingMustBeInteger', { name: settingLabel(i18n, setting.key) ?? setting.label }) }
+      return {
+        ok: false,
+        error: i18n.t('admin.settingMustBeInteger', { name: settingLabel(i18n, setting.key) ?? setting.label }),
+      }
     }
-    if (
-      parsed < (setting.min ?? Number.NEGATIVE_INFINITY) ||
-      parsed > (setting.max ?? Number.POSITIVE_INFINITY)
-    ) {
+    if (parsed < (setting.min ?? Number.NEGATIVE_INFINITY) || parsed > (setting.max ?? Number.POSITIVE_INFINITY)) {
       return {
         ok: false,
         error: i18n.t('admin.settingMustBeBetween', {

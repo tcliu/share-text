@@ -120,7 +120,11 @@
 </script>
 
 {#if open}
-  <BaseDialog title={i18n.t('tags.title')} maxWidth="lg" onCancel={handleCancelRequest} dismissKeydownCapture={!discardPromptOpen}>
+  <BaseDialog
+    title={i18n.t('tags.title')}
+    maxWidth="lg"
+    onCancel={handleCancelRequest}
+    dismissKeydownCapture={!discardPromptOpen}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
         <TagInput
@@ -147,7 +151,7 @@
         </TagInput>
       </FormField>
 
-    <Buttons align="right">
+      <Buttons align="right">
         {#snippet children()}
           <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{i18n.t('common.ok')}</Button>
           <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>

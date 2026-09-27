@@ -36,9 +36,7 @@ function renderDialog(overrides: Partial<Props> = {}) {
 // The overlay dismiss button shares the dialog close button's accessible
 // name; select the dialog's own close affordance, never the overlay.
 function getDialogCloseButton(queries: { getAllByLabelText: (label: string) => HTMLElement[] }) {
-  const buttons = queries
-    .getAllByLabelText('Close dialog')
-    .filter(button => !button.hasAttribute('data-testid'))
+  const buttons = queries.getAllByLabelText('Close dialog').filter(button => !button.hasAttribute('data-testid'))
   return buttons[buttons.length - 1]
 }
 
@@ -121,9 +119,7 @@ describe('ShareDialog', () => {
   })
 
   it('seeds suggestions with previously shared users for a normal user', async () => {
-    mockedFetchRecentSharees.mockResolvedValue([
-      { id: 2, username: 'bob', email: 'bob@example.com' },
-    ])
+    mockedFetchRecentSharees.mockResolvedValue([{ id: 2, username: 'bob', email: 'bob@example.com' }])
     const { findByText } = renderDialog()
 
     expect(await findByText('bob')).toBeTruthy()
@@ -147,9 +143,7 @@ describe('ShareDialog', () => {
 
   it('searches all users while typing for an admin', async () => {
     vi.useFakeTimers()
-    mockedSearchUsers.mockResolvedValue([
-      { id: 2, username: 'bob', email: 'bob@example.com' },
-    ])
+    mockedSearchUsers.mockResolvedValue([{ id: 2, username: 'bob', email: 'bob@example.com' }])
     const { getByLabelText, queryByText } = renderDialog({ isAdmin: true })
 
     fireEvent.input(getByLabelText('Shared with'), { target: { value: 'bo' } })

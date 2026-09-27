@@ -125,7 +125,12 @@ describe('POST /api/auth/login', () => {
     expect(mocks.findUserByCredentials).toHaveBeenCalledWith('alice', 'secret')
     expect(mocks.claimAnonymousDocuments).toHaveBeenCalled()
     const cookie = store.get('share-text-user-session')
-    expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: 'strict', path: '/', maxAge: USER_SESSION_MAX_AGE })
+    expect(cookie?.options).toMatchObject({
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: USER_SESSION_MAX_AGE,
+    })
     expect(mocks.createSessionToken).not.toHaveBeenCalled()
   })
 
@@ -151,7 +156,12 @@ describe('POST /api/auth/login', () => {
     expect(mocks.createSessionToken).toHaveBeenCalledWith(ADMIN_SESSION_TTL_MS)
     const cookie = store.get('share-text-admin-session')
     expect(cookie?.value).toBe('signed-token')
-    expect(cookie?.options).toMatchObject({ httpOnly: true, sameSite: 'strict', path: '/', maxAge: ADMIN_SESSION_MAX_AGE })
+    expect(cookie?.options).toMatchObject({
+      httpOnly: true,
+      sameSite: 'strict',
+      path: '/',
+      maxAge: ADMIN_SESSION_MAX_AGE,
+    })
   })
 
   it('matches the admin username case-insensitively', async () => {

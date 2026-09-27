@@ -37,10 +37,8 @@
   const yearOf = (value: string) => Number(value.slice(0, 4))
   const monthOf = (value: string) => Number(value.slice(5, 7)) - 1
   const dayOf = (value: string) => Number(value.slice(8, 10))
-  const daysInMonth = (year: number, month: number) =>
-    new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  const weekdayOf = (value: string) =>
-    new Date(Date.UTC(yearOf(value), monthOf(value), dayOf(value))).getUTCDay()
+  const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+  const weekdayOf = (value: string) => new Date(Date.UTC(yearOf(value), monthOf(value), dayOf(value))).getUTCDay()
 
   function todayIso(): string {
     const now = new Date()
@@ -122,13 +120,7 @@
   })
 
   const triggerLabel = $derived(
-    start && end
-      ? `${start} – ${end}`
-      : start
-        ? `${start} – …`
-        : end
-          ? `… – ${end}`
-          : i18n.t('range.selectDates'),
+    start && end ? `${start} – ${end}` : start ? `${start} – …` : end ? `… – ${end}` : i18n.t('range.selectDates'),
   )
 
   const dayNodes = new Map<string, HTMLButtonElement>()
@@ -293,29 +285,29 @@
         align: 'left',
         autoPlace: true,
       })}
-      class="fixed left-0 top-0 z-40 w-[17rem] max-w-[calc(100vw-1rem)] rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-2xl shadow-slate-950/60 backdrop-blur">
+      class="fixed top-0 left-0 z-40 w-[17rem] max-w-[calc(100vw-1rem)] rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-2xl shadow-slate-950/60 backdrop-blur">
       <div class="mb-1.5 flex items-center justify-between gap-1">
         <button
           type="button"
           aria-label={i18n.t('range.prevMonth')}
           onclick={prevMonth}
-            class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! outline-none transition hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
-            <ChevronLeftIcon className="h-4 w-4" />
+          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
+          <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <span class="text-xs font-semibold text-slate-200">{monthLabel}</span>
         <button
           type="button"
           aria-label={i18n.t('range.nextMonth')}
           onclick={nextMonth}
-            class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! outline-none transition hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
-            <ChevronRightIcon className="h-4 w-4" />
+          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
+          <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
 
       <div class="grid grid-cols-7 gap-1" role="grid" aria-label={i18n.t('range.calendar')}>
         <div class="contents" role="row">
           {#each weekdayLabels as label}
-              <div role="columnheader" class="py-0.5 text-center text-[10px] font-semibold uppercase text-slate-500">
+            <div role="columnheader" class="py-0.5 text-center text-[10px] font-semibold text-slate-500 uppercase">
               {label}
             </div>
           {/each}
@@ -338,7 +330,7 @@
                     aria-current={cell.day === todayIso() ? 'date' : undefined}
                     onclick={() => selectDay(cell.day as string)}
                     onkeydown={event => onDayKeydown(event, cell.day as string)}
-                    class={`flex h-8 w-8 items-center justify-center rounded-md text-xs! outline-none transition motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${
+                    class={`flex h-8 w-8 items-center justify-center rounded-md text-xs! transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 motion-reduce:transition-none ${
                       selected
                         ? 'bg-cyan-500 font-semibold text-onaccent!'
                         : between
@@ -362,7 +354,7 @@
           type="button"
           disabled={!start && !end}
           onclick={clear}
-          class="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-slate-500! outline-none transition hover:text-rose-300! disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
+          class="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-slate-500! transition outline-none hover:text-rose-300! disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
           {i18n.t('range.clear')}
         </button>
       </div>

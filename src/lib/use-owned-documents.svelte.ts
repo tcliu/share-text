@@ -59,14 +59,17 @@ export function useOwnedDocuments(onSignedOut: () => void) {
   async function load() {
     loading = true
     try {
-      const response = await fetchOwnedDocuments({
-        search: searchState.searchQuery,
-        searchKeys: searchState.searchKeys,
-        limit: pageSize,
-        offset: (page - 1) * pageSize,
-        sortBy: searchState.sortBy,
-        order: searchState.sortDir,
-      }, i18n)
+      const response = await fetchOwnedDocuments(
+        {
+          search: searchState.searchQuery,
+          searchKeys: searchState.searchKeys,
+          limit: pageSize,
+          offset: (page - 1) * pageSize,
+          sortBy: searchState.sortBy,
+          order: searchState.sortDir,
+        },
+        i18n,
+      )
       documents = response.documents
       total = response.total
       loaded = true

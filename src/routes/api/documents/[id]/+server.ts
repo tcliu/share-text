@@ -59,7 +59,10 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
         }
         if (tag && typeof tag === 'object' && typeof (tag as { name?: unknown }).name === 'string') {
           const rawColor = (tag as { color?: unknown }).color
-          const color = typeof rawColor === 'string' && isTagColor(rawColor) ? rawColor : getDefaultTagColor((tag as { name: string }).name)
+          const color =
+            typeof rawColor === 'string' && isTagColor(rawColor)
+              ? rawColor
+              : getDefaultTagColor((tag as { name: string }).name)
           return [{ name: (tag as { name: string }).name, color }]
         }
         return []
@@ -96,7 +99,10 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
     return json({ error: 'Document not found' }, { status: 404 })
   }
   if (!access.canEdit) {
-    return json({ error: 'You do not have permission to edit this document' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
+    return json(
+      { error: 'You do not have permission to edit this document' },
+      { status: viewer.type === 'anonymous' ? 404 : 403 },
+    )
   }
 
   const startedAt = Date.now()
@@ -105,7 +111,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
     return json({ error: 'Document not found' }, { status: 404 })
   }
 
-  const details: Record<string, unknown> = { id, name: document.name, elapsed_ms: Date.now() - startedAt, content_size: contentByteSize(document.content) }
+  const details: Record<string, unknown> = {
+    id,
+    name: document.name,
+    elapsed_ms: Date.now() - startedAt,
+    content_size: contentByteSize(document.content),
+  }
   if (document.documentType !== undefined) {
     details.type = document.documentType
   }
@@ -126,7 +137,10 @@ export const DELETE: RequestHandler = async ({ params, getClientAddress, cookies
     return json({ error: 'Document not found' }, { status: 404 })
   }
   if (!access.canDelete) {
-    return json({ error: 'You do not have permission to delete this document' }, { status: viewer.type === 'anonymous' ? 404 : 403 })
+    return json(
+      { error: 'You do not have permission to delete this document' },
+      { status: viewer.type === 'anonymous' ? 404 : 403 },
+    )
   }
 
   const startedAt = Date.now()
@@ -147,7 +161,12 @@ export const DELETE: RequestHandler = async ({ params, getClientAddress, cookies
     logEvent({
       ip: viewer.ip,
       action: 'document_delete_error',
-      details: { id, name: access.document.name, error: error instanceof Error ? error.message : 'Unknown error', elapsed_ms: Date.now() - startedAt },
+      details: {
+        id,
+        name: access.document.name,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        elapsed_ms: Date.now() - startedAt,
+      },
     })
     throw error
   }

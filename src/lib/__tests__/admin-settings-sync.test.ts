@@ -35,8 +35,7 @@ const settings = [
   },
 ]
 
-const INITIAL_PROPERTIES =
-  'max_documents_per_ip=10\nmax_content_length=1048576'
+const INITIAL_PROPERTIES = 'max_documents_per_ip=10\nmax_content_length=1048576'
 
 function makeSettingsFetch() {
   const settingsFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
@@ -91,14 +90,10 @@ describe('useAdminSettings properties text sync', () => {
     vi.stubGlobal('fetch', makeSettingsFetch())
     const state = renderHost()
     await waitFor(() => expect(state().settings.length).toBe(2))
-    state().updatePropertiesText(
-      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576',
-    )
+    state().updatePropertiesText('max_documents_per_ip=50\n# comment\nmax_content_length=1048576')
     await waitFor(() => expect(state().draftValues['max_documents_per_ip']).toBe('50'))
     expect(state().draftValues['max_content_length']).toBe('1048576')
-    expect(state().propertiesText).toBe(
-      'max_documents_per_ip=50\n# comment\nmax_content_length=1048576',
-    )
+    expect(state().propertiesText).toBe('max_documents_per_ip=50\n# comment\nmax_content_length=1048576')
   })
 
   it('reconciles a form draft edit back into the editor text', async () => {
@@ -108,9 +103,7 @@ describe('useAdminSettings properties text sync', () => {
 
     state().draftValues['max_content_length'] = '2048'
     await waitFor(() => expect(state().propertiesText).toContain('max_content_length=2048'))
-    expect(state().propertiesText).toBe(
-      'max_documents_per_ip=10\nmax_content_length=2048',
-    )
+    expect(state().propertiesText).toBe('max_documents_per_ip=10\nmax_content_length=2048')
   })
 
   it('reports unknown settings in the editor without pushing them', async () => {

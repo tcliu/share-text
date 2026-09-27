@@ -50,8 +50,7 @@
   const typeClasses: Record<ToastType, string> = {
     success:
       'border border-transparent border-l-8 border-l-[var(--toast-success-border)] bg-[var(--toast-success-bg)] text-[var(--toast-success-fg)]',
-    info:
-      'border border-transparent border-l-8 border-l-[var(--toast-info-border)] bg-[var(--toast-info-bg)] text-[var(--toast-info-fg)]',
+    info: 'border border-transparent border-l-8 border-l-[var(--toast-info-border)] bg-[var(--toast-info-bg)] text-[var(--toast-info-fg)]',
     warning:
       'border border-transparent border-l-8 border-l-[var(--toast-warning-border)] bg-[var(--toast-warning-bg)] text-[var(--toast-warning-fg)]',
     error:

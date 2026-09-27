@@ -40,8 +40,7 @@ const settings = [
   },
 ]
 
-const INITIAL_PROPERTIES =
-  'max_documents_per_ip=10\nmax_content_length=1048576'
+const INITIAL_PROPERTIES = 'max_documents_per_ip=10\nmax_content_length=1048576'
 
 function makeSettingsFetch() {
   return vi.fn().mockImplementation((url: string, init?: RequestInit) => {
@@ -111,9 +110,7 @@ describe('AdminPropertiesView', () => {
 
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
-    await waitFor(() =>
-      expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'),
-    )
+    await waitFor(() => expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'))
   })
 
   it('reflects an editor edit back in the form', async () => {
@@ -186,11 +183,7 @@ describe('AdminPropertiesView', () => {
     fireEvent.input(getByLabelText('Max documents per IP'), { target: { value: '50' } })
     switchToPropertiesTab(getByText)
     const editor = getByLabelText('Settings properties content') as HTMLTextAreaElement
-    await waitFor(() =>
-      expect(editor.value).toBe(
-        'max_documents_per_ip=50\nmax_content_length=1048576',
-      ),
-    )
+    await waitFor(() => expect(editor.value).toBe('max_documents_per_ip=50\nmax_content_length=1048576'))
 
     switchToFormTab(getByText)
     fireEvent.click(getByText('Reset'))

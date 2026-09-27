@@ -103,7 +103,7 @@
     {recreateKey}
     {maxContentLength}
     {onReady}
-    onAutoFocused={onAutoFocused}
+    {onAutoFocused}
     onContentChange={handleContentChange}></EditorComponent>
 {:else}
   <div class={containerClass}>

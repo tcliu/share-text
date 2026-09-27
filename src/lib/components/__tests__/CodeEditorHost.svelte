@@ -14,9 +14,5 @@
   } = $props()
 </script>
 
-<CodeEditor
-  bind:content
-  {docType}
-  {recreateKey}
-  {maxContentLength} />
+<CodeEditor bind:content {docType} {recreateKey} {maxContentLength} />
 <span data-testid="content-length" class="hidden">{content.length}</span>

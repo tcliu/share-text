@@ -32,9 +32,9 @@ describe('PreviewPane', () => {
     })
     const firstPreview = vi.fn().mockResolvedValue(PreviewStub)
     const secondPreview = vi.fn(async () => {
-        await gate
-        return PreviewStub
-      })
+      await gate
+      return PreviewStub
+    })
     const { rerender } = render(PreviewPane, { preview: firstPreview, content: 'first' })
     await vi.waitFor(() => expect(contentText()).toBe('first'))
 

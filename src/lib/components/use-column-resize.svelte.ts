@@ -63,8 +63,7 @@ export function createColumnResize(config: ColumnResizeConfig) {
     resizeStartX = event.clientX
     const captured = captureAllWidths()
     resizeStartWidth = captured[ci]
-    resizeSiblingTotal =
-      ci < getColumnCount() - 1 ? captured[ci] + captured[ci + 1] : null
+    resizeSiblingTotal = ci < getColumnCount() - 1 ? captured[ci] + captured[ci + 1] : null
     setColumnWidths(captured)
   }
 
@@ -92,10 +91,7 @@ export function createColumnResize(config: ColumnResizeConfig) {
         for (let j = 0; j < getColumnCount(); j++) {
           if (j !== i) others += widths()[j]
         }
-        const fillWidth = Math.max(
-          getMinWidth(i),
-          container.clientWidth - getFillWidthOffset() - others,
-        )
+        const fillWidth = Math.max(getMinWidth(i), container.clientWidth - getFillWidthOffset() - others)
         if (newWidth < fillWidth && i > 0) {
           // The table would shrink below the container: grow the previous
           // column by the shortfall so the trailing splitter stays anchored at
@@ -152,8 +148,7 @@ export function createColumnResize(config: ColumnResizeConfig) {
     setColumnWidths(captured)
     resizingCol = ci
     resizeStartWidth = captured[ci]
-    resizeSiblingTotal =
-      ci < getColumnCount() - 1 ? captured[ci] + captured[ci + 1] : null
+    resizeSiblingTotal = ci < getColumnCount() - 1 ? captured[ci] + captured[ci + 1] : null
     applyResizeDiff(event.key === 'ArrowRight' ? 10 : -10)
     keepTrailingSplitterVisible()
     resizingCol = null

@@ -37,7 +37,7 @@
   const boxSizeClass = $derived(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
   const iconSizeClass = $derived(size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')
   const resolvedLabelClass = $derived(
-    labelClass ?? (size === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300')
+    labelClass ?? (size === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300'),
   )
 
   $effect(() => {
@@ -47,7 +47,7 @@
 </script>
 
 <label
-  class={`inline-flex cursor-pointer items-center relative before:absolute before:-inset-1 before:content-[''] ${gapClass} ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${wrapperClass}`}>
+  class={`relative inline-flex cursor-pointer items-center before:absolute before:-inset-1 before:content-[''] ${gapClass} ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${wrapperClass}`}>
   <input
     bind:checked
     bind:this={inputRef}

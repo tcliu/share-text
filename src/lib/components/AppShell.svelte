@@ -269,7 +269,7 @@
     aria-hidden={suppressed ? 'true' : undefined}
     class={floating
       ? `absolute inset-y-0 z-40 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
-      : 'flex min-h-0 min-w-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] shrink-0 flex-row'}
+      : 'flex min-h-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] min-w-0 shrink-0 flex-row'}
     style={`--pane-w: ${drawer.effectiveSize}px;${suppressed ? 'visibility:hidden;' : ''}`}>
     {#if !floating && side === 'right'}
       <Splitter

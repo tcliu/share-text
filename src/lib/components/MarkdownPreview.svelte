@@ -10,7 +10,7 @@
 
   function renderDocument(md: string): string {
     const bodyHtml = md.trim()
-      ? marked.parse(md, { breaks: true, gfm: true }) as string
+      ? (marked.parse(md, { breaks: true, gfm: true }) as string)
       : '<div class="placeholder">No content to preview</div>'
 
     return `<!DOCTYPE html>
@@ -110,8 +110,5 @@
   }
 </script>
 
-<iframe
-  title={i18n.t('preview.markdown')}
-  sandbox="allow-same-origin"
-  srcdoc={srcdoc}
-  class="h-full w-full bg-slate-950"></iframe>
+<iframe title={i18n.t('preview.markdown')} sandbox="allow-same-origin" {srcdoc} class="h-full w-full bg-slate-950"
+></iframe>

@@ -10,9 +10,7 @@ describe('toSqliteSql', () => {
   })
 
   it('converts current_timestamp to a UTC ISO strftime expression', () => {
-    expect(toSqliteSql('updated_at = current_timestamp')).toBe(
-      "updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
-    )
+    expect(toSqliteSql('updated_at = current_timestamp')).toBe("updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
   })
 })
 
@@ -79,7 +77,9 @@ describe('SQLite adapter', () => {
       ['key-new', 'new', '', '1.1.1.1', '1.1.1.1', '2021-01-01T00:00:00.000Z'],
     )
 
-    const result = await db.query<{ key: string }>('select key, name, updated_at from documents order by updated_at desc')
+    const result = await db.query<{ key: string }>(
+      'select key, name, updated_at from documents order by updated_at desc',
+    )
     expect(result.rows.map(row => row.key)).toEqual(['key-new', 'key-old'])
   })
 

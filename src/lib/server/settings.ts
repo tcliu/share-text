@@ -84,10 +84,7 @@ function readNumber(value: string | undefined): number | null {
 
 function isWithinRange(value: number, definition: SettingDefinition) {
   return (
-    definition.min !== undefined &&
-    definition.max !== undefined &&
-    value >= definition.min &&
-    value <= definition.max
+    definition.min !== undefined && definition.max !== undefined && value >= definition.min && value <= definition.max
   )
 }
 

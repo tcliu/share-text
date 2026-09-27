@@ -9,7 +9,10 @@ interface PointerInit {
   button?: number
 }
 
-function pointerEvent(type: string, { x = 0, y = 0, pointerId = 1, pointerType = 'touch', button = 0 }: PointerInit = {}): PointerEvent {
+function pointerEvent(
+  type: string,
+  { x = 0, y = 0, pointerId = 1, pointerType = 'touch', button = 0 }: PointerInit = {},
+): PointerEvent {
   const event = new Event(type, { bubbles: true, cancelable: true })
   Object.assign(event, { clientX: x, clientY: y, pointerId, pointerType, button })
   return event as unknown as PointerEvent

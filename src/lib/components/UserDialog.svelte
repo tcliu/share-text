@@ -97,7 +97,7 @@
   maxWidth="md"
   onCancel={handleCancelRequest}
   dismissKeydownCapture={!discardPromptOpen}
-  pending={pending}>
+  {pending}>
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     <FormField label={i18n.t('admin.users.username')} htmlFor="user-username">
       <input
@@ -106,7 +106,7 @@
         bind:value={username}
         type="text"
         autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
     </FormField>
     <FormField label={i18n.t('admin.users.email')} htmlFor="user-email">
       <input
@@ -114,7 +114,7 @@
         bind:value={email}
         type="email"
         autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
     </FormField>
     <FormField label={i18n.t('auth.password')} htmlFor="user-password">
       <PasswordInput id="user-password" bind:value={password} disabled={pending} />
@@ -136,7 +136,7 @@
     </FormField>
     <Buttons align="right">
       {#snippet children()}
-        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} pending={pending}>
+        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
           {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
         </Button>
         {#if mode === 'edit'}

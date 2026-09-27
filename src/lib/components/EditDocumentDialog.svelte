@@ -89,7 +89,11 @@
 
   function shareeTooltip(username: string) {
     const sharee = shareeByUsername.get(username)
-    return sharee ? (sharee.status === 'inactive' ? `${sharee.email} — ${i18n.t('admin.inactive')}` : sharee.email) : undefined
+    return sharee
+      ? sharee.status === 'inactive'
+        ? `${sharee.email} — ${i18n.t('admin.inactive')}`
+        : sharee.email
+      : undefined
   }
 
   // Mirror the loaded share list into the editable draft exactly once per
@@ -187,7 +191,7 @@
           bind:value={key}
           type="text"
           autocomplete="off"
-          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
       </FormField>
     {/if}
     <FormField label={i18n.t('admin.documents.name')} htmlFor="document-name">
@@ -197,7 +201,7 @@
         bind:value={name}
         type="text"
         autocomplete="off"
-        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+        class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
     </FormField>
     <FormField label={i18n.t('editor.documentType')}>
       <SelectDropdown
@@ -216,7 +220,7 @@
           bind:value={createdBy}
           type="text"
           autocomplete="off"
-          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
       </FormField>
       <FormField label={i18n.t('admin.documents.updatedBy')} htmlFor="document-updated-by">
         <input
@@ -224,7 +228,7 @@
           bind:value={updatedBy}
           type="text"
           autocomplete="off"
-          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+          class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
       </FormField>
       <Checkbox bind:checked={isPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
       <FormField label={i18n.t('share.sharedWith')} htmlFor="document-shared-with">

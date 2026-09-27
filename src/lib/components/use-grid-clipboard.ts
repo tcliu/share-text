@@ -9,11 +9,7 @@ export function createGridClipboard() {
       .catch(err => console.warn('[GridClipboard] copy failed:', err))
   }
 
-  function paste(
-    ri: number,
-    ci: number,
-    applyText: (ri: number, ci: number, text: string) => void,
-  ) {
+  function paste(ri: number, ci: number, applyText: (ri: number, ci: number, text: string) => void) {
     if (clipboard) {
       applyText(ri, ci, clipboard)
       return
@@ -24,9 +20,15 @@ export function createGridClipboard() {
         .then(text => {
           if (text) applyText(ri, ci, text)
         })
-          .catch(err => console.warn('[GridClipboard] paste read failed:', err))
+        .catch(err => console.warn('[GridClipboard] paste read failed:', err))
     }
   }
 
-  return { copy, paste, get buffer() { return clipboard } }
+  return {
+    copy,
+    paste,
+    get buffer() {
+      return clipboard
+    },
+  }
 }

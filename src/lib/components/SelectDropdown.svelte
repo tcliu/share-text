@@ -327,12 +327,7 @@
   }))
 </script>
 
-<div
-  class="relative"
-  bind:this={containerRef}
-  data-escape-capture={open ? '' : null}
-  onfocusout={handleFocusOut}
->
+<div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null} onfocusout={handleFocusOut}>
   {#snippet triggerControl()}
     {#if filterable}
       <div class="relative w-fit" bind:this={controlRef}>
@@ -353,7 +348,8 @@
           oninput={handleControlInput}
           onkeydown={handleControlKeydown}
           class={resolvedControlClass} />
-        <ChevronDownIcon className="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <ChevronDownIcon
+          className="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
       </div>
     {:else}
       <button
@@ -381,12 +377,7 @@
   {#if clearable && activeValue !== ''}
     <span class="inline-flex items-center gap-1">
       {@render triggerControl()}
-      <Button
-        variant="ghost"
-        size="xs"
-        icon={closeIcon}
-        ariaLabel={resolvedClearLabel}
-        onClick={handleClear} />
+      <Button variant="ghost" size="xs" icon={closeIcon} ariaLabel={resolvedClearLabel} onClick={handleClear} />
     </span>
   {:else}
     {@render triggerControl()}
@@ -398,7 +389,7 @@
       role="listbox"
       aria-label={ariaLabel}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => open, align, autoPlace })}
-      class={`fixed left-0 top-0 z-40 will-change-transform ${resolvedPanelClass}`}>
+      class={`fixed top-0 left-0 z-40 will-change-transform ${resolvedPanelClass}`}>
       {#if emptyLabel && filteredOptions.length === 0}
         <div role="presentation" class={emptyClass}>{emptyLabel}</div>
       {/if}

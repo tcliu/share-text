@@ -57,10 +57,14 @@
 
   const VARIANT_CHIP: Record<string, string> = {
     sky: 'border-sky-500/30 bg-sky-500/10 text-sky-200 hover:border-sky-400 hover:text-sky-100 focus-visible:border-sky-400 focus-visible:text-sky-100',
-    violet: 'border-violet-500/30 bg-violet-500/10 text-violet-200 hover:border-violet-400 hover:text-violet-100 focus-visible:border-violet-400 focus-visible:text-violet-100',
-    amber: 'border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:text-amber-100 focus-visible:border-amber-400 focus-visible:text-amber-100',
-    fuchsia: 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200 hover:border-fuchsia-400 hover:text-fuchsia-100 focus-visible:border-fuchsia-400 focus-visible:text-fuchsia-100',
-    emerald: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:text-emerald-100 focus-visible:border-emerald-400 focus-visible:text-emerald-100',
+    violet:
+      'border-violet-500/30 bg-violet-500/10 text-violet-200 hover:border-violet-400 hover:text-violet-100 focus-visible:border-violet-400 focus-visible:text-violet-100',
+    amber:
+      'border-amber-500/30 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:text-amber-100 focus-visible:border-amber-400 focus-visible:text-amber-100',
+    fuchsia:
+      'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200 hover:border-fuchsia-400 hover:text-fuchsia-100 focus-visible:border-fuchsia-400 focus-visible:text-fuchsia-100',
+    emerald:
+      'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:text-emerald-100 focus-visible:border-emerald-400 focus-visible:text-emerald-100',
   }
 
   const resolvedButtonClass = $derived(
@@ -72,9 +76,7 @@
   // (`shrink-0` search + `flex-1 overflow-y-auto` options). A custom
   // `panelClass` is intentionally ignored here so an ad-hoc
   // `overflow-y-auto`/`p-1` doesn't create a double-scroll container.
-  const resolvedPanelClass = $derived(
-    filterable ? `${CHIP_PANEL_BASE} overflow-hidden flex flex-col` : panelClass,
-  )
+  const resolvedPanelClass = $derived(filterable ? `${CHIP_PANEL_BASE} overflow-hidden flex flex-col` : panelClass)
 
   let open = $state(false)
   const selection = useListSelection()
@@ -88,7 +90,9 @@
     if (!filterable) return options
     const needle = filterText.trim().toLowerCase()
     if (!needle) return options
-    return options.filter(option => option.label.toLowerCase().includes(needle) || option.value.toLowerCase().includes(needle))
+    return options.filter(
+      option => option.label.toLowerCase().includes(needle) || option.value.toLowerCase().includes(needle),
+    )
   })
 
   // In filterable mode, keep the highlight anchored on the active value
@@ -273,11 +277,11 @@
       role="option"
       tabindex="-1"
       aria-selected={option.value === activeValue}
-      onpointerdown={(event) => event.preventDefault()}
+      onpointerdown={event => event.preventDefault()}
       onclick={() => select(option.value)}
       onfocus={() => selection.set(index)}
       onmouseenter={() => selection.set(index)}
-      class={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs outline-none transition-none ${index === selection.index ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}>
+      class={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-none outline-none ${index === selection.index ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}>
       <span class="min-w-0 truncate">{option.label}</span>
     </button>
   {:else}
@@ -289,8 +293,7 @@
   class="relative inline-flex"
   bind:this={containerRef}
   data-escape-capture={open ? '' : null}
-  onfocusout={handleFocusOut}
->
+  onfocusout={handleFocusOut}>
   <button
     type="button"
     bind:this={buttonRef}
@@ -299,8 +302,10 @@
     aria-haspopup={filterable ? undefined : 'listbox'}
     aria-expanded={filterable ? undefined : open}
     aria-controls={!filterable && open ? panelId : undefined}
-    aria-activedescendant={!filterable && open && filteredOptions[selection.index] ? `${panelId}-option-${selection.index}` : undefined}
-    disabled={disabled}
+    aria-activedescendant={!filterable && open && filteredOptions[selection.index]
+      ? `${panelId}-option-${selection.index}`
+      : undefined}
+    {disabled}
     onclick={toggle}
     onkeydown={handleButtonKeydown}
     class={resolvedButtonClass}>
@@ -325,9 +330,11 @@
             aria-haspopup="listbox"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-activedescendant={open && filteredOptions[selection.index] ? `${panelId}-option-${selection.index}` : undefined}
+            aria-activedescendant={open && filteredOptions[selection.index]
+              ? `${panelId}-option-${selection.index}`
+              : undefined}
             onkeydown={handleFilterKeydown}
-            class="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus-visible:border-sky-500" />
+            class="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-sky-500" />
         </div>
         <div id={panelId} role="listbox" aria-label={ariaLabel} class="min-h-0 flex-1 overflow-y-auto p-1">
           {@render optionList()}

@@ -184,7 +184,11 @@
     const currentType = getDocumentType(docType)
     const validation = await currentType.validate(content)
     if (!validation.valid) {
-      toast.error(i18n.t('doc.toast.cannotSave', { error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }) }))
+      toast.error(
+        i18n.t('doc.toast.cannotSave', {
+          error: validation.error ?? i18n.t('doc.toast.invalidType', { label: currentType.label }),
+        }),
+      )
       return
     }
     saving = true

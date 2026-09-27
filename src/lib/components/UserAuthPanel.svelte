@@ -103,22 +103,27 @@
 <div class={outerClass}>
   <div class={cardClass}>
     {#if !embedded}
-      <h1 class="text-2xl font-semibold tracking-tight text-slate-100">{mode === 'signin' ? i18n.t('auth.login') : i18n.t('auth.createAccount')}</h1>
+      <h1 class="text-2xl font-semibold tracking-tight text-slate-100">
+        {mode === 'signin' ? i18n.t('auth.login') : i18n.t('auth.createAccount')}
+      </h1>
     {/if}
     <div class={embedded ? '' : 'mt-4'}>
-      <div class="mb-4 flex rounded-lg border border-slate-700 p-0.5" role="group" aria-label={i18n.t('auth.accountOptions')}>
+      <div
+        class="mb-4 flex rounded-lg border border-slate-700 p-0.5"
+        role="group"
+        aria-label={i18n.t('auth.accountOptions')}>
         <button
           type="button"
           aria-pressed={mode === 'signin'}
           onclick={() => switchMode('signin')}
-          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold outline-none transition ${mode === 'signin' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
+          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition outline-none ${mode === 'signin' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
           {i18n.t('auth.login')}
         </button>
         <button
           type="button"
           aria-pressed={mode === 'register'}
           onclick={() => switchMode('register')}
-          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold outline-none transition ${mode === 'register' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
+          class={`flex-1 rounded-md px-3 py-1.5 text-sm font-semibold transition outline-none ${mode === 'register' ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:text-slate-200 focus:text-slate-200'}`}>
           {i18n.t('auth.createAccount')}
         </button>
       </div>
@@ -139,7 +144,7 @@
               bind:value={identifier}
               type="text"
               autocomplete="username"
-              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
           </FormField>
           <FormField label={i18n.t('auth.password')} htmlFor="user-password">
             <PasswordInput id="user-password" bind:value={password} disabled={pending} />
@@ -148,7 +153,8 @@
             <p class="text-sm text-rose-400" role="alert">{error}</p>
           {/if}
           <Checkbox bind:checked={rememberMe} name="rememberMe" label={i18n.t('auth.rememberMe')} disabled={pending} />
-          <Button variant="primary" accent="cyan" type="submit" pending={pending} className="w-full">{i18n.t('auth.continue')}</Button>
+          <Button variant="primary" accent="cyan" type="submit" {pending} className="w-full"
+            >{i18n.t('auth.continue')}</Button>
         </form>
       {:else}
         <form
@@ -166,7 +172,7 @@
               bind:value={username}
               type="text"
               autocomplete="username"
-              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
           </FormField>
           <FormField label={i18n.t('auth.email')} htmlFor="register-email">
             <input
@@ -174,7 +180,7 @@
               bind:value={email}
               type="email"
               autocomplete="email"
-              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500" />
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500" />
           </FormField>
           <FormField label={i18n.t('auth.password')} htmlFor="register-password">
             <PasswordInput id="register-password" bind:value={password} disabled={pending} />
@@ -182,13 +188,15 @@
           {#if error}
             <p class="text-sm text-rose-400" role="alert">{error}</p>
           {/if}
-          <Button variant="primary" accent="cyan" type="submit" pending={pending} className="w-full">{i18n.t('auth.continue')}</Button>
+          <Button variant="primary" accent="cyan" type="submit" {pending} className="w-full"
+            >{i18n.t('auth.continue')}</Button>
         </form>
       {/if}
 
       {#if !embedded}
         <div class="mt-4 text-center">
-          <a href="/" class="text-sm text-slate-400 outline-none transition hover:text-cyan-400 focus:text-cyan-400">{i18n.t('auth.goToDocuments')}</a>
+          <a href="/" class="text-sm text-slate-400 transition outline-none hover:text-cyan-400 focus:text-cyan-400"
+            >{i18n.t('auth.goToDocuments')}</a>
         </div>
       {/if}
     </div>

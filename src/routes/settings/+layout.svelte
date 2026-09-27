@@ -123,7 +123,11 @@
     <div class="flex items-center gap-2">
       <ThemeMenu align="right" />
       <LanguageMenu align="right" />
-      <Button size="sm" ariaLabel={i18n.t('auth.goToDocuments')} tooltip={i18n.t('auth.goToDocuments')} onClick={() => goto('/')}>
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('auth.goToDocuments')}
+        tooltip={i18n.t('auth.goToDocuments')}
+        onClick={() => goto('/')}>
         {#snippet icon()}
           <DocumentIcon />
         {/snippet}
@@ -152,7 +156,11 @@
         <SettingsGeneralView settingsState={state.settingsState} />
       {/snippet}
       {#snippet documentsToolbar(state: SettingsState)}
-        <Button size="sm" ariaLabel={i18n.t('settings.documents.add')} tooltip={i18n.t('settings.documents.add')} onClick={() => goto('/new')}>
+        <Button
+          size="sm"
+          ariaLabel={i18n.t('settings.documents.add')}
+          tooltip={i18n.t('settings.documents.add')}
+          onClick={() => goto('/new')}>
           {#snippet icon()}
             <PlusIcon />
           {/snippet}

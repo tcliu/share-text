@@ -101,7 +101,9 @@ export async function fetchDocument(id: string): Promise<Document | null> {
   return body.document ?? null
 }
 
-export async function createDocument(options: { name?: string; content?: string; documentType?: string } = {}): Promise<Document> {
+export async function createDocument(
+  options: { name?: string; content?: string; documentType?: string } = {},
+): Promise<Document> {
   const response = await fetch(BASE_PATH, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

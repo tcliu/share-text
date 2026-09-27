@@ -1,11 +1,7 @@
 import { toast } from 'svelte-sonner'
 import type { Locale } from './i18n.svelte'
 import { getI18nContext } from './i18n.svelte'
-import {
-  fetchAdminPreferences,
-  saveAdminPreferences,
-  type AdminPreferences,
-} from './admin-preferences'
+import { fetchAdminPreferences, saveAdminPreferences, type AdminPreferences } from './admin-preferences'
 
 export function useAdminPreferences(onSignedOut: () => void) {
   const i18n = getI18nContext()

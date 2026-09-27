@@ -30,15 +30,7 @@
     editable?: boolean
   }
 
-  let {
-    label,
-    value,
-    depth = 0,
-    path = [],
-    onChange,
-    onRenameKey,
-    editable = true,
-  }: Props = $props()
+  let { label, value, depth = 0, path = [], onChange, onRenameKey, editable = true }: Props = $props()
 
   // svelte-ignore state_referenced_locally
   const startsOpen = depth === 0
@@ -183,7 +175,8 @@
   }
 </script>
 
-<span bind:this={measureEl} class="invisible absolute whitespace-pre text-sm font-mono leading-snug" aria-hidden="true"></span>
+<span bind:this={measureEl} class="invisible absolute font-mono text-sm leading-snug whitespace-pre" aria-hidden="true"
+></span>
 
 <div class="font-mono text-sm leading-snug">
   <div class="flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40">
@@ -192,15 +185,13 @@
       class="relative inline-flex shrink-0 items-center justify-center rounded outline-none before:absolute before:-inset-1 before:content-[''] focus:text-cyan-300"
       aria-label={open ? i18n.t('structure.collapse', { name: label }) : i18n.t('structure.expand', { name: label })}
       aria-expanded={open}
-      onclick={() => (open = !open)}
-    >
+      onclick={() => (open = !open)}>
       <ChevronRightSmallIcon className="h-3 w-3 text-slate-400 transition-transform {open ? 'rotate-90' : ''}" />
     </button>
     <Copyable
       copyText={copyValue(value)}
       copyAriaLabel={label ? i18n.t('structure.copyValue', { name: label }) : i18n.t('structure.copyNode')}
-      copyTooltip={label ? i18n.t('structure.copyValue', { name: label }) : i18n.t('structure.copyNode')}
-    >
+      copyTooltip={label ? i18n.t('structure.copyValue', { name: label }) : i18n.t('structure.copyNode')}>
       {#if label !== ''}
         <span class="text-slate-300">{label}</span>
         <span class="text-slate-600">:</span>
@@ -220,22 +211,20 @@
             path={entryPath(entry)}
             {onChange}
             {onRenameKey}
-            {editable}
-          />
+            {editable} />
         {:else if editingValueKey === entry.key && onChange && editable}
           <div class="flex items-center gap-1 rounded px-1 py-px">
             <span class="w-3 shrink-0"></span>
-            <span class="text-slate-300 shrink-0">{entry.key}</span>
-            <span class="text-slate-600 shrink-0">:</span>
+            <span class="shrink-0 text-slate-300">{entry.key}</span>
+            <span class="shrink-0 text-slate-600">:</span>
             <div class="flex-1">
               <input
                 bind:this={editValueInput}
                 bind:value={editValueText}
-                class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 text-sm font-mono leading-snug outline outline-1 outline-cyan-500"
+                class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 font-mono text-sm leading-snug outline outline-1 outline-cyan-500"
                 style={`width: ${editValueMinWidth || 40}px`}
                 onblur={commitValue}
-                onkeydown={handleValueKeydown}
-              />
+                onkeydown={handleValueKeydown} />
             </div>
           </div>
         {:else if editingNameKey === entry.key && onRenameKey && editable}
@@ -244,65 +233,82 @@
             <input
               bind:this={editNameInput}
               bind:value={editNameText}
-              class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 text-sm font-mono leading-snug text-slate-300 outline outline-1 outline-cyan-500"
+              class="min-w-[2ch] rounded bg-slate-900 px-1 py-1 font-mono text-sm leading-snug text-slate-300 outline outline-1 outline-cyan-500"
               style={`width: ${editNameMinWidth || 40}px`}
               onblur={commitName}
-              onkeydown={handleNameKeydown}
-            />
-            <span class="text-slate-600 shrink-0">:</span>
+              onkeydown={handleNameKeydown} />
+            <span class="shrink-0 text-slate-600">:</span>
             <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
           </div>
         {:else}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             class="group flex items-center gap-1 rounded px-1 py-px hover:bg-slate-800/40"
-            ondblclick={onChange && editable ? () => startEditValue(entry) : undefined}
-          >
+            ondblclick={onChange && editable ? () => startEditValue(entry) : undefined}>
             <span class="w-3 shrink-0"></span>
             {#if onRenameKey && editable}
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <span
-                class="text-slate-300 shrink-0 cursor-pointer rounded outline-none hover:underline focus:underline"
-                ondblclick={(e) => { e.stopPropagation(); startEditName(entry) }}
-                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); startEditName(entry) } }}
+                class="shrink-0 cursor-pointer rounded text-slate-300 outline-none hover:underline focus:underline"
+                ondblclick={e => {
+                  e.stopPropagation()
+                  startEditName(entry)
+                }}
+                onkeydown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    startEditName(entry)
+                  }
+                }}
                 title={i18n.t('structure.renameHint')}
                 role="button"
-                tabindex="0"
-              >{entry.key}</span>
+                tabindex="0">{entry.key}</span>
             {:else}
-              <span class="text-slate-300 shrink-0">{entry.key}</span>
+              <span class="shrink-0 text-slate-300">{entry.key}</span>
             {/if}
-            <span class="text-slate-600 shrink-0">:</span>
+            <span class="shrink-0 text-slate-600">:</span>
             <span class="min-w-0 truncate text-slate-400">
               <span class={valueClass(entry.value)}>{valueText(entry.value)}</span>
             </span>
             {#if onChange && editable}
-              <span bind:this={editBtnEl} class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+              <span
+                bind:this={editBtnEl}
+                class="shrink-0 transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
                 <Button
                   size="sm"
                   variant="ghost"
                   ariaLabel={i18n.t('structure.editKey', { name: entry.key })}
                   tooltip={i18n.t('structure.editKey', { name: entry.key })}
-                  onClick={(e) => { e.stopPropagation(); startEditValue(entry) }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-                  className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300"
-                >
+                  onClick={e => {
+                    e.stopPropagation()
+                    startEditValue(entry)
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+                  }}
+                  className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300">
                   {#snippet icon()}
                     <EditIcon />
                   {/snippet}
                 </Button>
               </span>
             {/if}
-            <span class="shrink-0 [@media(hover:hover)]:opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+            <span
+              class="shrink-0 transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
               <Button
                 size="sm"
                 variant="ghost"
                 ariaLabel={i18n.t('structure.copyValue', { name: entry.key })}
                 tooltip={i18n.t('structure.copyValue', { name: entry.key })}
-                onClick={(e) => { e.stopPropagation(); void handleCopy(copyValue(entry.value)) }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
-                className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300"
-              >
+                onClick={e => {
+                  e.stopPropagation()
+                  void handleCopy(copyValue(entry.value))
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+                }}
+                className="bg-transparent p-1.5 text-slate-400 hover:text-cyan-300">
                 {#snippet icon()}
                   <CopyIcon />
                 {/snippet}

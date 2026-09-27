@@ -46,14 +46,20 @@
       class={`inline-flex w-fit cursor-pointer items-center rounded-full px-2 py-0.5 text-xs transition disabled:cursor-not-allowed ${chipClass} ${active ? 'border-2 font-semibold opacity-100' : 'm-px border opacity-70 hover:opacity-100'}`}>
       <span class="grid">
         <span class="col-start-1 row-start-1 {active ? 'font-semibold' : ''}">{label}</span>
-        <span class="col-start-1 row-start-1 invisible font-semibold" aria-hidden="true">{label}</span>
+        <span class="invisible col-start-1 row-start-1 font-semibold" aria-hidden="true">{label}</span>
       </span>
     </button>
   {:else}
     <span {style} class={`${chipClass} inline-flex items-center gap-1`}>
       {label}
       {#if onRemove}
-        <button type="button" aria-label={ariaLabel ?? i18n.t('combobox.remove', { name: label })} onclick={onRemove} {disabled} style={removeButtonStyle} class={removeButtonClass}>
+        <button
+          type="button"
+          aria-label={ariaLabel ?? i18n.t('combobox.remove', { name: label })}
+          onclick={onRemove}
+          {disabled}
+          style={removeButtonStyle}
+          class={removeButtonClass}>
           <CloseIcon className="h-2.5 w-2.5" />
         </button>
       {/if}

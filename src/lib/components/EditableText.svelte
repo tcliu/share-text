@@ -153,42 +153,57 @@
   })
 </script>
 
-  {#if editing}
+{#if editing}
   <!-- In edit mode size the input to the measured label+icon width so
        sibling tag chips don't shift. Fallback to min-width only if we
        couldn't measure. -->
   <div class="flex min-w-0 items-center">
     <input
       bind:this={input}
-      bind:value={value}
-      onclick={(e) => e.stopPropagation()}
-      onkeydown={(e) => { e.stopPropagation(); handleKeydown(e) }}
+      bind:value
+      onclick={e => e.stopPropagation()}
+      onkeydown={e => {
+        e.stopPropagation()
+        handleKeydown(e)
+      }}
       onblur={commit}
       data-escape-capture
       aria-label={i18n.t('edit.editText')}
       style={inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'}
-      class={`${TEXT_SIZE[size]} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition motion-reduce:transition-none focus:outline-cyan-500`} />
+      class={`${TEXT_SIZE[size]} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
   </div>
 {:else}
   {#snippet displayContent()}
     <button
       bind:this={displayBtn}
       type="button"
-      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 ${className}`}
+      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
       title={i18n.t('edit.doubleClickToEdit')}
-      onclick={(e) => { e.stopPropagation(); scheduleActivate() }}
-      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
+      onclick={e => {
+        e.stopPropagation()
+        scheduleActivate()
+      }}
+      onkeydown={e => {
+        if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+      }}
       ondblclick={handleTextDoubleClick}>
       {text}
     </button>
-    <span bind:this={editBtn} class="[@media(hover:hover)]:opacity-0 transition motion-reduce:transition-none group-hover:opacity-100 focus-within:opacity-100">
+    <span
+      bind:this={editBtn}
+      class="transition group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none [@media(hover:hover)]:opacity-0">
       <Button
         size="sm"
         variant="ghost"
         ariaLabel={i18n.t('edit.edit')}
         tooltip={i18n.t('edit.edit')}
-        onClick={(e) => { e.stopPropagation(); startEdit() }}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation() }}
+        onClick={e => {
+          e.stopPropagation()
+          startEdit()
+        }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+        }}
         className="bg-transparent text-slate-400 hover:text-cyan-300">
         {#snippet icon()}
           <EditIcon />
@@ -203,7 +218,7 @@
   <div class="group flex min-w-0 items-center gap-1">
     {@render displayContent()}
     {#if copyable && text.trim() !== ''}
-      <CopyButton text={text} copyAriaLabel={`Copy ${text}`} />
+      <CopyButton {text} copyAriaLabel={`Copy ${text}`} />
     {/if}
   </div>
 {/if}

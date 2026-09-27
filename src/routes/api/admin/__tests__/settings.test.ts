@@ -96,7 +96,12 @@ describe('PUT /api/admin/settings', () => {
 
   it('does not apply earlier items when a later setting is invalid', async () => {
     const response = await PUT(
-      putEvent({ settings: [{ key: 'max_documents_per_ip', value: 50 }, { key: 'nope', value: 5 }] }),
+      putEvent({
+        settings: [
+          { key: 'max_documents_per_ip', value: 50 },
+          { key: 'nope', value: 5 },
+        ],
+      }),
     )
 
     expect(response.status).toBe(400)

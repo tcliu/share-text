@@ -36,7 +36,7 @@
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-slate-100">{label}</span>
             <span
-              class="rounded-full border px-2 py-0.5 text-xs font-medium uppercase tracking-wide {setting.source ===
+              class="rounded-full border px-2 py-0.5 text-xs font-medium tracking-wide uppercase {setting.source ===
               'database'
                 ? 'border-cyan-700 bg-cyan-950/50 text-cyan-200'
                 : setting.source === 'environment'
@@ -50,20 +50,20 @@
         </div>
         <div class="flex items-center gap-2">
           {#if setting.kind === 'string'}
-          <input
-            type="text"
-            bind:value={settingsState.draftValues[setting.key]}
-            disabled={settingsState.pending}
-            aria-label={label}
-            spellcheck="false"
-            class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-cyan-500 disabled:opacity-40" />
+            <input
+              type="text"
+              bind:value={settingsState.draftValues[setting.key]}
+              disabled={settingsState.pending}
+              aria-label={label}
+              spellcheck="false"
+              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500 disabled:opacity-40" />
           {:else}
-          <NumberInput
-            bind:value={settingsState.draftValues[setting.key]}
-            min={setting.min}
-            max={setting.max}
-            disabled={settingsState.pending}
-            ariaLabel={label} />
+            <NumberInput
+              bind:value={settingsState.draftValues[setting.key]}
+              min={setting.min}
+              max={setting.max}
+              disabled={settingsState.pending}
+              ariaLabel={label} />
           {/if}
           {#if setting.source === 'database'}
             <Button
@@ -98,7 +98,7 @@
     state={{}}
     ariaLabel={i18n.t('admin.propertiesViews')} />
 
-    <Buttons align="right">
+  <Buttons align="right">
     {#snippet children()}
       <Button
         variant="primary"
@@ -108,7 +108,8 @@
         onClick={() => void settingsState.apply()}>
         {i18n.t('common.apply')}
       </Button>
-      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}>{i18n.t('common.reload')}</Button>
+      <Button disabled={settingsState.pending} onClick={() => void settingsState.reload()}
+        >{i18n.t('common.reload')}</Button>
       <Button
         disabled={settingsState.pending || !settingsState.hasUnsavedChanges}
         onClick={() => settingsState.resetDraft()}>

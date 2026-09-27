@@ -21,6 +21,8 @@
   stroke-linecap="round"
   stroke-linejoin="round"
   aria-hidden="true"
-  width={SIZE_PX[size]} height={SIZE_PX[size]} class={className}>
+  width={SIZE_PX[size]}
+  height={SIZE_PX[size]}
+  class={className}>
   <path d="M3 7.5 6 4.5 9 7.5" />
 </svg>

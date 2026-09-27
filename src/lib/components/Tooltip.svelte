@@ -55,11 +55,7 @@
     // Alignment shifts are folded into the left offset instead of CSS
     // transforms so the box can be clamped to the viewport horizontally.
     const start =
-      align === 'left'
-        ? rect.left
-        : align === 'right'
-          ? rect.right - width
-          : rect.left + rect.width / 2 - width / 2
+      align === 'left' ? rect.left : align === 'right' ? rect.right - width : rect.left + rect.width / 2 - width / 2
     const min = VIEWPORT_MARGIN
     const max = window.innerWidth - VIEWPORT_MARGIN - width
     left = Math.round(Math.min(Math.max(start, min), Math.max(min, max)))

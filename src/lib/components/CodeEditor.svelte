@@ -69,7 +69,9 @@
   // never imports a per-app settings module.
   function colorThemeExtensions(theme: string) {
     return [
-      theme === 'dark' || theme === 'ember' || theme === 'forest' || theme === 'midnight' || theme === 'nebula' ? githubDark : githubLight,
+      theme === 'dark' || theme === 'ember' || theme === 'forest' || theme === 'midnight' || theme === 'nebula'
+        ? githubDark
+        : githubLight,
       EditorView.theme({
         '&': {
           height: '100%',
@@ -113,9 +115,10 @@
           backgroundColor: 'var(--cm-playbackHighlightSelected)',
           borderRadius: '0.125rem',
         },
-        '.cm-selectionBackground .cm-playbackHighlight, .cm-playbackHighlight.cm-selectionBackground, .cm-content:has(.cm-selectionBackground) .cm-playbackHighlight': {
-          backgroundColor: 'var(--cm-playbackHighlightSelected) !important',
-        },
+        '.cm-selectionBackground .cm-playbackHighlight, .cm-playbackHighlight.cm-selectionBackground, .cm-content:has(.cm-selectionBackground) .cm-playbackHighlight':
+          {
+            backgroundColor: 'var(--cm-playbackHighlightSelected) !important',
+          },
         '.cm-selectionDisabled': {
           userSelect: 'none',
         },
@@ -449,9 +452,5 @@
 </script>
 
 <div class={containerClass}>
-  <div
-    bind:this={editorContainerRef}
-    role="textbox"
-    aria-label={editorAriaLabel}
-    class={editorClass}></div>
+  <div bind:this={editorContainerRef} role="textbox" aria-label={editorAriaLabel} class={editorClass}></div>
 </div>

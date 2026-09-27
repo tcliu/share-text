@@ -103,7 +103,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
       })
       return json({ error: error.message }, { status: 403 })
     }
-    logEvent({ ip: viewer.ip, action: 'document_create_error', details: { error: error instanceof Error ? error.message : 'Unknown error' } })
+    logEvent({
+      ip: viewer.ip,
+      action: 'document_create_error',
+      details: { error: error instanceof Error ? error.message : 'Unknown error' },
+    })
     throw error
   }
 }

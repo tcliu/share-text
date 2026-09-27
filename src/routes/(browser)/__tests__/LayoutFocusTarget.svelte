@@ -8,6 +8,4 @@
   context.registerEditorFocus(() => focusTarget?.focus())
 </script>
 
-<button bind:this={focusTarget} type="button">
-  Editor focus target
-</button>
+<button bind:this={focusTarget} type="button"> Editor focus target </button>

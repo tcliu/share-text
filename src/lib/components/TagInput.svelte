@@ -21,7 +21,18 @@
     option?: Snippet<[tag: string]>
   }
 
-  let { value = [], availableTags = [], onChange, placeholder = '', disabled = false, inputId, chipClass = 'border-slate-600 bg-slate-800 text-slate-200', chipClassFor, chip, option }: Props = $props()
+  let {
+    value = [],
+    availableTags = [],
+    onChange,
+    placeholder = '',
+    disabled = false,
+    inputId,
+    chipClass = 'border-slate-600 bg-slate-800 text-slate-200',
+    chipClassFor,
+    chip,
+    option,
+  }: Props = $props()
   const i18n = getI18nContext()
 
   let id = $props.id()
@@ -37,9 +48,9 @@
 
   const query = $derived(draft.trim().toLowerCase())
   const suggestions = $derived.by(() => {
-    const selected = new Set(value.map((tag) => tag.toLowerCase()))
+    const selected = new Set(value.map(tag => tag.toLowerCase()))
     return availableTags.filter(
-      (tag) => !selected.has(tag.toLowerCase()) && (!query || tag.toLowerCase().includes(query)),
+      tag => !selected.has(tag.toLowerCase()) && (!query || tag.toLowerCase().includes(query)),
     )
   })
 
@@ -70,7 +81,7 @@
   function addName(name: string): void {
     const trimmed = name.trim()
     if (!trimmed) return
-    if (value.some((tag) => tag.toLowerCase() === trimmed.toLowerCase())) return
+    if (value.some(tag => tag.toLowerCase() === trimmed.toLowerCase())) return
     value = [...value, trimmed]
     emit()
   }
@@ -78,12 +89,12 @@
   function commitDraft(): void {
     const names = draft
       .split(',')
-      .map((part) => part.trim())
+      .map(part => part.trim())
       .filter(Boolean)
     draft = ''
     navigated = false
     if (!names.length) return
-    const seen = new Set(value.map((tag) => tag.toLowerCase()))
+    const seen = new Set(value.map(tag => tag.toLowerCase()))
     const next = [...value]
     for (const name of names) {
       if (seen.has(name.toLowerCase())) continue
@@ -211,14 +222,16 @@
       {#if chip}
         {@render chip(tag, () => removeAt(index))}
       {:else}
-        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs {chipClassFor?.(tag) ?? chipClass}">
+        <span
+          class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs {chipClassFor?.(tag) ??
+            chipClass}">
           {tag}
           <button
             type="button"
             aria-label={i18n.t('tagInput.remove', { name: tag })}
-            disabled={disabled}
+            {disabled}
             onclick={() => removeAt(index)}
-            class="rounded-full p-0.5 opacity-60 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-40">
+            class="rounded-full p-0.5 opacity-60 transition-opacity outline-none hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-40">
             <CloseIcon className="h-3 w-3" />
           </button>
         </span>
@@ -239,8 +252,12 @@
       aria-autocomplete="list"
       aria-activedescendant={open && suggestions.length > 0 ? `${listboxId}-option-${selection.index}` : undefined}
       autocomplete="off"
-      onfocus={() => { if (!open) openPanel() }}
-      oninput={() => { navigated = false }}
+      onfocus={() => {
+        if (!open) openPanel()
+      }}
+      oninput={() => {
+        navigated = false
+      }}
       onkeydown={handleKeydown} />
   </div>
 </div>
@@ -259,8 +276,11 @@
         role="option"
         tabindex="-1"
         aria-selected={index === selection.index}
-        class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition max-[27.999rem]:min-h-11 {index === selection.index ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'}"
-        onpointerdown={(e) => e.preventDefault()}
+        class="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition outline-none max-[27.999rem]:min-h-11 {index ===
+        selection.index
+          ? 'bg-slate-800 text-cyan-200'
+          : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'}"
+        onpointerdown={e => e.preventDefault()}
         onmouseenter={() => {
           navigated = true
           selection.set(index)
@@ -269,7 +289,9 @@
         {#if option}
           {@render option(suggestion)}
         {:else}
-          <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs {chipClassFor?.(suggestion) ?? chipClass}">{suggestion}</span>
+          <span
+            class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs {chipClassFor?.(suggestion) ??
+              chipClass}">{suggestion}</span>
         {/if}
       </button>
     {/each}

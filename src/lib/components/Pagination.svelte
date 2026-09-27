@@ -196,7 +196,9 @@
   }
 </script>
 
-<nav aria-label={resolvedPaginationLabel} class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
+<nav
+  aria-label={resolvedPaginationLabel}
+  class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
   <button
     type="button"
     aria-label={resolvedPreviousLabel}
@@ -208,7 +210,8 @@
 
   {#if showStartEllipsis}
     <button type="button" onclick={() => goToPage(1)} class={pageButtonClass}>1</button>
-    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}>…</span>
+    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}
+      >…</span>
   {/if}
 
   {#each pageNumbers as pageNum (pageNum)}
@@ -230,7 +233,8 @@
   {/each}
 
   {#if showEndEllipsis}
-    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}>…</span>
+    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}
+      >…</span>
     <button type="button" onclick={() => goToPage(totalPages)} class={pageButtonClass}>{totalPages}</button>
   {/if}
 
@@ -247,13 +251,13 @@
     <span>{resolvedPageSizeLabel}</span>
     <div class="relative">
       <SelectDropdown
-      buttonLabel={String(pageSize)}
-      activeValue={String(pageSize)}
-      ariaLabel={resolvedPageSizeLabel}
-      size={size}
-      options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-      onSelect={handlePageSizeChange}
-      emptyLabel={i18n.t('dropdown.noOptions')} />
+        buttonLabel={String(pageSize)}
+        activeValue={String(pageSize)}
+        ariaLabel={resolvedPageSizeLabel}
+        {size}
+        options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
+        onSelect={handlePageSizeChange}
+        emptyLabel={i18n.t('dropdown.noOptions')} />
     </div>
   </div>
   {#if trailing}

@@ -94,7 +94,6 @@ export interface AdminSessionInfo {
   configured: boolean
 }
 
-
 const BASE_PATH = '/api/admin'
 
 async function parseResponse<T>(response: Response, fallback: string, i18n: I18nStore): Promise<T> {
@@ -108,12 +107,7 @@ async function parseResponse<T>(response: Response, fallback: string, i18n: I18n
   return body as T
 }
 
-export async function login(
-  username: string,
-  password: string,
-  rememberMe = false,
-  i18n: I18nStore,
-): Promise<void> {
+export async function login(username: string, password: string, rememberMe = false, i18n: I18nStore): Promise<void> {
   const response = await fetch(`${BASE_PATH}/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -134,7 +128,11 @@ export async function logout(i18n: I18nStore): Promise<void> {
 
 export async function fetchAdminSettings(i18n: I18nStore): Promise<AdminSetting[]> {
   const response = await fetch(`${BASE_PATH}/settings`)
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, i18n.t('admin.auth.toast.loadSettings'), i18n)
+  const body = await parseResponse<{ settings: AdminSetting[] }>(
+    response,
+    i18n.t('admin.auth.toast.loadSettings'),
+    i18n,
+  )
   return body.settings
 }
 
@@ -147,7 +145,11 @@ export async function updateAdminSettings(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ settings }),
   })
-  const body = await parseResponse<{ settings: AdminSetting[] }>(response, i18n.t('admin.auth.toast.saveSettings'), i18n)
+  const body = await parseResponse<{ settings: AdminSetting[] }>(
+    response,
+    i18n.t('admin.auth.toast.saveSettings'),
+    i18n,
+  )
   return body.settings
 }
 
@@ -214,7 +216,11 @@ export async function updateAdminDocument(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, i18n.t('admin.auth.toast.updateDocument'), i18n)
+  const body = await parseResponse<{ document: AdminDocument }>(
+    response,
+    i18n.t('admin.auth.toast.updateDocument'),
+    i18n,
+  )
   return body.document
 }
 
@@ -231,13 +237,21 @@ export async function createAdminDocument(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
   })
-  const body = await parseResponse<{ document: AdminDocument }>(response, i18n.t('admin.auth.toast.createDocument'), i18n)
+  const body = await parseResponse<{ document: AdminDocument }>(
+    response,
+    i18n.t('admin.auth.toast.createDocument'),
+    i18n,
+  )
   return body.document
 }
 
 export async function fetchAdminDocument(id: string, i18n: I18nStore): Promise<AdminDocumentDetail> {
   const response = await fetch(`${BASE_PATH}/documents/${id}`)
-  const body = await parseResponse<{ document: AdminDocumentDetail }>(response, i18n.t('admin.auth.toast.loadDocument'), i18n)
+  const body = await parseResponse<{ document: AdminDocumentDetail }>(
+    response,
+    i18n.t('admin.auth.toast.loadDocument'),
+    i18n,
+  )
   return body.document
 }
 
@@ -252,7 +266,11 @@ export async function importAdminDocuments(records: unknown[], i18n: I18nStore):
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ records }),
   })
-  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(response, i18n.t('admin.auth.toast.importDocuments'), i18n)
+  const body = await parseResponse<{ documents: AdminDocumentSummary[] }>(
+    response,
+    i18n.t('admin.auth.toast.importDocuments'),
+    i18n,
+  )
   return body.documents
 }
 
@@ -343,7 +361,10 @@ export async function importAdminUsers(records: unknown[], i18n: I18nStore): Pro
   return body.users
 }
 
-export async function exportAdminDocuments(ids: string[] | undefined, i18n: I18nStore): Promise<AdminDocumentExportRecord[]> {
+export async function exportAdminDocuments(
+  ids: string[] | undefined,
+  i18n: I18nStore,
+): Promise<AdminDocumentExportRecord[]> {
   const params = new URLSearchParams()
   if (ids && ids.length > 0) {
     params.set('ids', ids.join(','))

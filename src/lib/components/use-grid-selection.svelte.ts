@@ -84,9 +84,7 @@ export function createGridSelection(opts: {
     s.selectedRows.size === 0 && (s.selectedCell === null || (model.headers && s.selectedCell.ri === 0)),
   )
 
-  const colInsertDisabled = $derived(
-    s.selectedCols.size === 0 && s.selectedCell === null,
-  )
+  const colInsertDisabled = $derived(s.selectedCols.size === 0 && s.selectedCell === null)
 
   const highlightKeys = $derived.by(() => {
     const keys = new Set(s.selectedSet)
@@ -371,9 +369,13 @@ export function createGridSelection(opts: {
       dir,
       true,
       s.selectedRows,
-      v => { s.selectedRows = v },
+      v => {
+        s.selectedRows = v
+      },
       s.rowAnchor,
-      v => { s.rowAnchor = v },
+      v => {
+        s.rowAnchor = v
+      },
       model.headers ? 1 : 0,
       model.rowCount,
       focus.rowSelector,
@@ -458,9 +460,13 @@ export function createGridSelection(opts: {
       dir,
       false,
       s.selectedCols,
-      v => { s.selectedCols = v },
+      v => {
+        s.selectedCols = v
+      },
       s.colAnchor,
-      v => { s.colAnchor = v },
+      v => {
+        s.colAnchor = v
+      },
       0,
       model.columnCount,
       focus.columnSelector,
@@ -750,17 +756,39 @@ export function createGridSelection(opts: {
   }
 
   return {
-    get selectedCell() { return s.selectedCell },
-    get selectedSet() { return s.selectedSet },
-    get selectedRows() { return s.selectedRows },
-    get selectedCols() { return s.selectedCols },
-    get noSelection() { return noSelection },
-    get actionRow() { return actionRow },
-    get actionCol() { return actionCol },
-    get rowInsertDisabled() { return rowInsertDisabled },
-    get colInsertDisabled() { return colInsertDisabled },
-    get highlightKeys() { return highlightKeys },
-    get isDragging() { return isDragging },
+    get selectedCell() {
+      return s.selectedCell
+    },
+    get selectedSet() {
+      return s.selectedSet
+    },
+    get selectedRows() {
+      return s.selectedRows
+    },
+    get selectedCols() {
+      return s.selectedCols
+    },
+    get noSelection() {
+      return noSelection
+    },
+    get actionRow() {
+      return actionRow
+    },
+    get actionCol() {
+      return actionCol
+    },
+    get rowInsertDisabled() {
+      return rowInsertDisabled
+    },
+    get colInsertDisabled() {
+      return colInsertDisabled
+    },
+    get highlightKeys() {
+      return highlightKeys
+    },
+    get isDragging() {
+      return isDragging
+    },
     isCellSelected,
     cellClass,
     rangeHighlightStyle,

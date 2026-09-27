@@ -23,17 +23,7 @@
     option?: import('svelte').Snippet<[ComboboxOption]>
   }
 
-  let {
-    selected,
-    suggestions,
-    onQueryChange,
-    onAdd,
-    onRemove,
-    placeholder,
-    id,
-    chip,
-    option,
-  }: Props = $props()
+  let { selected, suggestions, onQueryChange, onAdd, onRemove, placeholder, id, chip, option }: Props = $props()
 
   let inputValue = $state('')
   let activeIndex = $state(0)
@@ -46,9 +36,7 @@
 
   const listboxId = $derived(`${id ? `${id}-` : 'combobox-'}listbox`)
   const optionId = (index: number) => `${listboxId}-option-${index}`
-  const activeOptionId = $derived(
-    dropdownOpen && suggestions.length > 0 ? optionId(activeIndex) : undefined,
-  )
+  const activeOptionId = $derived(dropdownOpen && suggestions.length > 0 ? optionId(activeIndex) : undefined)
 
   $effect(() => {
     if (!dropdownOpen) return
@@ -193,7 +181,7 @@
         class="min-w-0 flex-1 bg-transparent py-1 text-sm text-slate-100 outline-none placeholder:text-slate-500"
         placeholder={selected.length === 0 ? (placeholder ?? i18n.t('combobox.placeholder')) : ''}
         autocomplete="off"
-        data-escape-capture={(dropdownOpen || inputValue.trim()) ? true : undefined}
+        data-escape-capture={dropdownOpen || inputValue.trim() ? true : undefined}
         onfocus={handleInputFocus}
         onblur={handleInputBlur}
         oninput={handleInput}
@@ -207,7 +195,7 @@
       aria-label={placeholder}
       use:positionPanel={() => ({ getTrigger: () => containerRef, getOpen: () => dropdownOpen })}
       data-escape-capture
-      class="fixed left-0 top-0 z-40 w-64 will-change-transform max-h-52 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur">
+      class="fixed top-0 left-0 z-40 max-h-52 w-64 overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur will-change-transform">
       {#each suggestions as suggestion, index}
         <button
           type="button"
@@ -215,7 +203,7 @@
           role="option"
           tabindex="-1"
           aria-selected="false"
-          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm outline-none transition ${index === activeIndex ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'}`}
+          class={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition outline-none ${index === activeIndex ? 'bg-slate-800 text-cyan-200' : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200'}`}
           onpointerdown={e => e.preventDefault()}
           onmouseenter={() => {
             activeIndex = index

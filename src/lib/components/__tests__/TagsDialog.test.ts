@@ -51,8 +51,7 @@ describe('TagsDialog', () => {
 
     await fireEvent.input(input, { target: { value: 'gamma' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
-    const closeButton = document
-      .querySelectorAll('button[aria-label="Close dialog"]')[0] as HTMLButtonElement
+    const closeButton = document.querySelectorAll('button[aria-label="Close dialog"]')[0] as HTMLButtonElement
     await fireEvent.click(closeButton)
     expect(getByText('Discard unsaved changes?')).toBeTruthy()
 

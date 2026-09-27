@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearDraft, loadDraft, loadDraftDocType, loadDraftName, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
+import {
+  clearDraft,
+  loadDraft,
+  loadDraftDocType,
+  loadDraftName,
+  saveDraft,
+  NEW_DOCUMENT_DRAFT_ID,
+} from '$lib/document-drafts'
 
 describe('document-drafts localStorage helpers', () => {
   beforeEach(() => {

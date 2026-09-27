@@ -45,7 +45,8 @@
         onClick={() => void preferencesState.apply()}>
         {i18n.t('common.apply')}
       </Button>
-      <Button disabled={preferencesState.pending} onClick={() => void preferencesState.reload()}>{i18n.t('common.reload')}</Button>
+      <Button disabled={preferencesState.pending} onClick={() => void preferencesState.reload()}
+        >{i18n.t('common.reload')}</Button>
       <Button
         disabled={preferencesState.pending || !preferencesState.hasUnsavedChanges}
         onClick={() => preferencesState.resetDraft()}>

@@ -8,9 +8,7 @@ export type Viewer =
   | { type: 'user'; userId: number; username: string; ip: string; name: string }
   | { type: 'admin'; userId: null; ip: string; name: string }
 
-export async function resolveViewer(
-  event: Pick<RequestEvent, 'cookies' | 'getClientAddress'>,
-): Promise<Viewer> {
+export async function resolveViewer(event: Pick<RequestEvent, 'cookies' | 'getClientAddress'>): Promise<Viewer> {
   const ip = event.getClientAddress()
   if (isAdminSession({ cookies: event.cookies })) {
     return { type: 'admin', userId: null, ip, name: getAdminUsername() }

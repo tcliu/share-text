@@ -21,10 +21,10 @@
 
 <div data-testid={testId} class="text-slate-300">
   {#if value === undefined}
-    <div class="text-sm italic text-slate-400">No content to preview</div>
+    <div class="text-sm text-slate-400 italic">No content to preview</div>
   {:else if !isContainer(value)}
     <pre class={valueClass(value)}>{valueText(value)}</pre>
   {:else}
-    <StructureNode label={containerLabel(value)} value={value} depth={0} {onChange} {onRenameKey} {editable} />
+    <StructureNode label={containerLabel(value)} {value} depth={0} {onChange} {onRenameKey} {editable} />
   {/if}
 </div>
