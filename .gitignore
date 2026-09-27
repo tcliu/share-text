@@ -4,6 +4,7 @@ archive/
 log/
 node_modules/
 .svelte-kit/
+test-results/
 .tmp/
 .data/
 .opencode/
