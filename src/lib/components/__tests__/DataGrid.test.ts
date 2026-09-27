@@ -28,9 +28,7 @@ function colSelector(root: HTMLElement, ci: number): HTMLElement {
 }
 
 function hasCellValue(root: HTMLElement, value: string): boolean {
-  return Array.from(root.querySelectorAll('textarea')).some(
-    i => (i as HTMLTextAreaElement).value === value,
-  )
+  return Array.from(root.querySelectorAll('textarea')).some(i => (i as HTMLTextAreaElement).value === value)
 }
 
 function expectRangeHighlight(root: HTMLElement, r1: number, c1: number, r2: number, c2: number) {
@@ -106,7 +104,13 @@ describe('DataGrid (reusable grid)', () => {
   })
 
   it('omits column resize handles when editable is false', async () => {
-    render(DataGrid, { value: [['a', 'b'], ['1', '2']], editable: false })
+    render(DataGrid, {
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
+      editable: false,
+    })
     const root = await screen.findByTestId('data-grid')
     expect(within(root).queryByRole('button', { name: 'Resize column 1' })).toBeNull()
     expect(within(root).queryByRole('button', { name: 'Resize column 2' })).toBeNull()
@@ -216,7 +220,14 @@ describe('DataGrid (reusable grid)', () => {
   })
 
   it('a multiline editor expands as an overlay without moving the rows below', async () => {
-    render(DataGrid, { value: [['a', 'x'], ['1', 'y'], ['2', 'z']], showHeaders: false })
+    render(DataGrid, {
+      value: [
+        ['a', 'x'],
+        ['1', 'y'],
+        ['2', 'z'],
+      ],
+      showHeaders: false,
+    })
     const root = await screen.findByTestId('data-grid')
     const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
     const below = gridCell(root, 1, 0) as HTMLTextAreaElement
@@ -245,7 +256,14 @@ describe('DataGrid (reusable grid)', () => {
   })
 
   it('a multiline editor grows one line at a time up to 5 lines, then scrolls', async () => {
-    render(DataGrid, { value: [['a', 'x'], ['1', 'y'], ['2', 'z']], showHeaders: false })
+    render(DataGrid, {
+      value: [
+        ['a', 'x'],
+        ['1', 'y'],
+        ['2', 'z'],
+      ],
+      showHeaders: false,
+    })
     const root = await screen.findByTestId('data-grid')
     const editor = gridCell(root, 0, 0) as HTMLTextAreaElement
     editor.focus()
@@ -727,13 +745,16 @@ describe('DataGrid (reusable grid)', () => {
       ],
     })
     const root = await screen.findByTestId('data-grid')
-    expect(root.querySelector('thead th')!.className).toContain('sticky')
+    expect(root.querySelector('thead th')!.classList.contains('sticky')).toBe(true)
     const headerRow = root.querySelector('thead tr') as HTMLElement
-    expect(headerRow.className).toContain('sticky top-0')
+    expect(headerRow.classList.contains('sticky')).toBe(true)
+    expect(headerRow.classList.contains('top-0')).toBe(true)
     const sel = rowSelector(root, 1)
-    expect(sel.className).toContain('sticky left-0')
+    expect(sel.classList.contains('sticky')).toBe(true)
+    expect(sel.classList.contains('left-0')).toBe(true)
     const corner = root.querySelector('thead th') as HTMLElement
-    expect(corner.className).toContain('sticky left-0')
+    expect(corner.classList.contains('sticky')).toBe(true)
+    expect(corner.classList.contains('left-0')).toBe(true)
   })
 
   it('when headers are disabled the first row shows centered column letters (A, B, AA)', async () => {
@@ -1937,11 +1958,13 @@ describe('DataGrid (fixed columns)', () => {
       ['c', '100'],
     ])
     await fireEvent.click(descButton)
-    await vi.waitFor(() => expect(onChange.mock.calls.at(-1)?.[0]).toEqual([
-      ['c', '100'],
-      ['b', '20'],
-      ['a', '3'],
-    ]))
+    await vi.waitFor(() =>
+      expect(onChange.mock.calls.at(-1)?.[0]).toEqual([
+        ['c', '100'],
+        ['b', '20'],
+        ['a', '3'],
+      ]),
+    )
   })
 
   it('sorts a single-column numeric list ascending numerically', async () => {
@@ -1972,15 +1995,17 @@ describe('DataGrid (fixed columns)', () => {
     await vi.waitFor(() => expect(root.querySelector('th[aria-sort="ascending"]')).not.toBeNull())
     await fireEvent.input(gridCell(root, 1, 0), { target: { value: 'z' } })
     await fireEvent.blur(gridCell(root, 1, 0))
-    await vi.waitFor(() =>
-      expect(root.querySelector('th[aria-sort="ascending"]')).toBeNull())
+    await vi.waitFor(() => expect(root.querySelector('th[aria-sort="ascending"]')).toBeNull())
   })
 })
 
 describe('DataGrid (column resize)', () => {
   it('switches to fixed table layout with a colgroup when initialColumnWidths is provided', async () => {
     render(DataGrid, {
-      value: [['a', 'b'], ['1', '2']],
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
       initialColumnWidths: ['100', '200'],
       showHeaders: false,
     })
@@ -1992,7 +2017,10 @@ describe('DataGrid (column resize)', () => {
 
   it('uses a shared fixed-width colgroup when initialColumnWidths is omitted', async () => {
     render(DataGrid, {
-      value: [['a', 'b'], ['1', '2']],
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
       showHeaders: false,
     })
     const root = await screen.findByTestId('data-grid')
@@ -2003,7 +2031,10 @@ describe('DataGrid (column resize)', () => {
 
   it('renders resize splitter buttons with aria-labels in the column selector row', async () => {
     render(DataGrid, {
-      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      value: [
+        ['a', 'b', 'c'],
+        ['1', '2', '3'],
+      ],
       showHeaders: false,
     })
     const root = await screen.findByTestId('data-grid')
@@ -2015,7 +2046,10 @@ describe('DataGrid (column resize)', () => {
 
   it('ArrowRight on a mid-column splitter grows the left column and shrinks the right', async () => {
     render(DataGrid, {
-      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      value: [
+        ['a', 'b', 'c'],
+        ['1', '2', '3'],
+      ],
       initialColumnWidths: ['100', '200', '150'],
       showHeaders: false,
     })
@@ -2032,7 +2066,10 @@ describe('DataGrid (column resize)', () => {
 
   it('ArrowLeft on a mid-column splitter shrinks the left column and grows the right', async () => {
     render(DataGrid, {
-      value: [['a', 'b', 'c'], ['1', '2', '3']],
+      value: [
+        ['a', 'b', 'c'],
+        ['1', '2', '3'],
+      ],
       initialColumnWidths: ['100', '200', '150'],
       showHeaders: false,
     })
@@ -2046,7 +2083,10 @@ describe('DataGrid (column resize)', () => {
 
   it('trailing splitter ArrowRight grows the last column beyond the initial width', async () => {
     render(DataGrid, {
-      value: [['a', 'b'], ['1', '2']],
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
       initialColumnWidths: ['120', '120'],
       showHeaders: false,
     })
@@ -2062,7 +2102,10 @@ describe('DataGrid (column resize)', () => {
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
     try {
       render(DataGrid, {
-        value: [['a', 'b'], ['1', '2']],
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
       })
@@ -2087,7 +2130,10 @@ describe('DataGrid (column resize)', () => {
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
     try {
       render(DataGrid, {
-        value: [['a', 'b'], ['1', '2']],
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
         storageKey: 'csv-preview',
@@ -2095,7 +2141,9 @@ describe('DataGrid (column resize)', () => {
       const root = await screen.findByTestId('data-grid')
       await vi.waitFor(() => expect(colSelector(root, 1).style.width).toBe('243px'))
 
-      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, { key: 'ArrowRight' })
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, {
+        key: 'ArrowRight',
+      })
       await vi.waitFor(() => expect(localStorage.getItem('share-text:column-widths:csv-preview')).not.toBeNull())
       const stored = JSON.parse(localStorage.getItem('share-text:column-widths:csv-preview')!)
       expect(stored).toEqual([120, 253])
@@ -2111,7 +2159,10 @@ describe('DataGrid (column resize)', () => {
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
     try {
       render(DataGrid, {
-        value: [['a', 'b'], ['1', '2']],
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
         storageKey: 'csv-preview',
@@ -2127,7 +2178,10 @@ describe('DataGrid (column resize)', () => {
 
   it('non-arrow keypresses on the splitter are ignored', async () => {
     render(DataGrid, {
-      value: [['a', 'b'], ['1', '2']],
+      value: [
+        ['a', 'b'],
+        ['1', '2'],
+      ],
       initialColumnWidths: ['120', '120'],
       showHeaders: false,
     })
@@ -2164,7 +2218,10 @@ describe('DataGrid (column resize)', () => {
     vi.stubGlobal('ResizeObserver', MockResizeObserver)
     try {
       render(DataGrid, {
-        value: [['a', 'b'], ['1', '2']],
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
         showHeaders: false,
       })
       const root = await screen.findByTestId('data-grid')
@@ -2173,7 +2230,9 @@ describe('DataGrid (column resize)', () => {
       Object.defineProperty(colSelector(root, 0), 'offsetWidth', { value: 120, configurable: true })
       Object.defineProperty(colSelector(root, 1), 'offsetWidth', { value: 120, configurable: true })
 
-      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, { key: 'ArrowRight' })
+      await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 1"]') as HTMLElement, {
+        key: 'ArrowRight',
+      })
       const header1 = colSelector(root, 1)
       expect(header1.style.width).toBe('110px')
 
@@ -2198,7 +2257,10 @@ describe('DataGrid (column resize)', () => {
     vi.stubGlobal('ResizeObserver', MockResizeObserver)
     try {
       render(DataGrid, {
-        value: [['a', 'b'], ['1', '2']],
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
       })
