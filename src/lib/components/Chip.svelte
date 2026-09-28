@@ -60,7 +60,7 @@
           {disabled}
           style={removeButtonStyle}
           class={removeButtonClass}>
-          <CloseIcon className="h-2.5 w-2.5" />
+          <CloseIcon size="xs" />
         </button>
       {/if}
     </span>

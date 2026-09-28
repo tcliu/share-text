@@ -763,7 +763,7 @@
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'asc')}
                         disabled={!editable}>
-                        <SortAscIcon className="h-2.5 w-2.5" />
+                        <SortAscIcon size="xs" />
                       </button>
                       <button
                         type="button"
@@ -774,7 +774,7 @@
                         onmousedown={event => event.stopPropagation()}
                         onclick={() => editable && handleSortClick(ci, 'desc')}
                         disabled={!editable}>
-                        <SortDescIcon className="h-2.5 w-2.5" />
+                        <SortDescIcon size="xs" />
                       </button>
                     </span>
                   </span>

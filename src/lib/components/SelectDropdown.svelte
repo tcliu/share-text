@@ -349,7 +349,8 @@
           onkeydown={handleControlKeydown}
           class={resolvedControlClass} />
         <ChevronDownIcon
-          className="pointer-events-none absolute right-1.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          size="sm"
+          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
       </div>
     {:else}
       <button
@@ -367,12 +368,12 @@
         onkeydown={handleControlKeydown}
         class={resolvedButtonClass}>
         <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
-        <ChevronDownIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+        <ChevronDownIcon size="sm" className="ml-auto shrink-0 text-slate-500" />
       </button>
     {/if}
   {/snippet}
   {#snippet closeIcon()}
-    <CloseIcon className="h-4 w-4" />
+    <CloseIcon size="sm" />
   {/snippet}
   {#if clearable && activeValue !== ''}
     <span class="inline-flex items-center gap-1">

@@ -250,7 +250,7 @@
         tabindex="-1"
         aria-label={resolvedIncrementLabel}
         class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronUpSmallIcon className="h-4 w-4" />
+        <ChevronUpSmallIcon size="sm" />
       </button>
       <button
         type="button"
@@ -259,7 +259,7 @@
         tabindex="-1"
         aria-label={resolvedDecrementLabel}
         class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronDownSmallIcon className="h-4 w-4" />
+        <ChevronDownSmallIcon size="sm" />
       </button>
     </div>
   {/if}

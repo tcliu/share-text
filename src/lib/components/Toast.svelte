@@ -91,7 +91,7 @@
     onClick={onClose}
     className="shrink-0 opacity-75 hover:opacity-100">
     {#snippet icon()}
-      <CloseIcon className="h-4 w-4" />
+      <CloseIcon size="sm" />
     {/snippet}
   </Button>
 </div>

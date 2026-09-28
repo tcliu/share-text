@@ -38,13 +38,15 @@
   )
 
   const SIZE_ICON_CLASSES: Record<SearchInputSize, string> = {
-    sm: 'pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500',
-    md: 'pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500',
-    lg: 'pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500',
+    sm: 'pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-500',
+    md: 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500',
+    lg: 'pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500',
   }
 
   let {
     value = $bindable(),
+  const SIZE_ICON_SIZE: Record<SearchInputSize, 'sm' | 'md'> = { sm: 'sm', md: 'md', lg: 'md' }
+
     ariaLabel,
     placeholder,
     size = 'sm',
@@ -63,7 +65,8 @@
 
 <div class={wrapperClass}>
   <div class="relative">
-    <SearchIcon className={resolvedIconClass} />
+  const resolvedIconSize = $derived(SIZE_ICON_SIZE[size])
+    <SearchIcon size={resolvedIconSize} className={resolvedIconClass} />
     <input
       bind:this={inputRef}
       type="search"

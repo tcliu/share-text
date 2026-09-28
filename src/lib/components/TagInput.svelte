@@ -232,7 +232,7 @@
             {disabled}
             onclick={() => removeAt(index)}
             class="rounded-full p-0.5 opacity-60 transition-opacity outline-none hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-40">
-            <CloseIcon className="h-3 w-3" />
+            <CloseIcon size="xs" />
           </button>
         </span>
       {/if}

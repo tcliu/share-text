@@ -377,7 +377,7 @@
               aria-label={sheetCloseLabel}
               onclick={() => close()}
               class="relative shrink-0 rounded-md p-2.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-100 focus-visible:text-slate-100 motion-reduce:transition-none">
-              <CloseIcon className="h-4 w-4" />
+              <CloseIcon size="sm" />
             </button>
           </div>
           <div

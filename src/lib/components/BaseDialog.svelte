@@ -213,7 +213,7 @@
         onclick={handleCancelRequest}
         disabled={cancelDisabled}
         class="absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-200 focus:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
-        <CloseIcon className="h-4 w-4" />
+        <CloseIcon size="sm" />
       </button>
       {#if header}
         <div class="px-5.5 pt-5.5">{@render header()}</div>

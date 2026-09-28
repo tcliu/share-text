@@ -534,7 +534,7 @@
                     : 'hover:text-cyan-300 focus:text-cyan-300'}"
                   aria-label={sortAriaLabel?.(column, 'asc') ?? `Sort ${column.header} ascending`}
                   onclick={() => handleSortClick(column, 'asc')}>
-                  <SortAscIcon className="h-2.5 w-2.5" />
+                  <SortAscIcon size="xs" />
                 </button>
                 <button
                   type="button"
@@ -543,7 +543,7 @@
                     : 'hover:text-cyan-300 focus:text-cyan-300'}"
                   aria-label={sortAriaLabel?.(column, 'desc') ?? `Sort ${column.header} descending`}
                   onclick={() => handleSortClick(column, 'desc')}>
-                  <SortDescIcon className="h-2.5 w-2.5" />
+                  <SortDescIcon size="xs" />
                 </button>
               </span>
             </span>

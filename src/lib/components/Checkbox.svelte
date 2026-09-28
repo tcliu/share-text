@@ -35,7 +35,7 @@
 
   const gapClass = $derived(size === 'sm' ? 'gap-2' : 'gap-3')
   const boxSizeClass = $derived(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
-  const iconSizeClass = $derived(size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')
+  const iconSize = $derived(size === 'sm' ? 'xs' : 'sm')
   const resolvedLabelClass = $derived(
     labelClass ?? (size === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300'),
   )
@@ -65,7 +65,7 @@
   <span
     aria-hidden="true"
     class={`inline-flex ${boxSizeClass} items-center justify-center rounded-md border transition peer-focus-visible:border-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/70 ${checked ? 'border-cyan-500 bg-cyan-300 text-slate-950' : 'border-slate-700 bg-slate-950 text-transparent'} ${boxClass}`}>
-    <CheckIcon className={iconSizeClass} />
+    <CheckIcon size={iconSize} />
   </span>
   {#if label}
     <span class={resolvedLabelClass}>{label}</span>

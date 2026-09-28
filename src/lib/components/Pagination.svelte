@@ -59,7 +59,7 @@
       pageInput: 'h-8 min-w-8',
       pageInputPad: '0.5rem',
       text: 'text-xs',
-      icon: 'h-4 w-4',
+      iconSize: 'sm',
     },
     sm: {
       iconButton: 'h-9 w-9',
@@ -67,7 +67,7 @@
       pageInput: 'h-9 min-w-9',
       pageInputPad: '0.625rem',
       text: 'text-sm',
-      icon: 'h-4 w-4',
+      iconSize: 'sm',
     },
     md: {
       iconButton: 'h-10 w-10',
@@ -75,7 +75,7 @@
       pageInput: 'h-10 min-w-10',
       pageInputPad: '0.75rem',
       text: 'text-md',
-      icon: 'h-5 w-5',
+      iconSize: 'md',
     },
     lg: {
       iconButton: 'h-11 w-11',
@@ -83,7 +83,7 @@
       pageInput: 'h-11 min-w-11',
       pageInputPad: '0.875rem',
       text: 'text-lg',
-      icon: 'h-5 w-5',
+      iconSize: 'md',
     },
   } as const
 
@@ -205,7 +205,7 @@
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
-    <ChevronLeftIcon className={SIZE_CLASS[size].icon} />
+    <ChevronLeftIcon size={SIZE_CLASS[size].iconSize} />
   </button>
 
   {#if showStartEllipsis}
@@ -244,7 +244,7 @@
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
-    <ChevronRightIcon className={SIZE_CLASS[size].icon} />
+    <ChevronRightIcon size={SIZE_CLASS[size].iconSize} />
   </button>
 
   <div class="flex items-center gap-1.5">

@@ -271,7 +271,7 @@
     onkeydown={onTriggerKeydown}
     class={`${NATIVE_SELECT_BUTTON_CLASS} ${start || end ? 'text-slate-100!' : 'text-slate-500!'}`}>
     <span class="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
-    <CalendarIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
+    <CalendarIcon size="sm" className="shrink-0 opacity-70" />
   </button>
 
   {#if open}
@@ -292,7 +292,7 @@
           aria-label={i18n.t('range.prevMonth')}
           onclick={prevMonth}
           class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
-          <ChevronLeftIcon className="h-4 w-4" />
+          <ChevronLeftIcon size="sm" />
         </button>
         <span class="text-xs font-semibold text-slate-200">{monthLabel}</span>
         <button
@@ -300,7 +300,7 @@
           aria-label={i18n.t('range.nextMonth')}
           onclick={nextMonth}
           class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
-          <ChevronRightIcon className="h-4 w-4" />
+          <ChevronRightIcon size="sm" />
         </button>
       </div>
 
