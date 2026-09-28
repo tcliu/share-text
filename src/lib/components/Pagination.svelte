@@ -118,6 +118,9 @@
   // page's input. Mouse navigation never sets it and never steals focus.
   let refocusJumpInput = false
   let refocusFrame = 0
+  // Set by any focusin elsewhere in the app (from a `<svelte:window>`
+  // listener) so a fast Tab away is never overridden by the deferred refocus.
+  let focusMovedAway = false
 
   $effect(() => {
     pageJumpInputValue = String(currentPage)
@@ -128,11 +131,12 @@
     pageJumpInput
     if (!refocusJumpInput) return
     refocusJumpInput = false
+    focusMovedAway = false
     // Cancel any pending frame before scheduling a new one, and skip when
     // focus already moved on, so a fast Tab is never overridden.
     cancelAnimationFrame(refocusFrame)
     refocusFrame = requestAnimationFrame(() => {
-      if (document.activeElement !== document.body) return
+      if (focusMovedAway) return
       pageJumpInput?.focus()
     })
   })
@@ -194,7 +198,13 @@
       onPageSizeChange(parsed)
     }
   }
+
+  function handleWindowFocusIn(): void {
+    focusMovedAway = true
+  }
 </script>
+
+<svelte:window onfocusin={handleWindowFocusIn} />
 
 <nav
   aria-label={resolvedPaginationLabel}

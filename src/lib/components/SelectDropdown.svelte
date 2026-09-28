@@ -102,6 +102,11 @@
   let inputRef = $state<HTMLInputElement | null>(null)
   let controlRef = $state<HTMLInputElement | HTMLButtonElement | HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
+  // Option elements by index (bound, never queried) for scrollport reveal.
+  let optionEls = $state<(HTMLElement | null)[]>([])
+  // Whether the filterable control input holds focus (bound from its events,
+  // never read from `document.activeElement`).
+  let inputFocused = $state(false)
   let filterText = $state('')
   let suppressOpenOnFocus = false
 
@@ -157,7 +162,7 @@
   // panel: the option never receives focus (aria-activedescendant pattern),
   // so the browser would otherwise let it drift out of the scrollport.
   function revealActive() {
-    revealInScrollport(panelRef?.querySelector<HTMLButtonElement>(`[id="${panelId}-option-${selection.peek()}"]`))
+    revealInScrollport(optionEls[selection.peek()])
   }
 
   function toggle() {
@@ -182,6 +187,7 @@
   }
 
   function handleControlFocus() {
+    inputFocused = true
     if (suppressOpenOnFocus) {
       suppressOpenOnFocus = false
       return
@@ -204,7 +210,7 @@
     }
     requestAnimationFrame(() => {
       const input = inputRef
-      if (!input || document.activeElement !== input) return
+      if (!input || !inputFocused) return
       const { selectionStart, selectionEnd, value } = input
       if (value.length === 0) return
       const collapsed = selectionStart === selectionEnd
@@ -241,7 +247,9 @@
 
   async function select(value: string) {
     const selectedOption = options.find(option => option.value === value)
-    const needsFocusRestore = filterable && inputRef !== null && document.activeElement !== inputRef
+    // Always restore focus for a filterable control: the option never receives
+    // focus (aria-activedescendant), so the input keeps (or regains) the caret.
+    const needsFocusRestore = filterable && inputRef !== null
     onSelect(value)
     if (filterable && selectedOption) {
       filterText = selectedOption.label
@@ -251,6 +259,10 @@
       suppressOpenOnFocus = true
       await tick()
       inputRef?.focus()
+      // `focus()` is a no-op when the input already holds focus, so no focus
+      // event consumes the guard; clear it either way or the next real focus
+      // would be swallowed and the panel would not reopen.
+      suppressOpenOnFocus = false
     }
   }
 
@@ -397,6 +409,7 @@
       {#each filteredOptions as option, index}
         <button
           type="button"
+          bind:this={optionEls[index]}
           id={`${panelId}-option-${index}`}
           role="option"
           tabindex="-1"

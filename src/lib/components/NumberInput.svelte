@@ -78,7 +78,7 @@
       return
     }
     queueMicrotask(() => {
-      if (document.activeElement !== input) return
+      if (!focused) return
       const end = input.value.length
       input.setSelectionRange(end, end)
     })

@@ -62,7 +62,7 @@
     try {
       const labelRect = displayBtn?.getBoundingClientRect()
       const editRect = editBtn?.getBoundingClientRect()
-      const gapPx = 4 // Tailwind gap-1 is 0.25rem -> 4px at 16px root
+      const gapPx = 8 // Tailwind gap-2 is 0.5rem -> 8px at 16px root
       if (labelRect) {
         inputWidth = Math.ceil(labelRect.width + (editRect?.width ?? 0) + gapPx)
       } else {
@@ -177,7 +177,7 @@
     <button
       bind:this={displayBtn}
       type="button"
-      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
+      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 py-1 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
       title={i18n.t('edit.doubleClickToEdit')}
       onclick={e => {
         e.stopPropagation()
@@ -214,8 +214,10 @@
 
   <!-- Don't grow to fill the available space in display mode so sibling elements
        (e.g. tag chips) sit immediately after the filename instead of being
-       pushed to the right. Keep min-w-0 so truncation still works. -->
-  <div class="group flex min-w-0 items-center gap-1">
+       pushed to the right. Keep min-w-0 so truncation still works.
+       The icon wrappers (edit + copy) get a small downward nudge so they sit on
+       the text's visual center, which rides below the line box's center. -->
+  <div class="group flex min-w-0 items-center gap-2 [&>span]:translate-y-0.5">
     {@render displayContent()}
     {#if copyable && text.trim() !== ''}
       <CopyButton {text} copyAriaLabel={`Copy ${text}`} />

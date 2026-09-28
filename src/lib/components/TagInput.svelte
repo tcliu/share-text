@@ -44,6 +44,8 @@
   let inputRef = $state<HTMLInputElement | null>(null)
   let containerRef = $state<HTMLDivElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
+  // Suggestion elements by index (bound, never queried) for scrollport reveal.
+  let optionEls = $state<(HTMLElement | null)[]>([])
   const selection = useListSelection(0)
 
   const query = $derived(draft.trim().toLowerCase())
@@ -129,7 +131,7 @@
   // the option never receives focus (aria-activedescendant pattern), so the
   // browser would otherwise let it drift out of the scrollport.
   function revealActive(): void {
-    revealInScrollport(panelRef?.querySelector<HTMLButtonElement>(`[id="${listboxId}-option-${selection.peek()}"]`))
+    revealInScrollport(optionEls[selection.peek()])
   }
 
   function handleKeydown(event: KeyboardEvent): void {
@@ -272,6 +274,7 @@
     {#each suggestions as suggestion, index (suggestion.toLowerCase())}
       <button
         type="button"
+        bind:this={optionEls[index]}
         id={`${listboxId}-option-${index}`}
         role="option"
         tabindex="-1"

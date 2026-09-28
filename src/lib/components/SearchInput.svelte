@@ -18,6 +18,8 @@
     inputRef?: HTMLInputElement | null
     oninput?: (event: Event) => void
     onkeydown?: (event: KeyboardEvent) => void
+    onfocus?: (event: FocusEvent) => void
+    onblur?: (event: FocusEvent) => void
   }
 
   // Literal class variants (never interpolated) so the Tailwind scanner emits
@@ -43,10 +45,10 @@
     lg: 'pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500',
   }
 
-  let {
-    value = $bindable(),
   const SIZE_ICON_SIZE: Record<SearchInputSize, 'sm' | 'md'> = { sm: 'sm', md: 'md', lg: 'md' }
 
+  let {
+    value = $bindable(),
     ariaLabel,
     placeholder,
     size = 'sm',
@@ -55,17 +57,19 @@
     inputRef = $bindable(null),
     oninput,
     onkeydown,
+    onfocus,
+    onblur,
   }: Props = $props()
 
   // Derived (not a plain const) so locale switches re-resolve the placeholder.
   const resolvedPlaceholder = $derived(placeholder ?? i18n.t('search.placeholder'))
   const resolvedInputClass = $derived(inputClass ?? inputVariants({ size }))
   const resolvedIconClass = $derived(SIZE_ICON_CLASSES[size])
+  const resolvedIconSize = $derived(SIZE_ICON_SIZE[size])
 </script>
 
 <div class={wrapperClass}>
   <div class="relative">
-  const resolvedIconSize = $derived(SIZE_ICON_SIZE[size])
     <SearchIcon size={resolvedIconSize} className={resolvedIconClass} />
     <input
       bind:this={inputRef}
@@ -75,6 +79,8 @@
       placeholder={resolvedPlaceholder}
       {oninput}
       {onkeydown}
+      {onfocus}
+      {onblur}
       class={resolvedInputClass} />
   </div>
 </div>

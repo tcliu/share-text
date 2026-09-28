@@ -84,6 +84,8 @@
   let buttonRef = $state<HTMLButtonElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   let inputRef = $state<HTMLInputElement | null>(null)
+  // Option elements by index (bound, never queried) for scrollport reveal.
+  let optionEls = $state<(HTMLElement | null)[]>([])
   let filterText = $state('')
 
   const filteredOptions = $derived.by(() => {
@@ -134,7 +136,7 @@
   // panel: the option never receives focus (aria-activedescendant pattern),
   // so the browser would otherwise let it drift out of the scrollport.
   function revealActive() {
-    revealInScrollport(panelRef?.querySelector<HTMLButtonElement>(`[id="${panelId}-option-${selection.peek()}"]`))
+    revealInScrollport(optionEls[selection.peek()])
   }
 
   function toggle() {
@@ -273,6 +275,7 @@
   {#each filteredOptions as option, index}
     <button
       type="button"
+      bind:this={optionEls[index]}
       id={`${panelId}-option-${index}`}
       role="option"
       tabindex="-1"
