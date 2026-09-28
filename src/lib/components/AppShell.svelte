@@ -22,6 +22,7 @@
   import { AppShellDrawer } from './use-app-shell-drawer.svelte'
 
   interface Props {
+    className?: string
     mode?: AppShellDrawerMode
     open?: boolean
     paneSize?: number
@@ -49,6 +50,7 @@
     onOpenChange?: (open: boolean) => void
     onPaneChange?: (size: number) => void
     onDragEnd?: () => void
+    onLayoutModeChange?: (floating: boolean) => void
     onRightOpenChange?: (open: boolean) => void
     onRightPaneChange?: (size: number) => void
     onRightDragEnd?: () => void
@@ -60,6 +62,7 @@
   }
 
   let {
+    className = 'flex h-dvh flex-col overflow-hidden',
     mode = 'auto',
     open = $bindable(true),
     paneSize = $bindable(APP_SHELL_DEFAULT_WIDTH),
@@ -87,6 +90,7 @@
     onOpenChange = undefined,
     onPaneChange = undefined,
     onDragEnd = undefined,
+    onLayoutModeChange = undefined,
     onRightOpenChange = undefined,
     onRightPaneChange = undefined,
     onRightDragEnd = undefined,
@@ -110,8 +114,11 @@
   // embedded shell floats its drawers when its space is narrow even on a wide
   // screen. The default keeps the server/first paint docked; the observer
   // corrects it after mount. Every presentation decision below derives from
-  // `floating`, so measurement and layout can never disagree.
+  // `floating`, so measurement and layout can never disagree. Until the
+  // measurement lands, a viewport-width CSS guard (below) hides the pane on
+  // narrow screens so the first paint never shows the squeezed docked pane.
   let reduceMotion = $state(false)
+  let measured = $state(false)
   let containerWidth = $state(APP_SHELL_DESKTOP_BREAKPOINT)
   let rootEl = $state<HTMLElement | null>(null)
   let mainEl = $state<HTMLElement | null>(null)
@@ -187,6 +194,13 @@
     toggleRight: () => rightDrawer.setOpen(!rightOpen),
   })
 
+  // Report the resolved presentation so a caller can keep app-level behavior
+  // (e.g. a route-driven overlay sync or a close affordance) on the same ruler
+  // the shell lays the pane out with, instead of a second viewport breakpoint.
+  $effect(() => {
+    onLayoutModeChange?.(floating)
+  })
+
   onMount(() => {
     leftDrawer.restoreSize()
     rightDrawer.restoreSize()
@@ -208,6 +222,7 @@
     if (rootEl) {
       resizeObserver.observe(rootEl)
     }
+    measured = true
     return () => {
       motionQuery.removeEventListener('change', syncMotion)
       resizeObserver.disconnect()
@@ -268,8 +283,8 @@
     data-suppressed={suppressed ? '' : null}
     aria-hidden={suppressed ? 'true' : undefined}
     class={floating
-      ? `absolute inset-y-0 z-40 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
-      : 'flex min-h-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] min-w-0 shrink-0 flex-row'}
+      ? `app-shell-pane absolute inset-y-0 z-40 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
+      : 'app-shell-pane flex min-h-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] min-w-0 shrink-0 flex-row'}
     style={`--pane-w: ${drawer.effectiveSize}px;${suppressed ? 'visibility:hidden;' : ''}`}>
     {#if !floating && side === 'right'}
       <Splitter
@@ -308,46 +323,64 @@
 
 <svelte:document onkeydown={handleDrawerEscape} />
 
-<header
-  class={`flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4 ${headerClassName}`}>
-  {@render header?.(headerApi)}
-</header>
-<div bind:this={rootEl} class="relative flex min-h-0 flex-1 flex-row" style="min-width: {min}px">
-  {#if leftDrawer.visible}
-    {@render drawerPane(leftDrawer, leftPane, 'left', resolvedResizeLabel, resolvedLeftPaneLabel, paneClassName)}
-  {/if}
+<div class={className} data-shell-measured={mode === 'auto' ? String(measured) : null}>
+  <header
+    class={`flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4 ${headerClassName}`}>
+    {@render header?.(headerApi)}
+  </header>
+  <div bind:this={rootEl} class="relative flex min-h-0 flex-1 flex-row" style="min-width: {min}px">
+    {#if leftDrawer.visible}
+      {@render drawerPane(leftDrawer, leftPane, 'left', resolvedResizeLabel, resolvedLeftPaneLabel, paneClassName)}
+    {/if}
 
-  <main
-    bind:this={mainEl}
-    tabindex="-1"
-    inert={overlayOpen}
-    class={`min-h-0 min-w-0 flex-1 overflow-y-auto outline-none ${mainClassName}`}>
-    {@render children?.()}
-  </main>
-
-  {#if rightDrawer.visible}
-    {@render drawerPane(
-      rightDrawer,
-      rightPane,
-      'right',
-      resolvedRightResizeLabel,
-      resolvedRightPaneLabel,
-      rightPaneClassName,
-    )}
-  {/if}
-
-  {#if overlayOpen}
-    <button
-      type="button"
+    <main
+      bind:this={mainEl}
       tabindex="-1"
-      aria-label={resolvedCloseLabel}
-      class={`absolute inset-0 z-30 bg-slate-950/60 ${suppressed ? 'invisible' : ''}`}
-      onclick={handleBackdropClick}></button>
+      inert={overlayOpen}
+      class={`min-h-0 min-w-0 flex-1 overflow-y-auto outline-none ${mainClassName}`}>
+      {@render children?.()}
+    </main>
+
+    {#if rightDrawer.visible}
+      {@render drawerPane(
+        rightDrawer,
+        rightPane,
+        'right',
+        resolvedRightResizeLabel,
+        resolvedRightPaneLabel,
+        rightPaneClassName,
+      )}
+    {/if}
+
+    {#if overlayOpen}
+      <!-- tabindex="-1" keeps the backdrop out of the tab order; prevent
+        pointerdown focus too, so closing by tapping the backdrop never parks
+        focus on the unmounting button and drops it to <body>. -->
+      <button
+        type="button"
+        tabindex="-1"
+        aria-label={resolvedCloseLabel}
+        class={`absolute inset-0 z-30 bg-slate-950/60 ${suppressed ? 'invisible' : ''}`}
+        onpointerdown={event => event.preventDefault()}
+        onclick={handleBackdropClick}></button>
+    {/if}
+  </div>
+  {#if footer}
+    <footer
+      class={`flex flex-none items-center justify-between gap-4 border-t border-slate-800 px-3 py-3 sm:px-4 ${footerClassName}`}>
+      {@render footer?.()}
+    </footer>
   {/if}
 </div>
-{#if footer}
-  <footer
-    class={`flex flex-none items-center justify-between gap-4 border-t border-slate-800 px-3 py-3 sm:px-4 ${footerClassName}`}>
-    {@render footer?.()}
-  </footer>
-{/if}
+
+<style>
+  /* Until the shell has measured its container, hide the pane on a narrow
+     viewport so the server/first paint never shows the squeezed docked pane;
+     the measured floating presentation replaces it. The viewport query matches
+     the shell's own container breakpoint for a top-level shell. */
+  @media (max-width: 767px) {
+    :global([data-shell-measured='false']) :global(.app-shell-pane) {
+      display: none;
+    }
+  }
+</style>
