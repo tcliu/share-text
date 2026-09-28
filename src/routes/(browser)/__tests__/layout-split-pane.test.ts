@@ -16,8 +16,8 @@ function stubDesktop() {
   }))
 }
 
-function asideStyle(container: HTMLElement) {
-  return container.querySelector('aside')?.getAttribute('style')
+function drawerStyle(container: HTMLElement) {
+  return container.querySelector('[data-drawer-presentation]')?.getAttribute('style')
 }
 
 describe('Split pane width on load', () => {
@@ -34,7 +34,7 @@ describe('Split pane width on load', () => {
       children: (() => '') as unknown as Snippet,
     })
     await waitFor(() => {
-      expect(asideStyle(container)).toContain('--aside-w: 300px')
+      expect(drawerStyle(container)).toContain('--pane-w: 300px')
     })
   })
 })

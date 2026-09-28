@@ -1,14 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { tick } from 'svelte'
-  import { slide } from 'svelte/transition'
   import { toast } from 'svelte-sonner'
   import { page } from '$app/stores'
   import { goto, afterNavigate } from '$app/navigation'
   import type { LayoutData } from './$types'
   import { setShareTextContext } from '$lib/share-text-context'
   import DocumentList from '$lib/components/DocumentList.svelte'
-  import Splitter from '$lib/components/Splitter.svelte'
+  import AppShell from '$lib/components/AppShell.svelte'
   import Button from '$lib/components/Button.svelte'
   import PersonIcon from '$lib/icons/PersonIcon.svelte'
   import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
@@ -16,7 +15,6 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
   import BaseDialog from '$lib/components/BaseDialog.svelte'
   import UserAuthPanel, { type AuthPanelMode } from '$lib/components/UserAuthPanel.svelte'
-  import MobileDrawer from '$lib/components/MobileDrawer.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import ThemeMenu from '$lib/components/ThemeMenu.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -26,11 +24,10 @@
   import { useUserAuth } from '$lib/use-user-auth.svelte'
   import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
   import {
-    loadSplitPaneWidth,
-    saveSplitPaneWidth,
-    SPLIT_PANE_MAX_WIDTH,
-    SPLIT_PANE_MIN_WIDTH,
-  } from '$lib/split-pane'
+    APP_SHELL_DEFAULT_WIDTH,
+    APP_SHELL_MAX_WIDTH,
+    APP_SHELL_MIN_WIDTH,
+  } from '$lib/app-shell'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
@@ -44,11 +41,13 @@
 
   let selectedDocumentRefreshToken = $state(0)
   let deleteTarget = $state<string | null>(null)
-  let leftPaneCollapsed = $state(false)
-  let leftPaneWidth = $state(loadSplitPaneWidth())
-  let leftPaneMinWidth = $state(SPLIT_PANE_MIN_WIDTH)
+  let leftPaneOpen = $state(true)
+  let leftPaneWidth = $state(APP_SHELL_DEFAULT_WIDTH)
+  let leftPaneMinWidth = $state(APP_SHELL_MIN_WIDTH)
+  // Mirrors the shell's own dock/floating presentation so the list's route
+  // sync and close affordance use the shell's ruler, never a second breakpoint.
+  let paneFloating = $state(false)
   let editorFocus = $state<(() => void) | null>(null)
-  let mobileDrawerOpen = $state(false)
   let loginOpen = $state(false)
   let loginMode: AuthPanelMode = $state('signin')
 
@@ -70,17 +69,6 @@
     return () => media.removeEventListener('change', update)
   })
 
-  let reduceMotion = $state(false)
-
-  $effect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const update = () => (reduceMotion = media.matches)
-    update()
-    media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  })
-
   function requestSelectedDocumentRefresh() {
     selectedDocumentRefreshToken += 1
   }
@@ -91,7 +79,8 @@
       return
     }
     if ($page.url.pathname === '/new') {
-      closeMobileDrawer()
+      // Only the floating drawer overlaps the editor; a docked pane stays put.
+      if (paneFloating) closeDrawer()
       await tick()
       editorFocus?.()
       return
@@ -130,29 +119,16 @@
     }
   }
 
-  async function toggleLeftPane() {
-    leftPaneCollapsed = !leftPaneCollapsed
-    await tick()
-    editorFocus?.()
-  }
-
-  // The full-width header owns the desktop collapse toggle; the list keeps
-  // its collapse button only as a close affordance for the mobile drawer.
+  // The AppShell header owns the collapse toggle on every viewport so a
+  // closed pane can always be reopened; the list keeps its collapse button
+  // only as a close affordance while the pane floats.
   const handleListCollapse = $derived.by(() => {
-    if (!isMobile) return undefined
-    return mobileDrawerOpen ? closeMobileDrawer : undefined
+    if (!paneFloating || !leftPaneOpen) return undefined
+    return closeDrawerAndFocus
   })
 
-  function handleSplitPaneChange(value: number) {
-    leftPaneWidth = value
-  }
-
-  function handleSplitPaneDragEnd() {
-    saveSplitPaneWidth(leftPaneWidth)
-  }
-
   function handleMinWidthChange(minWidth: number) {
-    const effectiveMin = Math.min(SPLIT_PANE_MAX_WIDTH, Math.max(SPLIT_PANE_MIN_WIDTH, minWidth))
+    const effectiveMin = Math.min(APP_SHELL_MAX_WIDTH, Math.max(APP_SHELL_MIN_WIDTH, minWidth))
     leftPaneMinWidth = effectiveMin
     if (leftPaneWidth < effectiveMin) {
       leftPaneWidth = effectiveMin
@@ -160,11 +136,21 @@
   }
 
   function openMobileDrawer() {
-    mobileDrawerOpen = true
+    leftPaneOpen = true
   }
 
-  function closeMobileDrawer() {
-    mobileDrawerOpen = false
+  function closeDrawer() {
+    leftPaneOpen = false
+  }
+
+  async function closeDrawerAndFocus() {
+    leftPaneOpen = false
+    await tick()
+    if (showingEditor) {
+      editorFocus?.()
+    } else {
+      mainRef?.focus()
+    }
   }
 
   async function handleSignOut() {
@@ -218,8 +204,17 @@
     history.replaceState(null, '', url.pathname + (url.search ? `?${url.searchParams}` : '') + url.hash)
   })
 
-  afterNavigate((navigation) => {
-    closeMobileDrawer()
+  // While the pane floats it is an overlay: keep it open on the list route and
+  // closed on editor routes so the list never covers the editor, while a docked
+  // pane's collapse state is left untouched. Keyed off the shell's own
+  // presentation so the two rulers can never disagree.
+  $effect(() => {
+    if (paneFloating) {
+      leftPaneOpen = !showingEditor
+    }
+  })
+
+  afterNavigate(navigation => {
     if (navigation.type === 'enter') return
     const main = mainRef
     if (main && !main.contains(document.activeElement)) {
@@ -228,8 +223,8 @@
   })
 
   $effect(() => {
-    if (editorGuardState.discardDialogOpen) {
-      closeMobileDrawer()
+    if (editorGuardState.discardDialogOpen && paneFloating) {
+      leftPaneOpen = false
     }
   })
 
@@ -297,6 +292,7 @@
 
 {#snippet documentList()}
   <DocumentList
+    bare
     documents={documentsState.documents}
     loading={documentsState.loadingDocuments}
     error={documentsState.documentsError}
@@ -306,7 +302,6 @@
     searchActive={documentsState.searchInput.trim() !== '' || documentsState.searchQuery !== ''}
     onSearchInput={documentsState.handleSearchInput}
     onSearchKeydown={documentsState.handleSearchKeydown}
-    width={isMobile ? undefined : leftPaneWidth}
     onNew={handleNew}
     onRefresh={handleRefresh}
     onLoadMore={documentsState.loadMore}
@@ -314,94 +309,87 @@
     onMinWidthChange={handleMinWidthChange} />
 {/snippet}
 
+{#snippet browserHeader(api: import('$lib/app-shell').AppShellHeaderApi)}
+  <div class="flex items-center gap-2">
+    <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
+    <Button
+      size="sm"
+      className="-ml-1"
+      ariaLabel={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
+      tooltip={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
+      ariaExpanded={api.open}
+      preventFocusSteal
+      onClick={() => api.toggleLeft()}>
+      {#snippet icon()}
+        <MenuIcon className="h-4 w-4" />
+      {/snippet}
+    </Button>
+    <h1 class="text-base font-semibold tracking-tight whitespace-nowrap text-slate-200 sm:text-lg">
+      {i18n.t('app.name')}
+    </h1>
+  </div>
+  <div class="flex items-center gap-2">
+    <ThemeMenu align="right" />
+    <LanguageMenu align="right" />
+    {#if profileIdentity}
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('list.settings')}
+        tooltip={i18n.t('list.settingsWith', { name: profileIdentity.username })}
+        onClick={handleSettings}>
+        {#snippet icon()}
+          <SettingsIcon />
+        {/snippet}
+      </Button>
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('list.signOut')}
+        tooltip={i18n.t('list.signedInAs', { name: profileIdentity.username })}
+        onClick={handleSignOutClick}>
+        {#snippet icon()}
+          <SignOutIcon />
+        {/snippet}
+      </Button>
+    {:else}
+      <Button
+        size="sm"
+        ariaLabel={i18n.t('list.login')}
+        tooltip={i18n.t('list.login')}
+        onClick={() => (loginOpen = true)}>
+        {#snippet icon()}
+          <PersonIcon />
+        {/snippet}
+      </Button>
+    {/if}
+  </div>
+{/snippet}
+
 <a
   href="#main-content"
-  class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950">Skip to content</a>
+  class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
+  >Skip to content</a>
 
-<div class="flex h-dvh flex-col overflow-hidden">
-  <header class="flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4">
-    <div class="flex items-center gap-2">
-      {#if !isMobile}
-        <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
-        <Button
-          size="sm"
-          className="-ml-1"
-          ariaLabel={leftPaneCollapsed ? i18n.t('list.showDocumentList') : i18n.t('list.collapse')}
-          tooltip={leftPaneCollapsed ? i18n.t('list.showDocumentList') : i18n.t('list.collapse')}
-          ariaExpanded={!leftPaneCollapsed}
-          preventFocusSteal
-          onClick={toggleLeftPane}>
-          {#snippet icon()}
-            <MenuIcon className="h-4 w-4" />
-          {/snippet}
-        </Button>
-      {/if}
-      <h1 class="text-base font-semibold tracking-tight text-slate-200 sm:text-lg">{i18n.t('app.name')}</h1>
-    </div>
-    <div class="flex items-center gap-2">
-      <ThemeMenu align="right" />
-      <LanguageMenu align="right" />
-      {#if profileIdentity}
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('list.settings')}
-          tooltip={i18n.t('list.settingsWith', { name: profileIdentity.username })}
-          onClick={handleSettings}>
-          {#snippet icon()}
-            <SettingsIcon />
-          {/snippet}
-        </Button>
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('list.signOut')}
-          tooltip={i18n.t('list.signedInAs', { name: profileIdentity.username })}
-          onClick={handleSignOutClick}>
-          {#snippet icon()}
-            <SignOutIcon />
-          {/snippet}
-        </Button>
-      {:else}
-        <Button size="sm" ariaLabel={i18n.t('list.login')} tooltip={i18n.t('list.login')} onClick={() => (loginOpen = true)}>
-          {#snippet icon()}
-            <PersonIcon />
-          {/snippet}
-        </Button>
-      {/if}
-    </div>
-  </header>
-
-  <div class="flex min-h-0 flex-1 overflow-hidden">
-    {#if !leftPaneCollapsed && (!isMobile || !showingEditor)}
-      <div
-        class={`flex ${showingEditor ? 'hidden lg:flex' : 'w-full lg:w-auto'}`}
-        transition:slide={{ axis: 'x', duration: reduceMotion ? 0 : 200 }}>
-        {@render documentList()}
-        {#if !isMobile}
-          <Splitter
-            className="hidden lg:block"
-            value={leftPaneWidth}
-            min={leftPaneMinWidth}
-            max={SPLIT_PANE_MAX_WIDTH}
-            onChange={handleSplitPaneChange}
-            onDragEnd={handleSplitPaneDragEnd} />
-        {/if}
-      </div>
-    {/if}
-    <main
-      bind:this={mainRef}
-      id="main-content"
-      tabindex="-1"
-      class={`min-w-0 flex-1 outline-none ${showingEditor ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`}>
-      {@render children()}
-    </main>
-  </div>
-</div>
-
-{#if isMobile && showingEditor}
-  <MobileDrawer open={mobileDrawerOpen} onClose={closeMobileDrawer}>
+<AppShell
+  bind:open={leftPaneOpen}
+  bind:paneSize={leftPaneWidth}
+  min={leftPaneMinWidth}
+  max={APP_SHELL_MAX_WIDTH}
+  defaultSize={APP_SHELL_DEFAULT_WIDTH}
+  storageKey="share-text:split-pane-width"
+  headerClassName="flex-wrap"
+  leftPaneLabel={i18n.t('editor.documentList')}
+  onLayoutModeChange={floating => (paneFloating = floating)}
+  onOpenChange={() => {
+    if (!paneFloating) void tick().then(() => editorFocus?.())
+  }}
+  header={browserHeader}>
+  {#snippet leftPane()}
     {@render documentList()}
-  </MobileDrawer>
-{/if}
+  {/snippet}
+  <div bind:this={mainRef} id="main-content" tabindex="-1" class="flex min-h-full flex-1 flex-col outline-none">
+    {@render children()}
+  </div>
+</AppShell>
 
 {#if editorGuardState.discardDialogOpen}
   <ConfirmDialog
@@ -428,6 +416,10 @@
     title={loginMode === 'signin' ? i18n.t('auth.login') : i18n.t('auth.createAccount')}
     maxWidth="md"
     onCancel={() => (loginOpen = false)}>
-    <UserAuthPanel embedded bind:mode={loginMode} onAuthenticated={handleLoginAuthenticated} onsuccess={() => void handleLoginSuccess()} />
+    <UserAuthPanel
+      embedded
+      bind:mode={loginMode}
+      onAuthenticated={handleLoginAuthenticated}
+      onsuccess={() => void handleLoginSuccess()} />
   </BaseDialog>
 {/if}

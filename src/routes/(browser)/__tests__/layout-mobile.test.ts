@@ -8,13 +8,34 @@ import { setPage } from '../../../test/mocks/app-stores'
 
 const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
 
-function stubMobile() {
+// The layout's drawer behavior follows the shared AppShell's own dock/floating
+// presentation (its container width), not a viewport media query. Simulate a
+// narrow shell container so the pane floats; matchMedia still reports mobile
+// for the editor toolbar's `isMobile` context.
+const NARROW_CONTAINER_WIDTH = 375
+
+function stubNarrowShell() {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: true,
     media: query,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }))
+  class NarrowResizeObserver {
+    callback: ResizeObserverCallback
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback
+    }
+    observe() {
+      this.callback(
+        [{ contentRect: { width: NARROW_CONTAINER_WIDTH } } as ResizeObserverEntry],
+        this as unknown as ResizeObserver,
+      )
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('ResizeObserver', NarrowResizeObserver)
 }
 
 function mockFetch() {
@@ -33,14 +54,14 @@ function mockFetch() {
 describe('Mobile layout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    stubMobile()
+    stubNarrowShell()
     localStorage.clear()
     setPage({ params: {}, url: new URL('http://localhost/'), route: { id: '/' } })
     vi.stubGlobal('fetch', mockFetch())
   })
 
-  it('shows the document list full screen on the list route', async () => {
-    const { queryByText, queryByPlaceholderText, queryByLabelText } = render(Layout, {
+  it('shows the document list on the list route', async () => {
+    const { queryByText, queryByPlaceholderText, getAllByRole } = render(Layout, {
       children: (() => '') as unknown as Snippet,
     })
 
@@ -48,7 +69,7 @@ describe('Mobile layout', () => {
       expect(queryByText('Existing')).toBeTruthy()
     })
     expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
-    expect(queryByLabelText('Collapse document list')).toBeNull()
+    expect(getAllByRole('button', { name: 'Collapse document list' }).length).toBeGreaterThan(0)
     expect(queryByText('Back to document list')).toBeNull()
   })
 
@@ -69,9 +90,7 @@ describe('Mobile layout', () => {
   })
 
   it('opens the document list in a drawer on the editor page and closes it', async () => {
-    const { getByTestId, getByRole, queryByTestId, queryByPlaceholderText, queryByText } = render(
-      LayoutDrawerHost,
-    )
+    const { getByTestId, getAllByRole, queryByPlaceholderText, queryByText } = render(LayoutDrawerHost)
 
     await waitFor(() => {
       expect(queryByText('Existing')).toBeTruthy()
@@ -80,27 +99,26 @@ describe('Mobile layout', () => {
     setPage({ params: { id: 'aaaaaa' }, url: new URL('http://localhost/aaaaaa'), route: { id: '/[id]' } })
 
     await waitFor(() => {
-      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
+      expect(queryByPlaceholderText('Search documents...')).toBeNull()
     })
-    expect(queryByPlaceholderText('Search documents...')).toBeNull()
 
     await fireEvent.click(getByTestId('open-drawer'))
 
     await waitFor(() => {
-      expect(queryByTestId('mobile-drawer-overlay')).toBeTruthy()
+      expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
     })
-    expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
     expect(queryByText('Existing')).toBeTruthy()
 
-    await fireEvent.click(getByRole('button', { name: 'Collapse document list' }))
+    const collapseButtons = getAllByRole('button', { name: 'Collapse document list' })
+    await fireEvent.click(collapseButtons[collapseButtons.length - 1])
 
     await waitFor(() => {
-      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
+      expect(queryByPlaceholderText('Search documents...')).toBeNull()
     })
   })
 
-  it('closes the drawer when the backdrop is clicked', async () => {
-    const { getByTestId, queryByTestId } = render(LayoutDrawerHost)
+  it('toggles the drawer from the header', async () => {
+    const { getByTestId, getAllByRole, getByRole, queryByPlaceholderText } = render(LayoutDrawerHost)
 
     await waitFor(() => {
       expect(getByTestId('open-drawer')).toBeTruthy()
@@ -110,13 +128,17 @@ describe('Mobile layout', () => {
 
     await fireEvent.click(getByTestId('open-drawer'))
     await waitFor(() => {
-      expect(queryByTestId('mobile-drawer-overlay')).toBeTruthy()
+      expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
     })
 
-    await fireEvent.click(getByTestId('mobile-drawer-overlay'))
+    await fireEvent.click(getAllByRole('button', { name: 'Collapse document list' })[0])
     await waitFor(() => {
-      expect(queryByTestId('mobile-drawer-overlay')).toBeNull()
+      expect(queryByPlaceholderText('Search documents...')).toBeNull()
+    })
+
+    await fireEvent.click(getByRole('button', { name: 'Show document list' }))
+    await waitFor(() => {
+      expect(queryByPlaceholderText('Search documents...')).toBeTruthy()
     })
   })
-
 })

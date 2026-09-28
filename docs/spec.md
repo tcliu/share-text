@@ -604,7 +604,7 @@ dialogs, login panel, admin hooks).
 - `i18n.t()` is called in templates and `$derived`; never in a `$props()`
   default (prop defaults evaluate once and would not react to a locale change).
   Shared components with default labels (`CopyButton`, `Copyable`, `Chip`,
-  `Splitter`, `MobileDrawer`, `LazyCodeEditor`, `FormatDialog`,
+  `Splitter`, `LazyCodeEditor`, `FormatDialog`,
   `Combobox`, `SelectDropdown`, `DataTable`) keep the prop optional and resolve
   the fallback via `$derived(prop ?? i18n.t('key'))` or an inline `??` at the
   call site. Toast text in event handlers and async code uses the current locale
@@ -647,25 +647,29 @@ pre-paint allowlist, CSS blocks, and menu options in lockstep.
 
 ### Responsive Layout
 
-Below the `lg` breakpoint (1023px, driven by a `matchMedia`-backed `isMobile`
-full-screen pages with no splitter: the document list occupies the whole screen
-when no editor is open (on `/`), and opening a document (route `/[id]` or
-`/new`) hides the list and shows the editor full screen. The document list is
-still reachable from an editor via a left slide-out `MobileDrawer`: the editor
-header shows a hamburger button before the filename that opens it
-(`openMobileDrawer` on the share-text context, set on the layout's
-`mobileDrawerOpen` state), and the drawer renders the same shared `documentList`
-snippet the layout uses on the list route. The drawer is a `fixed inset-0 z-40`
-overlay whose dark backdrop closes on click, whose panel (`w-full max-w-sm`)
-slides in from the left (`fly` x `-100%`, 200ms) over a fading backdrop and
-which closes on the collapse button, on Escape, and on any
-client-side navigation via `afterNavigate`. The panel is exposed as
-`role="dialog"`/`aria-modal` with a `tabindex="-1"` ref: opening it moves focus
-to the panel, Tab is trapped within it, and closing restores focus to the
-element focused before it opened. Its Escape handling follows the shared dialog
-keydown protocol (respects `event.defaultPrevented`, marks
-`shareTextDialogHandled`, stops immediate propagation) so it never double-fires
-with `BaseDialog`.
+The browser layout renders its header, document-list pane, and editor column
+through the shared `AppShell`: the pane docks beside the content at or above
+the shell container breakpoint and floats as an overlay below it, with a
+built-in `Splitter` (the shell owns persistence under
+`share-text:split-pane-width`) and a backdrop plus cooperative Escape handling.
+The pane is a non-modal layout drawer, not a dialog: while it floats the editor
+column is `inert` but the app header stays reachable (its toggle also closes the
+pane), and there is no focus trap. Until the shell has measured its container, a
+viewport-width CSS guard hides the pane on narrow screens so the server/first
+paint never shows the squeezed docked pane. The editor header shows a hamburger button
+before the filename that opens the pane (`openMobileDrawer` on the share-text
+context, set on the layout's drawer-open state), and the pane renders the shared
+`documentList` snippet (embedded bare inside the shell's `aside`, labelled with
+the document-list name). The pane closes on the collapse button, on the header
+toggle, on backdrop click, and on Escape, and stays open on the list route /
+closed on editor routes while it floats. The layout mirrors the shell's own
+dock/floating presentation (`onLayoutModeChange`) and drives the route sync, the
+list close affordance, and the docked focus restore from that single ruler, so
+it can never disagree with the shell's breakpoint; `isMobile` (`max-width:
+1023px`) only drives the editor toolbar layout. Opening the floating pane moves
+focus into it and closing returns focus toward the main column, while docked
+header toggles restore the registered editor focus. The pane width floor follows
+the list header measurement.
 
 On mobile the `DocumentEditorPane` header stacks into three rows — document
 name + right-aligned type selector, then the tag chips, then the action
@@ -694,16 +698,15 @@ the end of the first row; the buttons can themselves span multiple rows.
 
 The browser, admin, and settings layouts share a full-width app header: title
 left; `ThemeMenu` + `LanguageMenu` + identity actions right. The browser header
-adds the desktop list-collapse toggle (hamburger `MenuIcon`, `aria-expanded`,
-`preventFocusSteal` since collapsing restores editor focus)
-before the title; it is hidden on mobile, where the editor toolbar's drawer
-button opens the list instead. `DocumentList` owns only a list toolbar (New,
+adds the list-collapse toggle (hamburger `MenuIcon`, `aria-expanded`,
+`preventFocusSteal` since docked toggles restore editor focus)
+before the title; it stays visible on every viewport so a closed pane can
+always be reopened. `DocumentList` owns only a list toolbar (New,
 Refresh, search): its header collapse button renders only when the layout
-passes `onToggleCollapse`, i.e. solely as the mobile-drawer close affordance —
-it is absent on desktop and on the mobile list route where there is nothing to
-collapse. Collapsing hides the pane entirely (no collapsed rail, matching tts);
+passes `onToggleCollapse`, i.e. solely as the narrow-viewport close affordance —
+it is absent on desktop. Collapsing hides the pane entirely (no collapsed rail, matching tts);
 the header toggle reopens it with a width slide (200ms, instant under
-`prefers-reduced-motion`), and either transition restores the registered
+`prefers-reduced-motion`), and docked toggles restore the registered
 editor focus. Identity actions live in the browser header: a Login button
 opening the sign-in dialog (embedded `UserAuthPanel`, no navigation, so drafts
 and editor state survive; the form also accepts admin credentials when the

@@ -67,13 +67,13 @@ The page is split into two vertical panes.
 
 ### Responsive layout
 
-On screens narrower than the `lg` breakpoint (1023px) the two panes stop being
-side by side and become full-screen pages: the document list occupies the whole
-screen on `/`, and opening a document (or `/new`) hides the list and shows the
-editor full screen. From the editor, a hamburger button before the document
-name opens a left slide-out drawer with the document list; the drawer closes on
-its collapse button, on Escape, on tapping the dark backdrop, and after
-navigating to a document. On mobile the editor header stacks into rows —
+On narrow screens the document list becomes an overlay drawer over the editor
+rather than a side-by-side pane: from the editor, a hamburger button before the
+document name opens the list; the drawer closes on
+its collapse button, on the header toggle, on Escape, on tapping the dark backdrop,
+and after navigating to a document. The drawer is a non-modal overlay — the
+editor behind it is inert, but the app header stays usable, so its toggle also
+closes the list. On mobile the editor header stacks into rows —
 document name and type selector, then the tag chips, then the action buttons —
   and the action row opens with a three-dot (kebab) menu holding **Upload**,
   **Preview view** toggles and the **Copy**,

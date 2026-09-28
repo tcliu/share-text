@@ -29,6 +29,7 @@
     onToggleCollapse?: () => void
     width?: number
     onMinWidthChange?: (minWidth: number) => void
+    bare?: boolean
   }
 
   let {
@@ -47,6 +48,7 @@
     onToggleCollapse,
     width,
     onMinWidthChange,
+    bare = false,
   }: Props = $props()
 
   let loadMoreSentinel = $state<HTMLElement | null>(null)
@@ -93,9 +95,11 @@
 </script>
 
 <aside
-  aria-label={i18n.t('editor.documentList')}
-  class="flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 lg:w-[var(--aside-w,100%)]"
-  style={width !== undefined ? `--aside-w: ${width}px` : undefined}>
+  aria-label={bare ? undefined : i18n.t('editor.documentList')}
+  class={bare
+    ? 'flex h-full min-h-0 w-full flex-col gap-2 bg-slate-900/50'
+    : 'flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 lg:w-[var(--aside-w,100%)]'}
+  style={bare || width === undefined ? undefined : `--aside-w: ${width}px`}>
   <div bind:this={headerRef} class="flex items-center gap-1 px-2 pt-2">
     {#if onToggleCollapse}
       <Button
