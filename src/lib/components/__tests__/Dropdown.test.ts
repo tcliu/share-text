@@ -62,7 +62,7 @@ describe('filterable SelectDropdown', () => {
     expect(panelOpen()).toBe(false)
   })
 
-  it('does nothing on Enter when the panel is closed', async () => {
+  it('reopens on Enter when the panel is closed and keeps the value', async () => {
     const { getByRole } = render(DropdownHost)
     const input = getByRole('combobox') as HTMLInputElement
     await fireEvent.focus(input)
@@ -72,7 +72,7 @@ describe('filterable SelectDropdown', () => {
 
     await fireEvent.keyDown(input, { key: 'Enter' })
     expect(input.value).toBe('Markdown')
-    expect(panelOpen()).toBe(false)
+    expect(panelOpen()).toBe(true)
   })
 
   it('reopens with a click after confirming with Enter', async () => {
