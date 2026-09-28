@@ -1,6 +1,6 @@
 <script lang="ts">
-  import ChevronUpSmallIcon from '$lib/icons/ChevronUpSmallIcon.svelte'
-  import ChevronDownSmallIcon from '$lib/icons/ChevronDownSmallIcon.svelte'
+  import ChevronUpIcon from '$lib/icons/ChevronUpIcon.svelte'
+  import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -249,8 +249,8 @@
         disabled={disabled || isAtMax}
         tabindex="-1"
         aria-label={resolvedIncrementLabel}
-        class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-1 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronUpSmallIcon size="sm" />
+        class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-0.5 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
+        <ChevronUpIcon size="xs" />
       </button>
       <button
         type="button"
@@ -258,8 +258,8 @@
         disabled={disabled || isAtMin}
         tabindex="-1"
         aria-label={resolvedDecrementLabel}
-        class="flex flex-1 items-center justify-center bg-slate-900 px-1 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronDownSmallIcon size="sm" />
+        class="flex flex-1 items-center justify-center bg-slate-900 px-0.5 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
+        <ChevronDownIcon size="xs" />
       </button>
     </div>
   {/if}

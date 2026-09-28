@@ -356,12 +356,14 @@
             ? `${panelId}-option-${selection.index}`
             : undefined}
           onfocus={handleControlFocus}
+          onblur={() => (inputFocused = false)}
           onclick={handleControlClick}
           oninput={handleControlInput}
           onkeydown={handleControlKeydown}
           class={resolvedControlClass} />
         <ChevronDownIcon
           size="sm"
+          variant="solid"
           className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
       </div>
     {:else}
@@ -380,7 +382,7 @@
         onkeydown={handleControlKeydown}
         class={resolvedButtonClass}>
         <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
-        <ChevronDownIcon size="sm" className="ml-auto shrink-0 text-slate-500" />
+        <ChevronDownIcon size="sm" variant="solid" className="ml-auto shrink-0 text-slate-500" />
       </button>
     {/if}
   {/snippet}

@@ -313,7 +313,7 @@
     onkeydown={handleButtonKeydown}
     class={resolvedButtonClass}>
     <span class="truncate">{label}</span>
-    <ChevronDownIcon size="xs" className="shrink-0 opacity-70" />
+    <ChevronDownIcon size="xs" variant="solid" className="shrink-0 opacity-70" />
   </button>
 
   {#if open}
