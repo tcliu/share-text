@@ -160,7 +160,7 @@
                 <span
                   class={tagChipClass()}
                   style="color: #94a3b8; border-color: rgba(148,163,184,0.4); background-color: rgba(148,163,184,0.1);">
-                  <LockIcon className="h-3 w-3" />
+                  <LockIcon size="xs" />
                   {i18n.t('list.private')}
                 </span>
               {/if}

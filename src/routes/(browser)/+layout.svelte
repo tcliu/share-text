@@ -321,7 +321,7 @@
       preventFocusSteal
       onClick={() => api.toggleLeft()}>
       {#snippet icon()}
-        <MenuIcon className="h-4 w-4" />
+        <MenuIcon size="sm" />
       {/snippet}
     </Button>
     <h1 class="text-base font-semibold tracking-tight whitespace-nowrap text-slate-200 sm:text-lg">

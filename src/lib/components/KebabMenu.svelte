@@ -44,7 +44,7 @@
   {itemClass}
   itemDisabled={item => item.disabled ?? false}>
   {#snippet icon()}
-    <KebabIcon className="h-4 w-4" />
+    <KebabIcon size="sm" />
   {/snippet}
   {#snippet item(it: KebabMenuItem, _state: MenuItemState)}
     {#if it.icon}

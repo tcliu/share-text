@@ -186,7 +186,7 @@
       aria-label={open ? i18n.t('structure.collapse', { name: label }) : i18n.t('structure.expand', { name: label })}
       aria-expanded={open}
       onclick={() => (open = !open)}>
-      <ChevronRightSmallIcon className="h-3 w-3 text-slate-400 transition-transform {open ? 'rotate-90' : ''}" />
+      <ChevronRightSmallIcon size="xs" className="text-slate-400 transition-transform {open ? 'rotate-90' : ''}" />
     </button>
     <Copyable
       copyText={copyValue(value)}
