@@ -79,8 +79,21 @@ export class AppShellDrawer {
   setOpen(next: boolean): void {
     this.options.setOpen(next)
     this.options.notifyOpenChange(next)
-    if (this.options.floating()) {
-      focusAfterTick(next ? this.asideEl : this.options.focusFallback())
+    if (!this.options.floating()) {
+      return
+    }
+    if (next) {
+      focusAfterTick(this.asideEl)
+      return
+    }
+    // Closing: reclaim focus only when it is still inside the pane (or was
+    // never placed). A caller that already moved focus — e.g. back to its
+    // trigger during notifyOpenChange — keeps it instead of being overridden
+    // after the flush.
+    const active = document.activeElement
+    const callerTookFocus = active !== null && active !== document.body && !(this.asideEl?.contains(active) ?? false)
+    if (!callerTookFocus) {
+      focusAfterTick(this.options.focusFallback())
     }
   }
 
