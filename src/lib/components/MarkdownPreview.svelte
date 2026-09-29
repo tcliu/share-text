@@ -110,5 +110,4 @@
   }
 </script>
 
-<iframe title={i18n.t('preview.markdown')} sandbox="allow-same-origin" {srcdoc} class="h-full w-full bg-slate-950"
-></iframe>
+<iframe title={i18n.t('preview.markdown')} sandbox="" {srcdoc} class="h-full w-full bg-slate-950"></iframe>
