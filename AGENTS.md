@@ -83,3 +83,8 @@ npm test
 ```
 
 Then review the change with the `review` skill — reporting findings with severity, location, rule, and fix — before presenting it as done.
+
+- Run browser e2e with `npm run e2e` (Playwright smoke over the resolved dev port; reports land in `.tmp/e2e/`).
+- e2e specs live one-per-flow under `e2e/`, with cross-flow helpers in
+  `e2e/helpers.ts` rather than one growing `smoke.spec.ts`; keep test titles
+  stable so `--grep` filters keep working.
