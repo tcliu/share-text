@@ -7,6 +7,7 @@
   import { createAutoScroll } from './use-grid-autoscroll.svelte'
   import { columnLetter } from './grid-utils'
   import { createColumnResize } from './use-column-resize.svelte'
+  import { createTableScrollSync } from './use-table-scroll-sync.svelte'
   import TableIcon from '$lib/icons/TableIcon.svelte'
   import RowInsertAboveIcon from '$lib/icons/RowInsertAboveIcon.svelte'
   import RowInsertBelowIcon from '$lib/icons/RowInsertBelowIcon.svelte'
@@ -327,23 +328,6 @@
     columnWidths = next
   }
 
-  // The body wrapper's vertical scrollbar narrows its visible width; pad the
-  // header wrapper by the same amount so the header table's right edge and
-  // scroll range stay aligned with the body's once columns overflow. This
-  // observes the body wrapper itself, so it tracks scrollbar appearance.
-  $effect(() => {
-    const body = gridContainer
-    const header = headerWrapper
-    if (!body || !header) return
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => {
-      const scrollbarWidth = body.offsetWidth - body.clientWidth
-      header.style.paddingRight = scrollbarWidth > 0 ? `${scrollbarWidth}px` : ''
-    })
-    observer.observe(body)
-    return () => observer.disconnect()
-  })
-
   // Re-fit columns only when the outer viewport resizes (e.g. the pane
   // splitter), never when the body wrapper's own scrollbar appears — that would
   // immediately collapse an intentionally overflowing table into a fitted one.
@@ -365,27 +349,10 @@
     return () => observer.disconnect()
   })
 
-  // The header band never scrolls on its own (its wrapper clips with
-  // overflow-hidden): mirror the body wrapper's horizontal scroll into it and
-  // forward wheel events so scrolling still works while the pointer is over the
-  // header.
-  $effect(() => {
-    const body = gridContainer
-    const header = headerWrapper
-    if (!body || !header) return
-    const onScroll = () => {
-      header.scrollLeft = body.scrollLeft
-    }
-    const onWheel = (event: WheelEvent) => {
-      if (event.deltaY !== 0) body.scrollTop += event.deltaY
-      if (event.deltaX !== 0) body.scrollLeft += event.deltaX
-    }
-    body.addEventListener('scroll', onScroll, { passive: true })
-    header.addEventListener('wheel', onWheel, { passive: true })
-    return () => {
-      body.removeEventListener('scroll', onScroll)
-      header.removeEventListener('wheel', onWheel)
-    }
+  createTableScrollSync({
+    getBody: () => gridContainer,
+    getHeader: () => headerWrapper,
+    padHeaderForScrollbar: true,
   })
 
   // --- Column width style helpers ---
