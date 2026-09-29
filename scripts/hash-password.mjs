@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { randomBytes, scryptSync } from 'node:crypto'
 
 function usage() {
