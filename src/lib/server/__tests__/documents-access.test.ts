@@ -4,14 +4,8 @@ process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
-import {
-  claimAnonymousDocuments,
-  fetchDocumentSummaries,
-  getDocumentAccess,
-  insertDocument,
-  resolveDocumentAccess,
-  setDocumentAccess,
-} from '$lib/server/documents'
+import { claimAnonymousDocuments, fetchDocumentSummaries, insertDocument } from '$lib/server/document-store'
+import { getDocumentAccess, resolveDocumentAccess, setDocumentAccess } from '$lib/server/document-access'
 import { createUser, updateUser, type User } from '$lib/server/users'
 import type { Viewer } from '$lib/server/viewer'
 

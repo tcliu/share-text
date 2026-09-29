@@ -5,11 +5,18 @@ const documentsMocks = vi.hoisted(() => ({
   fetchDocumentVersions: vi.fn(),
 }))
 
-vi.mock('$lib/server/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
+vi.mock('$lib/server/document-access', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
   return {
     ...actual,
     resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
+  }
+})
+
+vi.mock('$lib/server/document-versions', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-versions')>('$lib/server/document-versions')
+  return {
+    ...actual,
     fetchDocumentVersions: documentsMocks.fetchDocumentVersions,
   }
 })

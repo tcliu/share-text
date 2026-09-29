@@ -114,17 +114,13 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 
   let user
   try {
-    user = await createUser({ username, email, password })
+    user = await createUser({ username, email, password, status: normalizedStatus })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create user'
     if (message === 'username or email is already taken') {
       return json({ error: message }, { status: 409 })
     }
     return json({ error: message }, { status: 400 })
-  }
-
-  if (normalizedStatus === 'inactive') {
-    await updateUser(user.id, { status: normalizedStatus })
   }
 
   const created = await findAdminUserById(user.id)

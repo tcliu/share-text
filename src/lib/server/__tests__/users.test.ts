@@ -5,7 +5,8 @@ process.env.SQLITE_PATH = ':memory:'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
 import { hashPassword } from '$lib/server/password'
-import { insertDocument, setDocumentAccess } from '$lib/server/documents'
+import { insertDocument } from '$lib/server/document-store'
+import { setDocumentAccess } from '$lib/server/document-access'
 import {
   createUser,
   deleteUser,
@@ -201,6 +202,27 @@ describe('users against the SQLite backend (dev profile)', () => {
     expect(await deleteUser(user.id)).toBe(true)
     expect(await findAdminUserById(user.id)).toBeNull()
     expect(await deleteUser(user.id)).toBe(false)
+  })
+
+  it('clears owned documents and removes share rows when a user is deleted', async () => {
+    const alice = await createUser({ username: 'alice', email: 'alice@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'bob@example.com', password: 'x' })
+
+    // alice owns a document; bob owns a document shared with alice.
+    const owned = await insertDocument({ name: 'owned', content: 'hi', by: 'alice', ownerUserId: alice.id })
+    const shared = await insertDocument({ name: 'shared', content: 'hi', by: 'bob', ownerUserId: bob.id })
+    await setDocumentAccess(shared.id, { sharedWith: [alice.username] })
+
+    expect(await deleteUser(alice.id)).toBe(true)
+
+    const db = await getDb()
+    const ownerRow = await db.query<{ owner_user_id: number | null }>(
+      'select owner_user_id from documents where key = $1',
+      [owned.id],
+    )
+    expect(ownerRow.rows[0]?.owner_user_id).toBeNull()
+    const shares = await db.query('select 1 from document_shares where user_id = $1', [alice.id])
+    expect(shares.rows).toHaveLength(0)
   })
 
   it('normalizes status values', () => {

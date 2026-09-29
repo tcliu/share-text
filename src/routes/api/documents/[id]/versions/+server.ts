@@ -1,11 +1,12 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { fetchDocumentVersions, resolveDocumentAccess } from '$lib/server/documents'
-import { parseDocumentId } from '$lib/server/request-utils'
+import { fetchDocumentVersions } from '$lib/server/document-versions'
+import { resolveDocumentAccess } from '$lib/server/document-access'
+import { parseDocumentKey } from '$lib/server/request-utils'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

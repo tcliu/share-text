@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { DOCUMENT_SEARCH_KEYS, listDocumentsForOwnedUser } from '$lib/server/documents'
+import { DOCUMENT_SEARCH_KEYS } from '$lib/server/document-query'
+import { listDocumentsForOwnedUser } from '$lib/server/document-admin'
 import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { resolveViewer } from '$lib/server/viewer'
 

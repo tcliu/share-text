@@ -7,8 +7,8 @@ const documentMocks = vi.hoisted(() => ({
   setDocumentAccess: vi.fn(),
 }))
 
-vi.mock('$lib/server/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
+vi.mock('$lib/server/document-access', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
   return {
     ...actual,
     resolveDocumentAccess: documentMocks.resolveDocumentAccess,

@@ -83,20 +83,26 @@ export function normalizeStatus(value: string): UserStatus {
   throw new Error('status must be active or inactive')
 }
 
-export async function createUser(input: { username: string; email: string; password: string }): Promise<User> {
+export async function createUser(input: {
+  username: string
+  email: string
+  password: string
+  status?: UserStatus
+}): Promise<User> {
   const username = normalizeUsername(input.username)
   const email = normalizeEmail(input.email)
   if (!input.password) {
     throw new Error('password is required')
   }
+  const status = input.status ?? 'active'
   const passwordHash = await hashPassword(input.password)
   const db = await getDb()
   try {
     const result = await db.query<UserRow>(
-      `insert into users (username, email, password_hash, created_at)
-       values ($1, $2, $3, current_timestamp)
+      `insert into users (username, email, password_hash, status, created_at)
+       values ($1, $2, $3, $4, current_timestamp)
        returning id, username, email, status`,
-      [username, email, passwordHash],
+      [username, email, passwordHash, status],
     )
     return toUser(result.rows[0])
   } catch (error) {
@@ -433,6 +439,14 @@ export async function updateUser(id: number, input: UpdateUserInput): Promise<Us
 
 export async function deleteUser(id: number): Promise<boolean> {
   const db = await getDb()
-  const result = await db.query('delete from users where id = $1', [id])
-  return (result.rowCount ?? 0) > 0
+  // The SQLite adapter runs with foreign keys off, so the schema's
+  // `documents.owner_user_id on delete set null` and `document_shares
+  // on delete cascade` do not fire in dev. Clear the references explicitly so
+  // both adapters leave documents ownerless and remove the user's share rows.
+  return db.transaction(async query => {
+    await query('update documents set owner_user_id = null where owner_user_id = $1', [id])
+    await query('delete from document_shares where user_id = $1', [id])
+    const result = await query('delete from users where id = $1', [id])
+    return (result.rowCount ?? 0) > 0
+  })
 }

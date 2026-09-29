@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { claimAnonymousDocuments } from '$lib/server/documents'
+import { claimAnonymousDocuments } from '$lib/server/document-store'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord } from '$lib/server/request-utils'
 import { resolveProfile } from '$lib/server/profile'

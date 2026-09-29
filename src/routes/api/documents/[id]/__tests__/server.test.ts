@@ -5,11 +5,18 @@ const documentsMocks = vi.hoisted(() => ({
   resolveDocumentAccess: vi.fn(),
 }))
 
-vi.mock('$lib/server/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
+vi.mock('$lib/server/document-store', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
   return {
     ...actual,
     updateDocument: documentsMocks.updateDocument,
+  }
+})
+
+vi.mock('$lib/server/document-access', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
+  return {
+    ...actual,
     resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
   }
 })
@@ -80,6 +87,40 @@ describe('PUT /api/documents/[id]', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Unsupported fields in request body' })
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
+  })
+
+  it('rejects wrong-typed fields instead of silently dropping them', async () => {
+    for (const body of [{ name: 5 }, { content: 5 }, { documentType: 5 }, { tags: 'alpha' }]) {
+      const response = await PUT({
+        params: { id: 'a1b2c3' },
+        request: new Request('http://localhost/api/documents/a1b2c3', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        }),
+        getClientAddress: () => '127.0.0.1',
+      } as never)
+
+      expect(response.status).toBe(400)
+    }
+    expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed tag entries instead of dropping them', async () => {
+    for (const tags of [[{ name: 5 }], [42], [null]]) {
+      const response = await PUT({
+        params: { id: 'a1b2c3' },
+        request: new Request('http://localhost/api/documents/a1b2c3', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ tags }),
+        }),
+        getClientAddress: () => '127.0.0.1',
+      } as never)
+
+      expect(response.status).toBe(400)
+    }
     expect(documentsMocks.updateDocument).not.toHaveBeenCalled()
   })
 

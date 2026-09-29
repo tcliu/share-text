@@ -19,12 +19,14 @@ export async function isLoginRateLimited(ip: string): Promise<boolean> {
 export async function recordLoginAttempt(ip: string): Promise<void> {
   const db = await getDb()
   const nowIso = new Date().toISOString()
-  await db.query('delete from login_attempts where ip = $1 and reset_at <= $2', [ip, nowIso])
-  await db.query(
-    `insert into login_attempts (ip, attempt_count, reset_at) values ($1, 1, $2)
-     on conflict (ip) do update set attempt_count = login_attempts.attempt_count + 1`,
-    [ip, newResetAtIso()],
-  )
+  await db.transaction(async query => {
+    await query('delete from login_attempts where ip = $1 and reset_at <= $2', [ip, nowIso])
+    await query(
+      `insert into login_attempts (ip, attempt_count, reset_at) values ($1, 1, $2)
+       on conflict (ip) do update set attempt_count = login_attempts.attempt_count + 1`,
+      [ip, newResetAtIso()],
+    )
+  })
 }
 
 export async function resetLoginAttempts(ip: string): Promise<void> {

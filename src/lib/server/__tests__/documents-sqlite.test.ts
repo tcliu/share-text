@@ -4,21 +4,24 @@ process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
+import { DocumentLimitError, normalizeDocumentKey } from '$lib/server/document-model'
 import {
   deleteDocument,
-  DocumentLimitError,
-  exportDocumentsForAdmin,
   fetchDocument,
-  fetchDocumentForAdmin,
   fetchDocumentSummaries,
-  importDocumentsForAdmin,
   insertDocument,
-  listDocumentsForAdmin,
-  normalizeDocumentKey,
+  listDistinctTags,
   updateDocument,
-} from '$lib/server/documents'
+} from '$lib/server/document-store'
+import {
+  exportDocumentsForAdmin,
+  fetchDocumentForAdmin,
+  importDocumentsForAdmin,
+  listDocumentsForAdmin,
+} from '$lib/server/document-admin'
 import { getMaxDocumentsPerUser, setSettingValue } from '$lib/server/settings'
 import { sameColorFamily } from '$lib/tag-colors'
+import type { Viewer } from '$lib/server/viewer'
 
 beforeEach(async () => {
   const db = await getDb()
@@ -369,6 +372,39 @@ describe('documents against the SQLite backend (dev profile)', () => {
     await insertDocument({ name: 'Only', content: '', by: '10.0.0.1' })
     const result = await listDocumentsForAdmin({ search: 'only', searchKeys: ['not-a-column'] })
     expect(result.total).toBe(0)
+  })
+})
+
+describe('listDistinctTags cache invalidation (dev profile)', () => {
+  const viewer: Viewer = { type: 'anonymous', userId: null, username: null, ip: '127.0.0.1', name: '127.0.0.1' }
+
+  it('reflects a tag-changing update immediately', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '127.0.0.1' })
+    // Prime the cache with the pre-update tag set.
+    expect((await listDistinctTags(viewer)).map(tag => tag.name)).toEqual([])
+
+    await updateDocument(created.id, { tags: [{ name: 'alpha', color: '#00F0FF' }], by: '127.0.0.1' })
+
+    expect((await listDistinctTags(viewer)).map(tag => tag.name)).toEqual(['alpha'])
+  })
+
+  it('drops a deleted document tag immediately', async () => {
+    const created = await insertDocument({ name: 'Notes', content: 'body', by: '127.0.0.1' })
+    await updateDocument(created.id, { tags: [{ name: 'alpha', color: '#00F0FF' }], by: '127.0.0.1' })
+    expect((await listDistinctTags(viewer)).map(tag => tag.name)).toEqual(['alpha'])
+
+    await deleteDocument(created.id)
+
+    expect(await listDistinctTags(viewer)).toEqual([])
+  })
+
+  it('reflects tags set by an admin import immediately', async () => {
+    await importDocumentsForAdmin(
+      [{ name: 'Imported', content: 'body', documentType: 'text', tags: [{ name: 'urgent', color: '#FF6680' }] }],
+      '10.0.0.1',
+    )
+
+    expect((await listDistinctTags(viewer)).map(tag => tag.name)).toEqual(['urgent'])
   })
 })
 

@@ -12,16 +12,37 @@ const documentsMocks = vi.hoisted(() => ({
   missingSharees: vi.fn(),
 }))
 
-vi.mock('$lib/server/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
+vi.mock('$lib/server/document-model', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-model')>('$lib/server/document-model')
+  return {
+    ...actual,
+    normalizeDocumentKey: documentsMocks.normalizeDocumentKey,
+  }
+})
+
+vi.mock('$lib/server/document-store', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
+  return {
+    ...actual,
+    fetchDocument: documentsMocks.fetchDocument,
+    deleteDocument: documentsMocks.deleteDocument,
+    updateDocument: documentsMocks.updateDocument,
+  }
+})
+
+vi.mock('$lib/server/document-admin', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-admin')>('$lib/server/document-admin')
   return {
     ...actual,
     listDocumentsForAdmin: documentsMocks.listDocumentsForAdmin,
     fetchDocumentForAdmin: documentsMocks.fetchDocumentForAdmin,
-    fetchDocument: documentsMocks.fetchDocument,
-    deleteDocument: documentsMocks.deleteDocument,
-    updateDocument: documentsMocks.updateDocument,
-    normalizeDocumentKey: documentsMocks.normalizeDocumentKey,
+  }
+})
+
+vi.mock('$lib/server/document-access', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
+  return {
+    ...actual,
     getDocumentAccess: documentsMocks.getDocumentAccess,
     setDocumentAccess: documentsMocks.setDocumentAccess,
     missingSharees: documentsMocks.missingSharees,

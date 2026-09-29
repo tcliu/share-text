@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
-import { isDocumentKeyChars, resolveDocumentAccess } from '$lib/server/documents'
+import { isDocumentKeyChars } from '$lib/server/document-model'
+import { resolveDocumentAccess } from '$lib/server/document-access'
 import { getMaxContentLength } from '$lib/server/settings'
 import { resolveViewer } from '$lib/server/viewer'
 

@@ -1,13 +1,13 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
+import { contentByteSize } from '$lib/server/document-model'
 import {
-  contentByteSize,
   importDocumentsForAdmin,
   listDocumentsForAdmin,
   MAX_IMPORT_RECORDS,
   normalizeImportTags,
   type ImportDocumentRecord,
-} from '$lib/server/documents'
+} from '$lib/server/document-admin'
 import { logEvent } from '$lib/server/logging'
 import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { isBodyRecord } from '$lib/server/request-utils'

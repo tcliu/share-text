@@ -1,15 +1,15 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { exportDocumentsForAdmin } from '$lib/server/documents'
+import { exportDocumentsForAdmin } from '$lib/server/document-admin'
 import { logEvent } from '$lib/server/logging'
-import { parseDocumentId } from '$lib/server/request-utils'
+import { parseDocumentKey } from '$lib/server/request-utils'
 
 export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   const idsParam = url.searchParams.get('ids')
   const ids: string[] = []
   if (idsParam) {
     for (const raw of idsParam.split(',')) {
-      const id = await parseDocumentId(raw.trim())
+      const id = await parseDocumentKey(raw.trim())
       if (!id) {
         return json({ error: 'Invalid document id in export selection' }, { status: 400 })
       }

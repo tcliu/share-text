@@ -3,20 +3,19 @@ import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
   contentByteSize,
-  deleteDocument,
   isValidDocumentType,
   normalizeName,
-  resolveDocumentAccess,
-  updateDocument,
-} from '$lib/server/documents'
+} from '$lib/server/document-model'
+import { deleteDocument, updateDocument } from '$lib/server/document-store'
+import { resolveDocumentAccess } from '$lib/server/document-access'
 import { logEvent } from '$lib/server/logging'
-import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
+import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
 import { getMaxContentLength } from '$lib/server/settings'
-import { getDefaultTagColor, isTagColor } from '$lib/tag-colors'
+import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -34,7 +33,7 @@ export const GET: RequestHandler = async ({ params, getClientAddress, cookies })
 }
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -49,25 +48,40 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
     return json({ error: 'Unsupported fields in request body' }, { status: 400 })
   }
 
+  if (body.name !== undefined && typeof body.name !== 'string') {
+    return json({ error: 'name must be a string' }, { status: 400 })
+  }
+  if (body.content !== undefined && typeof body.content !== 'string') {
+    return json({ error: 'content must be a string' }, { status: 400 })
+  }
+  if (body.documentType !== undefined && typeof body.documentType !== 'string') {
+    return json({ error: 'documentType must be a string' }, { status: 400 })
+  }
+  if (body.tags !== undefined && !Array.isArray(body.tags)) {
+    return json({ error: 'tags must be an array' }, { status: 400 })
+  }
+
   const name = typeof body.name === 'string' ? body.name : undefined
   const content = typeof body.content === 'string' ? body.content : undefined
   const docType = typeof body.documentType === 'string' ? body.documentType : undefined
-  const tags = Array.isArray(body.tags)
-    ? body.tags.flatMap(tag => {
-        if (typeof tag === 'string') {
-          return [{ name: tag, color: getDefaultTagColor(tag) }]
-        }
-        if (tag && typeof tag === 'object' && typeof (tag as { name?: unknown }).name === 'string') {
-          const rawColor = (tag as { color?: unknown }).color
-          const color =
-            typeof rawColor === 'string' && isTagColor(rawColor)
-              ? rawColor
-              : getDefaultTagColor((tag as { name: string }).name)
-          return [{ name: (tag as { name: string }).name, color }]
-        }
-        return []
-      })
-    : undefined
+  let tags: Tag[] | undefined
+  if (Array.isArray(body.tags)) {
+    tags = []
+    for (let i = 0; i < body.tags.length; i++) {
+      const tag = body.tags[i]
+      if (typeof tag === 'string') {
+        tags.push({ name: tag, color: getDefaultTagColor(tag) })
+        continue
+      }
+      if (tag === null || typeof tag !== 'object' || typeof (tag as { name?: unknown }).name !== 'string') {
+        return json({ error: `tags[${i}] must be a string or an object with a name` }, { status: 400 })
+      }
+      const tagName = (tag as { name: string }).name
+      const rawColor = (tag as { color?: unknown }).color
+      const color = typeof rawColor === 'string' && isTagColor(rawColor) ? rawColor : getDefaultTagColor(tagName)
+      tags.push({ name: tagName, color })
+    }
+  }
 
   if (name === undefined && content === undefined && docType === undefined && tags === undefined) {
     return json({ error: 'Request body must include name, content, documentType, or tags' }, { status: 400 })
@@ -126,7 +140,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress, c
 }
 
 export const DELETE: RequestHandler = async ({ params, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

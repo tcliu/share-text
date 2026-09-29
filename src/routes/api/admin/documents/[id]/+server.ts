@@ -3,28 +3,23 @@ import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
   contentByteSize,
-  deleteDocument,
-  fetchDocument,
-  fetchDocumentForAdmin,
-  getDocumentAccess,
   isUniqueKeyViolation,
   isValidDocumentType,
-  MAX_SHAREES,
-  missingSharees,
   normalizeCreatedBy,
   normalizeDocumentKey,
   normalizeName,
   normalizeUpdatedBy,
-  setDocumentAccess,
-  updateDocument,
   type DocumentType,
-} from '$lib/server/documents'
+} from '$lib/server/document-model'
+import { deleteDocument, fetchDocument, updateDocument } from '$lib/server/document-store'
+import { fetchDocumentForAdmin } from '$lib/server/document-admin'
+import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess } from '$lib/server/document-access'
 import { getMaxContentLength } from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
-import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
+import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
 
 export const GET: RequestHandler = async ({ params }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -44,7 +39,7 @@ export const GET: RequestHandler = async ({ params }) => {
 }
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -246,7 +241,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
 }
 
 export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

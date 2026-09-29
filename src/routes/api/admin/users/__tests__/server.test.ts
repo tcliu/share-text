@@ -113,19 +113,25 @@ describe('POST /api/admin/users', () => {
       username: 'alice',
       email: 'alice@example.com',
       password: 's3cret',
+      status: 'active',
     })
     expect(usersMocks.updateUser).not.toHaveBeenCalled()
   })
 
-  it('sets status to inactive when requested', async () => {
+  it('creates the user inactive when requested', async () => {
     usersMocks.createUser.mockResolvedValue({ id: 1, username: 'bob', email: 'bob@example.com', status: 'inactive' })
-    usersMocks.updateUser.mockResolvedValue({ id: 1, username: 'bob', email: 'bob@example.com', status: 'inactive' })
     const response = await POST(
       postEvent({ body: { username: 'bob', email: 'bob@example.com', password: 's3cret', status: 'inactive' } }),
     )
 
     expect(response.status).toBe(201)
-    expect(usersMocks.updateUser).toHaveBeenCalledWith(1, { status: 'inactive' })
+    expect(usersMocks.createUser).toHaveBeenCalledWith({
+      username: 'bob',
+      email: 'bob@example.com',
+      password: 's3cret',
+      status: 'inactive',
+    })
+    expect(usersMocks.updateUser).not.toHaveBeenCalled()
   })
 
   it('rejects duplicate usernames or emails with 409', async () => {

@@ -4,13 +4,8 @@ process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
-import {
-  deleteDocument,
-  fetchDocumentVersion,
-  fetchDocumentVersions,
-  insertDocument,
-  updateDocument,
-} from '$lib/server/documents'
+import { deleteDocument, insertDocument, updateDocument } from '$lib/server/document-store'
+import { fetchDocumentVersion, fetchDocumentVersions } from '$lib/server/document-versions'
 import { clearSettingsCache, getMaxDocumentVersions } from '$lib/server/settings'
 
 beforeEach(async () => {

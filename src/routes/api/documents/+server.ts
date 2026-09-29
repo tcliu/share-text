@@ -3,13 +3,12 @@ import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
   contentByteSize,
-  DOCUMENT_SEARCH_KEYS,
   DocumentLimitError,
-  fetchDocumentSummaries,
-  insertDocument,
   isValidDocumentType,
   normalizeName,
-} from '$lib/server/documents'
+} from '$lib/server/document-model'
+import { DOCUMENT_SEARCH_KEYS } from '$lib/server/document-query'
+import { fetchDocumentSummaries, insertDocument } from '$lib/server/document-store'
 import { logEvent } from '$lib/server/logging'
 import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { isBodyRecord } from '$lib/server/request-utils'

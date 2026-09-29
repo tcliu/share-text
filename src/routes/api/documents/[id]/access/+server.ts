@@ -6,13 +6,13 @@ import {
   missingSharees,
   resolveDocumentAccess,
   setDocumentAccess,
-} from '$lib/server/documents'
+} from '$lib/server/document-access'
 import { logEvent } from '$lib/server/logging'
-import { isBodyRecord, parseDocumentId } from '$lib/server/request-utils'
+import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const GET: RequestHandler = async ({ params, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -34,7 +34,7 @@ export const GET: RequestHandler = async ({ params, getClientAddress, cookies })
 }
 
 export const PUT: RequestHandler = async ({ params, request, getClientAddress, cookies }) => {
-  const id = await parseDocumentId(params.id)
+  const id = await parseDocumentKey(params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

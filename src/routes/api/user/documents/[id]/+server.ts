@@ -1,14 +1,10 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import {
-  contentByteSize,
-  deleteDocument,
-  normalizeName,
-  resolveDocumentAccess,
-  updateDocument,
-} from '$lib/server/documents'
+import { contentByteSize, normalizeName } from '$lib/server/document-model'
+import { deleteDocument, updateDocument } from '$lib/server/document-store'
+import { resolveDocumentAccess } from '$lib/server/document-access'
 import { logEvent } from '$lib/server/logging'
-import { parseDocumentId } from '$lib/server/request-utils'
+import { parseDocumentKey } from '$lib/server/request-utils'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const PUT: RequestHandler = async event => {
@@ -17,7 +13,7 @@ export const PUT: RequestHandler = async event => {
     return json({ error: 'Authentication required' }, { status: 401 })
   }
 
-  const id = await parseDocumentId(event.params.id)
+  const id = await parseDocumentKey(event.params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }
@@ -68,7 +64,7 @@ export const DELETE: RequestHandler = async event => {
     return json({ error: 'Authentication required' }, { status: 401 })
   }
 
-  const id = await parseDocumentId(event.params.id)
+  const id = await parseDocumentKey(event.params.id)
   if (!id) {
     return json({ error: 'Document not found' }, { status: 404 })
   }

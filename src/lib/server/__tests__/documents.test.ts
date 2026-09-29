@@ -15,7 +15,7 @@ import {
   normalizeUpdatedBy,
   toDocument,
   toDocumentSummary,
-} from '$lib/server/documents'
+} from '$lib/server/document-model'
 import { getDefaultTagColor, nextTagColor, pickTagColor, sameColorFamily, TAG_COLORS } from '$lib/tag-colors'
 
 describe('isDocumentKey', () => {

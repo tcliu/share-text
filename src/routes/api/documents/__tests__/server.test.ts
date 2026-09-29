@@ -5,8 +5,8 @@ const documentsMocks = vi.hoisted(() => ({
   insertDocument: vi.fn(),
 }))
 
-vi.mock('$lib/server/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/documents')>('$lib/server/documents')
+vi.mock('$lib/server/document-store', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
   return {
     ...actual,
     fetchDocumentSummaries: documentsMocks.fetchDocumentSummaries,

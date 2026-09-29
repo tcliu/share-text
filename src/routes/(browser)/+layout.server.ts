@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types'
-import { fetchDocumentSummaries } from '$lib/server/documents'
+import { fetchDocumentSummaries } from '$lib/server/document-store'
 import { DEFAULT_DOCUMENTS_PAGE_SIZE } from '$lib/documents'
 import { resolveViewer } from '$lib/server/viewer'
 
