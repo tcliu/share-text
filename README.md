@@ -101,21 +101,22 @@ from your client IP, or claimed by your account after sign-in). The admin
 **Documents** tab can delete any document.
 No `DATABASE_URL` is needed — documents are stored in a local SQLite file at
 `.data/dev.sqlite` (created on first run). The **Login** button in
-the list header opens `/login`, where visitors can sign in or create an account.
+the list header opens an embedded sign-in dialog, where visitors can sign in or
+create an account.
 
 ## Admin
 
 The admin console is a dedicated area under `/admin`, reached by navigating
 there directly (`/admin` redirects to `/admin/general`, or to `/login`
-when signed out). Sign in with the configured `ADMIN_USERNAME`/`ADMIN_PASSWORD`
-(or `ADMIN_PASSWORD_HASH` in production) through the shared `/login` page.
-Five tabs are available after sign-in as real routes: **General**
+when signed out, which sends unauthenticated visitors to the browser page's
+sign-in dialog). Sign in with the configured `ADMIN_USERNAME`/`ADMIN_PASSWORD`
+(or `ADMIN_PASSWORD_HASH` in production) through that shared dialog.
+Four tabs are available after sign-in as real routes: **General**
 (`/admin/general`, admin preferred language), **Properties**
 (`/admin/properties`, runtime-adjustable application properties),
 **Documents** (`/admin/documents`, browse all documents across all client IPs),
-**Users** (`/admin/users`, manage registered user accounts), and **Text To
-Speech** (`/admin/text-to-speech`). The Documents and Users toolbars offer JSON
-**Import**/**Export**.
+and **Users** (`/admin/users`, manage registered user accounts). The Documents
+and Users toolbars offer JSON **Import**/**Export**.
 
 Admin API endpoints live under `/api/admin/*` and are protected by a signed,
 HTTP-only admin session cookie; the session expires after 24 hours (30 days

@@ -79,8 +79,8 @@ synchronizes through a small fetch-based JSON API.
   `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`, and/or
   `content`); `DELETE` removes it.
 - `/api/admin/users/[id]` — `PUT` updates a user (`username`, `email`,
-  `password`, and/or `status`); `DELETE` removes it (leaving documents
-  ownerless and removing share rows via cascade).
+  `password`, and/or `status`); `DELETE` removes it (clearing the owner on the
+  documents it owned and removing its share rows).
 - `/api/admin/documents/export` — `GET` returns a JSON array of documents
   (every document, or only the comma-separated `ids` selection) shaped like
   import records (`{ key, name, content, documentType, tags, isPublic }`) so
@@ -142,8 +142,16 @@ synchronizes through a small fetch-based JSON API.
 
 ## Data Layer
 
-- `src/lib/server/documents.ts` holds all persistence logic with
-  engine-agnostic SQL using `$n` placeholders and `current_timestamp`.
+- `src/lib/server/document-model.ts` holds the pure model helpers (keys,
+  names, tags, limits, row mapping); `document-query.ts` holds the shared
+  search/sort column maps; `document-store.ts` holds the app-facing
+  persistence (create/read/update/delete, summaries, tag cache);
+  `document-access.ts` holds `resolveDocumentAccess` and sharing;
+  `document-admin.ts` holds the admin listing/import/export; and
+  `document-versions.ts` holds version history. All write engine-agnostic SQL
+  using `$n` placeholders and `current_timestamp`, with a one-way dependency
+  flow (model ← versions ← store ← access/admin; store and admin also share
+  `document-query.ts` and the single-query `db-query.ts` runner).
 - `db.ts` resolves the `PROFILE` and returns the matching `Db` adapter (the
   small `query`/`close` interface in `db-types.ts`):
   - `db-sqlite.ts` uses the `better-sqlite3` package and
@@ -171,9 +179,10 @@ synchronizes through a small fetch-based JSON API.
   another row into `document_versions` (content, type, `created_by`, time);
   each insert then prunes every row beyond the newest `max_document_versions`
   (`MAX_DOCUMENT_VERSIONS`, default 20) for that document. The latest version
-  therefore always mirrors the last saved body. `deleteDocument` removes a
-  document's versions explicitly (also handled by the `on delete cascade` FK
-  on Postgres), and because versions reference the immutable numeric
+  therefore always mirrors the last saved body. `deleteDocument` removes the
+  document's shares, versions, and the row itself in one transaction (the
+  `on delete cascade` FKs also cover the children on Postgres), and because
+  versions reference the immutable numeric
   `documents.id`, an admin rename of the key never requires migrating version
   rows; the version queries resolve the app-facing key to that numeric id via
   a subquery. The production `db.ts` bootstrap creates
@@ -195,7 +204,7 @@ synchronizes through a small fetch-based JSON API.
   missing users fall back to anonymous). Route handlers resolve the viewer
   once and pass it through, so the client `owned`/`editable` flags always come
   from the listing/load data.
-- `resolveDocumentAccess` (`src/lib/server/documents.ts`) computes
+- `resolveDocumentAccess` (`src/lib/server/document-access.ts`) computes
   `canView`/`canEdit`/`canDelete`/`canManageAccess` for a document. Anonymous
   viewers can view public documents and own only documents with
   `owner_user_id is null` and a matching `created_by` IP; registered users can
@@ -223,8 +232,9 @@ synchronizes through a small fetch-based JSON API.
   rate limits (shared with user auth via `rate-limit.ts`) persist in the
   `login_attempts` table, so they survive restarts and are shared across
   instances.
-- `src/hooks.server.ts` guards every `/api/admin/*` route except `login` and
-  `session`, returning 401 for requests without a valid session cookie.
+- `src/hooks.server.ts` guards every `/api/admin/*` route except
+  `/api/admin/session`, returning 401 for requests without a valid session
+  cookie.
 - `src/lib/server/settings.ts` defines the runtime-adjustable properties and
   resolves them with precedence database override > environment > default,
   cached in memory for a short TTL and invalidated on write.
@@ -240,8 +250,7 @@ synchronizes through a small fetch-based JSON API.
   machine lives in the `useAdminAuth` composable (`src/lib/use-admin-auth.svelte.ts`);
   the layout defines the four `Tab` entries (label, path, toolbar snippet,
   content snippet) that render the shared `AdminGeneralView`/`AdminPropertiesView`/
-  `AdminDocumentsView`/`AdminUsersView`, and keeps the
-  (`AdminDialog.svelte`) has been removed.
+  `AdminDocumentsView`/`AdminUsersView`.
   `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
   **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
   edit the one shared draft held by `useAdminSettings`. `useAdminSettings` also
@@ -270,9 +279,10 @@ synchronizes through a small fetch-based JSON API.
   `beforeNavigate` discard guard lets navigations within `/admin` through
   without prompting, since the shared state survives tab switches, and the
   admin layout renders no top header row until the session is `authenticated`.
-  The browser-level account login/register page lives at `/login`; it accepts
-  both user and admin credentials through the unified auth endpoint, redirecting
-  an existing admin session to `/admin/general` and a user session to `/`.
+  The browser-level account login/register form lives in the header's embedded
+  auth dialog (`UserAuthPanel`); it accepts both user and admin credentials
+  through the unified auth endpoint, redirecting an existing admin session to
+  `/admin/general` and a user session to `/`.
 - In the Documents tab, the ID, Name, Created by, and Updated by cells are
   copyable editable text via `PUT /api/admin/documents/[id]`, which accepts
   `name`, `updatedBy`, `createdBy`, `key`, `isPublic`, `documentType`,

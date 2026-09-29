@@ -317,16 +317,17 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 ## Accounts And Sharing
 
-- A **Login** button in the list header opens `/login`, where visitors sign in
-  or create an account (username, email, password). Signing in or registering
-  claims the documents the visitor created anonymously from that client IP. A
-  **Remember me** checkbox issues a 30-day session cookie; the password is
-  never stored client-side.
+- A **Login** button in the list header opens an embedded sign-in dialog, where
+  visitors sign in or create an account (username, email, password). Signing in
+  or registering claims the documents the visitor created anonymously from that
+  client IP. A **Remember me** checkbox issues a 30-day session cookie; the
+  password is never stored client-side.
 - A signed-in user sees a **Settings** (gear) button and **Sign out** in the
   list header instead of **Login**. The Settings button opens `/settings` for a
   registered user and `/admin` for an admin session.
 - Signing in accepts either a user account or the configured admin credentials;
-  `/login` is the only sign-in page.
+  the browser page's sign-in dialog is the only sign-in surface (`/login`
+  redirects unauthenticated visitors to `/?login=1`, which opens that dialog).
 - The **Settings** page (`/settings`) is organized into **Profile**,
   **General**, and **Documents** tabs. **Profile** shows the
   signed-in account identity. **General** holds the account's preferred
@@ -363,8 +364,9 @@ dirty-state guard with the shell, and the shell runs every leave-path through it
 
 The admin console is a dedicated area under `/admin`, reached by direct
 navigation. A server-side layout guard redirects unauthenticated visitors to
-`/login`, which accepts admin credentials on the same form as user sign-in; if
-no admin password source is configured, admin sign-in simply fails to match.
+`/login`, which forwards to the browser page's sign-in dialog; that dialog
+accepts admin credentials on the same form as user sign-in, and if no admin
+password source is configured, admin sign-in simply fails to match.
 The page header offers **Go to Documents** and **Sign out** once signed in. The
 The four tabs live at the real routes `/admin/general`, `/admin/properties`,
 `/admin/documents`, and `/admin/users` (`/admin` redirects to the General route),
