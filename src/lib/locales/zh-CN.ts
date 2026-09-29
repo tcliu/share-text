@@ -260,6 +260,12 @@ export const zhCN = {
   splitter: {
     resize: '调整窗格大小',
   },
+  resizable: {
+    resizeWidth: '调整宽度',
+    resizeHeight: '调整高度',
+    resizeBoth: '调整宽度和高度',
+    resizeValue: '宽 {width} × 高 {height} 像素',
+  },
   appShell: {
     closePane: '关闭面板',
     leftPane: '左侧面板',

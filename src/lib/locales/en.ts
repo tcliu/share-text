@@ -263,6 +263,12 @@ export const en = {
   splitter: {
     resize: 'Resize split panes',
   },
+  resizable: {
+    resizeWidth: 'Resize width',
+    resizeHeight: 'Resize height',
+    resizeBoth: 'Resize width and height',
+    resizeValue: '{width} by {height} pixels',
+  },
   appShell: {
     closePane: 'Close pane',
     leftPane: 'Left pane',

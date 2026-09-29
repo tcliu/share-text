@@ -289,6 +289,7 @@
     {#if !floating && side === 'right'}
       <Splitter
         orientation="vertical"
+        invert
         className={splitterClassName}
         value={drawer.effectiveSize}
         min={drawer.splitterMin}
