@@ -16,6 +16,7 @@ test-results/
 !.env.example
 !.env.*.example
 .worktrees/
+coverage/
 
 # Generated Cloudflare Pages config (npm run env:sync:cloudflare); never commit.
 wrangler.toml
