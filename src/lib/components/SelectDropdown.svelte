@@ -59,27 +59,45 @@
   let id = $props.id()
   const panelId = `${id}-panel`
 
+  // One padding value per size (Button-style `px-* py-*`) shared by the trigger
+  // boxes, the option rows, and the empty row. The chevron is a flow child of
+  // the box, so it renders identically in both trigger variants; a small
+  // negative right margin (see `triggerChevron`) pulls it toward the edge
+  // without touching that single box padding. `minW` floors every surface so an
+  // empty query cannot collapse the trigger.
   const SIZE_CLASS = {
-    xs: { pad: 'py-1', minW: 'min-w-24' },
-    sm: { pad: 'py-2', minW: 'min-w-32' },
-    md: { pad: 'py-2.5', minW: 'min-w-40' },
-    lg: { pad: 'py-3', minW: 'min-w-48' },
+    xs: { pad: 'px-2.5 py-1.5', minW: 'min-w-20', icon: 'sm' },
+    sm: { pad: 'px-3 py-2', minW: 'min-w-28', icon: 'sm' },
+    md: { pad: 'px-3 py-2.5', minW: 'min-w-36', icon: 'md' },
+    lg: { pad: 'px-4 py-3', minW: 'min-w-44', icon: 'lg' },
   } as const
 
   // Default floating panel chrome; a `panelClass` override replaces it. The
-  // per-size min-width lives on the option rows (see optionRowClass), because
-  // the positioner floors the panel root to the trigger width via inline style.
+  // per-size min-width lives on the trigger and option rows (see `SIZE_CLASS`),
+  // because the positioner floors the panel root to the trigger width via
+  // inline style.
   const DEFAULT_PANEL_CLASS =
     'w-max max-w-xs max-h-[min(50vh,20rem)] overflow-y-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1 shadow-2xl shadow-slate-950/60 backdrop-blur'
 
+  // One box class for both trigger variants: the border, surface, padding, and
+  // chevron inset are identical whether the box holds a button or the filterable
+  // input, so the two render the same. The filterable box is a `label` so a click
+  // anywhere in the padding forwards to the input natively instead of adding a
+  // click handler to a non-interactive element. Only the focus trigger differs
+  // (the input is focused indirectly through the box). Hover tints the border
+  // while keyboard focus draws a ring with the border transparent, so a hovered
+  // trigger and the focused trigger are never mistaken for each other — a
+  // pointer can hover one while focus sits on another.
+  const BOX_CLASS = $derived(
+    `${SIZE_CLASS[size].minW} inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 text-left text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+  )
+
   const resolvedButtonClass = $derived(
-    buttonClass ??
-      `inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 pl-3 pr-2 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+    buttonClass ?? `${BOX_CLASS} focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500`,
   )
 
   const resolvedControlClass = $derived(
-    controlClass ??
-      `field-sizing-content cursor-pointer rounded-md border border-slate-700 bg-slate-950 pl-3 pr-7 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+    controlClass ?? `${BOX_CLASS} focus-within:border-transparent focus-within:ring-2 focus-within:ring-cyan-500`,
   )
 
   const resolvedPanelClass = $derived(panelClass ?? DEFAULT_PANEL_CLASS)
@@ -91,16 +109,16 @@
   // the literal stays inline so Tailwind can see the class — keep them in sync.
   const optionRowClass = $derived(
     optionClass ??
-      `${SIZE_CLASS[size].minW} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
+      `${SIZE_CLASS[size].minW} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`,
   )
 
-  const emptyClass = $derived(`${SIZE_CLASS[size].minW} px-3 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-400`)
+  const emptyClass = $derived(`${SIZE_CLASS[size].minW} ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]} text-slate-400`)
   const resolvedClearLabel = $derived(clearLabel ?? 'Clear selection')
   let open = $state(false)
   const selection = useListSelection()
   let containerRef = $state<HTMLDivElement | null>(null)
   let inputRef = $state<HTMLInputElement | null>(null)
-  let controlRef = $state<HTMLInputElement | HTMLButtonElement | HTMLDivElement | null>(null)
+  let controlRef = $state<HTMLButtonElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   // Option elements by index (bound, never queried) for scrollport reveal.
   let optionEls = $state<(HTMLElement | null)[]>([])
@@ -158,6 +176,14 @@
     open = false
   }
 
+  // Escape drops focus the way moving away does: blur the trigger and let
+  // the existing focusout path close the panel, so focus never lingers on a
+  // dismissed control.
+  function blurControl() {
+    const control = inputRef ?? controlRef
+    control?.blur()
+  }
+
   // Keep the highlighted option visible while arrowing through a scrollable
   // panel: the option never receives focus (aria-activedescendant pattern),
   // so the browser would otherwise let it drift out of the scrollport.
@@ -186,26 +212,14 @@
     void tick().then(() => revealActive())
   }
 
-  function handleControlFocus() {
-    inputFocused = true
-    if (suppressOpenOnFocus) {
-      suppressOpenOnFocus = false
-      return
-    }
-    openPanel()
-  }
-
-  function handleControlClick(event: MouseEvent) {
-    if (!open) {
-      openPanel()
-    }
-    // A single click into the prefilled combobox should land the caret after
-    // the current value rather than with the whole label selected (a browser
-    // may select all when the input gains focus), so the next keystroke
-    // appends to the filter instead of replacing it. A non-collapsed selection
-    // that is not the whole value is a deliberate drag-select and is left
-    // alone; defer a frame so it wins over the browser's own selection.
-    if (event.detail !== 1 || !inputRef) {
+  // Tabbing (or clicking) into the prefilled combobox lands the caret after
+  // the current value rather than leaving the whole label selected (a browser
+  // may select all when the input gains focus), so the next keystroke
+  // appends to the filter instead of replacing it. A non-collapsed selection
+  // that is not the whole value is a deliberate drag-select and is left
+  // alone; defer a frame so it wins over the browser's own selection.
+  function placeCaretAtEnd() {
+    if (!inputRef) {
       return
     }
     requestAnimationFrame(() => {
@@ -219,6 +233,26 @@
       const end = value.length
       input.setSelectionRange(end, end)
     })
+  }
+
+  function handleControlFocus() {
+    inputFocused = true
+    placeCaretAtEnd()
+    if (suppressOpenOnFocus) {
+      suppressOpenOnFocus = false
+      return
+    }
+    openPanel()
+  }
+
+  function handleControlClick(event: MouseEvent) {
+    if (!open) {
+      openPanel()
+    }
+    if (event.detail !== 1) {
+      return
+    }
+    placeCaretAtEnd()
   }
 
   // Typing into the closed combobox reopens the panel so the edited query
@@ -242,7 +276,7 @@
     if (filterable && inputRef) {
       filterText = ''
     }
-    void tick().then(() => controlRef?.focus())
+    void tick().then(() => (inputRef ?? controlRef)?.focus())
   }
 
   async function select(value: string) {
@@ -300,6 +334,12 @@
           revealActive()
         })
       }
+    } else if (event.key === 'Escape') {
+      // A focused but closed control owns no window-level Escape listener
+      // (`useDropdown` only listens while open), so drop focus here directly.
+      // In a dialog the dialog's own capture handler runs first and still
+      // cancels, exactly as before.
+      blurControl()
     } else if (event.key === 'Enter') {
       if (!open) {
         // Enter on the closed control reopens the panel, so a value that was
@@ -328,11 +368,11 @@
     container: () => containerRef,
     onOutsideClick: () => close(),
     onEscape: () => {
-      if (filterable && filterText && filterText !== buttonLabel) {
-        filterText = ''
-        return true
-      }
+      // Blurring fires the focusout path, which closes the panel and resets
+      // a dirty filter through the `!open` effect, so Escape both reverts
+      // and drops focus in one step.
       close()
+      blurControl()
     },
     onScrollClose: () => close(),
     panel: () => panelRef,
@@ -340,9 +380,12 @@
 </script>
 
 <div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null} onfocusout={handleFocusOut}>
+  {#snippet triggerChevron()}
+    <ChevronDownIcon size={SIZE_CLASS[size].icon} variant="solid" className="-mr-1.5 shrink-0 text-slate-400" />
+  {/snippet}
   {#snippet triggerControl()}
     {#if filterable}
-      <div class="relative w-fit" bind:this={controlRef}>
+      <label class={resolvedControlClass}>
         <input
           bind:this={inputRef}
           type="text"
@@ -360,12 +403,9 @@
           onclick={handleControlClick}
           oninput={handleControlInput}
           onkeydown={handleControlKeydown}
-          class={resolvedControlClass} />
-        <ChevronDownIcon
-          size="sm"
-          variant="solid"
-          className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
-      </div>
+          class="field-sizing-content min-w-0 bg-transparent text-left outline-none" />
+        {@render triggerChevron()}
+      </label>
     {:else}
       <button
         type="button"
@@ -382,7 +422,7 @@
         onkeydown={handleControlKeydown}
         class={resolvedButtonClass}>
         <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
-        <ChevronDownIcon size="sm" variant="solid" className="ml-auto shrink-0 text-slate-500" />
+        {@render triggerChevron()}
       </button>
     {/if}
   {/snippet}
@@ -392,7 +432,14 @@
   {#if clearable && activeValue !== ''}
     <span class="inline-flex items-center gap-1">
       {@render triggerControl()}
-      <Button variant="ghost" size="xs" icon={closeIcon} ariaLabel={resolvedClearLabel} onClick={handleClear} />
+      <!-- Tab focus tints the icon exactly like hover, with no ring. -->
+      <Button
+        variant="ghost"
+        size="xs"
+        icon={closeIcon}
+        ariaLabel={resolvedClearLabel}
+        onClick={handleClear}
+        focusRing={false} />
     </span>
   {:else}
     {@render triggerControl()}
@@ -423,9 +470,7 @@
           class={`${optionRowClass} ${
             index === selection.index
               ? 'bg-slate-800 text-cyan-200'
-              : option.value === activeValue
-                ? 'bg-cyan-500/15 text-cyan-200'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-cyan-200'
           }`}>
           <span class="min-w-0 truncate">{option.label}</span>
         </button>

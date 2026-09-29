@@ -29,18 +29,17 @@ export const PHONE_SHEET_MAX = '27.999rem'
 export const PHONE_SHEET_QUERY = `(max-width: ${PHONE_SHEET_MAX})`
 
 /**
- * `SelectDropdown` button/option classes matching a native select footprint
- * (12.5px font, 6px/9px padding, no min-width) so the control swaps in
- * invisibly wherever it replaces one. Passed through
+ * `SelectDropdown` button/option classes for a compact filter-control footprint
+ * (the app's `text-sm` size, 6px/9px padding, no min-width). Passed through
  * `buttonClass`/`optionClass`, which replace the component defaults wholesale
- * — keep these in sync with the `SelectDropdown` base classes. Font and
- * line-height carry `!` where the host stylesheet sets `font:inherit` on bare
- * buttons (unlayered author CSS beats utilities).
+ * — keep these in sync with the `SelectDropdown` base classes. No `!` is needed
+ * to override Preflight's `font: inherit` on form controls: it sits in
+ * `@layer base`, which the utilities layer follows.
  */
 export const NATIVE_SELECT_BUTTON_CLASS =
-  'inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-[9px] py-[6px] text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-cyan-500 text-[12.5px]! leading-[1.2]!'
+  'inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 px-2.25 py-1.5 text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500 focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500 text-sm leading-tight'
 export const NATIVE_SELECT_OPTION_CLASS =
-  'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-[9px] py-[6px] text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 text-[12.5px]!'
+  'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-2.25 py-1.5 text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 text-sm'
 
 export const CHIP_PANEL_BASE =
   'fixed left-0 top-0 z-40 max-h-[min(50vh,20rem)] w-64 rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur'

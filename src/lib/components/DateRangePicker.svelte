@@ -291,7 +291,7 @@
           type="button"
           aria-label={i18n.t('range.prevMonth')}
           onclick={prevMonth}
-          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
+          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition outline-none hover:bg-slate-800 hover:text-cyan-300 motion-reduce:transition-none">
           <ChevronLeftIcon size="sm" />
         </button>
         <span class="text-xs font-semibold text-slate-200">{monthLabel}</span>
@@ -299,7 +299,7 @@
           type="button"
           aria-label={i18n.t('range.nextMonth')}
           onclick={nextMonth}
-          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400! transition outline-none hover:bg-slate-800 hover:text-cyan-300! motion-reduce:transition-none">
+          class="flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition outline-none hover:bg-slate-800 hover:text-cyan-300 motion-reduce:transition-none">
           <ChevronRightIcon size="sm" />
         </button>
       </div>
@@ -330,14 +330,14 @@
                     aria-current={cell.day === todayIso() ? 'date' : undefined}
                     onclick={() => selectDay(cell.day as string)}
                     onkeydown={event => onDayKeydown(event, cell.day as string)}
-                    class={`flex h-8 w-8 items-center justify-center rounded-md text-xs! transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 motion-reduce:transition-none ${
+                    class={`flex h-8 w-8 items-center justify-center rounded-md text-xs transition outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 motion-reduce:transition-none ${
                       selected
-                        ? 'bg-cyan-500 font-semibold text-onaccent!'
+                        ? 'bg-cyan-500 font-semibold text-onaccent'
                         : between
-                          ? 'bg-cyan-500/15 text-cyan-100!'
+                          ? 'bg-cyan-500/15 text-cyan-100'
                           : cell.day === todayIso()
-                            ? 'font-semibold text-cyan-300! hover:bg-slate-800'
-                            : 'text-slate-300! hover:bg-slate-800 hover:text-slate-100!'
+                            ? 'font-semibold text-cyan-300 hover:bg-slate-800'
+                            : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
                     }`}>
                     {numberFormat.format(cell.label)}
                   </button>
@@ -349,12 +349,12 @@
       </div>
 
       <div class="mt-1.5 flex items-center justify-between border-t border-slate-800 pt-1.5">
-        <span class="min-w-0 truncate text-[11px] text-slate-500">{triggerLabel}</span>
+        <span class="min-w-0 truncate text-xs text-slate-500">{triggerLabel}</span>
         <button
           type="button"
           disabled={!start && !end}
           onclick={clear}
-          class="shrink-0 rounded-md px-1.5 py-0.5 text-[11px] text-slate-500! transition outline-none hover:text-rose-300! disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
+          class="shrink-0 rounded-md px-1.5 py-0.5 text-xs text-slate-500 transition outline-none hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
           {i18n.t('range.clear')}
         </button>
       </div>
