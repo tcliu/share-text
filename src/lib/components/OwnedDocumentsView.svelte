@@ -9,7 +9,7 @@
   import PlainCell from './PlainCell.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
   import { formatTimestamp } from '$lib/date-format'
-  import type { Tag } from '$lib/tag-colors'
+  import { formatContentSize, formatTagNames } from '$lib/document-list-format'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -21,14 +21,6 @@
   let { documentsState }: Props = $props()
 
   const supportsHover = useSupportsHover()
-
-  function formatSize(value: number) {
-    return value.toLocaleString()
-  }
-
-  function formatTags(tags: Tag[] | undefined) {
-    return tags?.map(tag => tag.name).join(', ') ?? ''
-  }
 
   const columns = $derived.by<DataTableColumn<AdminDocumentSummary>[]>(() => [
     {
@@ -187,7 +179,7 @@
   {#if (document.tags ?? []).length > 0}
     {#if supportsHover.value}
       <Copyable
-        text={formatTags(document.tags)}
+        text={formatTagNames(document.tags)}
         className="block text-slate-400"
         copyAriaLabel={i18n.t('admin.copyTagsFor', { name: document.name })}>
         {@render tagsChips(document)}
@@ -199,7 +191,7 @@
 {/snippet}
 
 {#snippet lengthCell(document: AdminDocumentSummary)}
-  {formatSize(document.contentSize)}
+  {formatContentSize(document.contentSize)}
 {/snippet}
 
 {#snippet accessCell(document: AdminDocumentSummary)}

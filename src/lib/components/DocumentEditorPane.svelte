@@ -36,6 +36,7 @@
   import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '$lib/editor-preview-split'
   import { usePreviewContent } from './use-preview-content.svelte'
   import { useFormat } from './use-format.svelte'
+  import { useDocumentActions } from './use-document-actions.svelte'
   import { getShareTextContext } from '$lib/share-text-context'
   import { formatTimestamp } from '$lib/date-format'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -133,8 +134,17 @@
     }
   }
 
-  let fileInputRef = $state<HTMLInputElement | null>(null)
-  let uploadConfirmOpen = $state(false)
+  const actions = useDocumentActions({
+    getContent: () => content,
+    setContent: value => (content = value),
+    getDocType: () => docType,
+    setDocType: value => (docType = value),
+    getDocument: () => ({ id: document.id, name: document.name }),
+    getMaxContentLength: () => maxContentLength,
+    getDirty: () => dirty,
+    onTypeChange: value => onTypeChange(value),
+  })
+
   let tagsOpen = $state(false)
   let historyOpen = $state(false)
 
@@ -155,104 +165,9 @@
     () => document.id,
   )
 
-  function openFilePicker() {
-    fileInputRef?.click()
-  }
-
-  function handleUploadClick() {
-    if (dirty) {
-      uploadConfirmOpen = true
-      return
-    }
-    openFilePicker()
-  }
-
-  function handleUploadConfirm() {
-    uploadConfirmOpen = false
-    openFilePicker()
-  }
-
-  async function handleFileChange() {
-    const file = fileInputRef?.files?.[0]
-    if (!file) return
-    try {
-      const text = await file.text()
-      const byteSize = new TextEncoder().encode(text).byteLength
-      if (byteSize > 1024 * 1024) {
-        toast.error(i18n.t('editor.toast.fileTooLarge'))
-        return
-      }
-      if (maxContentLength > 0 && text.length > maxContentLength) {
-        toast.error(i18n.t('editor.toast.fileTooLong', { limit: maxContentLength }))
-        return
-      }
-      content = text
-      toast.success(i18n.t('editor.toast.fileUploaded'))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.fileReadFailed'))
-    } finally {
-      if (fileInputRef) {
-        fileInputRef.value = ''
-      }
-    }
-  }
-
   function handleSave() {
     if (!editable || !dirty || saving) return
     onSave()
-  }
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(content)
-      toast.success(i18n.t('editor.toast.copied'))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
-    }
-  }
-
-  async function handleCopyLink() {
-    try {
-      const url = new URL(window.location.href)
-      url.pathname = `/${document.id}`
-      url.search = ''
-      url.hash = ''
-      await navigator.clipboard.writeText(url.toString())
-      toast.success(i18n.t('editor.toast.linkCopied'))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : i18n.t('editor.toast.copyFailed'))
-    }
-  }
-
-  function handleExport() {
-    const currentType = getDocumentType(docType)
-    const blob = new Blob([content], { type: `${currentType.mimeType};charset=utf-8` })
-    const url = URL.createObjectURL(blob)
-    const anchor = globalThis.document.createElement('a')
-    anchor.href = url
-    anchor.download = `${document.name || 'document'}.${currentType.extension}`
-    globalThis.document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    URL.revokeObjectURL(url)
-  }
-
-  async function handleTypeSelect(value: string) {
-    if (value === docType) return
-    const fromType = getDocumentType(docType)
-    const toType = getDocumentType(value)
-    if (fromType.convertTo?.target === value) {
-      const result = await fromType.convertTo.convert(content)
-      if (!result.ok) {
-        toast.error(
-          i18n.t('editor.toast.cannotConvert', { error: result.error ?? i18n.t('editor.toast.invalidContent') }),
-        )
-        return
-      }
-      content = result.value ?? ''
-    }
-    docType = value
-    onTypeChange(value)
   }
 
   const formattedTimestamp = $derived(formatTimestamp(document.updatedAt))
@@ -285,7 +200,7 @@
           ariaLabel={i18n.t('editor.documentType')}
           filterable={true}
           size="sm"
-          onSelect={handleTypeSelect}
+          onSelect={actions.handleTypeSelect}
           align="right"
           emptyLabel={i18n.t('dropdown.noOptions')}
           autoPlace={true} />
@@ -355,7 +270,7 @@
       size="sm"
       ariaLabel={i18n.t('common.copy')}
       tooltip={i18n.t('common.copy')}
-      onClick={handleCopy}
+      onClick={actions.handleCopy}
       disabled={content.length === 0}>
       {#snippet icon()}
         <CopyIcon />
@@ -367,7 +282,7 @@
           size="sm"
           ariaLabel={i18n.t('editor.upload')}
           tooltip={i18n.t('editor.upload')}
-          onClick={handleUploadClick}>
+          onClick={actions.handleUploadClick}>
           {#snippet icon()}
             {@render uploadIcon()}
           {/snippet}
@@ -377,7 +292,7 @@
         size="sm"
         ariaLabel={i18n.t('editor.export')}
         tooltip={i18n.t('editor.export')}
-        onClick={handleExport}
+        onClick={actions.handleExport}
         disabled={content.length === 0}>
         {#snippet icon()}
           {@render exportIcon()}
@@ -421,7 +336,7 @@
                   {
                     id: 'copy-link',
                     label: i18n.t('editor.copyLink'),
-                    onClick: handleCopyLink,
+                    onClick: actions.handleCopyLink,
                     icon: linkIcon,
                   },
                 ]
@@ -560,7 +475,7 @@
                   {
                     id: 'upload',
                     label: i18n.t('editor.upload'),
-                    onClick: handleUploadClick,
+                    onClick: actions.handleUploadClick,
                     icon: uploadIcon,
                   },
                 ]
@@ -568,7 +483,7 @@
             {
               id: 'export',
               label: i18n.t('editor.export'),
-              onClick: handleExport,
+              onClick: actions.handleExport,
               disabled: content.length === 0,
               icon: exportIcon,
             },
@@ -658,11 +573,11 @@
   </div>
 
   <input
-    bind:this={fileInputRef}
+    bind:this={actions.fileInputRef}
     type="file"
     accept="text/plain,.txt,.md,.json,.csv,.html,.js,.xml,.yml,.yaml,application/json,text/markdown,text/html,text/xml,text/javascript"
     class="hidden"
-    onchange={handleFileChange} />
+    onchange={actions.handleFileChange} />
 
   <div class="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
     {#if document.updatedAt}
@@ -692,14 +607,14 @@
   </div>
 </section>
 
-{#if uploadConfirmOpen}
+{#if actions.uploadConfirmOpen}
   <ConfirmDialog
     title={i18n.t('editor.uploadConfirmTitle')}
     message={i18n.t('editor.uploadConfirmMessage')}
     confirmLabel={i18n.t('common.ok')}
     confirmColor="amber"
-    onConfirm={handleUploadConfirm}
-    onCancel={() => (uploadConfirmOpen = false)} />
+    onConfirm={actions.handleUploadConfirm}
+    onCancel={() => actions.closeUploadConfirm()} />
 {/if}
 
 {#if onTagsSave}
