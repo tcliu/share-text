@@ -32,6 +32,8 @@
   let closeTimer: ReturnType<typeof setTimeout> | null = null
   let containerRef = $state<HTMLDivElement | null>(null)
   let inputRef = $state<HTMLInputElement | null>(null)
+  // Suggestion elements by index (bound, never queried) for scrollport reveal.
+  let optionEls = $state<(HTMLElement | null)[]>([])
   let internalUpdate = false
 
   const listboxId = $derived(`${id ? `${id}-` : 'combobox-'}listbox`)
@@ -40,8 +42,9 @@
 
   $effect(() => {
     if (!dropdownOpen) return
-    const el = activeOptionId ? document.getElementById(activeOptionId) : null
-    el?.scrollIntoView({ block: 'nearest' })
+    void activeIndex
+    // Reveal the active suggestion once its element is bound in the listbox.
+    optionEls[activeIndex]?.scrollIntoView({ block: 'nearest' })
   })
 
   export function focus() {
@@ -199,6 +202,7 @@
       {#each suggestions as suggestion, index}
         <button
           type="button"
+          bind:this={optionEls[index]}
           id={optionId(index)}
           role="option"
           tabindex="-1"
