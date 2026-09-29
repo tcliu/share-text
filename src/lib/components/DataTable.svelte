@@ -79,6 +79,9 @@
     currentPage: number
     onPageChange: (page: number) => void
     onPageSizeChange: (size: number) => void
+    // Page-size choices offered by the pagination dropdown, forwarded to
+    // Pagination; omitted leaves Pagination's own default.
+    pageSizeOptions?: number[]
     containerClass?: string
     tableClass?: string
     fillHeight?: boolean
@@ -155,6 +158,7 @@
     currentPage,
     onPageChange,
     onPageSizeChange,
+    pageSizeOptions,
     containerClass = 'max-h-[min(70vh,44rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout',
     tableClass = 'min-w-0',
     fillHeight = false,
@@ -616,6 +620,7 @@
         {currentPage}
         {onPageChange}
         {onPageSizeChange}
+        {pageSizeOptions}
         previousLabel={paginationPreviousLabel}
         nextLabel={paginationNextLabel}
         pageSizeLabel={paginationPageSizeLabel}
