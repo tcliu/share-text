@@ -11,26 +11,28 @@
 
 @source inline("text-xs text-sm text-md text-lg");
 
-:root {
-  color-scheme: dark;
-}
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
 
-body {
-  margin: 0;
-  min-height: 100dvh;
-  background: var(--color-slate-950);
-  color: var(--color-slate-200);
-  font-family: system-ui, -apple-system, sans-serif;
-}
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-slate-950);
+    color: var(--color-slate-200);
+    font-family: system-ui, -apple-system, sans-serif;
+  }
 
-button,
-[role="button"],
-a {
-  cursor: pointer;
-}
+  button,
+  [role="button"],
+  a {
+    cursor: pointer;
+  }
 
-button:disabled {
-  cursor: not-allowed;
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 .st-tooltip {
