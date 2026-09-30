@@ -118,6 +118,9 @@
   // measurement lands, a viewport-width CSS guard (below) hides the pane on
   // narrow screens so the first paint never shows the squeezed docked pane.
   let reduceMotion = $state(false)
+  // Flips on the first pointer/key interaction. Transition params gate on it
+  // so the initial paint never slides a pane in (see `slideParams`).
+  let userInteracted = $state(false)
   let measured = $state(false)
   let containerWidth = $state(APP_SHELL_DESKTOP_BREAKPOINT)
   let rootEl = $state<HTMLElement | null>(null)
@@ -131,7 +134,14 @@
   const floating = $derived(resolveDrawerFloating(mode, desktopLayout))
   // Panes only ever slide sideways: docked panes sit in a row and floating
   // panes overlay it, so there is no stacked state needing a vertical axis.
-  const slideParams = $derived({ axis: 'x', duration: reduceMotion ? 0 : 200 } as const)
+  // The slide responds to a user toggle (the header menu), never the initial
+  // paint: until the first interaction the duration is zero, so a pane that
+  // mounts while the page settles (the docked pane once the container measures
+  // desktop) appears in place instead of sweeping across on load.
+  const slideParams = $derived({
+    axis: 'x',
+    duration: userInteracted && !reduceMotion ? 200 : 0,
+  } as const)
 
   const leftDrawer: AppShellDrawer = new AppShellDrawer({
     getOpen: () => open,
@@ -204,6 +214,16 @@
   onMount(() => {
     leftDrawer.restoreSize()
     rightDrawer.restoreSize()
+    // Arm the slide transition only after the user does anything; a bare page
+    // load must not animate a pane in. Capture phase so the flag is set before
+    // the same gesture's click toggles the drawer.
+    const markUserInteraction = () => {
+      userInteracted = true
+      window.removeEventListener('pointerdown', markUserInteraction, true)
+      window.removeEventListener('keydown', markUserInteraction, true)
+    }
+    window.addEventListener('pointerdown', markUserInteraction, true)
+    window.addEventListener('keydown', markUserInteraction, true)
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const syncMotion = () => {
       reduceMotion = motionQuery.matches
@@ -226,6 +246,8 @@
     return () => {
       motionQuery.removeEventListener('change', syncMotion)
       resizeObserver.disconnect()
+      window.removeEventListener('pointerdown', markUserInteraction, true)
+      window.removeEventListener('keydown', markUserInteraction, true)
     }
   })
 
