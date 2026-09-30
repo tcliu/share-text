@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import Button from './Button.svelte'
   import { createGridModel } from './use-grid-model.svelte'
   import { createGridSelection, createInitialSelectionState, RANGE_COLOR } from './use-grid-selection.svelte'
@@ -8,6 +8,7 @@
   import { columnLetter } from './grid-utils'
   import { createColumnResize } from './use-column-resize.svelte'
   import { createTableScrollSync } from './use-table-scroll-sync.svelte'
+  import { createGridCellRefs } from './grid-cell-refs'
   import TableIcon from '$lib/icons/TableIcon.svelte'
   import RowInsertAboveIcon from '$lib/icons/RowInsertAboveIcon.svelte'
   import RowInsertBelowIcon from '$lib/icons/RowInsertBelowIcon.svelte'
@@ -65,9 +66,9 @@
     getValue: () => value,
     getHeaders: () => showHeaders,
     onChange: m => onChange?.(m),
-    // Column cap is fixed config captured at grid creation.
-    // svelte-ignore state_referenced_locally
-    maxColumns,
+    // Column cap is fixed config captured at grid creation; the untracked read
+    // makes that one-time capture explicit instead of a suppressed warning.
+    maxColumns: untrack(() => maxColumns),
   })
 
   const ROW_NUMBER_WIDTH = 36
@@ -188,24 +189,20 @@
     return editingCell?.ri === ri && editingCell?.ci === ci
   }
 
-  function gridEl<T extends Element>(selector: string): T | null {
-    return rootEl?.querySelector<T>(selector) ?? null
-  }
-
-  function cellInputEl(ri: number, ci: number): HTMLTextAreaElement | null {
-    return gridEl<HTMLTextAreaElement>(`[data-row="${ri}"][data-col="${ci}"]`)
-  }
+  // Owned-node registry: cells, editors, and selectors register their own nodes
+  // through actions, so focus never queries the DOM (see grid-cell-refs.ts).
+  const cellRefs = createGridCellRefs()
 
   const focus = {
     cellBox(ri: number, ci: number) {
-      cellInputEl(ri, ci)?.closest<HTMLElement>('td, th')?.focus()
+      cellRefs.cellBox(ri, ci)?.focus()
     },
     cellInput(ri: number, ci: number) {
-      cellInputEl(ri, ci)?.focus()
+      cellRefs.cellInput(ri, ci)?.focus()
     },
     cellInputAtEnd(ri: number, ci: number) {
       tick().then(() => {
-        const input = cellInputEl(ri, ci)
+        const input = cellRefs.cellInput(ri, ci)
         if (input) {
           input.focus()
           input.setSelectionRange(input.value.length, input.value.length)
@@ -214,7 +211,7 @@
     },
     cellInputSelectAll(ri: number, ci: number) {
       tick().then(() => {
-        const input = cellInputEl(ri, ci)
+        const input = cellRefs.cellInput(ri, ci)
         if (input) {
           input.focus()
           input.setSelectionRange(0, input.value.length)
@@ -223,16 +220,16 @@
     },
     startEdit(ri: number, ci: number, value: string) {
       model.setValue(ri, ci, value)
-      cellInputEl(ri, ci)?.focus()
+      cellRefs.cellInput(ri, ci)?.focus()
     },
     rowSelector(ri: number) {
-      gridEl<HTMLElement>(`[data-row-selector="${ri}"]`)?.focus()
+      cellRefs.rowSelector(ri)?.focus()
     },
     columnSelector(ci: number) {
-      gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)?.focus()
+      cellRefs.colSelector(ci)?.focus()
     },
     isCellInputFocused(ri: number, ci: number) {
-      return document.activeElement === cellInputEl(ri, ci)
+      return document.activeElement === cellRefs.cellInput(ri, ci)
     },
   }
 
@@ -292,7 +289,7 @@
     setColumnWidths: (widths: number[]) => {
       columnWidths = widths
     },
-    getColumnCellWidth: (ci: number) => gridEl<HTMLElement>(`[data-col-selector="${ci}"]`)?.offsetWidth ?? 128,
+    getColumnCellWidth: (ci: number) => cellRefs.colSelector(ci)?.offsetWidth ?? 128,
     getMinWidth: () => MIN_COLUMN_WIDTH,
     getFillWidthOffset: () => TABLE_LEFT_BORDER + ROW_NUMBER_WIDTH,
     getStorageKey: () => storageKey,
@@ -705,6 +702,7 @@
                 {@const isSortDesc = isSortActive && sortDirection === 'desc'}
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <th
+                  use:cellRefs.colSelectorRef={{ ci }}
                   role="columnheader"
                   aria-colindex={ci + 1}
                   aria-sort={isSortActive ? (isSortAsc ? 'ascending' : 'descending') : undefined}
@@ -765,6 +763,7 @@
                   style="min-width:2.25rem;max-width:2.25rem;{sel.rowNumberBorderStyle(0)}"></th>
                 {#each model.rows[0].cells as cell, ci (cell.id)}
                   <th
+                    use:cellRefs.cellBoxRef={{ ri: 0, ci }}
                     role="columnheader"
                     aria-colindex={ci + 1}
                     aria-selected={sel.isCellSelected(0, ci)}
@@ -781,6 +780,7 @@
                     onkeydown={event => sel.handleBoxKeydown(event, 0, ci)}
                     onpaste={event => handleBoxPaste(event, 0, ci)}>
                     <textarea
+                      use:cellRefs.cellInputRef={{ ri: 0, ci }}
                       data-row={0}
                       data-col={ci}
                       rows={isCellEditing(0, ci) && cell.value.includes('\n') ? 2 : 1}
@@ -826,6 +826,7 @@
               <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <td
+                  use:cellRefs.rowSelectorRef={{ ri: actualRi }}
                   role="rowheader"
                   aria-rowindex={showHeaders ? ri + 3 : ri + 2}
                   aria-selected={sel.selectedRows.has(actualRi)}
@@ -844,6 +845,7 @@
                   {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <td
+                    use:cellRefs.cellBoxRef={{ ri: actualRi, ci }}
                     role="gridcell"
                     aria-colindex={ci + 1}
                     aria-selected={sel.isCellSelected(actualRi, ci)}
@@ -856,6 +858,7 @@
                     onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
                     onpaste={event => handleBoxPaste(event, actualRi, ci)}>
                     <textarea
+                      use:cellRefs.cellInputRef={{ ri: actualRi, ci }}
                       data-row={actualRi}
                       data-col={ci}
                       rows={expanded ? editorLines : 1}

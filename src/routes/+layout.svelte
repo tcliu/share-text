@@ -4,12 +4,20 @@
   import '../styles.css'
   import { Toaster, toast } from 'svelte-sonner'
   import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { setTipBox, tipState } from '$lib/actions/tooltip.svelte'
   import { useTheme } from '$lib/use-theme.svelte'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
   setI18nContext(createAppI18n())
   const themeState = useTheme()
+
+  // Register the shared tooltip box (the host half of `use:tooltip`).
+  let tipBoxEl = $state<HTMLElement | null>(null)
+  $effect(() => {
+    setTipBox(tipBoxEl)
+    return () => setTipBox(null)
+  })
 
   onMount(() => {
     themeState.hydrate()
@@ -31,6 +39,16 @@
 </script>
 
 {@render children()}
+
+<div
+  id="tip"
+  role="tooltip"
+  bind:this={tipBoxEl}
+  class="fixed z-tooltip pointer-events-none rounded-lg border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs leading-normal text-slate-200 whitespace-pre-line shadow-lg"
+  style:left="{tipState.left}px"
+  style:top="{tipState.top}px"
+  style:max-width="{tipState.maxWidth}px"
+  hidden={!tipState.visible}>{tipState.text}</div>
 
 {#if data?.devTag}
   <div

@@ -586,6 +586,25 @@ closed (the button mode lets the native Enter/Space toggle open instead).
 Mouse hover and arrow keys share the single `highlightIndex`, exposed to
 assistive tech via `aria-activedescendant`.
 
+### Plain-Text Hints (`data-tip`)
+
+Plain-text tooltips use the `use:tooltip` action
+(`src/lib/actions/tooltip.svelte.ts`) with a `data-tip` attribute on the
+triggering element; `Button`'s `dataTip` prop and the `DataTable` column
+`headerTip` (plus `headerTipPlace`) feed it. The action reads its own element's
+`dataset.tip` and publishes text plus geometry into the shared `tipState`; the
+root layout renders the single `#tip` host box (registered through `setTipBox`)
+from that state, so no module writes to the DOM. The box is anchored to the
+element (centered below, flipped above when there is no room, clamped inside the
+viewport) and hidden on pointer-leave/blur, on scroll (one shared capture
+listener), and on teardown. It carries `role="tooltip"`, is inert to pointer
+events, and sits in the `--z-index-tooltip` token (45) so it paints above the
+portalled `z-40` dialogs while staying below the `z-50` dev tag. A disabled
+button fires no pointer events, so `Button` moves the `data-tip` onto a
+non-disabled wrapper span (and gates the button's own `data-tip` off) — a
+disabled icon button with a `dataTip` still shows its hint. Rich positioned
+content keeps the `Tooltip` component.
+
 ### UI Localization (i18n)
 
 Both the browser app and the admin console are localized through
@@ -837,6 +856,13 @@ in `use-grid-selection.svelte.ts`). While a cell is being edited, mouse
 interaction inside it behaves like a normal text input (caret placement /
 in-cell text selection); grid range-dragging only works from a non-editing
 cell.
+
+Focus targets — cell boxes, cell editors, and the row/column selectors — are
+resolved through the owned-node registry in
+`src/lib/components/grid-cell-refs.ts` rather than DOM queries: each node
+registers itself through a `use:` action keyed by its current row/column index
+and re-keys when an insert or delete shifts that index, so focus and edit
+transitions reach the live node without `querySelector` traversal.
 
 Cells are editable as multiline text. Each cell editor is a `<textarea>`
 (`<input>` cannot hold `\n`) styled identically to a single-line input. While

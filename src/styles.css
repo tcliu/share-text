@@ -6,6 +6,11 @@
   --text-md: 0.9375rem; /* 15px */
   --text-lg: 1.125rem; /* 18px */
 
+  /* Transient hint layer: above portalled z-40 dialogs (which paint after the
+     layout host in body order) and below the z-50 dev tag. The token lives in
+     Tailwind's `--z-index-*` namespace so the `z-tooltip` utility resolves. */
+  --z-index-tooltip: 45;
+
   --color-onaccent: rgb(2 6 23);
 }
 

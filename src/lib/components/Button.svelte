@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import Tooltip from './Tooltip.svelte'
+  import { tooltip as tooltipAction } from '$lib/actions/tooltip.svelte'
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
@@ -134,6 +135,11 @@
 
   const disabledState = $derived(disabled || pending)
 
+  // The `data-tip` engine rides the element that receives pointer events: the
+  // button normally, or the wrapper span when the button is disabled (a
+  // disabled button fires no mouse events). Exactly one element carries the tip.
+  const tipOwnedByButton = $derived(!(disabledState && dataTip))
+
   const badgeClasses: Record<string, string> = {
     cyan: 'bg-cyan-500',
     emerald: 'bg-emerald-500',
@@ -215,7 +221,7 @@
     aria-label={ariaLabel}
     aria-pressed={ariaPressed}
     aria-expanded={ariaExpanded}
-    data-tip={dataTip}
+    use:tooltipAction data-tip={tipOwnedByButton ? dataTip : undefined}
     onclick={onClick}
     onkeydown={onKeyDown}
     onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined}
@@ -234,6 +240,12 @@
   <span bind:this={triggerEl} class="group relative inline-flex">
     {@render buttonElement()}
     <Tooltip align={tooltipAlign} trigger={triggerEl}>{tooltip}</Tooltip>
+  </span>
+{:else if disabledState && dataTip}
+  <!-- Disabled buttons fire no mouse events, so the tip rides on a
+    non-disabled wrapper instead; the button's own `data-tip` is gated off. -->
+  <span class="inline-flex" use:tooltipAction data-tip={dataTip}>
+    {@render buttonElement()}
   </span>
 {:else}
   {@render buttonElement()}
