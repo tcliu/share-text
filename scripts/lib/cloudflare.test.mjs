@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -312,6 +313,8 @@ describe('ensureD1Database', () => {
 
 describe('detectProductionBranch', () => {
   it('reads the checkout branch', () => {
-    expect(detectProductionBranch('/d/dev/workspaces/share-text')).toBe('master')
+    const dir = mkdtempSync(join(tmpdir(), 'prod-branch-'))
+    execFileSync('git', ['init', '-b', 'trunk'], { cwd: dir, stdio: 'pipe' })
+    expect(detectProductionBranch(dir)).toBe('trunk')
   })
 })

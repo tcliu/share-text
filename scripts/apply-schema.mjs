@@ -16,11 +16,10 @@ import {
 import { errorMessage, logEvent } from './log-event.mjs'
 
 // Split a SQL script into statements on semicolons that are not inside a
-// string literal, quoted identifier, line comment, or block comment. The
-// naive `sql.split(';')` breaks on the semicolon inside the document_versions
-// comment in sql/schema.sql, producing a chunk starting with bare text
-// ("version rows are removed ...") that Neon rejects with
-// `syntax error at or near "version"`.
+// string literal, quoted identifier, dollar-quoted body, line comment, or
+// block comment. The naive `sql.split(';')` breaks on semicolons inside
+// comments, string literals, or `$$`-quoted function bodies, producing
+// chunks starting with bare text that the server rejects with a syntax error.
 function splitSqlStatements(sql) {
   const statements = []
   let current = ''
@@ -28,10 +27,19 @@ function splitSqlStatements(sql) {
   let inDoubleQuote = false
   let inLineComment = false
   let inBlockComment = false
+  let dollarTag = null
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i]
     const next = sql[i + 1]
-    if (inLineComment) {
+    if (dollarTag !== null) {
+      if (char === '$' && sql.startsWith(dollarTag, i)) {
+        current += dollarTag
+        i += dollarTag.length - 1
+        dollarTag = null
+      } else {
+        current += char
+      }
+    } else if (inLineComment) {
       current += char
       if (char === '\n') inLineComment = false
     } else if (inBlockComment) {
@@ -56,6 +64,15 @@ function splitSqlStatements(sql) {
         i++
       } else if (char === '"') {
         inDoubleQuote = false
+      }
+    } else if (char === '$') {
+      const match = /^\$[A-Za-z_0-9]*\$/.exec(sql.slice(i))
+      if (match) {
+        dollarTag = match[0]
+        current += dollarTag
+        i += dollarTag.length - 1
+      } else {
+        current += char
       }
     } else if (char === '-' && next === '-') {
       inLineComment = true

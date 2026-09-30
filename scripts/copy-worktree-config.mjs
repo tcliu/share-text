@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { c } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
+import { CHECKLIST_HINT, renderList } from './_pickers.mjs'
+import { errorMessage, logEvent } from './log-event.mjs'
 import { copyDevFiles, listCopyTargets, readDevTag, resolveWorktreesDir } from './_worktrees.mjs'
 
 export { copyDevFiles }
@@ -9,20 +11,15 @@ export { copyDevFiles }
 // redraws on every keystroke, and re-reading .env.local per row per redraw
 // is needless filesystem work.
 function renderWorktreePicker(devTags) {
-  return (items, state) => {
-    const lines = []
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      const marker = state.selected.has(i) ? `${c.green}[x]${c.reset}` : '[ ]'
+  return renderList({
+    checkboxes: true,
+    hint: CHECKLIST_HINT,
+    formatRow: item => {
       const devTag = devTags.get(item.path)
       const suffix = devTag ? ` DEV_TAG=${devTag}` : ''
-      lines.push(` ${cursor} ${marker} ${item.name} ${c.gray}(${item.path}${suffix})${c.reset}`)
-    }
-    lines.push('')
-    lines.push(`${c.dim}Space: toggle | Enter: confirm | q: cancel${c.reset}`)
-    return lines
-  }
+      return `${item.name} ${c.gray}(${item.path}${suffix})${c.reset}`
+    },
+  })
 }
 
 function collectDevTags(worktrees) {
@@ -70,7 +67,35 @@ async function main() {
 
   for (const worktree of selected) {
     console.log(`${c.green}Copying config to${c.reset} ${worktree.name}...`)
-    const copied = copyDevFiles(root, worktree.path)
+    const startedAt = Date.now()
+    logEvent({
+      action: 'worktree_copy_config_start',
+      details: { name: worktree.name, path: worktree.path },
+    })
+    let copied
+    try {
+      copied = copyDevFiles(root, worktree.path)
+    } catch (error) {
+      logEvent({
+        action: 'worktree_copy_config_error',
+        details: {
+          name: worktree.name,
+          path: worktree.path,
+          elapsed_ms: Date.now() - startedAt,
+          error: errorMessage(error),
+        },
+      })
+      throw error
+    }
+    logEvent({
+      action: 'worktree_copy_config_end',
+      details: {
+        name: worktree.name,
+        path: worktree.path,
+        elapsed_ms: Date.now() - startedAt,
+        files_copied: copied.length,
+      },
+    })
     if (copied.length === 0) {
       console.log(`  ${c.dim}(nothing to copy — already present)${c.reset}`)
     } else {

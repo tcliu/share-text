@@ -64,7 +64,7 @@ describe('findScanJob', () => {
   it('matches by URL and prefers the canonical title', () => {
     const jobs = [
       { jobId: 1, url: `${SCAN_URL}/`, title: 'renamed in console' },
-      { jobId: 2, url: SCAN_URL, title: 'share-text auto-scan' },
+      { jobId: 2, url: SCAN_URL, title: SCAN_JOB_TITLE },
     ]
     expect(findScanJob(jobs, SCAN_URL)?.jobId).toBe(2)
   })
@@ -74,19 +74,19 @@ describe('findScanJob', () => {
   })
 
   it('falls back to the canonical title when the URL drifted', () => {
-    const jobs = [{ jobId: 9, url: 'https://old.example.com/api/cron/scan', title: 'share-text auto-scan' }]
+    const jobs = [{ jobId: 9, url: 'https://old.example.com/api/cron/scan', title: SCAN_JOB_TITLE }]
     expect(findScanJob(jobs, SCAN_URL)?.jobId).toBe(9)
   })
 
   it('returns null for an empty URL even when a titled job exists', () => {
-    const jobs = [{ jobId: 9, url: SCAN_URL, title: 'share-text auto-scan' }]
+    const jobs = [{ jobId: 9, url: SCAN_URL, title: SCAN_JOB_TITLE }]
     expect(findScanJob(jobs, '')).toBeNull()
   })
 
   it('scopes the title fallback per target so jobs never steal each other', () => {
     const jobs = [
-      { jobId: 1, url: SCAN_URL, title: 'share-text auto-scan' },
-      { jobId: 2, url: CF_SCAN_URL, title: 'share-text auto-scan (cloudflare)' },
+      { jobId: 1, url: SCAN_URL, title: SCAN_JOB_TITLE },
+      { jobId: 2, url: CF_SCAN_URL, title: `${SCAN_JOB_TITLE} (cloudflare)` },
     ]
     // URL drift falls back to the same target's job, never the other's.
     expect(findScanJob(jobs, 'https://moved.pages.dev/api/cron/scan', 'cloudflare')?.jobId).toBe(2)
