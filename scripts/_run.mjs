@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 
 // _run.mjs — shared command echoing for CLI scripts. Every external command
-// is printed before it runs so logs show what executed; values supplied under
-// secret-keyed flags are masked so credentials never reach the log.
-// A key whose segments include a secret word is masked before echo. `key` is
-// boundary-scoped, so `MONKEY` stays visible while `api-key` and `ACCESS_KEY`
-// do not; ordinary values are never masked.
+// is printed before it runs so logs show what executed; secret values are
+// masked so credentials never reach the log. Masked: the value after a
+// secret-keyed flag, an inline `--key=value`, a bare `NAME=value` whose name
+// names a secret, and the `--value` of an `env add <KEY>` (only when <KEY> is
+// absent, a flag, or itself secret — fail closed). `key` is boundary-scoped, so
+// `MONKEY` stays visible while `api-key` and `ACCESS_KEY` do not; ordinary
+// values are never masked.
 const SECRET_KEY_RE = /(^|[_-])(secret|password|passwd|token|credential|private|database_url|api_?key|access_?key|key)([_-]|$)/i
 const MASK = '***'
 
@@ -39,10 +41,6 @@ function maskTokens(tokens) {
     if (maskNext) {
       maskNext = false
       out.push(MASK)
-      continue
-    }
-    if (typeof token !== 'string') {
-      out.push(token)
       continue
     }
     if (isSecretFlag(token)) {

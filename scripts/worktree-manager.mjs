@@ -348,24 +348,24 @@ function flushProcs() {
   if (dirty) draw()
 }
 
+// Signal the pane's process group. An already-exited group (ESRCH) is a no-op;
+// any other failure is surfaced on the pane instead of thrown, so a stray
+// signal error cannot tear down the TUI mid-render.
+function signalPaneGroup(pane, signal) {
+  try {
+    process.kill(-pane.child.pid, signal)
+  } catch (error) {
+    if (error?.code === 'ESRCH') return
+    pane.lines.push(`${c.yellow}Failed to send ${signal} to the pane: ${error.message}${c.reset}`)
+    redraw()
+  }
+}
+
 function paneKillChild(pane = state.pane) {
   if (!pane || !pane.running) return
-  try {
-    process.kill(-pane.child.pid, 'SIGTERM')
-  } catch (error) {
-    if (error?.code !== 'ESRCH') throw error
-    // ESRCH: the group already exited; the child's own exit handler clears
-    // `running`, so there is nothing to report.
-  }
+  signalPaneGroup(pane, 'SIGTERM')
   pane.escalate = setTimeout(() => {
-    if (pane.running) {
-      try {
-        process.kill(-pane.child.pid, 'SIGKILL')
-      } catch (error) {
-        if (error?.code !== 'ESRCH') throw error
-        // ESRCH: an already-dead group needs no escalation.
-      }
-    }
+    if (pane.running) signalPaneGroup(pane, 'SIGKILL')
   }, KILL_ESCALATE_MS)
 }
 
