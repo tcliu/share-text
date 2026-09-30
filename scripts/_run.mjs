@@ -60,6 +60,15 @@ function maskTokens(tokens) {
       i += 1
       continue
     }
+    // A bare `NAME=value` assignment (e.g. typed at the worktree prompt): mask
+    // the value only when NAME itself names a secret.
+    if (token.includes('=')) {
+      const name = token.slice(0, token.indexOf('='))
+      if (isSecretName(name)) {
+        out.push(maskArgument(token))
+        continue
+      }
+    }
     out.push(token)
   }
   return out
