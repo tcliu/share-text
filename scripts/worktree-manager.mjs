@@ -352,16 +352,18 @@ function paneKillChild(pane = state.pane) {
   if (!pane || !pane.running) return
   try {
     process.kill(-pane.child.pid, 'SIGTERM')
-  } catch {
-    // ESRCH here means the group already exited; the child's own exit handler
-    // clears `running`, so there is nothing to report.
+  } catch (error) {
+    if (error?.code !== 'ESRCH') throw error
+    // ESRCH: the group already exited; the child's own exit handler clears
+    // `running`, so there is nothing to report.
   }
   pane.escalate = setTimeout(() => {
     if (pane.running) {
       try {
         process.kill(-pane.child.pid, 'SIGKILL')
-      } catch {
-        // Same as above: an already-dead group needs no escalation.
+      } catch (error) {
+        if (error?.code !== 'ESRCH') throw error
+        // ESRCH: an already-dead group needs no escalation.
       }
     }
   }, KILL_ESCALATE_MS)

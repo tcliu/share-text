@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import {
   copyFileSync,
   cpSync,
@@ -220,28 +220,19 @@ export function readBranchFromGitDir(worktreePath) {
 }
 
 export function resolveBaseBranch(root = process.cwd()) {
-  try {
-    const ref = execFileSync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], {
-      cwd: root,
-      encoding: 'utf-8',
-      stdio: 'pipe',
-    }).trim()
+  // A non-zero exit is expected here (unset origin/HEAD, absent branch), so
+  // probe with the non-throwing spawn and read the status instead of catching.
+  const probe = args => {
+    const result = spawnSync('git', args, { cwd: root, encoding: 'utf-8', stdio: 'pipe' })
+    return result.status === 0 ? (result.stdout ?? '').trim() : null
+  }
+  const ref = probe(['symbolic-ref', 'refs/remotes/origin/HEAD'])
+  if (ref) {
     const name = ref.replace('refs/remotes/origin/', '')
     if (name && name !== 'HEAD' && name !== ref) return name
-  } catch {
-    // origin/HEAD is unset in many checkouts; fall through to local candidates.
   }
   for (const cand of ['main', 'master']) {
-    try {
-      execFileSync('git', ['rev-parse', '--verify', `refs/heads/${cand}`], {
-        cwd: root,
-        encoding: 'utf-8',
-        stdio: 'pipe',
-      })
-      return cand
-    } catch {
-      // Candidate branch does not exist; try the next one.
-    }
+    if (probe(['rev-parse', '--verify', `refs/heads/${cand}`])) return cand
   }
   return null
 }

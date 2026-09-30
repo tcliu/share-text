@@ -2,6 +2,9 @@
 
 // Unified e2e entry point: `npm run e2e [-- [project] [branch] [-- <playwright args>]]`
 //
+// Arguments after `--` pass through to Playwright unchanged. A flag placed
+// before the separator, or without one, is rejected as an unknown option.
+//
 // 1. Scan for a running dev server via find-running-apps.mjs (identity + branch).
 // 2. If none matches, start `npm run dev` on the first free port in range and
 //    wait until its /api/info answers.
