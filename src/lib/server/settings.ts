@@ -1,19 +1,28 @@
 import { getDb } from './db'
 
-export type SettingKind = 'number' | 'string'
+export type SettingKind = 'number' | 'string' | 'boolean'
 
 export interface SettingDefinition {
   key: string
   label: string
   description: string
   kind: SettingKind
-  defaultValue: number | string
+  defaultValue: number | string | boolean
   envKey: string
   min?: number
   max?: number
 }
 
 export const SETTING_DEFINITIONS: SettingDefinition[] = [
+  {
+    key: 'app_active',
+    label: 'App active',
+    description:
+      'Report this app as active in GET /api/info. When off, catalog scans skip it entirely (never imported, updated, or marked missing).',
+    kind: 'boolean',
+    defaultValue: true,
+    envKey: 'APP_ACTIVE',
+  },
   {
     key: 'document_key_length',
     label: 'Document key length (chars)',
@@ -61,7 +70,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 export type SettingSource = 'database' | 'environment' | 'default'
 
 export interface ResolvedSetting extends SettingDefinition {
-  value: number | string
+  value: number | string | boolean
   source: SettingSource
 }
 
@@ -82,6 +91,25 @@ function readNumber(value: string | undefined): number | null {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
+// Boolean values are stored as the strings `true`/`false`; environment values
+// use the usual truthy/falsy spellings. Unrecognized spellings fall through.
+const TRUE_VALUES = ['1', 'true', 'yes', 'on']
+const FALSE_VALUES = ['0', 'false', 'no', 'off']
+
+function readBoolean(value: string | undefined): boolean | null {
+  if (value === undefined) {
+    return null
+  }
+  const trimmed = value.trim().toLowerCase()
+  if (TRUE_VALUES.includes(trimmed)) {
+    return true
+  }
+  if (FALSE_VALUES.includes(trimmed)) {
+    return false
+  }
+  return null
+}
+
 function isWithinRange(value: number, definition: SettingDefinition) {
   return (
     definition.min !== undefined && definition.max !== undefined && value >= definition.min && value <= definition.max
@@ -89,6 +117,15 @@ function isWithinRange(value: number, definition: SettingDefinition) {
 }
 
 export function resolveSettingSource(definition: SettingDefinition, dbValue: string | null): SettingSource {
+  if (definition.kind === 'boolean') {
+    if (dbValue !== null && readBoolean(dbValue) !== null) {
+      return 'database'
+    }
+    if (readBoolean(process.env[definition.envKey]) !== null) {
+      return 'environment'
+    }
+    return 'default'
+  }
   if (definition.kind === 'string') {
     if (dbValue !== null) {
       return 'database'
@@ -107,7 +144,20 @@ export function resolveSettingSource(definition: SettingDefinition, dbValue: str
   return 'default'
 }
 
-export function getEffectiveSettingValue(definition: SettingDefinition, dbValue: string | null) {
+export function getEffectiveSettingValue(
+  definition: SettingDefinition,
+  dbValue: string | null,
+): number | string | boolean {
+  if (definition.kind === 'boolean') {
+    if (dbValue !== null) {
+      const stored = readBoolean(dbValue)
+      if (stored !== null) {
+        return stored
+      }
+    }
+    const envValue = readBoolean(process.env[definition.envKey])
+    return envValue !== null ? envValue : definition.defaultValue
+  }
   if (definition.kind === 'string') {
     if (dbValue !== null) {
       return dbValue
@@ -154,10 +204,22 @@ export async function getMaxDocumentVersions() {
   return getSettingValue('max_document_versions')
 }
 
-const SETTINGS_CACHE_TTL_MS = 5000
-const valueCache = new Map<string, { value: number | string; expiresAt: number }>()
+// Opt-out flag served as the `active` field of `GET /api/info`; a catalog scan
+// skips this instance entirely when false. Defaults on. Best-effort: a database
+// hiccup must never fail the public info card, so it reports active.
+export async function getAppActive(): Promise<boolean> {
+  try {
+    const value = await getResolvedSettingValue('app_active')
+    return typeof value === 'boolean' ? value : true
+  } catch {
+    return true
+  }
+}
 
-async function getResolvedSettingValue(key: string): Promise<number | string> {
+const SETTINGS_CACHE_TTL_MS = 5000
+const valueCache = new Map<string, { value: number | string | boolean; expiresAt: number }>()
+
+async function getResolvedSettingValue(key: string): Promise<number | string | boolean> {
   const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
@@ -196,10 +258,20 @@ export async function listSettings(): Promise<ResolvedSetting[]> {
   })
 }
 
-export function validateSettingValue(key: string, value: unknown): number | string {
+export function validateSettingValue(key: string, value: unknown): number | string | boolean {
   const definition = getSettingDefinition(key)
   if (!definition) {
     throw new Error(`Unknown setting: ${key}`)
+  }
+  if (definition.kind === 'boolean') {
+    if (typeof value === 'boolean') {
+      return value
+    }
+    const parsed = typeof value === 'string' ? readBoolean(value) : value === 0 || value === 1 ? value === 1 : null
+    if (parsed === null) {
+      throw new Error(`${definition.label} must be a boolean`)
+    }
+    return parsed
   }
   if (definition.kind === 'string') {
     if (typeof value !== 'string') {

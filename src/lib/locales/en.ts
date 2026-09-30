@@ -335,6 +335,8 @@ export const en = {
     discardSettingsTitle: 'Discard unsaved settings changes?',
     discardSettingsMessage: 'Your unsaved admin settings changes will be lost.',
     env: 'env',
+    yes: 'Yes',
+    no: 'No',
     active: 'Active',
     inactive: 'Inactive',
     enabled: 'enabled',
@@ -530,6 +532,9 @@ export const en = {
     },
   },
   setting: {
+    app_active: 'App active',
+    app_activeDescription:
+      'Report this app as active in GET /api/info. When off, catalog scans skip it entirely (never imported, updated, or marked missing).',
     document_key_length: 'Document key length (chars)',
     document_key_lengthDescription:
       'Number of characters in generated document ids. New documents are named after their id. Existing documents keep their original ids.',

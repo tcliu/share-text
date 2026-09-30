@@ -155,7 +155,9 @@ export function useAdminSettings(onSignedOut: () => void) {
           ? null
           : setting.kind === 'string'
             ? (draftValues[setting.key]?.trim() ?? '')
-            : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
+            : setting.kind === 'boolean'
+              ? draftValues[setting.key] === 'true'
+              : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
       })),
       i18n,
     )

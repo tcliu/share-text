@@ -153,6 +153,10 @@ export function getI18nContext(): I18nStore {
 }
 
 const SETTING_KEYS = {
+  app_active: {
+    label: 'setting.app_active',
+    description: 'setting.app_activeDescription',
+  },
   document_key_length: {
     label: 'setting.document_key_length',
     description: 'setting.document_key_lengthDescription',

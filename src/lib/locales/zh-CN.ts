@@ -332,6 +332,8 @@ export const zhCN = {
     discardSettingsTitle: '放弃未保存的设置更改？',
     discardSettingsMessage: '未保存的管理设置更改将丢失。',
     env: '环境变量',
+    yes: '是',
+    no: '否',
     active: '启用',
     inactive: '停用',
     enabled: '已启用',
@@ -525,6 +527,8 @@ export const zhCN = {
     },
   },
   setting: {
+    app_active: '应用启用',
+    app_activeDescription: '在 GET /api/info 中将此应用报告为启用。关闭时，目录扫描会完全跳过它（不会导入、更新或标记为缺失）。',
     document_key_length: '文档键长度（字符）',
     document_key_lengthDescription: '生成的文档 ID 中的字符数。新文档以 ID 命名。现有文档保留其原始 ID。',
     max_content_length: '最大内容长度（字符）',

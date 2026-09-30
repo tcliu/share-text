@@ -332,6 +332,8 @@ export const zhTW = {
     discardSettingsTitle: '放棄未儲存的設定變更？',
     discardSettingsMessage: '未儲存的管理設定變更將遺失。',
     env: '環境變數',
+    yes: '是',
+    no: '否',
     active: '啟用',
     inactive: '停用',
     enabled: '已啟用',
@@ -525,6 +527,8 @@ export const zhTW = {
     },
   },
   setting: {
+    app_active: '應用程式啟用',
+    app_activeDescription: '在 GET /api/info 中將此應用程式回報為啟用。關閉時，目錄掃描會完全略過它（不會匯入、更新或標記為遺失）。',
     document_key_length: '文件鍵長度（字元）',
     document_key_lengthDescription: '產生的文件 ID 中的字元數。新文件以 ID 命名。現有文件保留其原始 ID。',
     max_content_length: '最大內容長度（字元）',

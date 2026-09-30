@@ -3,6 +3,7 @@
   import Button from './Button.svelte'
   import Buttons from './Buttons.svelte'
   import NumberInput from './NumberInput.svelte'
+  import SelectDropdown from './SelectDropdown.svelte'
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import ResetIcon from '$lib/icons/ResetIcon.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
@@ -21,6 +22,11 @@
     environment: i18n.t('admin.source.environment'),
     default: i18n.t('admin.source.default'),
   })
+
+  const booleanOptions = $derived([
+    { value: 'true', label: i18n.t('admin.yes') },
+    { value: 'false', label: i18n.t('admin.no') },
+  ])
 </script>
 
 {#snippet formContent()}
@@ -57,6 +63,15 @@
               aria-label={label}
               spellcheck="false"
               class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500 disabled:opacity-40" />
+          {:else if setting.kind === 'boolean'}
+            <SelectDropdown
+              buttonLabel={(settingsState.draftValues[setting.key] ?? String(setting.value)) === 'true'
+                ? i18n.t('admin.yes')
+                : i18n.t('admin.no')}
+              options={booleanOptions}
+              activeValue={settingsState.draftValues[setting.key] ?? String(setting.value)}
+              ariaLabel={label}
+              onSelect={value => (settingsState.draftValues[setting.key] = value)} />
           {:else}
             <NumberInput
               bind:value={settingsState.draftValues[setting.key]}

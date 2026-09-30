@@ -11,6 +11,7 @@ import {
   CATALOG_APP_TAGS,
   CATALOG_APP_URL,
 } from '$lib/server/catalog-app'
+import { getAppActive } from '$lib/server/settings'
 import { resolveProfile } from '$lib/server/profile'
 
 const NO_STORE = { 'cache-control': 'no-store, max-age=0' }
@@ -31,6 +32,9 @@ export const GET: RequestHandler = async () => {
       tags: [...CATALOG_APP_TAGS, CATALOG_APP_FRAMEWORK],
       branch,
       profile,
+      // `APP_ACTIVE` opt-out (database → environment → default true): a catalog
+      // scan elsewhere skips this instance entirely when false.
+      active: await getAppActive(),
     },
     { headers: NO_STORE },
   )

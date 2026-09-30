@@ -235,9 +235,12 @@ synchronizes through a small fetch-based JSON API.
 - `src/hooks.server.ts` guards every `/api/admin/*` route except
   `/api/admin/session`, returning 401 for requests without a valid session
   cookie.
-- `src/lib/server/settings.ts` defines the runtime-adjustable properties and
-  resolves them with precedence database override > environment > default,
-  cached in memory for a short TTL and invalidated on write.
+- `src/lib/server/settings.ts` defines the runtime-adjustable properties
+  (`number | string | boolean`) and resolves them with precedence database
+  override > environment > default, cached in memory for a short TTL and
+  invalidated on write. `app_active` (`APP_ACTIVE`) is the `GET /api/info`
+  active opt-out; `getAppActive()` is best-effort so the public info card never
+  fails on a database hiccup.
 - `src/lib/admin.ts` is the fetch-based admin API client. The admin console
   (`src/routes/admin/`) has a `+layout.svelte` that hosts the tab chrome via the
   tabs as real routes (`/admin/general`, `/admin/properties`,

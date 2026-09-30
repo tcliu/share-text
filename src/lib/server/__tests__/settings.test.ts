@@ -7,6 +7,7 @@ import { getDb } from '$lib/server/db'
 import {
   clearSettingsCache,
   deleteSettingValue,
+  getAppActive,
   getDocumentKeyLength,
   getMaxContentLength,
   getMaxDocumentVersions,
@@ -26,6 +27,7 @@ beforeEach(async () => {
   delete process.env.MAX_CONTENT_LENGTH
   delete process.env.DOCUMENT_KEY_LENGTH
   delete process.env.MAX_DOCUMENT_VERSIONS
+  delete process.env.APP_ACTIVE
 })
 
 describe('setting resolution', () => {
@@ -114,6 +116,32 @@ describe('setting resolution', () => {
     expect(await getSettingValue('max_content_length')).toBe(2048)
     await deleteSettingValue('max_content_length')
     expect(await getSettingValue('max_content_length')).toBe(1024 * 1024)
+  })
+})
+
+describe('boolean app_active setting', () => {
+  it('resolves from database over environment over default with a true fallback', async () => {
+    expect(await getAppActive()).toBe(true)
+    process.env.APP_ACTIVE = 'false'
+    clearSettingsCache()
+    expect(await getAppActive()).toBe(false)
+    expect((await listSettings()).find(setting => setting.key === 'app_active')).toMatchObject({
+      value: false,
+      source: 'environment',
+    })
+    await setSettingValue('app_active', true)
+    expect(await getAppActive()).toBe(true)
+    expect((await listSettings()).find(setting => setting.key === 'app_active')).toMatchObject({
+      value: true,
+      source: 'database',
+    })
+  })
+
+  it('validates boolean writes and rejects unrecognized spellings', () => {
+    expect(validateSettingValue('app_active', false)).toBe(false)
+    expect(validateSettingValue('app_active', 'no')).toBe(false)
+    expect(validateSettingValue('app_active', 'yes')).toBe(true)
+    expect(() => validateSettingValue('app_active', 'maybe')).toThrow('must be a boolean')
   })
 })
 
