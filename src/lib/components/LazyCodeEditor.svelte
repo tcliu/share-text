@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getI18nContext } from '$lib/i18n.svelte'
+  import type CodeEditor from './CodeEditor.svelte'
   const i18n = getI18nContext()
 
   interface Props {
@@ -34,7 +35,9 @@
 
   const resolvedAriaLabel = $derived(editorAriaLabel ?? i18n.t('editor.content'))
 
-  let EditorComponent = $state<any>(null)
+  // Lazy CodeEditor module: typed from the real component so the lazy boundary
+  // stays cast-free.
+  let EditorComponent = $state<typeof CodeEditor | null>(null)
   let editorInstance = $state<{
     focus: () => void
     getSelectionText: () => string
@@ -90,7 +93,6 @@
 </script>
 
 {#if EditorComponent}
-  <!-- svelte-ignore a11y_autofocus -->
   <EditorComponent
     bind:this={editorInstance}
     {content}

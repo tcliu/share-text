@@ -126,14 +126,18 @@ export function useDropdown(get: () => UseDropdownOptions): void {
       return false
     }
 
+    let pendingFrame: number | null = null
     function handleScroll(event: Event) {
       if (!get().isOpen()) return
       const target = event.target
       const panelEl = get().panel?.()
       if (target instanceof Node && panelEl?.contains(target)) return
-      // Defer visibility check until after scroll layout, and only hide when
-      // the trigger itself is clipped/out of view (out of scrollable area).
-      requestAnimationFrame(() => {
+      // Defer the visibility check until after scroll layout, but keep only the
+      // latest frame so a scroll burst queues one callback instead of one per
+      // event (and teardown can cancel it).
+      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
+      pendingFrame = requestAnimationFrame(() => {
+        pendingFrame = null
         if (!get().isOpen()) return
         const hostEl = get().container()
         if (!hostEl) return
@@ -153,6 +157,7 @@ export function useDropdown(get: () => UseDropdownOptions): void {
       if (onScrollClose) {
         window.removeEventListener('scroll', handleScroll, { capture: true })
       }
+      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
     }
   })
 }
