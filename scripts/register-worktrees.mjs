@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 import { c } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
+import { CHECKLIST_HINT, renderList } from './_pickers.mjs'
+import { errorMessage, logEvent } from './log-event.mjs'
 import { listRegisterTargets, registerWorktree, resolveWorktreesDir } from './_worktrees.mjs'
 
 export { listRegisterTargets, registerWorktree }
 
 function renderWorktreePicker() {
-  return (items, state) => {
-    const lines = []
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      const marker = state.selected.has(i) ? `${c.green}[x]${c.reset}` : '[ ]'
-      lines.push(` ${cursor} ${marker} ${item.name} ${c.gray}(${item.path})${c.reset}`)
-    }
-    lines.push('')
-    lines.push(`${c.dim}Space: toggle | Enter: confirm | q: cancel${c.reset}`)
-    return lines
-  }
+  return renderList({
+    checkboxes: true,
+    hint: CHECKLIST_HINT,
+    formatRow: item => `${item.name} ${c.gray}(${item.path})${c.reset}`,
+  })
 }
 
 // Single-question interview: pick -> exit. q/Ctrl-C (or confirming an
@@ -61,10 +56,28 @@ async function main() {
 
   for (const worktree of selected) {
     console.log(`${c.green}Registering${c.reset} ${worktree.name}...`)
+    const startedAt = Date.now()
+    logEvent({
+      action: 'worktree_register_start',
+      details: { name: worktree.name, path: worktree.path },
+    })
     try {
       registerWorktree(root, worktree.path, worktree.name)
+      logEvent({
+        action: 'worktree_register_end',
+        details: { name: worktree.name, path: worktree.path, elapsed_ms: Date.now() - startedAt },
+      })
       console.log(`${c.green}Registered${c.reset} ${worktree.name}`)
     } catch (error) {
+      logEvent({
+        action: 'worktree_register_error',
+        details: {
+          name: worktree.name,
+          path: worktree.path,
+          elapsed_ms: Date.now() - startedAt,
+          error: errorMessage(error),
+        },
+      })
       console.error(`${c.red}Failed to register${c.reset} ${worktree.name}: ${error.message}`)
     }
   }
