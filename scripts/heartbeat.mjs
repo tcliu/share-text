@@ -6,6 +6,7 @@
 //   node scripts/heartbeat.mjs [--target vercel|cloudflare] [--provider cron-job|none]
 // Missing and interactive: arrow-key picker (default cron-job).
 // Missing and non-interactive: abort.
+import { parseArgs as parseCliArgs } from 'node:util'
 import { applyHeartbeat, HEARTBEAT_CHOICES, HEARTBEAT_PROVIDERS, renderOptionPicker } from './lib/heartbeat.mjs'
 import { resolveCloudflareAppUrl } from './lib/cloudflare.mjs'
 import { loadTargetEnv } from './lib/target-env.mjs'
@@ -45,28 +46,30 @@ Examples:
 }
 
 function parseArgs(argv) {
-  const options = { providerFlag: '', targetFlag: '' }
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    const next = argv[i + 1]
-    if (arg.startsWith('--target=')) {
-      options.targetFlag = arg.slice('--target='.length)
-    } else if (arg === '--target') {
-      options.targetFlag = next || ''
-      if (next !== undefined) i++
-    } else if (arg.startsWith('--provider=')) {
-      options.providerFlag = arg.slice('--provider='.length)
-    } else if (arg === '--provider') {
-      options.providerFlag = next || ''
-      if (next !== undefined) i++
-    } else if (arg === '-h' || arg === '--help' || arg === 'help') {
-      usage()
-      process.exit(0)
-    } else {
-      fail(`Unknown option: ${arg}`)
-    }
+  let cli
+  try {
+    cli = parseCliArgs({
+      args: argv,
+      options: {
+        target: { type: 'string' },
+        provider: { type: 'string' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: true,
+      strict: true,
+    })
+  } catch (error) {
+    fail(error.message)
   }
-  return options
+  const { values, positionals } = cli
+  if (values.help || positionals.includes('help')) {
+    usage()
+    process.exit(0)
+  }
+  if (positionals.length > 0) {
+    fail(`Unknown argument: ${positionals[0]}`)
+  }
+  return { targetFlag: values.target ?? '', providerFlag: values.provider ?? '' }
 }
 
 async function pickProvider() {

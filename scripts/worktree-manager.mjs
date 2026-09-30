@@ -52,6 +52,9 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { stdin, stdout } from 'node:process'
 import { StringDecoder } from 'node:string_decoder'
+import { parseArgs as parseCliArgs } from 'node:util'
+
+import { maskCommandLine } from './_run.mjs'
 
 import {
   DEFAULT_WORKTREES_DIR,
@@ -349,12 +352,17 @@ function paneKillChild(pane = state.pane) {
   if (!pane || !pane.running) return
   try {
     process.kill(-pane.child.pid, 'SIGTERM')
-  } catch {}
+  } catch {
+    // ESRCH here means the group already exited; the child's own exit handler
+    // clears `running`, so there is nothing to report.
+  }
   pane.escalate = setTimeout(() => {
     if (pane.running) {
       try {
         process.kill(-pane.child.pid, 'SIGKILL')
-      } catch {}
+      } catch {
+        // Same as above: an already-dead group needs no escalation.
+      }
     }
   }, KILL_ESCALATE_MS)
 }
@@ -492,14 +500,18 @@ function runInWorktree(cmd, row) {
   const pane = state.pane
   if (pane.running) return
   if (pane.lines.length) pane.lines.push('')
-  pane.lines.push(`$ ${cmd}`)
+  // Mask once for every display surface: the echoed line, the pane title, and
+  // the status lines all render the command, so masking only the echo would
+  // leak a secret typed at the command prompt.
+  const displayCmd = maskCommandLine(cmd)
+  pane.lines.push(`$ ${displayCmd}`)
   if (pane.lines.length > OUTPUT_MAX_LINES) {
     pane.lines.splice(0, pane.lines.length - OUTPUT_MAX_LINES)
   }
   pane.pending = ''
   pane.scroll = 0
   pane.exit = null
-  pane.cmd = cmd
+  pane.cmd = displayCmd
   const decoder = new StringDecoder('utf8')
   const child = spawn(cmd, {
     shell: true,
@@ -1995,7 +2007,20 @@ const state = {
 }
 
 async function main() {
-  if (process.argv[2] === '--help' || process.argv[2] === '-h') {
+  let cli
+  try {
+    cli = parseCliArgs({
+      args: process.argv.slice(2),
+      options: { help: { type: 'boolean', short: 'h' } },
+      allowPositionals: true,
+      strict: true,
+    })
+  } catch (error) {
+    console.error(error.message)
+    process.exitCode = 1
+    return
+  }
+  if (cli.values.help) {
     console.log(
       'Usage: worktree-manager [dir]\n\nManage git worktrees rooted at the repository containing [dir] (default: current directory).',
     )
@@ -2006,7 +2031,7 @@ async function main() {
     process.exitCode = 1
     return
   }
-  const startDir = path.resolve(process.argv[2] ?? '.')
+  const startDir = path.resolve(cli.positionals[0] ?? '.')
   state.mainRoot = getMainRoot(startDir)
   state.worktreesDir = resolveWorktreesDir(state.mainRoot)
   refreshList()

@@ -228,7 +228,9 @@ export function resolveBaseBranch(root = process.cwd()) {
     }).trim()
     const name = ref.replace('refs/remotes/origin/', '')
     if (name && name !== 'HEAD' && name !== ref) return name
-  } catch {}
+  } catch {
+    // origin/HEAD is unset in many checkouts; fall through to local candidates.
+  }
   for (const cand of ['main', 'master']) {
     try {
       execFileSync('git', ['rev-parse', '--verify', `refs/heads/${cand}`], {
@@ -237,7 +239,9 @@ export function resolveBaseBranch(root = process.cwd()) {
         stdio: 'pipe',
       })
       return cand
-    } catch {}
+    } catch {
+      // Candidate branch does not exist; try the next one.
+    }
   }
   return null
 }

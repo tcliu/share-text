@@ -11,6 +11,7 @@ import { join } from 'node:path'
 
 import { LOCAL_ONLY_ENV_KEYS } from '../env-file.mjs'
 import { logEvent } from '../log-event.mjs'
+import { echoCommand } from '../_run.mjs'
 import { loadTargetEnv } from './target-env.mjs'
 
 // Generated wrangler config must sit at the project root under a standard
@@ -41,6 +42,8 @@ export function defaultWranglerRunner(args, { cwd, input, capture = false } = {}
   // No `--config`: Pages rejects custom config paths, and the generated root
   // config is auto-discovered from `cwd`.
   const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
+  // Echo before every run, including captured ones, so logs show what executed.
+  echoCommand(bin, fullArgs)
   const result = spawnSync(bin, fullArgs, {
     cwd,
     encoding: 'utf8',

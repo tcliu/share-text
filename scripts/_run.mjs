@@ -9,39 +9,92 @@
 const SECRET_KEY_RE = /(^|[_-])(secret|password|passwd|token|credential|private|database_url|api_?key|access_?key|key)([_-]|$)/i
 const MASK = '***'
 
-const isSecretFlag = (arg) =>
-  /^--?/.test(arg) && SECRET_KEY_RE.test(arg.replace(/^--?/, ''))
+const isSecretFlag = (arg) => {
+  if (!/^--?/.test(arg)) return false
+  // Test the key alone: an inline `--token=abc` form appends the value, which
+  // would otherwise hide the trailing boundary the pattern needs.
+  const key = arg.replace(/^--?/, '').split('=')[0]
+  return SECRET_KEY_RE.test(key)
+}
 
 function maskArgument(arg) {
   const separator = arg.indexOf('=')
   return separator === -1 ? arg : `${arg.slice(0, separator)}=${MASK}`
 }
 
-// Mask a single inline `--key=value` token; used by callers that render one
-// argument at a time (e.g. the worktree TUI's git echo).
-export function maskArgToken(arg) {
-  const separator = arg.indexOf('=')
-  if (separator <= 0) return arg
-  const key = arg.slice(0, separator)
-  return isSecretFlag(key) ? `${key}=${'*'.repeat(8)}` : arg
+// A positional name (env key) whose segments include a secret word.
+const isSecretName = (name) => SECRET_KEY_RE.test(String(name))
+
+// Mask a token list: the value after a secret-keyed flag, an inline
+// `--key=value` secret, and the `--value` of an `add <KEY>` — the value is only
+// secret when the key is, so fail closed when the key is absent or a flag.
+function maskTokens(tokens) {
+  const addAt = tokens.indexOf('add')
+  const addKey = addAt >= 0 && addAt + 1 < tokens.length ? tokens[addAt + 1] : ''
+  const addKeySecret = addAt < 0 || !addKey || String(addKey).startsWith('-') || isSecretName(addKey)
+  const out = []
+  let maskNext = false
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (maskNext) {
+      maskNext = false
+      out.push(MASK)
+      continue
+    }
+    if (typeof token !== 'string') {
+      out.push(token)
+      continue
+    }
+    if (isSecretFlag(token)) {
+      const hasInlineValue = token.includes('=')
+      out.push(hasInlineValue ? maskArgument(token) : token)
+      maskNext = !hasInlineValue
+      continue
+    }
+    if (addKeySecret && token.startsWith('--value=')) {
+      out.push(maskArgument(token))
+      continue
+    }
+    if (addKeySecret && token === '--value' && i + 1 < tokens.length) {
+      out.push(token, MASK)
+      i += 1
+      continue
+    }
+    out.push(token)
+  }
+  return out
+}
+
+// Mask a shell command string for the worktree TUI, which renders one line
+// rather than an argv array. Whitespace is preserved so the echoed line stays
+// identical apart from masked values; a masked secret that opens a quoted span
+// also masks the remaining whitespace-separated fragments up to its closing
+// quote (display-only best effort on the operator's own command).
+export function maskCommandLine(line) {
+  const parts = line.split(/(\s+)/)
+  const tokens = parts.filter(part => !/^\s*$/.test(part))
+  const masked = maskTokens(tokens)
+  // An odd number of double quotes means the token opens a quoted value whose
+  // closing quote sits in a later whitespace-separated token.
+  const opensQuote = token => ((token.match(/"/g) ?? []).length % 2 === 1)
+  for (let i = 0; i < masked.length; i++) {
+    if (masked[i] === tokens[i] || !opensQuote(tokens[i])) continue
+    let last = i
+    for (let j = i + 1; j < masked.length; j++) {
+      masked[j] = MASK
+      last = j
+      if (tokens[j].endsWith('"')) break
+    }
+    // Skip the span just masked so the extension cannot re-trigger on a
+    // fragment whose closing quote still reads as an opening one.
+    i = last
+  }
+  let cursor = 0
+  return parts.map(part => (/^\s*$/.test(part) ? part : masked[cursor++])).join('')
 }
 
 export function formatCommand(command, args = []) {
-  const parts = [command]
-  let maskNext = false
-  for (const arg of args) {
-    if (maskNext) {
-      parts.push(MASK)
-      maskNext = false
-    } else if (typeof arg === 'string' && isSecretFlag(arg)) {
-      const hasInlineValue = arg.includes('=')
-      parts.push(hasInlineValue ? maskArgument(arg) : arg)
-      maskNext = !hasInlineValue
-    } else {
-      parts.push(arg)
-    }
-  }
-  return parts.join(' ')
+  return [command, ...maskTokens(args)].join(' ')
 }
 
 export function echoCommand(command, args = []) {

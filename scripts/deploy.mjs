@@ -87,56 +87,58 @@ function resolveProdConfirmSync(profile, flag, skipNotice) {
 }
 
 function parseArgs(argv) {
-  const options = {
-    profileFlag: '',
-    targetFlags: [],
-    syncEnvFlag: '',
-    applySchemaFlag: '',
-    heartbeatFlag: '',
-    projectFlag: '',
+  let cli
+  try {
+    cli = parseCliArgs({
+      args: argv,
+      options: {
+        profile: { type: 'string' },
+        target: { type: 'string', multiple: true },
+        'sync-env': { type: 'boolean' },
+        'no-sync-env': { type: 'boolean' },
+        'apply-schema': { type: 'boolean' },
+        'no-apply-schema': { type: 'boolean' },
+        heartbeat: { type: 'string' },
+        project: { type: 'string' },
+        help: { type: 'boolean', short: 'h' },
+      },
+      allowPositionals: true,
+      strict: true,
+    })
+  } catch (error) {
+    fail(error.message)
   }
-  const pushTargets = raw => {
+  const { values, positionals } = cli
+  if (values.help) {
+    usage()
+    process.exit(0)
+  }
+  if (values['sync-env'] && values['no-sync-env']) {
+    fail('Conflicting --sync-env/--no-sync-env.')
+  }
+  if (values['apply-schema'] && values['no-apply-schema']) {
+    fail('Conflicting --apply-schema/--no-apply-schema.')
+  }
+  const options = {
+    profileFlag: values.profile ?? '',
+    targetFlags: [],
+    syncEnvFlag: values['sync-env'] ? 'yes' : values['no-sync-env'] ? 'no' : '',
+    applySchemaFlag: values['apply-schema'] ? 'yes' : values['no-apply-schema'] ? 'no' : '',
+    heartbeatFlag: values.heartbeat ?? '',
+    projectFlag: values.project ?? '',
+  }
+  for (const raw of values.target ?? []) {
     options.targetFlags = expandTargetFlag(raw, options.targetFlags)
   }
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i]
-    const next = argv[i + 1]
-    if (arg.startsWith('--profile=')) {
-      options.profileFlag = arg.slice('--profile='.length)
-    } else if (arg === '--profile') {
-      options.profileFlag = next || ''
-      if (next !== undefined) i++
-    } else if (arg.startsWith('--target=')) {
-      pushTargets(arg.slice('--target='.length))
-    } else if (arg === '--target') {
-      pushTargets(next || '')
-      if (next !== undefined) i++
-    } else if (arg === '--sync-env') {
-      options.syncEnvFlag = 'yes'
-    } else if (arg === '--no-sync-env') {
-      options.syncEnvFlag = 'no'
-    } else if (arg === '--apply-schema') {
-      options.applySchemaFlag = 'yes'
-    } else if (arg === '--no-apply-schema') {
-      options.applySchemaFlag = 'no'
-    } else if (arg.startsWith('--heartbeat=')) {
-      options.heartbeatFlag = arg.slice('--heartbeat='.length)
-    } else if (arg === '--heartbeat') {
-      options.heartbeatFlag = next || ''
-      if (next !== undefined) i++
-    } else if (arg.startsWith('--project=')) {
-      options.projectFlag = arg.slice('--project='.length)
-    } else if (arg === '--project') {
-      options.projectFlag = next || ''
-      if (next !== undefined) i++
-    } else if (arg === '-h' || arg === '--help' || arg === 'help') {
+  for (const positional of positionals) {
+    if (positional === 'vercel') {
+      // Legacy `deploy.sh vercel` positional: treat as --target vercel.
+      if (!options.targetFlags.includes('vercel')) options.targetFlags.push('vercel')
+    } else if (positional === 'help') {
       usage()
       process.exit(0)
-    } else if (arg === 'vercel' && !options.targetFlags.includes('vercel')) {
-      // Legacy `deploy.sh vercel` positional: treat as --target vercel.
-      options.targetFlags.push('vercel')
     } else {
-      fail(`Unknown option: ${arg}`)
+      fail(`Unknown argument: ${positional}`)
     }
   }
   return options

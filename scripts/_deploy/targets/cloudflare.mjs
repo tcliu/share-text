@@ -149,6 +149,7 @@ function runCloudflareDeploy(branch = '') {
     args.push('--branch', branch)
   }
   const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
+  console.log(formatCommand(bin, fullArgs))
   const result = spawnSync(bin, fullArgs, {
     cwd: ROOT_DIR,
     encoding: 'utf8',

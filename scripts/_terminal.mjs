@@ -230,37 +230,3 @@ export async function selectOne(items, options) {
   })
 }
 
-// Command echo for operator-run scripts: print every external command before
-// executing it so logs show what ran. Only values whose key names a secret,
-// key, password, or credential print as asterisks; ordinary values stay
-// visible so logs stay debuggable.
-const SECRET_KEY_PATTERN =
-  /SECRET|PASSWORD|PASSWD|TOKEN|CREDENTIAL|PRIVATE|DATABASE_URL|API_KEY|AUTH_KEY|ACCESS_KEY|CLIENT_SECRET|(^|_)KEY(_|$)/i
-
-export function isSecretKey(key) {
-  return SECRET_KEY_PATTERN.test(String(key ?? '').trim())
-}
-
-export function maskArgv(argv) {
-  const out = [...(argv ?? [])].map(String)
-  const addAt = out.indexOf('add')
-  const candidate = addAt >= 0 && addAt + 1 < out.length ? out[addAt + 1] : ''
-  // A flag (or nothing) after `add` means no key was given, so the value that
-  // follows must stay masked.
-  const key = candidate.startsWith('-') ? '' : candidate
-  // Fail closed: mask when the key is unknown or names a secret; only a known,
-  // non-secret key leaves its value visible for debuggability.
-  if (addAt >= 0 && key && !isSecretKey(key)) {
-    return out
-  }
-  for (let i = 0; i < out.length; i++) {
-    if (out[i] === '--value' && i + 1 < out.length) {
-      out[i + 1] = '***'
-    }
-  }
-  return out
-}
-
-export function formatCommand(command, argv = []) {
-  return `$ ${[String(command), ...maskArgv(argv)].join(' ')}`
-}
