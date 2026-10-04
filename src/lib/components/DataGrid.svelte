@@ -247,7 +247,16 @@
   function restoreFocusAfterHistoryChange() {
     const cell = sel.selectedCell
     tick().then(() => {
-      if (cell && model.rows[cell.ri]?.cells[cell.ci]) focus.cellBox(cell.ri, cell.ci)
+      // Undo/redo can shrink the matrix below the selected cell (e.g. undoing a
+      // paste into a navigation-appended row removes that row). Clamp to a cell
+      // that still exists so focus stays inside the grid instead of falling to
+      // <body>, where the history and navigation shortcuts no longer fire.
+      if (!cell || model.rowCount === 0 || model.columnCount === 0) return
+      const ri = Math.min(cell.ri, model.rowCount - 1)
+      const ci = Math.min(cell.ci, model.columnCount - 1)
+      if (!model.rows[ri]?.cells[ci]) return
+      if (ri !== cell.ri || ci !== cell.ci) sel.setActiveCell(ri, ci)
+      focus.cellBox(ri, ci)
     })
   }
 

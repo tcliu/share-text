@@ -668,8 +668,14 @@ export function createGridSelection(opts: {
 
   function pasteSelection() {
     if (!s.selectedCell) return
-    clipboard.paste(s.selectedCell.ri, s.selectedCell.ci, (ri, ci, text) => {
-      model.applyPastedText(ri, ci, text)
+    const { ri, ci } = s.selectedCell
+    clipboard.paste(ri, ci, (r, c, text) => {
+      model.applyPastedText(r, c, text)
+      // applyPastedText prunes navigation-appended pending rows before growing
+      // the matrix again, so pasting into a freshly appended row destroys the
+      // focused cell and drops focus to <body>. Restore the box so undo and
+      // arrow navigation stay inside the grid.
+      tick().then(() => focus.cellBox(r, c))
     })
   }
 
