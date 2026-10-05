@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '$lib/components/Button.svelte'
   import Checkbox from '$lib/components/Checkbox.svelte'
+  import ColumnsIcon from '$lib/icons/ColumnsIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import { createFocusoutClose } from '$lib/actions/use-focusout-close'
   import { useDropdown } from '$lib/actions/use-dropdown.svelte'
@@ -62,9 +63,7 @@
 
 <span class="colchooser relative inline-flex gap-1" bind:this={containerRef} onfocusout={handleFocusOut}>
   {#snippet triggerIcon()}
-    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
-      ><path
-        d="M2 3.75A.75.75 0 0 1 2.75 3h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 2 3.75Zm0 4A.75.75 0 0 1 2.75 7h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 2 7.75Zm0 4A.75.75 0 0 1 2.75 11h2.5a.75.75 0 0 1 0 1.5h-2.5A.75.75 0 0 1 2 11.75Zm6-8A.75.75 0 0 1 8.75 3h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 8 3.75Zm0 4A.75.75 0 0 1 8.75 7h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 8 7.75Zm0 4A.75.75 0 0 1 8.75 11h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 8 11.75Z" /></svg>
+    <ColumnsIcon size="sm" />
   {/snippet}
   {#snippet resetIcon()}
     <RefreshIcon size="sm" />
