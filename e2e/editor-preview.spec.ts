@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { e2eUser, registerUser } from './helpers'
+import { createDocument, e2eUser, registerUser } from './helpers'
 
 // Guards the editor pane and the Markdown preview path (the preview renders in
 // a fully sandboxed iframe). Throwaway account cleaned up by global-teardown.
@@ -11,13 +11,7 @@ const markdown = `# ${heading}\n\nsome **bold** text`
 test('editor: open a Markdown document and render its preview', async ({ page }) => {
   await registerUser(page, user)
 
-  const created = await page.request.post('/api/documents', {
-    data: { name: docName, content: markdown, documentType: 'markdown' },
-  })
-  const body = (await created.json()) as { document?: { id?: string } }
-  expect(created.ok(), JSON.stringify(body)).toBe(true)
-  const id = body.document?.id
-  expect(id).toBeTruthy()
+  const id = await createDocument(page, { name: docName, content: markdown, documentType: 'markdown' })
 
   await page.goto(`/${id}`)
   await expect(page.getByRole('region', { name: docName })).toBeVisible()

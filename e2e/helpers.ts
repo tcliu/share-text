@@ -27,3 +27,21 @@ export async function registerUser(page: Page, user: E2eUser): Promise<void> {
   await dialog.getByRole('button', { name: 'Continue' }).click()
   await expect(dialog).toBeHidden()
 }
+
+export interface E2eDocument {
+  name: string
+  content: string
+  documentType?: string
+}
+
+// Creates a document via the authenticated session (page.request shares its
+// cookies) and returns its id. Centralizes the register → create → open
+// preamble the flow specs share.
+export async function createDocument(page: Page, document: E2eDocument): Promise<string> {
+  const created = await page.request.post('/api/documents', { data: document })
+  const body = (await created.json()) as { document?: { id?: string } }
+  expect(created.ok(), JSON.stringify(body)).toBe(true)
+  const id = body.document?.id
+  expect(id).toBeTruthy()
+  return id as string
+}
