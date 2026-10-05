@@ -4,6 +4,7 @@ import { parseArgs as parseCliArgs } from 'node:util'
 
 import { c, selectOne } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
+import { errorMessage, logEvent } from './log-event.mjs'
 import {
   countDirtyFiles,
   deleteBranch,
@@ -276,20 +277,59 @@ async function main() {
       const reason = describeBlockers(worktree)
       if (reason) {
         console.error(`${c.red}Skipped (guarded)${c.reset}: ${worktree.path} ${c.gray}(${reason})${c.reset}`)
+        logEvent({
+          action: 'worktree_delete_error',
+          details: {
+            path: worktree.path,
+            branch: worktree.branch ?? null,
+            guarded: true,
+            error: reason,
+          },
+        })
         skipped++
         continue
       }
     }
-    if (removeWorktree(root, worktree)) {
+    const startedAt = Date.now()
+    logEvent({
+      action: 'worktree_delete_start',
+      details: { path: worktree.path, branch: worktree.branch ?? null, guarded: false },
+    })
+    try {
+      if (!removeWorktree(root, worktree)) {
+        throw new Error('removeWorktree returned false')
+      }
       console.log(`${c.green}Removed worktree${c.reset}: ${worktree.path}`)
       // Unregistered dirs get their branch from a foreign .git, so deleting
       // that name in the main repo can hit an unrelated real branch. Mirrors
       // the safety divergence documented in scripts/worktree-manager.mjs.
+      let branchDeleted = false
       if (worktree.registered !== false && deleteBranch(root, worktree.branch)) {
+        branchDeleted = true
         console.log(`${c.green}Deleted branch${c.reset}: ${worktree.branch}`)
       }
+      logEvent({
+        action: 'worktree_delete',
+        details: {
+          path: worktree.path,
+          branch: worktree.branch ?? null,
+          guarded: false,
+          branch_deleted: branchDeleted,
+          elapsed_ms: Date.now() - startedAt,
+        },
+      })
       removed++
-    } else {
+    } catch (error) {
+      logEvent({
+        action: 'worktree_delete_error',
+        details: {
+          path: worktree.path,
+          branch: worktree.branch ?? null,
+          guarded: false,
+          error: errorMessage(error),
+          elapsed_ms: Date.now() - startedAt,
+        },
+      })
       console.error(`${c.red}Failed to remove worktree${c.reset}: ${worktree.path}`)
     }
   }
