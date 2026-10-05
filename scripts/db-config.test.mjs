@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { hasNeonSchema, neonSchemaPath, toSqliteSql } from './db-config.mjs'
+import { hasNeonSchema, neonSchemaPath, quoteIdentifier, toSqliteSql } from './db-config.mjs'
 
 describe('neonSchemaPath', () => {
   it('points at sql/schema.sql under the root', () => {
@@ -21,6 +21,21 @@ describe('hasNeonSchema', () => {
 
   it('reports a missing schema file', () => {
     expect(hasNeonSchema(mkdtempSync(join(tmpdir(), 'schema-missing-')))).toBe(false)
+  })
+})
+
+describe('quoteIdentifier', () => {
+  it('quotes a regular identifier', () => {
+    expect(quoteIdentifier('public')).toBe('"public"')
+  })
+
+  it('escapes an embedded double quote by doubling it', () => {
+    expect(quoteIdentifier('we"ird')).toBe('"we""ird"')
+  })
+
+  it('rejects an empty or NUL-containing identifier', () => {
+    expect(() => quoteIdentifier('')).toThrow()
+    expect(() => quoteIdentifier('a\u0000b')).toThrow()
   })
 })
 

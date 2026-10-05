@@ -1,5 +1,6 @@
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 import type { Db, DbQuery, DbResult } from './db-types'
+import { quoteIdentifier } from '../sql-rewrite.mjs'
 
 let pool: Pool | null = null
 
@@ -20,7 +21,9 @@ function getPool() {
 
   if (schemaName) {
     pool.on('connect', (client: PoolClient) => {
-      client.query(`set search_path to "${schemaName}"`)
+      void client.query(`set search_path to ${quoteIdentifier(schemaName)}`).catch(error => {
+        console.error('Failed to set search_path on Neon connection', { error })
+      })
     })
   }
 
@@ -44,7 +47,9 @@ export function createNeonDb(): Db {
         await client.query('commit')
         return result
       } catch (error) {
-        await client.query('rollback').catch(() => {})
+        await client.query('rollback').catch(rollbackError => {
+          console.error('Neon rollback failed', { rollbackError })
+        })
         throw error
       } finally {
         client.release()

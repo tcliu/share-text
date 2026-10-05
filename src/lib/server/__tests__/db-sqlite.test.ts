@@ -12,6 +12,12 @@ describe('toSqliteSql', () => {
   it('converts current_timestamp to a UTC ISO strftime expression', () => {
     expect(toSqliteSql('updated_at = current_timestamp')).toBe("updated_at = (strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
   })
+
+  it('leaves a quoted string literal containing current_timestamp untouched', () => {
+    expect(toSqliteSql("select 'current_timestamp' as note, bigint_value from t")).toBe(
+      "select 'current_timestamp' as note, bigint_value from t",
+    )
+  })
 })
 
 describe('SQLite adapter', () => {

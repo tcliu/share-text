@@ -4,18 +4,14 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Database } from 'better-sqlite3'
 import type { Db, DbQuery, DbResult } from './db-types'
+import { toSqliteSql } from '../sql-rewrite.mjs'
+
+export { toSqliteSql }
 
 export const DEFAULT_SQLITE_PATH = '.data/dev.sqlite'
 
 function isRowsReturningSql(sql: string) {
   return /^\s*(select|with\b)/i.test(sql) || /returning\b/i.test(sql)
-}
-
-export function toSqliteSql(sql: string) {
-  return sql
-    .replace(/\$\d+/g, () => '?')
-    .replaceAll('bigserial', 'integer')
-    .replaceAll('current_timestamp', "(strftime('%Y-%m-%dT%H:%M:%fZ','now'))")
 }
 
 type SqliteValue = null | number | bigint | string | Uint8Array
