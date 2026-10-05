@@ -1,5 +1,6 @@
 import { getDb } from './db'
 import { isUniqueViolation } from './db-errors'
+import type { DbQuery } from './db-types'
 import { toIsoString } from './iso-string'
 import { hashPassword, isPasswordHash, verifyPassword } from './password'
 import { appendSearchConditions } from './sql-search'
@@ -271,11 +272,14 @@ export async function findUserByCredentials(identifier: string, password: string
   return toUser(row)
 }
 
-export async function findUsersByUsernameOrEmail(values: string[], includeInactive = false): Promise<User[]> {
+export async function findUsersByUsernameOrEmail(
+  values: string[],
+  includeInactive = false,
+  query?: DbQuery,
+): Promise<User[]> {
   if (values.length === 0) {
     return []
   }
-  const db = await getDb()
   const params: string[] = []
   const conditions = values.map(value => {
     const normalized = value.trim().toLowerCase()
@@ -284,10 +288,8 @@ export async function findUsersByUsernameOrEmail(values: string[], includeInacti
     return `(username = $${params.length - 1} or email = $${params.length})`
   })
   const statusFilter = includeInactive ? '' : " and status = 'active'"
-  const result = await db.query<UserRow>(
-    `select id, username, email, status from users where (${conditions.join(' or ')})${statusFilter}`,
-    params,
-  )
+  const sql = `select id, username, email, status from users where (${conditions.join(' or ')})${statusFilter}`
+  const result = query ? await query<UserRow>(sql, params) : await (await getDb()).query<UserRow>(sql, params)
   return result.rows.map(toUser)
 }
 

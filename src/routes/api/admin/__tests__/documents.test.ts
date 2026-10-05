@@ -61,6 +61,16 @@ vi.mock('$lib/server/settings', async () => {
   }
 })
 
+// The PUT now runs both writes in one `Db.transaction`; the route only needs
+// the callback to be invoked with an injected query.
+vi.mock('$lib/server/db', () => ({
+  getDb: async () => ({
+    query: async () => ({ rows: [], rowCount: 0 }),
+    transaction: async (fn: (query: unknown) => Promise<unknown>) => fn(async () => ({ rows: [], rowCount: 0 })),
+    close: async () => {},
+  }),
+}))
+
 import { GET as listGET } from '../documents/+server'
 import { DELETE, GET, PUT } from '../documents/[id]/+server'
 
@@ -220,7 +230,12 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { name: 'Renamed', by: '203.0.113.9' })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      { name: 'Renamed', by: '203.0.113.9' },
+      expect.anything(),
+      {},
+    )
     await expect(response.json()).resolves.toEqual({
       document: {
         id: 'a1b2c3',
@@ -259,10 +274,15 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
-      updatedBy: '203.0.113.10',
-      by: '203.0.113.9',
-    })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      {
+        updatedBy: '203.0.113.10',
+        by: '203.0.113.9',
+      },
+      expect.anything(),
+      {},
+    )
   })
 
   it('returns 400 when the body has neither a name nor updatedBy', async () => {
@@ -302,12 +322,38 @@ describe('PUT /api/admin/documents/[id]', () => {
 
     expect(response.status).toBe(200)
     expect(documentsMocks.missingSharees).toHaveBeenCalledWith(['bob', 'carol'], true)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { by: '203.0.113.9' })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { by: '203.0.113.9' }, expect.anything(), {})
     expect(documentsMocks.setDocumentAccess).toHaveBeenCalledWith(
       'a1b2c3',
       { sharedWith: ['bob', 'carol'] },
-      { includeInactive: true },
+      { includeInactive: true, query: expect.anything() },
     )
+  })
+
+  it('logs and rethrows when the share write fails inside the transaction', async () => {
+    documentsMocks.getDocumentAccess.mockResolvedValueOnce({ isPublic: true, sharedWith: [] })
+    documentsMocks.setDocumentAccess.mockRejectedValueOnce(new Error('share write failed'))
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    try {
+      await expect(
+        PUT({
+          params: { id: 'a1b2c3' },
+          request: new Request('http://localhost/api/admin/documents/a1b2c3', {
+            method: 'PUT',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ sharedWith: ['bob'] }),
+          }),
+          getClientAddress: () => '203.0.113.9',
+        } as never),
+      ).rejects.toThrow('share write failed')
+      expect(
+        logSpy.mock.calls.some(
+          ([line]) => typeof line === 'string' && line.includes('action=admin_document_update_error'),
+        ),
+      ).toBe(true)
+    } finally {
+      logSpy.mockRestore()
+    }
   })
 
   it('applies shares against the renamed key when key and sharedWith change together', async () => {
@@ -334,12 +380,17 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { key: 'newname', by: '203.0.113.9' })
-    expect(documentsMocks.getDocumentAccess).toHaveBeenCalledWith('newname')
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      { key: 'newname', by: '203.0.113.9' },
+      expect.anything(),
+      {},
+    )
+    expect(documentsMocks.getDocumentAccess).toHaveBeenCalledWith('newname', expect.anything())
     expect(documentsMocks.setDocumentAccess).toHaveBeenCalledWith(
       'newname',
       { sharedWith: ['bob'] },
-      { includeInactive: true },
+      { includeInactive: true, query: expect.anything() },
     )
   })
 
@@ -422,10 +473,15 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
-      createdBy: 'admin@example.com',
-      by: '203.0.113.9',
-    })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      {
+        createdBy: 'admin@example.com',
+        by: '203.0.113.9',
+      },
+      expect.anything(),
+      {},
+    )
     const body = (await response.json()) as { document: { createdBy: string } }
     expect(body.document.createdBy).toBe('admin@example.com')
   })
@@ -443,7 +499,12 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', { key: 'zzz999', by: '203.0.113.9' })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      { key: 'zzz999', by: '203.0.113.9' },
+      expect.anything(),
+      {},
+    )
   })
 
   it('returns 409 when the new key collides with an existing document', async () => {
@@ -483,10 +544,15 @@ describe('PUT /api/admin/documents/[id]', () => {
     } as never)
 
     expect(response.status).toBe(200)
-    expect(documentsMocks.updateDocument).toHaveBeenCalledWith('a1b2c3', {
-      content: 'hello world!',
-      by: '203.0.113.9',
-    })
+    expect(documentsMocks.updateDocument).toHaveBeenCalledWith(
+      'a1b2c3',
+      {
+        content: 'hello world!',
+        by: '203.0.113.9',
+      },
+      expect.anything(),
+      expect.objectContaining({ maxContentLength: 1024 * 1024, maxDocumentVersions: 20 }),
+    )
     const body = (await response.json()) as { document: { content: string; contentSize: number } }
     expect(body.document.content).toBe('hello world!')
     expect(body.document.contentSize).toBe(12)

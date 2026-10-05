@@ -1,4 +1,5 @@
 import { getDb } from './db'
+import type { DbQuery } from './db-types'
 import { fetchDocument } from './document-store'
 import { toBoolean, type Document } from './document-model'
 import { runQuery } from './db-query'
@@ -12,8 +13,8 @@ interface DocumentAccessRow {
   is_public: boolean | number | string | null
 }
 
-async function fetchDocumentAccessRow(id: string) {
-  const result = await runQuery<DocumentAccessRow>(
+async function fetchDocumentAccessRow(id: string, query: DbQuery = runQuery) {
+  const result = await query<DocumentAccessRow>(
     'select key, created_by, owner_user_id, is_public from documents where key = $1',
     [id],
   )
@@ -84,12 +85,12 @@ export interface DocumentAccessState {
   sharedWith: User[]
 }
 
-export async function getDocumentAccess(id: string): Promise<DocumentAccessState | null> {
-  const row = await fetchDocumentAccessRow(id)
+export async function getDocumentAccess(id: string, query: DbQuery = runQuery): Promise<DocumentAccessState | null> {
+  const row = await fetchDocumentAccessRow(id, query)
   if (!row) {
     return null
   }
-  const shares = await runQuery<UserRow & { id: string | number }>(
+  const shares = await query<UserRow & { id: string | number }>(
     `select u.id, u.username, u.email, u.status from document_shares s
      join users u on u.id = s.user_id
      where s.document_id = (select id from documents where key = $1)
@@ -135,9 +136,10 @@ export const MAX_SHAREES = 100
 export async function setDocumentAccess(
   id: string,
   input: { isPublic?: boolean; sharedWith?: string[] },
-  options: { includeInactive?: boolean } = {},
+  options: { includeInactive?: boolean; query?: DbQuery } = {},
 ): Promise<DocumentAccessState | null> {
-  const row = await fetchDocumentAccessRow(id)
+  const { query } = options
+  const row = await fetchDocumentAccessRow(id, query ?? runQuery)
   if (!row) {
     return null
   }
@@ -145,26 +147,35 @@ export async function setDocumentAccess(
 
   let shareeIds: number[] | undefined
   if (input.sharedWith !== undefined) {
-    const users = await findUsersByUsernameOrEmail(input.sharedWith, options.includeInactive)
+    const users = await findUsersByUsernameOrEmail(input.sharedWith, options.includeInactive, query)
     shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
   }
 
-  const db = await getDb()
-  await db.transaction(async query => {
+  const apply = async (run: DbQuery) => {
     if (input.isPublic !== undefined) {
-      await query('update documents set is_public = $1 where key = $2', [input.isPublic, id])
+      await run('update documents set is_public = $1 where key = $2', [input.isPublic, id])
     }
     if (shareeIds !== undefined) {
-      await query('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
+      await run('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
       for (const userId of shareeIds) {
-        await query(
+        await run(
           `insert into document_shares (document_id, user_id, created_at)
            values ((select id from documents where key = $1), $2, current_timestamp)`,
           [id, userId],
         )
       }
     }
-  })
+  }
 
-  return getDocumentAccess(id)
+  // With an injected query the caller owns the transaction (e.g. the admin
+  // edit-document PUT that must commit the document update and the share
+  // rewrite together); otherwise open one so the share rewrite stays atomic.
+  if (query) {
+    await apply(query)
+  } else {
+    const db = await getDb()
+    await db.transaction(apply)
+  }
+
+  return getDocumentAccess(id, query)
 }

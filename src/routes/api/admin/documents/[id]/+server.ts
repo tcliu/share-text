@@ -13,8 +13,9 @@ import {
 } from '$lib/server/document-model'
 import { deleteDocument, fetchDocument, updateDocument } from '$lib/server/document-store'
 import { fetchDocumentForAdmin } from '$lib/server/document-admin'
-import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess } from '$lib/server/document-access'
-import { getMaxContentLength } from '$lib/server/settings'
+import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess, type DocumentAccessState } from '$lib/server/document-access'
+import { getDb } from '$lib/server/db'
+import { getMaxContentLength, getMaxDocumentVersions } from '$lib/server/settings'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
 
@@ -59,6 +60,9 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     documentType?: DocumentType
     sharedWith?: string[]
   } = {}
+  // Resolved before the transaction so `updateDocument` never reaches the
+  // settings table (a second connection) while the write transaction is open.
+  let maxContentLength: number | undefined
   if (typeof body.name === 'string') {
     try {
       changes.name = normalizeName(body.name)
@@ -98,7 +102,8 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   }
   if (typeof body.content === 'string') {
     try {
-      assertContentWithinLimit(body.content, await getMaxContentLength())
+      maxContentLength = await getMaxContentLength()
+      assertContentWithinLimit(body.content, maxContentLength)
       changes.content = body.content
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
@@ -147,26 +152,51 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   const ip = getClientAddress()
   const startedAt = Date.now()
   const { sharedWith, ...documentChanges } = changes
+  // Both writes run against one query so a failure in the share rewrite rolls
+  // the document update back instead of leaving a partial apply.
+  const limits: { maxContentLength?: number; maxDocumentVersions?: number } = {}
+  if (maxContentLength !== undefined) {
+    limits.maxContentLength = maxContentLength
+  }
+  if (changes.content !== undefined || changes.documentType !== undefined) {
+    limits.maxDocumentVersions = await getMaxDocumentVersions()
+  }
+
+  const db = await getDb()
   let updated
+  const accessBefore: { state: DocumentAccessState | null } = { state: null }
   try {
-    updated = await updateDocument(id, { ...documentChanges, by: ip })
+    updated = await db.transaction(async query => {
+      const document = await updateDocument(id, { ...documentChanges, by: ip }, query, limits)
+      if (!document) {
+        return null
+      }
+      if (sharedWith !== undefined) {
+        accessBefore.state = await getDocumentAccess(document.id, query)
+        const access = await setDocumentAccess(
+          document.id,
+          { sharedWith },
+          { includeInactive: true, query },
+        )
+        if (!access) {
+          throw new Error('Document not found while updating shares')
+        }
+      }
+      return document
+    })
   } catch (error) {
     if (isUniqueKeyViolation(error)) {
       return json({ error: 'Document key already exists' }, { status: 409 })
     }
+    logEvent({
+      ip,
+      action: 'admin_document_update_error',
+      details: { id, error: error instanceof Error ? error.message : 'Unknown error' },
+    })
     throw error
   }
   if (!updated) {
     return json({ error: 'Document not found' }, { status: 404 })
-  }
-
-  const accessId = updated.id
-  const accessBefore = sharedWith !== undefined ? await getDocumentAccess(accessId) : null
-  if (sharedWith !== undefined) {
-    const access = await setDocumentAccess(accessId, { sharedWith }, { includeInactive: true })
-    if (!access) {
-      return json({ error: 'Document not found' }, { status: 404 })
-    }
   }
 
   const details: Record<string, string | number | boolean> = {
@@ -195,34 +225,27 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     details.new_is_public = changes.isPublic
   }
   if (sharedWith !== undefined) {
-    details.old_sharees = accessBefore?.sharedWith.map(user => user.username).join(', ') ?? ''
+    details.old_sharees = accessBefore.state?.sharedWith.map(user => user.username).join(', ') ?? ''
     details.new_sharees = sharedWith.join(', ')
   }
   if (changes.content !== undefined) {
     details.old_content_size = contentByteSize(existing.content)
     details.new_content_size = contentByteSize(changes.content)
   }
-  const action =
-    changes.key !== undefined
-      ? 'admin_document_update_key'
-      : changes.content !== undefined
-        ? 'admin_document_update_content'
-        : changes.updatedBy !== undefined
-          ? 'admin_document_update_updated_by'
-          : changes.createdBy !== undefined
-            ? 'admin_document_update_created_by'
-            : changes.isPublic !== undefined
-              ? 'admin_document_update_access'
-              : sharedWith !== undefined
-                ? 'admin_document_update_shares'
-                : changes.documentType !== undefined
-                  ? 'admin_document_update_type'
-                  : 'admin_document_rename'
-  logEvent({
-    ip,
-    action,
-    details,
-  })
+  // One entry per changed field so every mutation class is greppable by its
+  // action even when a single request changes several fields.
+  const actions: string[] = []
+  if (changes.name !== undefined) actions.push('admin_document_rename')
+  if (changes.key !== undefined) actions.push('admin_document_update_key')
+  if (changes.content !== undefined) actions.push('admin_document_update_content')
+  if (changes.updatedBy !== undefined) actions.push('admin_document_update_updated_by')
+  if (changes.createdBy !== undefined) actions.push('admin_document_update_created_by')
+  if (changes.isPublic !== undefined) actions.push('admin_document_update_access')
+  if (sharedWith !== undefined) actions.push('admin_document_update_shares')
+  if (changes.documentType !== undefined) actions.push('admin_document_update_type')
+  for (const action of actions) {
+    logEvent({ ip, action, details })
+  }
 
   const document = {
     id: updated.id,

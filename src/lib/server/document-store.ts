@@ -142,10 +142,11 @@ export async function fetchDocument(id: string) {
 }
 
 export async function claimAnonymousDocuments(ip: string, user: User) {
-  await runQuery(
+  const result = await runQuery(
     'update documents set owner_user_id = $1, created_by = $2, updated_by = $3 where owner_user_id is null and created_by = $4',
     [user.id, user.username, user.username, ip],
   )
+  return result.rowCount ?? 0
 }
 
 export async function insertDocument(options: {

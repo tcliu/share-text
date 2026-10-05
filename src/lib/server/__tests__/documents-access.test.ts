@@ -189,6 +189,21 @@ describe('document access state', () => {
     const state = await getDocumentAccess(doc.id)
     expect(state?.sharedWith.map(user => user.username)).toEqual(['bob'])
   })
+
+  it('applies an access update on an injected query (caller-owned transaction)', async () => {
+    const owner = await createUser({ username: 'alice', email: 'a@example.com', password: 'x' })
+    const bob = await createUser({ username: 'bob', email: 'b@example.com', password: 'x' })
+    const doc = await insertDocument({ content: 'body', by: 'alice', ownerUserId: owner.id })
+
+    const db = await getDb()
+    const state = await db.transaction(query =>
+      setDocumentAccess(doc.id, { isPublic: false, sharedWith: ['bob'] }, { includeInactive: true, query }),
+    )
+
+    expect(state?.isPublic).toBe(false)
+    expect(state?.sharedWith.map(user => user.username)).toEqual(['bob'])
+    expect((await getDocumentAccess(doc.id))?.sharedWith.map(user => user.username)).toEqual(['bob'])
+  })
 })
 
 describe('claimAnonymousDocuments', () => {
