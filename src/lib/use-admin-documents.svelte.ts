@@ -13,6 +13,7 @@ import {
 } from '$lib/admin'
 import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
+import { createPageSelection } from '$lib/use-page-selection.svelte'
 import { arraysEqualUnordered } from '$lib/array-utils'
 import { getI18nContext } from '$lib/i18n.svelte'
 
@@ -32,7 +33,7 @@ export function useAdminDocuments(params: {
   let loading = $state(false)
   let bulkDeletePending = $state(false)
   let bulkDeleteOpen = $state(false)
-  let selectedIds = $state<Set<string>>(new Set())
+  const selection = createPageSelection(() => documents.map(document => document.id))
   let dialogOpen = $state(false)
   let dialogMode = $state<'add' | 'edit'>('edit')
   let editTarget = $state<AdminDocumentSummary | null>(null)
@@ -57,11 +58,9 @@ export function useAdminDocuments(params: {
     return () => searchState.destroy()
   })
 
-  const selectedCount = $derived(selectedIds.size)
-  const currentPageAllSelected = $derived(
-    documents.length > 0 && documents.every(document => selectedIds.has(document.id)),
-  )
-  const currentPageSomeSelected = $derived(documents.some(document => selectedIds.has(document.id)))
+  const selectedCount = $derived(selection.selectedCount)
+  const currentPageAllSelected = $derived(selection.currentPageAllSelected)
+  const currentPageSomeSelected = $derived(selection.currentPageSomeSelected)
 
   function reset() {
     documents = []
@@ -71,7 +70,7 @@ export function useAdminDocuments(params: {
     loading = false
     bulkDeletePending = false
     bulkDeleteOpen = false
-    selectedIds = new Set()
+    selection.reset()
     dialogOpen = false
     dialogMode = 'edit'
     editTarget = null
@@ -138,33 +137,15 @@ export function useAdminDocuments(params: {
   }
 
   function toggleAllOnCurrentPage() {
-    if (currentPageAllSelected) {
-      const next = new Set(selectedIds)
-      for (const document of documents) {
-        next.delete(document.id)
-      }
-      selectedIds = next
-    } else {
-      const next = new Set(selectedIds)
-      for (const document of documents) {
-        next.add(document.id)
-      }
-      selectedIds = next
-    }
+    selection.toggleAllOnCurrentPage()
   }
 
   function toggleSelection(id: string, checked: boolean) {
-    const next = new Set(selectedIds)
-    if (checked) {
-      next.add(id)
-    } else {
-      next.delete(id)
-    }
-    selectedIds = next
+    selection.toggleSelection(id, checked)
   }
 
   async function confirmBulkDelete() {
-    const ids = [...selectedIds]
+    const ids = [...selection.selectedIds]
     bulkDeleteOpen = false
     if (ids.length === 0) {
       return
@@ -172,11 +153,7 @@ export function useAdminDocuments(params: {
     bulkDeletePending = true
     try {
       await Promise.all(ids.map(id => deleteAdminDocument(id, i18n)))
-      const next = new Set(selectedIds)
-      for (const id of ids) {
-        next.delete(id)
-      }
-      selectedIds = next
+      selection.remove(ids)
       toast.success(
         ids.length === 1
           ? i18n.t('admin.documents.deleted', { count: ids.length })
@@ -230,7 +207,10 @@ export function useAdminDocuments(params: {
   async function exportRecords() {
     exportPending = true
     try {
-      const records = await exportAdminDocuments(selectedIds.size > 0 ? [...selectedIds] : undefined, i18n)
+      const records = await exportAdminDocuments(
+        selection.selectedIds.size > 0 ? [...selection.selectedIds] : undefined,
+        i18n,
+      )
       downloadJson('documents-export.json', records)
       toast.success(
         records.length === 1
@@ -300,7 +280,7 @@ export function useAdminDocuments(params: {
     if (selectedCount !== 1) {
       return
     }
-    const id = [...selectedIds][0]
+    const id = [...selection.selectedIds][0]
     const document = documents.find(document => document.id === id)
     if (document) {
       openEdit(document)
@@ -505,7 +485,7 @@ export function useAdminDocuments(params: {
       return exportPending
     },
     get selectedIds() {
-      return selectedIds
+      return selection.selectedIds
     },
     get selectedCount() {
       return selectedCount

@@ -12,6 +12,7 @@ import {
 } from '$lib/admin'
 import { downloadJson } from '$lib/download-json'
 import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
+import { createPageSelection } from '$lib/use-page-selection.svelte'
 import { getI18nContext } from '$lib/i18n.svelte'
 
 export type UserDialogMode = 'add' | 'edit'
@@ -44,7 +45,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   let importOpen = $state(false)
   let importPending = $state(false)
   let exportPending = $state(false)
-  let selectedIds = $state<Set<string>>(new Set())
+  const selection = createPageSelection(() => users.map(user => String(user.id)))
 
   const searchState = useAdminDocumentsSearch({
     onParamsChange() {
@@ -57,9 +58,9 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     return () => searchState.destroy()
   })
 
-  const selectedCount = $derived(selectedIds.size)
-  const currentPageAllSelected = $derived(users.length > 0 && users.every(user => selectedIds.has(String(user.id))))
-  const currentPageSomeSelected = $derived(users.some(user => selectedIds.has(String(user.id))))
+  const selectedCount = $derived(selection.selectedCount)
+  const currentPageAllSelected = $derived(selection.currentPageAllSelected)
+  const currentPageSomeSelected = $derived(selection.currentPageSomeSelected)
 
   function reset() {
     users = []
@@ -77,7 +78,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     importOpen = false
     importPending = false
     exportPending = false
-    selectedIds = new Set()
+    selection.reset()
     searchState.reset()
   }
 
@@ -171,7 +172,10 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   async function exportRecords() {
     exportPending = true
     try {
-      const records = await exportAdminUsers(selectedIds.size > 0 ? [...selectedIds].map(Number) : undefined, i18n)
+      const records = await exportAdminUsers(
+        selection.selectedIds.size > 0 ? [...selection.selectedIds].map(Number) : undefined,
+        i18n,
+      )
       downloadJson('users-export.json', records)
       toast.success(
         records.length === 1
@@ -245,33 +249,15 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   }
 
   function toggleSelection(id: string, checked: boolean) {
-    const next = new Set(selectedIds)
-    if (checked) {
-      next.add(id)
-    } else {
-      next.delete(id)
-    }
-    selectedIds = next
+    selection.toggleSelection(id, checked)
   }
 
   function toggleAllOnCurrentPage() {
-    if (currentPageAllSelected) {
-      const next = new Set(selectedIds)
-      for (const user of users) {
-        next.delete(String(user.id))
-      }
-      selectedIds = next
-    } else {
-      const next = new Set(selectedIds)
-      for (const user of users) {
-        next.add(String(user.id))
-      }
-      selectedIds = next
-    }
+    selection.toggleAllOnCurrentPage()
   }
 
   async function setBulkStatus(status: AdminUserStatus) {
-    const ids = [...selectedIds]
+    const ids = [...selection.selectedIds]
     bulkStatusOpen = false
     if (ids.length === 0) {
       return
@@ -285,7 +271,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
           state: status === 'active' ? i18n.t('admin.enabled') : i18n.t('admin.disabled'),
         }),
       )
-      selectedIds = new Set()
+      selection.clear()
       void load()
     } catch (error) {
       if (!handleAuthError(error)) {
@@ -301,7 +287,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   // dialog. The button is disabled with no selection.
   function handleToolbarEdit() {
     if (selectedCount === 1) {
-      const id = [...selectedIds][0]
+      const id = [...selection.selectedIds][0]
       const user = users.find(u => String(u.id) === id)
       if (user) {
         openEdit(user)
@@ -347,7 +333,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
   }
 
   async function confirmBulkDelete() {
-    const ids = [...selectedIds]
+    const ids = [...selection.selectedIds]
     bulkDeleteOpen = false
     if (ids.length === 0) {
       return
@@ -355,11 +341,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
     bulkDeletePending = true
     try {
       await Promise.all(ids.map(id => deleteAdminUser(Number(id), i18n)))
-      const next = new Set(selectedIds)
-      for (const id of ids) {
-        next.delete(id)
-      }
-      selectedIds = next
+      selection.remove(ids)
       toast.success(
         ids.length === 1
           ? i18n.t('admin.users.deleted', { count: ids.length })
@@ -455,7 +437,7 @@ export function useAdminUsers(params: { onSignedOut: () => void }) {
       return exportPending
     },
     get selectedIds() {
-      return selectedIds
+      return selection.selectedIds
     },
     get selectedCount() {
       return selectedCount
