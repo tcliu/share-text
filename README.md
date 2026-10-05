@@ -61,7 +61,7 @@ Keys:
 | `MAX_CONTENT_LENGTH` | Max document content length in chars (editor + uploads, default 1048576), subject to a separate hard 1 MiB UTF-8 byte cap |
 | `ADMIN_USERNAME` | Admin login username (default `admin`) |
 | `ADMIN_PASSWORD` | Plain admin password (dev convenience; prefer a hash) |
-| `ADMIN_PASSWORD_HASH` | scrypt admin password hash for production (`node scripts/hash-password.mjs <password>`) |
+| `ADMIN_PASSWORD_HASH` | scrypt admin password hash for production (`node scripts/hash-password.mjs`, password via `ADMIN_PASSWORD` or stdin) |
 | `SESSION_SECRET` | Secret signing the admin and user session cookies (required in `prod`) |
 | `SCHEMA_NAME` | PostgreSQL schema name for table isolation in `prod` (default `public`) |
 | `DOCUMENT_KEY_LENGTH` | Generated document id character count (default 6, admin changes take effect for new keys immediately) |
@@ -173,6 +173,6 @@ npm test
 | `npm test` | Run Vitest |
 | `npm run schema:apply` | Apply `sql/schema.sql` to the dev SQLite database (or `PROFILE=prod` for the prod database) |
 | `npm run schema:recreate` | Drop and recreate the schema (`PROFILE=prod` required, idempotent in `dev`) |
-| `node scripts/hash-password.mjs <password>` | Generate a scrypt password hash for `ADMIN_PASSWORD_HASH` |
+| `ADMIN_PASSWORD=secret node scripts/hash-password.mjs` | Generate a scrypt password hash for `ADMIN_PASSWORD_HASH` (or pipe the password on stdin) |
 | `npm run env:sync:vercel` | Sync `.env` + `.env.vercel` to Vercel |
 | `npm run deploy` | Deploy to Vercel |

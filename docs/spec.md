@@ -1068,10 +1068,11 @@ Writes are last-write-wins with no conflict detection or merge.
   it requires `PROFILE=prod` and confirms with a prompt; in `dev` it is
   idempotent (runs apply-schema, which is already idempotent).
 - `scripts/hash-password.mjs` generates a scrypt password hash from a plaintext
-  password via `node scripts/hash-password.mjs <password>`, for use as
-  `ADMIN_PASSWORD_HASH`.
+  password read from `ADMIN_PASSWORD` or stdin (never argv, which is visible in
+  the process table and shell history), for use as `ADMIN_PASSWORD_HASH`.
 - `scripts/db-config.mjs` centralizes env-file parsing, profile resolution, and
-  the SQLite SQL rewrite for scripts.
+  Postgres identifier quoting; the SQLite SQL rewrite and quoting it shares with
+  the server runtime live in `src/lib/sql-rewrite.mjs`.
 - `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel`, upserts the set
   to Vercel production env vars, and removes stale ones.
 - `scripts/deploy.mjs` is the deploy entry (Vercel by default, or Cloudflare
