@@ -2,10 +2,10 @@
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
-  import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
+  import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
 
   interface Props {
-    settingsState: ReturnType<typeof useAdminSettings>
+    settingsState: ReturnType<typeof useAdminProperties>
   }
 
   let { settingsState }: Props = $props()

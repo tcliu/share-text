@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createI18nStore, createAppI18n, settingDescription, settingLabel, type I18nStore } from '$lib/i18n.svelte'
+import { createI18nStore, createAppI18n, type I18nStore } from '$lib/i18n.svelte'
 
 describe('i18n', () => {
   let i18n: I18nStore
@@ -90,18 +90,4 @@ describe('i18n', () => {
     expect(ephemeral.t('hello')).toBe('Hello')
   })
 
-  it('resolves setting labels and descriptions per locale', () => {
-    expect(settingLabel(i18n, 'max_documents_per_ip')).toBe('Max documents per IP')
-    expect(settingDescription(i18n, 'max_document_versions')).toContain('content versions')
-    i18n.setLocale('zh-CN')
-    expect(settingLabel(i18n, 'max_documents_per_ip')).toBe('单 IP 最大文档数')
-    expect(settingDescription(i18n, 'max_document_versions')).toContain('版本')
-    i18n.setLocale('zh-TW')
-    expect(settingLabel(i18n, 'max_content_length')).toBe('最大內容長度（字元）')
-  })
-
-  it('returns null for unknown settings so callers fall back to the server label', () => {
-    expect(settingLabel(i18n, 'unknown_setting')).toBeNull()
-    expect(settingDescription(i18n, 'unknown_setting')).toBeNull()
-  })
 })

@@ -8,8 +8,9 @@ import { goto } from '$app/navigation'
 const settings = [
   {
     key: 'max_documents_per_ip',
-    label: 'Max documents per IP',
-    description: 'Maximum number of documents a single client IP can create.',
+    labelKey: 'setting.max_documents_per_ip',
+    descriptionKey: 'setting.max_documents_per_ipDescription',
+    tags: ['documents'],
     kind: 'number',
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
@@ -55,7 +56,7 @@ function mockFetch() {
         json: async () => ({ authenticated: true, configured: true }),
       })
     }
-    if (path.includes('/api/admin/settings')) {
+    if (path.includes('/api/admin/properties')) {
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ settings }) })
     }
     if (path.includes('/api/admin/preferences')) {

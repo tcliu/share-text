@@ -2,21 +2,21 @@ import { toast } from 'svelte-sonner'
 import { untrack } from 'svelte'
 import {
   AdminAuthError,
-  fetchAdminSettings,
-  resetAdminSetting,
-  updateAdminSettings,
-  type AdminSetting,
+  fetchAdminProperties,
+  resetAdminProperty,
+  updateAdminProperties,
+  type AdminProperty,
 } from '$lib/admin'
 import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-import { getI18nContext, settingLabel } from '$lib/i18n.svelte'
+import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
 
 function parseNumberWithSeparators(raw: string): number {
   return Number(raw.replace(/,/g, ''))
 }
 
-export function useAdminSettings(onSignedOut: () => void) {
+export function useAdminProperties(onSignedOut: () => void) {
   const i18n = getI18nContext()
-  let settings = $state<AdminSetting[]>([])
+  let settings = $state<AdminProperty[]>([])
   let draftValues = $state<Record<string, string>>({})
   let pending = $state(false)
   let propertiesText = $state('')
@@ -39,21 +39,21 @@ export function useAdminSettings(onSignedOut: () => void) {
   }
 
   function validateSettingNumber(
-    setting: AdminSetting,
+    setting: AdminProperty,
     raw: string,
   ): { ok: true; value: number } | { ok: false; error: string } {
     const parsed = parseNumberWithSeparators(raw)
     if (!Number.isInteger(parsed)) {
       return {
         ok: false,
-        error: i18n.t('admin.settingMustBeInteger', { name: settingLabel(i18n, setting.key) ?? setting.label }),
+        error: i18n.t('admin.settingMustBeInteger', { name: i18n.t(setting.labelKey as MessageKey) }),
       }
     }
     if (parsed < (setting.min ?? Number.NEGATIVE_INFINITY) || parsed > (setting.max ?? Number.POSITIVE_INFINITY)) {
       return {
         ok: false,
         error: i18n.t('admin.settingMustBeBetween', {
-          name: settingLabel(i18n, setting.key) ?? setting.label,
+          name: i18n.t(setting.labelKey as MessageKey),
           min: setting.min ?? 0,
           max: setting.max ?? Number.MAX_SAFE_INTEGER,
         }),
@@ -115,7 +115,7 @@ export function useAdminSettings(onSignedOut: () => void) {
 
   async function load() {
     try {
-      const loaded = await fetchAdminSettings(i18n)
+      const loaded = await fetchAdminProperties(i18n)
       settings = loaded
       draftValues = Object.fromEntries(loaded.map(setting => [setting.key, String(setting.value)]))
       return true
@@ -148,7 +148,7 @@ export function useAdminSettings(onSignedOut: () => void) {
       }
     }
     pending = true
-    void updateAdminSettings(
+    void updateAdminProperties(
       changed.map(setting => ({
         key: setting.key,
         value: !hasDraftValue(setting.key)
@@ -157,7 +157,9 @@ export function useAdminSettings(onSignedOut: () => void) {
             ? (draftValues[setting.key]?.trim() ?? '')
             : setting.kind === 'boolean'
               ? draftValues[setting.key] === 'true'
-              : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
+              : setting.kind === 'cron'
+                ? (draftValues[setting.key]?.trim() ?? '')
+                : parseNumberWithSeparators(draftValues[setting.key] ?? ''),
       })),
       i18n,
     )
@@ -197,13 +199,13 @@ export function useAdminSettings(onSignedOut: () => void) {
     pending = false
   }
 
-  async function resetSetting(setting: AdminSetting) {
+  async function resetSetting(setting: AdminProperty) {
     pending = true
     try {
-      const updated = await resetAdminSetting(setting.key, i18n)
+      const updated = await resetAdminProperty(setting.key, i18n)
       settings = updated
       draftValues = Object.fromEntries(updated.map(item => [item.key, String(item.value)]))
-      toast.success(i18n.t('admin.settingReverted', { name: settingLabel(i18n, setting.key) ?? setting.label }))
+      toast.success(i18n.t('admin.settingReverted', { name: i18n.t(setting.labelKey as MessageKey) }))
     } catch (error) {
       if (!handleAuthError(error)) {
         toast.error(error instanceof Error ? error.message : i18n.t('admin.auth.toast.resetSetting'))
@@ -231,6 +233,9 @@ export function useAdminSettings(onSignedOut: () => void) {
     },
     get propertiesText() {
       return propertiesText
+    },
+    setDraftValue(key: string, value: string) {
+      draftValues = { ...draftValues, [key]: value }
     },
     updatePropertiesText(next: string) {
       propertiesText = next

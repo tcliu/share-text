@@ -2,101 +2,100 @@
   import Tabs from './Tabs.svelte'
   import Button from './Button.svelte'
   import Buttons from './Buttons.svelte'
-  import NumberInput from './NumberInput.svelte'
-  import SelectDropdown from './SelectDropdown.svelte'
+  import SearchInput from './SearchInput.svelte'
+  import Chip from './Chip.svelte'
+  import AdminPropertyRow from './AdminPropertyRow.svelte'
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
-  import ResetIcon from '$lib/icons/ResetIcon.svelte'
+  import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
-  import { getI18nContext, settingDescription, settingLabel } from '$lib/i18n.svelte'
+  import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
-  import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
+  import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
 
   interface Props {
-    settingsState: ReturnType<typeof useAdminSettings>
+    settingsState: ReturnType<typeof useAdminProperties>
   }
 
   let { settingsState }: Props = $props()
 
-  const sourceLabels = $derived<Record<string, string>>({
-    database: i18n.t('admin.source.saved'),
-    environment: i18n.t('admin.source.environment'),
-    default: i18n.t('admin.source.default'),
-  })
+  let query = $state('')
+  let selectedTags = $state(new Set<string>())
 
-  const booleanOptions = $derived([
-    { value: 'true', label: i18n.t('admin.yes') },
-    { value: 'false', label: i18n.t('admin.no') },
-  ])
+  // Fixed taxonomy order; only tags present in the loaded properties render.
+  const TAG_ORDER = ['app', 'documents']
+  const availableTags = $derived(
+    TAG_ORDER.filter(tag => settingsState.settings.some(setting => setting.tags?.includes(tag))),
+  )
+
+  function toggleTag(tag: string): void {
+    const next = new Set(selectedTags)
+    if (next.has(tag)) next.delete(tag)
+    else next.add(tag)
+    selectedTags = next
+  }
+
+  const normalizedQuery = $derived(query.trim().toLowerCase())
+  const filteredSettings = $derived(
+    settingsState.settings.filter(setting => {
+      if (selectedTags.size > 0 && !(setting.tags ?? []).some(tag => selectedTags.has(tag))) {
+        return false
+      }
+      if (!normalizedQuery) return true
+      const searchable = [
+        i18n.t(setting.labelKey as MessageKey),
+        i18n.t(setting.descriptionKey as MessageKey),
+        setting.key,
+        setting.envKey,
+        (setting.tags ?? []).join(' '),
+      ]
+        .join('\n')
+        .toLowerCase()
+      return searchable.includes(normalizedQuery)
+    }),
+  )
 </script>
 
 {#snippet formContent()}
-  <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
-    {#each settingsState.settings as setting, i}
-      {@const label = settingLabel(i18n, setting.key) ?? setting.label}
-      {@const description = settingDescription(i18n, setting.key) ?? setting.description}
-      <div
-        class="grid items-center gap-2 p-3 {setting.kind === 'string'
-          ? 'md:grid-cols-[minmax(0,1fr)_minmax(6.4rem,0.25fr)]'
-          : 'md:grid-cols-[minmax(0,1fr)_11rem]'} {i > 0 ? 'border-t border-slate-800' : ''}">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-slate-100">{label}</span>
-            <span
-              class="rounded-full border px-2 py-0.5 text-xs font-medium tracking-wide uppercase {setting.source ===
-              'database'
-                ? 'border-cyan-700 bg-cyan-950/50 text-cyan-200'
-                : setting.source === 'environment'
-                  ? 'border-violet-700 bg-violet-950/50 text-violet-200'
-                  : 'border-slate-700 bg-slate-900 text-slate-400'}">
-              {sourceLabels[setting.source]}
-            </span>
-          </div>
-          <p class="mt-0.5 text-xs text-slate-400">{description}</p>
-          <p class="mt-0.5 text-xs text-slate-500">{setting.key} ({i18n.t('admin.env')} {setting.envKey})</p>
-        </div>
-        <div class="flex items-center gap-2">
-          {#if setting.kind === 'string'}
-            <input
-              type="text"
-              bind:value={settingsState.draftValues[setting.key]}
-              disabled={settingsState.pending}
-              aria-label={label}
-              spellcheck="false"
-              class="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 transition outline-none focus:border-cyan-500 disabled:opacity-40" />
-          {:else if setting.kind === 'boolean'}
-            <SelectDropdown
-              buttonLabel={(settingsState.draftValues[setting.key] ?? String(setting.value)) === 'true'
-                ? i18n.t('admin.yes')
-                : i18n.t('admin.no')}
-              options={booleanOptions}
-              activeValue={settingsState.draftValues[setting.key] ?? String(setting.value)}
-              ariaLabel={label}
-              onSelect={value => (settingsState.draftValues[setting.key] = value)} />
-          {:else}
-            <NumberInput
-              bind:value={settingsState.draftValues[setting.key]}
-              min={setting.min}
-              max={setting.max}
-              disabled={settingsState.pending}
-              ariaLabel={label} />
-          {/if}
-          {#if setting.source === 'database'}
-            <Button
-              size="sm"
-              ariaLabel={i18n.t('admin.revertLabelToDefault', { name: label })}
-              tooltip={i18n.t('admin.revertToDefault')}
-              tooltipAlign="right"
-              disabled={settingsState.pending}
-              onClick={() => void settingsState.resetSetting(setting)}
-              className="shrink-0 text-slate-400 hover:text-cyan-300">
+  <div class="flex min-h-0 flex-1 flex-col gap-3">
+    <div class="flex flex-none flex-wrap items-center gap-2">
+      <SearchInput
+        bind:value={query}
+        ariaLabel={i18n.t('admin.properties.searchAria')}
+        placeholder={i18n.t('admin.properties.searchPlaceholder')}
+        wrapperClass="w-full sm:max-w-sm" />
+      {#if availableTags.length > 0}
+        <div class="flex min-h-7 flex-none items-center gap-2" role="group" aria-label={i18n.t('admin.tagFilter')}>
+          {#each availableTags as tag (tag)}
+            <Chip
+              label={tag}
+              chipClass="border border-slate-600 bg-slate-900 text-slate-300"
+              active={selectedTags.has(tag)}
+              onclick={() => toggleTag(tag)} />
+          {/each}
+          {#if selectedTags.size > 0}
+            <Button size="sm" ariaLabel={i18n.t('admin.clearTagFilters')} onClick={() => (selectedTags = new Set())}>
               {#snippet icon()}
-                <ResetIcon />
+                <CloseIcon />
               {/snippet}
             </Button>
           {/if}
         </div>
-      </div>
-    {/each}
+      {/if}
+    </div>
+    <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
+      {#each filteredSettings as setting, i (setting.key)}
+        <AdminPropertyRow
+          property={setting}
+          draft={settingsState.draftValues[setting.key] ?? String(setting.value)}
+          pending={settingsState.pending}
+          isFirst={i === 0}
+          onDraft={value => settingsState.setDraftValue(setting.key, value)}
+          onReset={() => void settingsState.resetSetting(setting)} />
+      {/each}
+      {#if filteredSettings.length === 0}
+        <p role="status" class="p-3 text-sm text-slate-400">{i18n.t('admin.properties.emptySearch')}</p>
+      {/if}
+    </div>
   </div>
 {/snippet}
 

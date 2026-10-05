@@ -19,7 +19,7 @@
   import ExportIcon from '$lib/icons/ExportIcon.svelte'
   import { useAdminAuth } from '$lib/use-admin-auth.svelte'
   import { useAdminPreferences } from '$lib/use-admin-preferences.svelte'
-  import { useAdminSettings } from '$lib/use-admin-settings.svelte'
+  import { useAdminProperties } from '$lib/use-admin-properties.svelte'
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
@@ -34,7 +34,7 @@
   const USERS_PATH = '/admin/users'
   type AdminState = {
     preferencesState: ReturnType<typeof useAdminPreferences>
-    settingsState: ReturnType<typeof useAdminSettings>
+    settingsState: ReturnType<typeof useAdminProperties>
     documentsState: ReturnType<typeof useAdminDocuments>
     usersState: ReturnType<typeof useAdminUsers>
   }
@@ -45,7 +45,7 @@
   let pendingNavigateUrl = $state<string | null>(null)
 
   const preferencesState = useAdminPreferences(() => authState.handleSignedOut())
-  const settingsState = useAdminSettings(() => authState.handleSignedOut())
+  const settingsState = useAdminProperties(() => authState.handleSignedOut())
   const documentsState = useAdminDocuments({ onSignedOut: () => authState.handleSignedOut() })
   const usersState = useAdminUsers({ onSignedOut: () => authState.handleSignedOut() })
   const authState = useAdminAuth({

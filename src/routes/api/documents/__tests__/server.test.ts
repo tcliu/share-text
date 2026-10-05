@@ -18,8 +18,8 @@ const settingsMocks = vi.hoisted(() => ({
   getMaxContentLength: vi.fn(),
 }))
 
-vi.mock('$lib/server/settings', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/settings')>('$lib/server/settings')
+vi.mock('$lib/server/admin-properties', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/admin-properties')>('$lib/server/admin-properties')
   return {
     ...actual,
     getMaxContentLength: settingsMocks.getMaxContentLength,

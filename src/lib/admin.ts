@@ -8,17 +8,19 @@ export class AdminAuthError extends Error {
   }
 }
 
-export type SettingKind = 'number' | 'string' | 'boolean'
+export type PropertyKind = 'number' | 'string' | 'boolean' | 'cron'
 
-export interface AdminSetting {
+export interface AdminProperty {
   key: string
-  label: string
-  description: string
-  kind: SettingKind
+  labelKey: string
+  descriptionKey: string
+  kind: PropertyKind
   defaultValue: number | string | boolean
   envKey: string
+  tags: string[]
   min?: number
   max?: number
+  masked?: boolean
   value: number | string | boolean
   source: 'database' | 'environment' | 'default'
 }
@@ -126,9 +128,9 @@ export async function logout(i18n: I18nStore): Promise<void> {
   await parseResponse<{ ok: boolean }>(response, i18n.t('auth.toast.signOutFailed'), i18n)
 }
 
-export async function fetchAdminSettings(i18n: I18nStore): Promise<AdminSetting[]> {
-  const response = await fetch(`${BASE_PATH}/settings`)
-  const body = await parseResponse<{ settings: AdminSetting[] }>(
+export async function fetchAdminProperties(i18n: I18nStore): Promise<AdminProperty[]> {
+  const response = await fetch(`${BASE_PATH}/properties`)
+  const body = await parseResponse<{ settings: AdminProperty[] }>(
     response,
     i18n.t('admin.auth.toast.loadSettings'),
     i18n,
@@ -136,16 +138,16 @@ export async function fetchAdminSettings(i18n: I18nStore): Promise<AdminSetting[
   return body.settings
 }
 
-export async function updateAdminSettings(
+export async function updateAdminProperties(
   settings: Array<{ key: string; value: number | string | boolean | null }>,
   i18n: I18nStore,
-): Promise<AdminSetting[]> {
-  const response = await fetch(`${BASE_PATH}/settings`, {
+): Promise<AdminProperty[]> {
+  const response = await fetch(`${BASE_PATH}/properties`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ settings }),
   })
-  const body = await parseResponse<{ settings: AdminSetting[] }>(
+  const body = await parseResponse<{ settings: AdminProperty[] }>(
     response,
     i18n.t('admin.auth.toast.saveSettings'),
     i18n,
@@ -153,8 +155,8 @@ export async function updateAdminSettings(
   return body.settings
 }
 
-export async function resetAdminSetting(key: string, i18n: I18nStore): Promise<AdminSetting[]> {
-  return updateAdminSettings([{ key, value: null }], i18n)
+export async function resetAdminProperty(key: string, i18n: I18nStore): Promise<AdminProperty[]> {
+  return updateAdminProperties([{ key, value: null }], i18n)
 }
 
 export async function fetchAdminDocuments(

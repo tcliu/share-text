@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit'
 import type { PageServerLoad } from './$types'
 import { isDocumentKeyChars } from '$lib/server/document-model'
 import { resolveDocumentAccess } from '$lib/server/document-access'
-import { getMaxContentLength } from '$lib/server/settings'
+import { getMaxContentLength } from '$lib/server/admin-properties'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const load: PageServerLoad = async ({ params, cookies, getClientAddress }) => {

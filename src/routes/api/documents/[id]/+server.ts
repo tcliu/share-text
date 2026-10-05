@@ -10,7 +10,7 @@ import { deleteDocument, updateDocument } from '$lib/server/document-store'
 import { resolveDocumentAccess } from '$lib/server/document-access'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
-import { getMaxContentLength } from '$lib/server/settings'
+import { getMaxContentLength } from '$lib/server/admin-properties'
 import { getDefaultTagColor, isTagColor, type Tag } from '$lib/tag-colors'
 import { resolveViewer } from '$lib/server/viewer'
 

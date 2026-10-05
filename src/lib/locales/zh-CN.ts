@@ -357,7 +357,12 @@ export const zhCN = {
     unknownSetting: '未知设置：{key}',
     properties: {
       form: '表单',
+      searchAria: '搜索属性',
+      searchPlaceholder: '搜索属性…',
+      emptySearch: '没有符合当前搜索的属性。',
     },
+    tagFilter: '按标签筛选',
+    clearTagFilters: '清除标签筛选',
     propertiesViews: '属性视图',
     settingsContent: '设置属性内容',
     settingsUpdated: '设置已更新',

@@ -151,36 +151,3 @@ export function getI18nContext(): I18nStore {
   }
   return defaultStore
 }
-
-const SETTING_KEYS = {
-  app_active: {
-    label: 'setting.app_active',
-    description: 'setting.app_activeDescription',
-  },
-  document_key_length: {
-    label: 'setting.document_key_length',
-    description: 'setting.document_key_lengthDescription',
-  },
-  max_content_length: {
-    label: 'setting.max_content_length',
-    description: 'setting.max_content_lengthDescription',
-  },
-  max_document_versions: {
-    label: 'setting.max_document_versions',
-    description: 'setting.max_document_versionsDescription',
-  },
-  max_documents_per_ip: {
-    label: 'setting.max_documents_per_ip',
-    description: 'setting.max_documents_per_ipDescription',
-  },
-} as const
-
-export function settingLabel(i18n: I18nStore, key: string): string | null {
-  const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
-  return setting ? i18n.t(setting.label) : null
-}
-
-export function settingDescription(i18n: I18nStore, key: string): string | null {
-  const setting = SETTING_KEYS[key as keyof typeof SETTING_KEYS]
-  return setting ? i18n.t(setting.description) : null
-}

@@ -1,17 +1,17 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
-  assertKnownSettingKey,
-  deleteSettingValue,
-  listSettings,
-  setSettingValue,
-  validateSettingValue,
-} from '$lib/server/settings'
+  assertKnownPropertyKey,
+  deletePropertyValue,
+  listProperties,
+  setPropertyValue,
+  validatePropertyValue,
+} from '$lib/server/admin-properties'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord } from '$lib/server/request-utils'
 
 export const GET: RequestHandler = async () => {
-  return json({ settings: await listSettings() })
+  return json({ settings: await listProperties() })
 }
 
 export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
@@ -20,7 +20,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     return json({ error: 'Request body must include a settings array' }, { status: 400 })
   }
 
-  const before = await listSettings()
+  const before = await listProperties()
   const beforeValues = new Map(before.map(setting => [setting.key, setting.value]))
   const ip = getClientAddress()
   const updates: Array<{ key: string; value: number | string | boolean | null }> = []
@@ -31,7 +31,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     }
     if (item.value === null) {
       try {
-        assertKnownSettingKey(item.key)
+        assertKnownPropertyKey(item.key)
         updates.push({ key: item.key, value: null })
       } catch (error) {
         return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
@@ -39,7 +39,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
       continue
     }
     try {
-      updates.push({ key: item.key, value: validateSettingValue(item.key, item.value) })
+      updates.push({ key: item.key, value: validatePropertyValue(item.key, item.value) })
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
     }
@@ -48,7 +48,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   for (const update of updates) {
     const opStartedAt = Date.now()
     if (update.value === null) {
-      await deleteSettingValue(update.key)
+      await deletePropertyValue(update.key)
       logEvent({
         ip,
         action: 'admin_setting_reset',
@@ -61,7 +61,7 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
       continue
     }
 
-    await setSettingValue(update.key, update.value)
+    await setPropertyValue(update.key, update.value)
     logEvent({
       ip,
       action: 'admin_setting_update',
@@ -74,5 +74,5 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     })
   }
 
-  return json({ settings: await listSettings() })
+  return json({ settings: await listProperties() })
 }

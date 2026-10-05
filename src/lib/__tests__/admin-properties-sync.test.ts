@@ -1,18 +1,19 @@
 // @vitest-environment jsdom
 import { render, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import AdminSettingsStateHost from './AdminSettingsStateHost.svelte'
-import type { useAdminSettings } from '$lib/use-admin-settings.svelte'
+import AdminSettingsStateHost from './AdminPropertiesStateHost.svelte'
+import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
 
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
-type AdminSettingsState = ReturnType<typeof useAdminSettings>
+type AdminSettingsState = ReturnType<typeof useAdminProperties>
 
 const settings = [
   {
     key: 'max_documents_per_ip',
-    label: 'Max documents per IP',
-    description: 'Maximum number of documents a single client IP can create.',
+    labelKey: 'setting.max_documents_per_ip',
+    descriptionKey: 'setting.max_documents_per_ipDescription',
+    tags: ['documents'],
     kind: 'number' as const,
     defaultValue: 10,
     envKey: 'MAX_DOCUMENTS_PER_IP',
@@ -23,8 +24,9 @@ const settings = [
   },
   {
     key: 'max_content_length',
-    label: 'Max content length (chars)',
-    description: 'Maximum number of characters allowed in document content.',
+    labelKey: 'setting.max_content_length',
+    descriptionKey: 'setting.max_content_lengthDescription',
+    tags: ['documents'],
     kind: 'number' as const,
     defaultValue: 1024 * 1024,
     envKey: 'MAX_CONTENT_LENGTH',
@@ -39,7 +41,7 @@ const INITIAL_PROPERTIES = 'max_documents_per_ip=10\nmax_content_length=1048576'
 
 function makeSettingsFetch() {
   const settingsFetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
-    if (String(url).includes('/api/admin/settings')) {
+    if (String(url).includes('/api/admin/properties')) {
       if (init?.method === 'PUT') {
         const body = JSON.parse(String(init.body)) as {
           settings: Array<{ key: string; value: number | string | null }>
@@ -72,7 +74,7 @@ function renderHost() {
   }
 }
 
-describe('useAdminSettings properties text sync', () => {
+describe('useAdminProperties properties text sync', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
@@ -140,7 +142,7 @@ describe('useAdminSettings properties text sync', () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        '/api/admin/settings',
+        '/api/admin/properties',
         expect.objectContaining({
           method: 'PUT',
           body: JSON.stringify({

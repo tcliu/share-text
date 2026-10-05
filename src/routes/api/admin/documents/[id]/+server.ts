@@ -15,7 +15,7 @@ import { deleteDocument, fetchDocument, updateDocument } from '$lib/server/docum
 import { fetchDocumentForAdmin } from '$lib/server/document-admin'
 import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess, type DocumentAccessState } from '$lib/server/document-access'
 import { getDb } from '$lib/server/db'
-import { getMaxContentLength, getMaxDocumentVersions } from '$lib/server/settings'
+import { getMaxContentLength, getMaxDocumentVersions } from '$lib/server/admin-properties'
 import { logEvent } from '$lib/server/logging'
 import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
 

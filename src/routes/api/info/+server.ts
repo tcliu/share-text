@@ -11,7 +11,7 @@ import {
   CATALOG_APP_TAGS,
   CATALOG_APP_URL,
 } from '$lib/server/catalog-app'
-import { getAppActive } from '$lib/server/settings'
+import { getAppActive } from '$lib/server/admin-properties'
 import { resolveProfile } from '$lib/server/profile'
 
 const NO_STORE = { 'cache-control': 'no-store, max-age=0' }

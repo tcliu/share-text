@@ -12,7 +12,7 @@ import { fetchDocumentSummaries, insertDocument } from '$lib/server/document-sto
 import { logEvent } from '$lib/server/logging'
 import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
 import { isBodyRecord } from '$lib/server/request-utils'
-import { getMaxContentLength } from '$lib/server/settings'
+import { getMaxContentLength } from '$lib/server/admin-properties'
 import { resolveViewer } from '$lib/server/viewer'
 
 export const GET: RequestHandler = async ({ url, getClientAddress, cookies }) => {

@@ -360,7 +360,12 @@ export const en = {
     unknownSetting: 'Unknown setting: {key}',
     properties: {
       form: 'Form',
+      searchAria: 'Search properties',
+      searchPlaceholder: 'Search properties...',
+      emptySearch: 'No properties match the current search.',
     },
+    tagFilter: 'Filter by tags',
+    clearTagFilters: 'Clear tag filters',
     propertiesViews: 'Properties views',
     settingsContent: 'Settings properties content',
     settingsUpdated: 'Settings updated',

@@ -357,7 +357,12 @@ export const zhTW = {
     unknownSetting: '未知設定：{key}',
     properties: {
       form: '表單',
+      searchAria: '搜尋屬性',
+      searchPlaceholder: '搜尋屬性…',
+      emptySearch: '沒有符合目前搜尋的屬性。',
     },
+    tagFilter: '依標籤篩選',
+    clearTagFilters: '清除標籤篩選',
     propertiesViews: '屬性檢視',
     settingsContent: '設定屬性內容',
     settingsUpdated: '設定已更新',

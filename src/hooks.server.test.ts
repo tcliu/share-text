@@ -40,7 +40,7 @@ describe('handle guard for /api/admin/*', () => {
 
   it('blocks unauthenticated admin requests with 401', async () => {
     authMocks.verifySessionToken.mockReturnValue(false)
-    const { event, resolve } = makeEvent('/api/admin/settings', 'token')
+    const { event, resolve } = makeEvent('/api/admin/properties', 'token')
 
     const response = await handle({ event, resolve } as never)
 
@@ -50,7 +50,7 @@ describe('handle guard for /api/admin/*', () => {
   })
 
   it('lets authenticated admin requests through', async () => {
-    const { event, resolve } = makeEvent('/api/admin/settings', 'valid-token')
+    const { event, resolve } = makeEvent('/api/admin/properties', 'valid-token')
 
     const response = await handle({ event, resolve } as never)
 
