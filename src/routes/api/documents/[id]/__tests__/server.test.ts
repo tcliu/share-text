@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const documentsMocks = vi.hoisted(() => ({
   updateDocument: vi.fn(),
+  deleteDocument: vi.fn(),
   resolveDocumentAccess: vi.fn(),
 }))
 
@@ -10,6 +11,19 @@ vi.mock('$lib/server/document-store', async () => {
   return {
     ...actual,
     updateDocument: documentsMocks.updateDocument,
+    deleteDocument: documentsMocks.deleteDocument,
+  }
+})
+
+const loggingMocks = vi.hoisted(() => ({
+  logEvent: vi.fn(),
+}))
+
+vi.mock('$lib/server/logging', async () => {
+  const actual = await vi.importActual<typeof import('$lib/server/logging')>('$lib/server/logging')
+  return {
+    ...actual,
+    logEvent: loggingMocks.logEvent,
   }
 })
 
@@ -35,7 +49,8 @@ vi.mock('$lib/server/settings', async () => {
   }
 })
 
-import { PUT } from '../+server'
+import { DELETE, PUT } from '../+server'
+import { ADMIN_SESSION_COOKIE, createSessionToken } from '$lib/server/admin-auth'
 
 describe('PUT /api/documents/[id]', () => {
   beforeEach(() => {
@@ -176,5 +191,138 @@ describe('PUT /api/documents/[id]', () => {
       tags,
       by: '127.0.0.1',
     })
+  })
+})
+
+describe('DELETE /api/documents/[id]', () => {
+  const document = {
+    id: 'a1b2c3',
+    name: 'Notes',
+    content: 'body',
+    documentType: 'text',
+    tags: [],
+    updatedAt: '',
+    updatedBy: '',
+  }
+
+  function adminCookies() {
+    return { get: (name: string) => (name === ADMIN_SESSION_COOKIE ? createSessionToken() : null) }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document,
+      canView: true,
+      canEdit: true,
+      canDelete: true,
+      canManageAccess: true,
+    })
+    documentsMocks.deleteDocument.mockResolvedValue(true)
+  })
+
+  it('deletes the document and logs the deletion', async () => {
+    const response = await DELETE({
+      params: { id: 'a1b2c3' },
+      getClientAddress: () => '127.0.0.1',
+      cookies: adminCookies(),
+    } as never)
+
+    expect(response.status).toBe(204)
+    expect(documentsMocks.deleteDocument).toHaveBeenCalledWith('a1b2c3')
+    expect(loggingMocks.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'document_delete',
+        details: expect.objectContaining({ id: 'a1b2c3', name: 'Notes' }),
+      }),
+    )
+  })
+
+  it('rejects an authenticated viewer without delete permission with 403', async () => {
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document,
+      canView: true,
+      canEdit: true,
+      canDelete: false,
+      canManageAccess: false,
+    })
+
+    const response = await DELETE({
+      params: { id: 'a1b2c3' },
+      getClientAddress: () => '127.0.0.1',
+      cookies: adminCookies(),
+    } as never)
+
+    expect(response.status).toBe(403)
+    expect(await response.json()).toEqual({ error: 'You do not have permission to delete this document' })
+    expect(documentsMocks.deleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('hides a forbidden document from an anonymous viewer behind 404', async () => {
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document,
+      canView: false,
+      canEdit: false,
+      canDelete: false,
+      canManageAccess: false,
+    })
+
+    const response = await DELETE({
+      params: { id: 'a1b2c3' },
+      getClientAddress: () => '127.0.0.1',
+      cookies: { get: () => null },
+    } as never)
+
+    expect(response.status).toBe(404)
+    expect(documentsMocks.deleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when the document does not exist', async () => {
+    documentsMocks.resolveDocumentAccess.mockResolvedValue({
+      document: null,
+      canView: false,
+      canEdit: false,
+      canDelete: false,
+      canManageAccess: false,
+    })
+
+    const response = await DELETE({
+      params: { id: 'a1b2c3' },
+      getClientAddress: () => '127.0.0.1',
+      cookies: adminCookies(),
+    } as never)
+
+    expect(response.status).toBe(404)
+    expect(documentsMocks.deleteDocument).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 for an invalid document key without touching access checks', async () => {
+    const response = await DELETE({
+      params: { id: 'not/valid' },
+      getClientAddress: () => '127.0.0.1',
+      cookies: adminCookies(),
+    } as never)
+
+    expect(response.status).toBe(404)
+    expect(documentsMocks.resolveDocumentAccess).not.toHaveBeenCalled()
+  })
+
+  it('logs a delete error and rethrows when the store fails', async () => {
+    documentsMocks.deleteDocument.mockRejectedValue(new Error('db down'))
+
+    await expect(
+      DELETE({
+        params: { id: 'a1b2c3' },
+        getClientAddress: () => '127.0.0.1',
+        cookies: adminCookies(),
+      } as never),
+    ).rejects.toThrow('db down')
+
+    expect(loggingMocks.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'document_delete_error',
+        details: expect.objectContaining({ id: 'a1b2c3', name: 'Notes', error: 'db down' }),
+      }),
+    )
   })
 })
