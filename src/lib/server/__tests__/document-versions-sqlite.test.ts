@@ -6,14 +6,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
 import { deleteDocument, insertDocument, updateDocument } from '$lib/server/document-store'
 import { fetchDocumentVersion, fetchDocumentVersions } from '$lib/server/document-versions'
-import { clearSettingsCache, getMaxDocumentVersions } from '$lib/server/settings'
+import { clearPropertiesCache, getMaxDocumentVersions } from '$lib/server/admin-properties'
 
 beforeEach(async () => {
   const db = await getDb()
   await db.query('delete from document_versions')
   await db.query('delete from documents')
   delete process.env.MAX_DOCUMENT_VERSIONS
-  clearSettingsCache()
+  clearPropertiesCache()
 })
 
 describe('document version history against the SQLite backend (dev profile)', () => {
@@ -111,7 +111,7 @@ describe('document version history against the SQLite backend (dev profile)', ()
 
   it('prunes versions beyond the configured limit', async () => {
     process.env.MAX_DOCUMENT_VERSIONS = '2'
-    clearSettingsCache()
+    clearPropertiesCache()
     expect(await getMaxDocumentVersions()).toBe(2)
 
     const created = await insertDocument({ name: 'Notes', content: '', by: '10.0.0.1' })

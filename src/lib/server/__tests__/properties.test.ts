@@ -5,22 +5,22 @@ process.env.SQLITE_PATH = ':memory:'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { getDb } from '$lib/server/db'
 import {
-  clearSettingsCache,
-  deleteSettingValue,
+  clearPropertiesCache,
+  deletePropertyValue,
   getAppActive,
   getDocumentKeyLength,
   getMaxContentLength,
   getMaxDocumentVersions,
   getMaxDocumentsPerUser,
-  getSettingStringValue,
-  getSettingValue,
-  listSettings,
-  setSettingValue,
-  validateSettingValue,
-} from '$lib/server/settings'
+  getPropertyStringValue,
+  getPropertyValue,
+  listProperties,
+  setPropertyValue,
+  validatePropertyValue,
+} from '$lib/server/admin-properties'
 
 beforeEach(async () => {
-  clearSettingsCache()
+  clearPropertiesCache()
   const db = await getDb()
   await db.query('delete from app_config')
   delete process.env.MAX_DOCUMENTS_PER_IP
@@ -32,18 +32,18 @@ beforeEach(async () => {
 
 describe('setting resolution', () => {
   it('falls back to the built-in default when neither env nor database has a value', async () => {
-    expect(await getSettingValue('max_documents_per_ip')).toBe(10)
+    expect(await getPropertyValue('max_documents_per_ip')).toBe(10)
     expect(await getMaxContentLength()).toBe(1024 * 1024)
     expect(await getDocumentKeyLength()).toBe(6)
     expect(await getMaxDocumentVersions()).toBe(20)
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.every(setting => setting.source === 'default')).toBe(true)
   })
 
   it('uses the environment value when no database override exists', async () => {
     process.env.MAX_DOCUMENTS_PER_IP = '25'
     expect(await getMaxDocumentsPerUser()).toBe(25)
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.find(setting => setting.key === 'max_documents_per_ip')).toMatchObject({
       value: 25,
       source: 'environment',
@@ -53,7 +53,7 @@ describe('setting resolution', () => {
   it('resolves the max_document_versions setting from the environment', async () => {
     process.env.MAX_DOCUMENT_VERSIONS = '5'
     expect(await getMaxDocumentVersions()).toBe(5)
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.find(setting => setting.key === 'max_document_versions')).toMatchObject({
       value: 5,
       source: 'environment',
@@ -65,7 +65,7 @@ describe('setting resolution', () => {
 
     expect(await getDocumentKeyLength()).toBe(6)
 
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.find(setting => setting.key === 'document_key_length')).toMatchObject({
       value: 6,
       source: 'default',
@@ -74,9 +74,9 @@ describe('setting resolution', () => {
 
   it('lets a database override win over the environment', async () => {
     process.env.MAX_DOCUMENTS_PER_IP = '25'
-    await setSettingValue('max_documents_per_ip', 50)
+    await setPropertyValue('max_documents_per_ip', 50)
     expect(await getMaxDocumentsPerUser()).toBe(50)
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.find(setting => setting.key === 'max_documents_per_ip')).toMatchObject({
       value: 50,
       source: 'database',
@@ -92,7 +92,7 @@ describe('setting resolution', () => {
 
     expect(await getDocumentKeyLength()).toBe(6)
 
-    const settings = await listSettings()
+    const settings = await listProperties()
     expect(settings.find(setting => setting.key === 'document_key_length')).toMatchObject({
       value: 6,
       source: 'default',
@@ -100,22 +100,22 @@ describe('setting resolution', () => {
   })
 
   it('reverts to environment or default when the override is deleted', async () => {
-    await setSettingValue('max_content_length', 1000)
-    await deleteSettingValue('max_content_length')
+    await setPropertyValue('max_content_length', 1000)
+    await deletePropertyValue('max_content_length')
     expect(await getMaxContentLength()).toBe(1024 * 1024)
 
     process.env.MAX_DOCUMENTS_PER_IP = '25'
-    await setSettingValue('max_documents_per_ip', 50)
-    await deleteSettingValue('max_documents_per_ip')
+    await setPropertyValue('max_documents_per_ip', 50)
+    await deletePropertyValue('max_documents_per_ip')
     expect(await getMaxDocumentsPerUser()).toBe(25)
   })
 
   it('reflects overrides immediately after a write (cache invalidation)', async () => {
-    expect(await getSettingValue('max_content_length')).toBe(1024 * 1024)
-    await setSettingValue('max_content_length', 2048)
-    expect(await getSettingValue('max_content_length')).toBe(2048)
-    await deleteSettingValue('max_content_length')
-    expect(await getSettingValue('max_content_length')).toBe(1024 * 1024)
+    expect(await getPropertyValue('max_content_length')).toBe(1024 * 1024)
+    await setPropertyValue('max_content_length', 2048)
+    expect(await getPropertyValue('max_content_length')).toBe(2048)
+    await deletePropertyValue('max_content_length')
+    expect(await getPropertyValue('max_content_length')).toBe(1024 * 1024)
   })
 })
 
@@ -123,47 +123,47 @@ describe('boolean app_active setting', () => {
   it('resolves from database over environment over default with a true fallback', async () => {
     expect(await getAppActive()).toBe(true)
     process.env.APP_ACTIVE = 'false'
-    clearSettingsCache()
+    clearPropertiesCache()
     expect(await getAppActive()).toBe(false)
-    expect((await listSettings()).find(setting => setting.key === 'app_active')).toMatchObject({
+    expect((await listProperties()).find(setting => setting.key === 'app_active')).toMatchObject({
       value: false,
       source: 'environment',
     })
-    await setSettingValue('app_active', true)
+    await setPropertyValue('app_active', true)
     expect(await getAppActive()).toBe(true)
-    expect((await listSettings()).find(setting => setting.key === 'app_active')).toMatchObject({
+    expect((await listProperties()).find(setting => setting.key === 'app_active')).toMatchObject({
       value: true,
       source: 'database',
     })
   })
 
   it('validates boolean writes and rejects unrecognized spellings', () => {
-    expect(validateSettingValue('app_active', false)).toBe(false)
-    expect(validateSettingValue('app_active', 'no')).toBe(false)
-    expect(validateSettingValue('app_active', 'yes')).toBe(true)
-    expect(() => validateSettingValue('app_active', 'maybe')).toThrow('must be a boolean')
+    expect(validatePropertyValue('app_active', false)).toBe(false)
+    expect(validatePropertyValue('app_active', 'no')).toBe(false)
+    expect(validatePropertyValue('app_active', 'yes')).toBe(true)
+    expect(() => validatePropertyValue('app_active', 'maybe')).toThrow('must be a boolean')
   })
 })
 
 describe('setting validation', () => {
   it('accepts in-range integers', () => {
-    expect(validateSettingValue('max_documents_per_ip', 5)).toBe(5)
+    expect(validatePropertyValue('max_documents_per_ip', 5)).toBe(5)
   })
 
   it('rejects unknown keys', () => {
-    expect(() => validateSettingValue('unknown_key', 5)).toThrow('Unknown setting')
+    expect(() => validatePropertyValue('unknown_key', 5)).toThrow('Unknown setting')
   })
 
   it('rejects non-integers', () => {
-    expect(() => validateSettingValue('max_documents_per_ip', 1.5)).toThrow('must be an integer')
+    expect(() => validatePropertyValue('max_documents_per_ip', 1.5)).toThrow('must be an integer')
   })
 
   it('rejects out-of-range values', () => {
-    expect(() => validateSettingValue('max_documents_per_ip', 0)).toThrow('must be between')
-    expect(() => validateSettingValue('max_content_length', 1024 * 1024 + 1)).toThrow('must be between')
-    expect(() => validateSettingValue('document_key_length', 3)).toThrow('must be between')
-    expect(() => validateSettingValue('document_key_length', 33)).toThrow('must be between')
-    expect(() => validateSettingValue('max_document_versions', 0)).toThrow('must be between')
-    expect(() => validateSettingValue('max_document_versions', 101)).toThrow('must be between')
+    expect(() => validatePropertyValue('max_documents_per_ip', 0)).toThrow('must be between')
+    expect(() => validatePropertyValue('max_content_length', 1024 * 1024 + 1)).toThrow('must be between')
+    expect(() => validatePropertyValue('document_key_length', 3)).toThrow('must be between')
+    expect(() => validatePropertyValue('document_key_length', 33)).toThrow('must be between')
+    expect(() => validatePropertyValue('max_document_versions', 0)).toThrow('must be between')
+    expect(() => validatePropertyValue('max_document_versions', 101)).toThrow('must be between')
   })
 })

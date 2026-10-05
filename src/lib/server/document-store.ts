@@ -3,7 +3,7 @@ import type { DbQuery } from './db-types'
 import { runQuery } from './db-query'
 import { logEvent } from './logging'
 import { appendSearchConditions } from './sql-search'
-import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './settings'
+import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './admin-properties'
 import {
   DocumentLimitError,
   MAX_KEY_ATTEMPTS,

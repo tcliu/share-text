@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { isUniqueViolation } from './db-errors'
 import { toIsoString } from './iso-string'
-import { getDocumentKeyLength } from './settings'
+import { getDocumentKeyLength } from './admin-properties'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
 import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
 

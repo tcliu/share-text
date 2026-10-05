@@ -1,7 +1,7 @@
 import type { DbQuery } from './db-types'
 import { runQuery } from './db-query'
 import { toIsoString } from './iso-string'
-import { getMaxDocumentVersions } from './settings'
+import { getMaxDocumentVersions } from './admin-properties'
 import { isValidDocumentType, type Document, type DocumentType } from './document-model'
 
 export interface DocumentVersionSummary {

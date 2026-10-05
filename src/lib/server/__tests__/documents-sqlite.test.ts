@@ -19,7 +19,7 @@ import {
   importDocumentsForAdmin,
   listDocumentsForAdmin,
 } from '$lib/server/document-admin'
-import { getMaxDocumentsPerUser, setSettingValue } from '$lib/server/settings'
+import { getMaxDocumentsPerUser, setPropertyValue } from '$lib/server/admin-properties'
 import { sameColorFamily } from '$lib/tag-colors'
 import type { Viewer } from '$lib/server/viewer'
 
@@ -54,14 +54,14 @@ describe('documents against the SQLite backend (dev profile)', () => {
   })
 
   it('respects a custom document_key_length setting', async () => {
-    await setSettingValue('document_key_length', 8)
+    await setPropertyValue('document_key_length', 8)
     try {
       const created = await insertDocument({ content: '', by: '10.0.0.77' })
 
       expect(created.id).toMatch(/^[0-9a-z]{8}$/)
       expect(created.name).toBe(created.id)
     } finally {
-      await setSettingValue('document_key_length', 6)
+      await setPropertyValue('document_key_length', 6)
     }
   })
 
@@ -273,14 +273,14 @@ describe('documents against the SQLite backend (dev profile)', () => {
   })
 
   it('applies a runtime max_documents_per_ip setting', async () => {
-    await setSettingValue('max_documents_per_ip', 1)
+    await setPropertyValue('max_documents_per_ip', 1)
     try {
       await insertDocument({ name: 'only', content: '', by: '10.0.0.50' })
       await expect(insertDocument({ name: 'over limit', content: '', by: '10.0.0.50' })).rejects.toBeInstanceOf(
         DocumentLimitError,
       )
     } finally {
-      await setSettingValue('max_documents_per_ip', 10)
+      await setPropertyValue('max_documents_per_ip', 10)
     }
   })
 

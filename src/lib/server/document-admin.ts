@@ -1,7 +1,7 @@
 import { getDb } from './db'
 import { toIsoString } from './iso-string'
 import { appendSearchConditions } from './sql-search'
-import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions } from './settings'
+import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions } from './admin-properties'
 import {
   MAX_KEY_ATTEMPTS,
   assertContentWithinLimit,
