@@ -2,42 +2,21 @@
   import DataGrid from './DataGrid.svelte'
   import type { PreviewProps } from '$lib/document-types'
   import { parseCsv, serializeCsv } from '$lib/csv-utils'
+  import { useContentReconcile } from './use-content-reconcile.svelte'
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()
 
-  let parsedRows = $state<string[][]>([])
-  let suppressSync = false
-  // The raw content that `parsedRows` was last reconciled against. Content that
-  // does not round-trip through serializeCsv/parseCsv (e.g. JSON text shown
-  // after a type change) would otherwise make the reparse branch run every
-  // effect pass and rebind a structurally-equal new array forever, freezing the
-  // app. Guard on the content itself so each change is parsed at most once.
-  let lastContent = $state<string | null>(null)
-
-  $effect(() => {
-    if (lastContent !== null) return
-    parsedRows = parseCsv(content)
-    lastContent = content
+  const reconcile = useContentReconcile({
+    content: () => content,
+    parse: value => ({ rows: parseCsv(value), error: null }),
+    serialize: rows => serializeCsv(rows),
+    onChange: value => onContentChange?.(value),
   })
-
-  $effect(() => {
-    if (content === lastContent) return
-    lastContent = content
-    if (suppressSync) {
-      suppressSync = false
-      return
-    }
-    const roundTripped = serializeCsv(parsedRows)
-    if (content !== roundTripped) {
-      parsedRows = parseCsv(content)
-    }
-  })
-
-  function handleChange(rows: string[][]) {
-    parsedRows = rows
-    suppressSync = true
-    onContentChange?.(serializeCsv(rows))
-  }
 </script>
 
-<DataGrid value={parsedRows} onChange={handleChange} {editable} testId="csv-preview" storageKey="csv-preview" />
+<DataGrid
+  value={reconcile.rows}
+  onChange={reconcile.handleChange}
+  {editable}
+  testId="csv-preview"
+  storageKey="csv-preview" />
