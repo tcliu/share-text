@@ -75,7 +75,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
   }
 
   await resetLoginAttempts(ip)
-  await claimAnonymousDocuments(ip, user)
+  const documentsClaimed = await claimAnonymousDocuments(ip, user)
   const ttlMs = rememberMe ? USER_SESSION_REMEMBER_TTL_MS : USER_SESSION_TTL_MS
   cookies.set(USER_SESSION_COOKIE, createUserSessionToken(user.id, ttlMs), {
     httpOnly: true,
@@ -84,6 +84,10 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     path: '/',
     maxAge: rememberMe ? USER_SESSION_REMEMBER_MAX_AGE : USER_SESSION_MAX_AGE,
   })
-  logEvent({ ip, action: 'user_login', details: { username: user.username, remember_me: rememberMe } })
+  logEvent({
+    ip,
+    action: 'user_login',
+    details: { username: user.username, remember_me: rememberMe, documents_claimed: documentsClaimed },
+  })
   return json({ user })
 }

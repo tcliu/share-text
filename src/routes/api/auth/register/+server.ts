@@ -36,7 +36,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
   }
 
   await resetLoginAttempts(ip)
-  await claimAnonymousDocuments(ip, user)
+  const documentsClaimed = await claimAnonymousDocuments(ip, user)
   cookies.set(USER_SESSION_COOKIE, createUserSessionToken(user.id), {
     httpOnly: true,
     sameSite: 'strict',
@@ -44,6 +44,6 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     path: '/',
     maxAge: USER_SESSION_MAX_AGE,
   })
-  logEvent({ ip, action: 'user_register', details: { username: user.username } })
+  logEvent({ ip, action: 'user_register', details: { username: user.username, documents_claimed: documentsClaimed } })
   return json({ user }, { status: 201 })
 }

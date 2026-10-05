@@ -2,8 +2,10 @@
  * Appends a case-insensitive substring search condition across the requested
  * searchable columns. Uses leading-wildcard LIKE patterns which defeat B-tree
  * index scans. Acceptable for SQLite (no trigram index available) and
- * small-to-medium Postgres datasets. For large Postgres deployments, add a
- * pg_trgm GIN index on the searchable columns.
+ * small-to-medium Postgres datasets. For large Postgres deployments the prod
+ * migration (`PROD_MIGRATIONS` in `db.ts`) adds a pg_trgm GIN index on
+ * `lower(name)`, the default search column; searching other selected columns
+ * would need a per-column trigram index.
  */
 export function appendSearchConditions(options: {
   search: string

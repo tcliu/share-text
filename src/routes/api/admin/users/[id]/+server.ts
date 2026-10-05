@@ -89,15 +89,16 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   if (changes.password !== undefined) {
     details.password_reset = true
   }
-  const action =
-    changes.status !== undefined
-      ? 'admin_user_update_status'
-      : changes.password !== undefined
-        ? 'admin_user_update_password'
-        : changes.username !== undefined
-          ? 'admin_user_update_username'
-          : 'admin_user_update_email'
-  logEvent({ ip: getClientAddress(), action, details })
+  // One entry per changed field so each mutation is greppable by its action
+  // even when a single request changes several fields.
+  const actions: string[] = []
+  if (changes.username !== undefined) actions.push('admin_user_update_username')
+  if (changes.email !== undefined) actions.push('admin_user_update_email')
+  if (changes.status !== undefined) actions.push('admin_user_update_status')
+  if (changes.password !== undefined) actions.push('admin_user_update_password')
+  for (const action of actions) {
+    logEvent({ ip: getClientAddress(), action, details })
+  }
 
   return json({ user: result })
 }
