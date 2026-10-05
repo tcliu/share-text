@@ -59,7 +59,7 @@ synchronizes through a small fetch-based JSON API.
   `admin` identity.
 - `/api/admin/logout` clears the admin cookie. `/api/admin/session` reports
   whether admin is configured and whether the caller is authenticated.
-- `/api/admin/settings` — `GET` returns resolved application properties with
+- `/api/admin/properties` — `GET` returns resolved application properties with
   their source; `PUT` accepts `{ settings: [{ key, value }] }` and updates or,
   when `value` is `null`, deletes the override (reverting to env/default).
 - `/api/admin/documents` — `GET` lists every document across all IPs with
@@ -235,8 +235,9 @@ synchronizes through a small fetch-based JSON API.
 - `src/hooks.server.ts` guards every `/api/admin/*` route except
   `/api/admin/session`, returning 401 for requests without a valid session
   cookie.
-- `src/lib/server/settings.ts` defines the runtime-adjustable properties
-  (`number | string | boolean`) and resolves them with precedence database
+- `src/lib/server/property-definitions.ts` defines the runtime-adjustable
+  properties (`number | string | boolean | cron`) and
+  `src/lib/server/admin-properties.ts` resolves them with precedence database
   override > environment > default, cached in memory for a short TTL and
   invalidated on write. `app_active` (`APP_ACTIVE`) is the `GET /api/info`
   active opt-out; `getAppActive()` is best-effort so the public info card never
@@ -256,7 +257,7 @@ synchronizes through a small fetch-based JSON API.
   `AdminDocumentsView`/`AdminUsersView`.
   `AdminPropertiesView` splits the Properties tab into state-driven **Form** and
   **Properties** sub-tabs (button tabs via `Tabs`, `aria-pressed`) that both
-  edit the one shared draft held by `useAdminSettings`. `useAdminSettings` also
+  edit the one shared draft held by `useAdminProperties`. `useAdminProperties` also
   keeps a Properties-format text representation of the draft
   (`propertiesText`) bound by the code editor (`AdminPropertiesCodeView`); the
   two directions are reconciled with the shared self-echo guard so the editor is
@@ -264,7 +265,7 @@ synchronizes through a small fetch-based JSON API.
   (`pickKnownSettings` + replace, unknown settings reported in a live
   `propertiesProblems` banner and never pushed), while form edits, Apply,
   Reload, and Reset resync the editor text. Apply persists only the changed
-  settings through `PUT /api/admin/settings`; Reset restores both views from
+  settings through `PUT /api/admin/properties`; Reset restores both views from
   the saved settings. The old batch dialog (`AdminSettingsBatchDialog.svelte`)
   has been removed.
   The login form has a "Remember me" checkbox that persists the username in
@@ -649,13 +650,12 @@ dialogs, login panel, admin hooks).
 - Data-driven labels rendered from reactive arrays (admin DataTable column
   headers, `AdminPropertiesView` source labels) are built in `$derived.by` so
   they follow a locale switch.
-- Setting labels and descriptions come from `$lib/server/settings.ts` as the
-  English fallback and are translated client-side via the `settingLabel` /
-  `settingDescription` helpers (`$lib/i18n.svelte`, `setting.<key>` /
-  `setting.<key>Description` message pairs) — `AdminPropertiesView` and the
-  `useAdminSettings` validation/revert toasts resolve
-  `settingLabel(i18n, key) ?? setting.label`. Messages produced by the server (API
-  `error` fields) remain English; only client-side UI text is translated.
+- Setting labels and descriptions come from each property's `labelKey` /
+  `descriptionKey` in `$lib/server/property-definitions.ts` (`setting.<key>` /
+  `setting.<key>Description` message pairs) and are translated client-side via
+  `i18n.t(labelKey)` in `AdminPropertiesView` and the `useAdminProperties`
+  validation/revert toasts. Messages produced by the server (API `error` fields)
+  remain English; only client-side UI text is translated.
 - Document type labels and format titles (e.g. "JSON", "Format JSON") are
   technical format names and stay untranslated.
 
