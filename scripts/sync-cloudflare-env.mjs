@@ -28,9 +28,11 @@
 import { spawn } from 'node:child_process'
 import { existsSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseEnvFile } from './env-file.mjs'
+import { parseFlags } from './lib/cloudflare-env-flags.mjs'
 import { logEvent } from './log-event.mjs'
+import { echoCommand } from './_run.mjs'
 import {
   CLOUDFLARE_LOCAL_ONLY_KEYS,
   cloudflareForbiddenKeys,
@@ -61,41 +63,19 @@ const ROOT_DIR = join(SCRIPT_DIR, '..')
 const SOURCE_FILES = ['.env.prod', '.env.cloudflare']
 const GENERATED_FILE = join(ROOT_DIR, GENERATED_WRANGLER_CONFIG)
 const SECRET_CONCURRENCY = 4
-const SECRET_MODES = ['always', 'missing']
 
 function fail(message) {
   console.error(message)
   process.exit(1)
 }
 
-function parseFlags(argv) {
-  const dryRun = argv.includes('--dry-run')
-  const prune = argv.includes('--prune')
-  const secretFlags = argv.filter(arg => arg.startsWith('--secrets='))
-  const unknown = argv.filter(
-    arg => arg !== '--dry-run' && arg !== '--prune' && !arg.startsWith('--secrets='),
-  )
-  if (unknown.length > 0) {
-    fail(`Unknown option: ${unknown.join(', ')} (expected --dry-run, --prune, --secrets=always|missing).`)
-  }
-  // A repeated flag with conflicting values is a mistake, not last-wins.
-  const modes = new Set(secretFlags.map(arg => arg.slice('--secrets='.length)))
-  if (modes.size > 1) {
-    fail(`Conflicting --secrets values: ${[...modes].join(', ')}.`)
-  }
-  const secrets = secretFlags.length > 0 ? secretFlags[0].slice('--secrets='.length) : 'always'
-  if (!SECRET_MODES.includes(secrets)) {
-    fail(`Unknown --secrets mode: ${secrets} (expected ${SECRET_MODES.join('|')}).`)
-  }
-  return { dryRun, prune, secrets }
-}
-
 function runWranglerAsync(args, { input } = {}) {
   return new Promise((resolve, reject) => {
     const bin = wranglerBin()
     const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
-    // No command echo here: the only caller passes the secret on stdin, and
-    // per-key completion events below carry the progress signal instead.
+    // The secret value goes on stdin, never argv, so the echoed command is
+    // safe; per-key completion events below carry the progress signal.
+    echoCommand(bin, fullArgs)
     const child = spawn(bin, fullArgs, { cwd: ROOT_DIR, stdio: ['pipe', 'inherit', 'inherit'] })
     const stdin = child.stdin
     stdin.on('error', () => {
@@ -307,7 +287,10 @@ async function main() {
   })
 }
 
-main().catch(error => {
-  console.error(error?.message || error)
-  process.exit(1)
-})
+// Run only as a CLI, so importing `parseFlags` from tests does not start a sync.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(error => {
+    console.error(error?.message || error)
+    process.exit(1)
+  })
+}

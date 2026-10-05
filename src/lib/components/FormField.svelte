@@ -17,7 +17,7 @@
 
   const wrapperClass = $derived(
     layout === 'inline'
-      ? `grid min-w-0 grid-cols-1 items-center gap-2 sm:grid-cols-[6rem_minmax(0,1fr)] ${className}`
+      ? `grid min-w-0 grid-cols-1 items-center gap-2 sm:grid-cols-form-inline ${className}`
       : `flex min-w-0 flex-col gap-1.5 ${className}`,
   )
 </script>

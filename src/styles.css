@@ -12,6 +12,10 @@
   --z-index-tooltip: 45;
 
   --color-onaccent: rgb(2 6 23);
+
+  /* Inline form-row grid: a fixed label column beside a flexible control.
+     Lives here so the template is a named utility, not an arbitrary value. */
+  --grid-template-columns-form-inline: 6rem minmax(0, 1fr);
 }
 
 @source inline("text-xs text-sm text-md text-lg");

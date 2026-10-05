@@ -1,21 +1,16 @@
-// CLI-side sibling of src/lib/server/logging: one line per event in the same
+// CLI-side sibling of src/lib/server/logging: one line per event in the shared
 // format (`<ISO timestamp> <LEVEL> ip=<ip> action=<action> <key>=<JSON>`), so
 // script output stays greppable next to server logs. Scripts run without a
-// request context, so ip is always `unknown`.
+// request context, so ip is always `unknown`. The format lives in
+// `src/lib/log-format.mjs` and is imported by both runtimes so a change lands
+// once.
 //
 // Never pass connection strings, secrets, passwords, or document contents —
 // only identifiers and counts.
+import { formatLogLine } from '../src/lib/log-format.mjs'
+
 export function logEvent({ action, details = {} }) {
-  const timestamp = new Date().toISOString()
-  const defaultLevel = action.endsWith('_error') ? 'ERROR' : 'INFO'
-  const { level, ...rest } = details
-  const resolvedLevel = level === 'INFO' || level === 'WARN' || level === 'ERROR' ? level : defaultLevel
-  const serializedDetails = Object.entries(rest)
-    .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
-    .join(' ')
-  console.log(
-    `${timestamp} ${resolvedLevel} ip=unknown action=${action}${serializedDetails ? ` ${serializedDetails}` : ''}`,
-  )
+  console.log(formatLogLine({ action, ip: 'unknown', details }))
 }
 
 export function errorMessage(error) {

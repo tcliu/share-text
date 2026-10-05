@@ -155,10 +155,11 @@ describe('dragCloseDown', () => {
     expect(h.updates).toEqual([])
   })
 
-  it('ignores drags starting on buttons so embedded controls keep working', () => {
+  it('ignores drags starting on elements that opt out via data-drag-ignore', () => {
     const h = createHarness()
     setClock(0)
     const button = document.createElement('button')
+    button.setAttribute('data-drag-ignore', '')
     h.element.appendChild(button)
     button.dispatchEvent(pointerEvent('pointerdown', { x: 0, y: 0 }))
     button.dispatchEvent(pointerEvent('pointermove', { x: 0, y: 100 }))
@@ -166,6 +167,18 @@ describe('dragCloseDown', () => {
     button.dispatchEvent(pointerEvent('pointerup', { x: 0, y: 100 }))
     expect(h.onClose).not.toHaveBeenCalled()
     expect(h.updates).toEqual([])
+  })
+
+  it('tracks drags starting on non-opted-out child controls', () => {
+    const h = createHarness()
+    setClock(0)
+    const child = document.createElement('span')
+    h.element.appendChild(child)
+    child.dispatchEvent(pointerEvent('pointerdown', { x: 0, y: 0 }))
+    child.dispatchEvent(pointerEvent('pointermove', { x: 0, y: 100 }))
+    setClock(20)
+    child.dispatchEvent(pointerEvent('pointerup', { x: 0, y: 100 }))
+    expect(h.onClose).toHaveBeenCalledTimes(1)
   })
 
   it('does nothing when disabled', () => {

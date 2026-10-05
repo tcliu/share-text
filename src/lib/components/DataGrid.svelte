@@ -550,6 +550,9 @@
     resize.handleResizeMouseMove(event)
   }} />
 
+<!-- False positive: the root is a shortcut host, not an interactive element.
+     Ctrl+Z/Y arrive as keydown events bubbled from the focusable grid cells it
+     wraps; the container itself has no role and needs none. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   data-testid={testId}
@@ -695,7 +698,6 @@
         {#if model.rowCount > 0}
           <thead>
             <tr aria-rowindex="1" class="sticky top-0 z-20 bg-slate-900">
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <th
                 role="columnheader"
                 aria-label={i18n.t('grid.selectAll')}
@@ -709,7 +711,6 @@
                 {@const isSortActive = sortColumn === ci}
                 {@const isSortAsc = isSortActive && sortDirection === 'asc'}
                 {@const isSortDesc = isSortActive && sortDirection === 'desc'}
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <th
                   use:cellRefs.colSelectorRef={{ ci }}
                   role="columnheader"
@@ -833,7 +834,6 @@
             {#each showHeaders ? model.rows.slice(1) : model.rows as row, ri (row.id)}
               {@const actualRi = showHeaders ? ri + 1 : ri}
               <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
                 <td
                   use:cellRefs.rowSelectorRef={{ ri: actualRi }}
                   role="rowheader"
@@ -852,7 +852,6 @@
                   {@const lineCount = cell.value.split('\n').length}
                   {@const expanded = isCellEditing(actualRi, ci) && lineCount > 1}
                   {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
                   <td
                     use:cellRefs.cellBoxRef={{ ri: actualRi, ci }}
                     role="gridcell"

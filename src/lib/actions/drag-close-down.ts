@@ -5,7 +5,15 @@ export interface DragCloseDownOptions {
   onDragUpdate: (offset: number, dragging: boolean) => void
   onClose: () => void
   getPanelHeight?: () => number
+  /**
+   * CSS selector matching elements that opt out of drag tracking (their own
+   * attribute; the action never walks ancestors). Defaults to
+   * `[data-drag-ignore]`.
+   */
+  ignoreSelector?: string
 }
+
+const DEFAULT_IGNORE_SELECTOR = '[data-drag-ignore]'
 
 const DRAG_START_SLOP_PX = 10
 const DISMISS_HEIGHT_RATIO = 0.3
@@ -16,8 +24,9 @@ const FAST_SWIPE_MIN_DISTANCE_PX = 40
  * Vertical drag-to-close for bottom sheets: touch/pen drags starting on the
  * element that move down past ~30% of the panel height (or a fast downward
  * flick) request `onClose`; otherwise the sheet snaps back. Drags starting
- * on form controls or buttons stay taps and are never tracked, so an
- * embedded close button keeps working on touch.
+ * on an element that opts out via `data-drag-ignore` (a close button, a form
+ * control) stay taps and are never tracked, so embedded controls keep working
+ * on touch.
  */
 export function dragCloseDown(element: HTMLElement, options: DragCloseDownOptions): ActionReturn<DragCloseDownOptions> {
   let current = options
@@ -34,7 +43,7 @@ export function dragCloseDown(element: HTMLElement, options: DragCloseDownOption
 
   function isIgnorableTarget(target: EventTarget | null): boolean {
     if (!(target instanceof HTMLElement)) return false
-    return !!target.closest('input, textarea, select, button, [contenteditable="true"]')
+    return target.matches(current.ignoreSelector ?? DEFAULT_IGNORE_SELECTOR)
   }
 
   function releaseCapture(pointerId: number) {
