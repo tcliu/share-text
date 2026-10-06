@@ -12,6 +12,10 @@
 
   interface Props {
     title?: string
+    // Accessible name when no `title` is rendered (a `header` snippet or a
+    // title-less dialog). Provide exactly one of `title`/`ariaLabel` so the
+    // `role="dialog"` element is always named.
+    ariaLabel?: string
     titleClass?: string
     className?: string
     maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'fit' | 'wide'
@@ -30,6 +34,7 @@
 
   let {
     title,
+    ariaLabel,
     titleClass = '',
     className = '',
     maxWidth = 'md',
@@ -203,6 +208,7 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby={!header && title ? titleId : undefined}
+      aria-label={!header && title ? undefined : ariaLabel}
       tabindex="-1"
       class={fullscreen
         ? `relative flex h-full w-full flex-col overflow-y-auto bg-slate-900 p-5.5 outline-none ${className}`

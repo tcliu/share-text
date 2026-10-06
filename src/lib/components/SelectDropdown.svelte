@@ -178,11 +178,14 @@
   // appends to the filter instead of replacing it. A non-collapsed selection
   // that is not the whole value is a deliberate drag-select and is left
   // alone; defer a frame so it wins over the browser's own selection.
+  let caretRafId: number | null = null
   function placeCaretAtEnd() {
     if (!inputRef) {
       return
     }
-    requestAnimationFrame(() => {
+    if (caretRafId !== null) cancelAnimationFrame(caretRafId)
+    caretRafId = requestAnimationFrame(() => {
+      caretRafId = null
       const input = inputRef
       if (!input || !inputFocused) return
       const { selectionStart, selectionEnd, value } = input
