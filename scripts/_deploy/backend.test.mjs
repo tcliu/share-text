@@ -35,4 +35,10 @@ describe('planDeployBackends', () => {
     const { needsNeonSchema } = planDeployBackends(['cloudflare'], target => env[target])
     expect(needsNeonSchema).toBe(false)
   })
+
+  it('treats a target with no resolver as an empty env', () => {
+    const { backends, needsNeonSchema } = planDeployBackends(['cloudflare'])
+    expect(backends.get('cloudflare')).toBe('neon')
+    expect(needsNeonSchema).toBe(true)
+  })
 })

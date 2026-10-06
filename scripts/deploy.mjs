@@ -209,9 +209,6 @@ async function deployWithTarget(options, { availableEntries, availableValues, co
     return
   }
   const profileValue = resolveProfileSync(options.profileFlag)
-  if (profileValue !== 'prod') {
-    fail(`Target '${targets.join(',')}' supports only the prod profile; dev has no deploy target.`)
-  }
   const syncEnv = resolveProdConfirmSync(
     profileValue,
     options.syncEnvFlag,

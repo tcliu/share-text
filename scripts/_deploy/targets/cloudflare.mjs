@@ -171,12 +171,6 @@ function runCloudflareDeploy(branch = '') {
   return match ? match[0] : ''
 }
 
-// D1 binding name is shared with the runtime selector (`src/lib/d1-binding.mjs`)
-// so the binding the deploy renders is the exact key the app reads.
-function d1BindingName() {
-  return D1_BINDING_NAME
-}
-
 // Hard isolation gate: forbidden keys on the Pages project are a fatal
 // misconfiguration (in D1 mode a remote Neon URL silently wins over the D1
 // binding; anywhere, Vercel credentials re-couple the target). The env sync
@@ -291,7 +285,7 @@ function cloudflareSteps(ctx) {
         }
         const databaseName = resolveD1DatabaseName(cloudflareEnv())
         const { status, databaseId } = ensureD1Database(databaseName)
-        state.d1 = { binding: d1BindingName(), databaseName, databaseId }
+        state.d1 = { binding: D1_BINDING_NAME, databaseName, databaseId }
         logEvent({
           action: status === 'created' ? 'd1_database_created' : 'd1_database_ready',
           details: { databaseName, databaseId },

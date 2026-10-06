@@ -8,7 +8,7 @@
 // the running app cannot drift.
 import { resolveD1DatabaseName } from '../lib/cloudflare.mjs'
 
-// Resolve the backend for a target from its merged env. The env config picks
+// Resolve the backend for a target from the supplied env. The env config picks
 // the backend; `target` only bounds what is hostable (D1 needs a Cloudflare
 // binding), so every non-Cloudflare target resolves to Neon.
 export function resolveDeployBackend(target, env = {}) {
