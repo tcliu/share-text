@@ -32,15 +32,13 @@ export async function saveUserPreferences(
   preferences: UserPreferences,
 ): Promise<UserPreferences> {
   const db = await getDb()
-  await db.transaction(async query => {
-    await query(
-      `insert into user_preferences (user_id, preferred_language, updated_at)
-       values ($1, $2, current_timestamp)
-       on conflict (user_id) do update set
-         preferred_language = excluded.preferred_language,
-         updated_at = current_timestamp`,
-      [viewer.userId, preferences.preferredLanguage],
-    )
-  })
+  await db.query(
+    `insert into user_preferences (user_id, preferred_language, updated_at)
+     values ($1, $2, current_timestamp)
+     on conflict (user_id) do update set
+       preferred_language = excluded.preferred_language,
+       updated_at = current_timestamp`,
+    [viewer.userId, preferences.preferredLanguage],
+  )
   return preferences
 }

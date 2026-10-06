@@ -19,6 +19,13 @@ export function toSqliteSql(sql) {
   })
 }
 
+// True when a statement yields rows: a `select`/`with` query, or any statement
+// with a `returning` clause. Shared by the SQLite and D1 adapters so both
+// classify a statement the same way.
+export function isRowsReturningSql(sql) {
+  return /^\s*(select|with\b)/i.test(sql) || /returning\b/i.test(sql)
+}
+
 // Quote a Postgres identifier for DDL. Identifiers cannot be parameterized,
 // so quoting is the only safe path for values that are legitimately
 // interpolated. Quoted identifiers may contain any character except NUL, so

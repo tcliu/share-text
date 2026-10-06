@@ -1,6 +1,6 @@
 import { getDb } from './db'
-import type { DbQuery } from './db-types'
-import { runQuery } from './db-query'
+import type { DbQuery } from './db/types'
+import { runQuery } from './db/query'
 import { logEvent } from './logging'
 import { appendSearchConditions } from './sql-search'
 import { getDocumentKeyLength, getMaxContentLength, getMaxDocumentVersions, getMaxDocumentsPerUser } from './admin-properties'
@@ -334,17 +334,23 @@ export async function updateDocument(
 }
 
 export async function deleteDocument(id: string) {
-  // The SQLite adapter does not enforce foreign keys and each `runQuery` uses
-  // its own connection, so the app-side child deletes must run atomically with
-  // the parent delete on one connection. On Postgres the `on delete cascade`
-  // FK also covers them; deleting first is idempotent there.
+  // SQLite runs with foreign keys off, so the app-side child deletes must run
+  // with the parent delete; one atomic batch guarantees that on every adapter
+  // (Postgres also cascades, where deleting first is idempotent). The parent
+  // delete's rowCount reports whether the document existed.
   const db = await getDb()
-  const deleted = await db.transaction(async query => {
-    await query('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
-    await query('delete from document_versions where document_id = (select id from documents where key = $1)', [id])
-    const result = await query('delete from documents where key = $1', [id])
-    return (result.rowCount ?? 0) > 0
-  })
+  const [, , parentDelete] = await db.batch([
+    {
+      sql: 'delete from document_shares where document_id = (select id from documents where key = $1)',
+      params: [id],
+    },
+    {
+      sql: 'delete from document_versions where document_id = (select id from documents where key = $1)',
+      params: [id],
+    },
+    { sql: 'delete from documents where key = $1', params: [id] },
+  ])
+  const deleted = (parentDelete.rowCount ?? 0) > 0
   if (deleted) {
     invalidateTagsCache()
   }

@@ -14,8 +14,8 @@ vi.mock('$lib/server/profile', async () => {
   return { ...actual, resolveProfile: mocks.resolveProfile }
 })
 
-vi.mock('$lib/server/db-neon', () => ({ createNeonDb: mocks.createNeonDb }))
-vi.mock('$lib/server/db-sqlite', () => ({ createSqliteDb: mocks.createSqliteDb }))
+vi.mock('$lib/server/db/neon', () => ({ createNeonDb: mocks.createNeonDb }))
+vi.mock('$lib/server/db/sqlite', () => ({ createSqliteDb: mocks.createSqliteDb }))
 
 vi.mock('$lib/server/logging', async () => {
   const actual = await vi.importActual<typeof import('$lib/server/logging')>('$lib/server/logging')

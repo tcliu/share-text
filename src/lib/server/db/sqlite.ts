@@ -3,16 +3,12 @@ import { readFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Database } from 'better-sqlite3'
-import type { Db, DbQuery, DbResult } from './db-types'
-import { toSqliteSql } from '../sql-rewrite.mjs'
+import type { Db, DbQuery, DbResult, DbStatement } from './types'
+import { isRowsReturningSql, toSqliteSql } from '../../sql-rewrite.mjs'
 
 export { toSqliteSql }
 
 export const DEFAULT_SQLITE_PATH = '.data/dev.sqlite'
-
-function isRowsReturningSql(sql: string) {
-  return /^\s*(select|with\b)/i.test(sql) || /returning\b/i.test(sql)
-}
 
 type SqliteValue = null | number | bigint | string | Uint8Array
 
@@ -24,7 +20,7 @@ function toSqliteParam(value: unknown): SqliteValue {
 }
 
 export async function readSchemaSql() {
-  const schemaUrl = new URL('../../../sql/schema.sql', import.meta.url)
+  const schemaUrl = new URL('../../../../sql/schema.sql', import.meta.url)
   return readFile(fileURLToPath(schemaUrl), 'utf8')
 }
 
@@ -66,6 +62,22 @@ export async function createSqliteDb(path = process.env.SQLITE_PATH || DEFAULT_S
   return {
     query<T>(sql: string, params: unknown[] = []): Promise<DbResult<T>> {
       return enqueue(() => Promise.resolve(execute<T>(sql, params)))
+    },
+    async batch(statements: DbStatement[]): Promise<DbResult<unknown>[]> {
+      if (statements.length === 0) {
+        return []
+      }
+      return enqueue(async () => {
+        database.exec('BEGIN')
+        try {
+          const results = statements.map(statement => execute(statement.sql, statement.params ?? []))
+          database.exec('COMMIT')
+          return results
+        } catch (error) {
+          database.exec('ROLLBACK')
+          throw error
+        }
+      })
     },
     async transaction<T>(fn: (query: DbQuery) => Promise<T>): Promise<T> {
       return enqueue(async () => {

@@ -1,4 +1,4 @@
-import { getDb } from './db'
+import { getDb } from './index'
 
 /**
  * Run a single engine-agnostic query against the shared connection. Callers

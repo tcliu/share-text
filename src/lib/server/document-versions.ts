@@ -1,5 +1,5 @@
-import type { DbQuery } from './db-types'
-import { runQuery } from './db-query'
+import type { DbQuery } from './db/types'
+import { runQuery } from './db/query'
 import { toIsoString } from './iso-string'
 import { getMaxDocumentVersions } from './admin-properties'
 import { isValidDocumentType, type Document, type DocumentType } from './document-model'

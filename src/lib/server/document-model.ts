@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { isUniqueViolation } from './db-errors'
+import { isUniqueViolation } from './db/errors'
 import { toIsoString } from './iso-string'
 import { getDocumentKeyLength } from './admin-properties'
 import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'

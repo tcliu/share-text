@@ -1,8 +1,17 @@
-import type { Db } from './db-types'
-import { createNeonDb } from './db-neon'
-import { createSqliteDb } from './db-sqlite'
-import { resolveProfile } from './profile'
-import { errorMessage, logEvent } from './logging'
+import type { Db, DbKind } from './types'
+import { createNeonDb } from './neon'
+import { createSqliteDb } from './sqlite'
+import { createD1Db, isD1Database, type D1DatabaseLike } from './d1'
+import { resolveProfile } from '../profile'
+import { errorMessage, logEvent } from '../logging'
+import { toDbError } from './errors'
+import { D1_BINDING_NAME } from '../../d1-binding.mjs'
+
+// Database selector. One file per provider (`sqlite.ts`, `neon.ts`, `d1.ts`);
+// this module owns backend resolution, caching, prod migrations, and the
+// public surface the server uses. Add a provider by implementing the `Db`
+// interface in its own file and adding one branch to `resolveDbConfig`.
+export type { Db, DbKind, DbQuery, DbResult, DbStatement } from './types'
 
 // Additive-only DDL for an already-launched Postgres database. Every table in
 // `sql/schema.sql` is created here too (the base `documents` table included, so
@@ -91,10 +100,83 @@ export const PROD_MIGRATIONS: readonly string[] = [
   'create index if not exists idx_documents_name_trgm on documents using gin (lower(name) gin_trgm_ops)',
 ]
 
+interface DbConfig {
+  kind: DbKind
+  create: () => Promise<Db>
+}
+
+function databaseUrl(env: NodeJS.ProcessEnv): string {
+  return String(env.DATABASE_URL || '').trim()
+}
+
+// Cloudflare Workers expose bindings (the D1 database included) on the request
+// `env`, not on `process.env`; `nodejs_compat` only mirrors vars/secrets/version
+// metadata. The deploy flow forces `CF_PAGES=1`, so it marks the Workers runtime
+// without a probe that would run on Node.
+function isCloudflareRuntime(env: NodeJS.ProcessEnv): boolean {
+  return String(env.CF_PAGES ?? '').trim() === '1'
+}
+
+// The specifier is built through a function so a non-Cloudflare bundle does not
+// try to resolve `cloudflare:workers` at build time; only the Workers runtime
+// resolves it.
+function cloudflareWorkersSpecifier() {
+  return 'cloudflare:workers'
+}
+
+interface CloudflareWorkersModule {
+  env?: Record<string, unknown>
+}
+
+let cloudflareWorkersModule: Promise<CloudflareWorkersModule | null> | null = null
+
+function importCloudflareWorkers(): Promise<CloudflareWorkersModule | null> {
+  if (!cloudflareWorkersModule) {
+    // Only reachable on a Workers runtime (the caller gates on `CF_PAGES`), so a
+    // failure means the binding could not be read — surface it once.
+    cloudflareWorkersModule = import(/* @vite-ignore */ cloudflareWorkersSpecifier()).catch(error => {
+      logEvent({
+        action: 'cloudflare_env_import_error',
+        details: { error: errorMessage(error), level: 'WARN' },
+      })
+      return null
+    })
+  }
+  return cloudflareWorkersModule
+}
+
+async function resolveD1Binding(env: NodeJS.ProcessEnv): Promise<D1DatabaseLike | null> {
+  const direct = (env as unknown as Record<string, unknown>)[D1_BINDING_NAME]
+  if (isD1Database(direct)) {
+    return direct
+  }
+  if (!isCloudflareRuntime(env)) {
+    return null
+  }
+  const workerEnv = (await importCloudflareWorkers())?.env?.[D1_BINDING_NAME]
+  return isD1Database(workerEnv) ? workerEnv : null
+}
+
+// Backend precedence: a prod profile with no DATABASE_URL and a reachable D1
+// binding is D1; prod otherwise is Neon; anything else is dev SQLite.
+export async function resolveDbConfig(env: NodeJS.ProcessEnv = process.env): Promise<DbConfig> {
+  const profile = resolveProfile(env)
+  if (profile === 'prod' && !databaseUrl(env)) {
+    const binding = await resolveD1Binding(env)
+    if (binding) {
+      return { kind: 'd1', create: async () => createD1Db(binding) }
+    }
+  }
+  if (profile === 'prod') {
+    return { kind: 'neon', create: async () => createNeonDb() }
+  }
+  return { kind: 'sqlite', create: createSqliteDb }
+}
+
 let db: Db | null = null
 let dbPromise: Promise<Db> | null = null
 
-export async function getDb(): Promise<Db> {
+export async function getDb(env: NodeJS.ProcessEnv = process.env): Promise<Db> {
   if (db) {
     return db
   }
@@ -103,9 +185,21 @@ export async function getDb(): Promise<Db> {
   }
 
   dbPromise = (async () => {
-    const profile = resolveProfile()
-    const initialized = profile === 'prod' ? createNeonDb() : await createSqliteDb()
-    if (profile === 'prod') {
+    const config = await resolveDbConfig(env)
+    // D1 is stateless (no pool) and its binding can differ per request; skip
+    // the cache for it.
+    if (config.kind === 'd1') {
+      return config.create()
+    }
+    const initialized = await config.create().catch(error => {
+      throw toDbError(error)
+    })
+    // Production Postgres never runs DDL through `sql/schema.sql`; it applies
+    // the additive PROD_MIGRATIONS instead, which a fresh Neon database needs.
+    // (D1 returns above: `apply-d1-schema.mjs` owns its schema, and these
+    // Postgres-flavoured statements would not parse.) Dev SQLite auto-applies
+    // the schema on open.
+    if (config.kind === 'neon') {
       for (const statement of PROD_MIGRATIONS) {
         try {
           await initialized.query(statement)
@@ -121,7 +215,6 @@ export async function getDb(): Promise<Db> {
         }
       }
     }
-
     db = initialized
     return initialized
   })()

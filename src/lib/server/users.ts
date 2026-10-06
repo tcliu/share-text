@@ -1,6 +1,6 @@
 import { getDb } from './db'
-import { isUniqueViolation } from './db-errors'
-import type { DbQuery } from './db-types'
+import { isUniqueViolation } from './db/errors'
+import type { Db, DbQuery } from './db/types'
 import { toIsoString } from './iso-string'
 import { hashPassword, isPasswordHash, verifyPassword } from './password'
 import { appendSearchConditions } from './sql-search'
@@ -124,10 +124,40 @@ export interface ImportUserRecord {
   status?: string
 }
 
+// Names the first imported record whose username or email already exists, for
+// the batch's unique-violation message (a batch error carries no record index).
+async function describeUserConflict(
+  db: Db,
+  prepared: ReadonlyArray<{ username: string; email: string }>,
+): Promise<string> {
+  const conditions: string[] = []
+  const params: unknown[] = []
+  for (const record of prepared) {
+    params.push(record.username)
+    conditions.push(`username = $${params.length}`)
+  }
+  for (const record of prepared) {
+    params.push(record.email)
+    conditions.push(`email = $${params.length}`)
+  }
+  const existing = await db.query<{ username: string; email: string }>(
+    `select username, email from users where ${conditions.join(' or ')}`,
+    params,
+  )
+  const takenUsernames = new Set(existing.rows.map(row => String(row.username).toLowerCase()))
+  const takenEmails = new Set(existing.rows.map(row => String(row.email).toLowerCase()))
+  for (let i = 0; i < prepared.length; i++) {
+    if (takenUsernames.has(prepared[i].username) || takenEmails.has(prepared[i].email)) {
+      return `record ${i + 1}: username or email is already taken`
+    }
+  }
+  return 'username or email is already taken'
+}
+
 /**
  * Bulk-create users for the admin import dialog. Every record is normalized
  * and its password resolved up front (hashing is expensive, so it happens
- * outside the transaction), then the inserts run in a single transaction so an
+ * outside the batch), then the inserts run in a single atomic batch so an
  * invalid or duplicate record aborts the whole import (all-or-nothing). A
  * record carries either a plaintext `password` (hashed here) or a pre-hashed
  * `passwordHash` (verified and stored as-is, so exports round-trip).
@@ -176,27 +206,25 @@ export async function importUsersForAdmin(records: ImportUserRecord[]): Promise<
     seenEmails.add(email)
   }
   const db = await getDb()
-  return db.transaction(async query => {
-    const created: AdminUser[] = []
-    for (let i = 0; i < prepared.length; i++) {
-      const { username, email, status, passwordHash } = prepared[i]
-      try {
-        const result = await query<UserAdminRow>(
-          `insert into users (username, email, password_hash, status, created_at)
-           values ($1, $2, $3, $4, current_timestamp)
-           returning id, username, email, status, created_at`,
-          [username, email, passwordHash, status],
-        )
-        created.push(toAdminUser(result.rows[0]))
-      } catch (error) {
-        if (isUniqueViolation(error)) {
-          throw new Error(`record ${i + 1}: username or email is already taken`)
-        }
-        throw error
-      }
+  // One atomic batch: either every record inserts or none does. A unique
+  // violation aborts the whole batch, so the message stays generic (the
+  // per-record pre-check above already names in-batch duplicates).
+  try {
+    const results = await db.batch(
+      prepared.map(({ username, email, status, passwordHash }) => ({
+        sql: `insert into users (username, email, password_hash, status, created_at)
+              values ($1, $2, $3, $4, current_timestamp)
+              returning id, username, email, status, created_at`,
+        params: [username, email, passwordHash, status],
+      })),
+    )
+    return results.map(result => toAdminUser(result.rows[0] as UserAdminRow))
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      throw new Error(await describeUserConflict(db, prepared))
     }
-    return created
-  })
+    throw error
+  }
 }
 
 export interface AdminUserExportRecord {
@@ -443,12 +471,13 @@ export async function deleteUser(id: number): Promise<boolean> {
   const db = await getDb()
   // The SQLite adapter runs with foreign keys off, so the schema's
   // `documents.owner_user_id on delete set null` and `document_shares
-  // on delete cascade` do not fire in dev. Clear the references explicitly so
-  // both adapters leave documents ownerless and remove the user's share rows.
-  return db.transaction(async query => {
-    await query('update documents set owner_user_id = null where owner_user_id = $1', [id])
-    await query('delete from document_shares where user_id = $1', [id])
-    const result = await query('delete from users where id = $1', [id])
-    return (result.rowCount ?? 0) > 0
-  })
+  // on delete cascade` do not fire in dev. Clear the references explicitly in
+  // one atomic batch so both adapters leave documents ownerless and remove the
+  // user's share rows; the final rowCount reports whether the user existed.
+  const [, , userDelete] = await db.batch([
+    { sql: 'update documents set owner_user_id = null where owner_user_id = $1', params: [id] },
+    { sql: 'delete from document_shares where user_id = $1', params: [id] },
+    { sql: 'delete from users where id = $1', params: [id] },
+  ])
+  return (userDelete.rowCount ?? 0) > 0
 }

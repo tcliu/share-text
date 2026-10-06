@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createSqliteDb, toSqliteSql } from '$lib/server/db-sqlite'
+import { createSqliteDb, toSqliteSql } from '$lib/server/db/sqlite'
 
 describe('toSqliteSql', () => {
   it('converts $n placeholders to ?', () => {
@@ -133,5 +133,39 @@ describe('SQLite adapter', () => {
 
     const afterRollback = await db.query<{ key: string }>('select key from documents where key = ?', ['tx3'])
     expect(afterRollback.rows).toHaveLength(0)
+  })
+
+  it('runs a batch atomically and reports per-statement row counts', async () => {
+    const results = await db.batch([
+      {
+        sql: 'insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)',
+        params: ['b1', 'B1', '', '1.1.1.1', '1.1.1.1'],
+      },
+      {
+        sql: 'insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)',
+        params: ['b2', 'B2', '', '1.1.1.1', '1.1.1.1'],
+      },
+    ])
+    expect(results.map(result => result.rowCount)).toEqual([1, 1])
+
+    const rows = await db.query<{ key: string }>('select key from documents where key in (?, ?) order by key', [
+      'b1',
+      'b2',
+    ])
+    expect(rows.rows.map(row => row.key)).toEqual(['b1', 'b2'])
+  })
+
+  it('rolls back a whole batch when a statement fails', async () => {
+    const insert = 'insert into documents (key, name, content, created_by, updated_by) values (?, ?, ?, ?, ?)'
+    await expect(
+      db.batch([
+        { sql: insert, params: ['c1', 'C1', '', '1.1.1.1', '1.1.1.1'] },
+        { sql: insert, params: ['c2', 'C2', '', '1.1.1.1', '1.1.1.1'] },
+        { sql: insert, params: ['c1', 'dup', '', '1.1.1.1', '1.1.1.1'] },
+      ]),
+    ).rejects.toThrow()
+
+    const rows = await db.query<{ key: string }>('select key from documents where key = ?', ['c1'])
+    expect(rows.rows).toHaveLength(0)
   })
 })

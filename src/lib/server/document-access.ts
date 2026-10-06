@@ -1,8 +1,8 @@
 import { getDb } from './db'
-import type { DbQuery } from './db-types'
+import type { DbQuery, DbStatement } from './db/types'
 import { fetchDocument } from './document-store'
 import { toBoolean, type Document } from './document-model'
-import { runQuery } from './db-query'
+import { runQuery } from './db/query'
 import { findUsersByUsernameOrEmail, type User } from './users'
 import type { Viewer } from './viewer'
 
@@ -151,30 +151,35 @@ export async function setDocumentAccess(
     shareeIds = users.map(user => user.id).filter(userId => userId !== ownerUserId)
   }
 
-  const apply = async (run: DbQuery) => {
-    if (input.isPublic !== undefined) {
-      await run('update documents set is_public = $1 where key = $2', [input.isPublic, id])
-    }
-    if (shareeIds !== undefined) {
-      await run('delete from document_shares where document_id = (select id from documents where key = $1)', [id])
-      for (const userId of shareeIds) {
-        await run(
-          `insert into document_shares (document_id, user_id, created_at)
-           values ((select id from documents where key = $1), $2, current_timestamp)`,
-          [id, userId],
-        )
-      }
+  // Build the writes, then run them atomically. An injected query means the
+  // caller owns the transaction (the admin edit-document PUT commits the
+  // document update and the share rewrite together); otherwise `Db.batch`
+  // keeps the share rewrite atomic on every adapter, D1 included.
+  const statements: DbStatement[] = []
+  if (input.isPublic !== undefined) {
+    statements.push({ sql: 'update documents set is_public = $1 where key = $2', params: [input.isPublic, id] })
+  }
+  if (shareeIds !== undefined) {
+    statements.push({
+      sql: 'delete from document_shares where document_id = (select id from documents where key = $1)',
+      params: [id],
+    })
+    for (const userId of shareeIds) {
+      statements.push({
+        sql: `insert into document_shares (document_id, user_id, created_at)
+              values ((select id from documents where key = $1), $2, current_timestamp)`,
+        params: [id, userId],
+      })
     }
   }
 
-  // With an injected query the caller owns the transaction (e.g. the admin
-  // edit-document PUT that must commit the document update and the share
-  // rewrite together); otherwise open one so the share rewrite stays atomic.
   if (query) {
-    await apply(query)
-  } else {
+    for (const statement of statements) {
+      await query(statement.sql, statement.params)
+    }
+  } else if (statements.length > 0) {
     const db = await getDb()
-    await db.transaction(apply)
+    await db.batch(statements)
   }
 
   return getDocumentAccess(id, query)

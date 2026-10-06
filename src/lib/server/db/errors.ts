@@ -12,3 +12,8 @@ export function isUniqueViolation(error: unknown) {
   }
   return error.message.includes('UNIQUE constraint failed')
 }
+
+export function toDbError(error: unknown): Error {
+  return error instanceof Error ? error : new Error('Database unavailable', { cause: error })
+}
+

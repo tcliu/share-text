@@ -18,7 +18,7 @@ import {
   type DocumentType,
 } from './document-model'
 import { ADMIN_SEARCH_COLUMNS, ADMIN_SORT_COLUMNS, DOCUMENT_SEARCH_COLUMNS } from './document-query'
-import { runQuery } from './db-query'
+import { runQuery } from './db/query'
 import { invalidateTagsCache, updateDocument } from './document-store'
 import { insertDocumentVersion } from './document-versions'
 import type { Tag } from '$lib/tag-colors'
@@ -261,6 +261,10 @@ export async function importDocumentsForAdmin(records: ImportDocumentRecord[], b
   }
 
   const db = await getDb()
+  // Interactive (reads between writes, and `updateDocument` emits its own
+  // statements), so this stays a transaction; on D1 it is therefore not atomic
+  // and logs `d1_transaction_nonatomic`. `setDocumentAccess` and the user
+  // import use `Db.batch` instead because their writes need no interleaved read.
   const created = await db.transaction(async query => {
     const imported: Document[] = []
     for (let i = 0; i < prepared.length; i++) {
