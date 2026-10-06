@@ -151,16 +151,25 @@ synchronizes through a small fetch-based JSON API.
   `document-versions.ts` holds version history. All write engine-agnostic SQL
   using `$n` placeholders and `current_timestamp`, with a one-way dependency
   flow (model ← versions ← store ← access/admin; store and admin also share
-  `document-query.ts` and the single-query `db-query.ts` runner).
-- `db.ts` resolves the `PROFILE` and returns the matching `Db` adapter (the
-  small `query`/`close` interface in `db-types.ts`):
-  - `db-sqlite.ts` uses the `better-sqlite3` package and
+  `document-query.ts` and the single-query `db/query.ts` runner).
+- `src/lib/server/db/index.ts` resolves the `PROFILE` and returns the matching
+  `Db` adapter (the small `query`/`batch`/`transaction`/`close` interface in
+  `src/lib/server/db/types.ts`):
+  - `db/sqlite.ts` uses the `better-sqlite3` package and
     rewrites `$n` → `?`, `bigserial` → `integer`, and `current_timestamp` → a
     UTC ISO `strftime` expression. The dev database file is auto-created and the
     schema applied on first start.
-  - `db-neon.ts` uses the `@neondatabase/serverless` WebSocket `Pool`
+  - `db/neon.ts` uses the `@neondatabase/serverless` WebSocket `Pool`
     (node-postgres compatible) configured from `DATABASE_URL`, which avoids the
     cold TCP/SSL handshake of a plain `pg` pool in serverless runtimes.
+  - `db/d1.ts` is the Cloudflare D1 adapter, selected when prod has no
+    `DATABASE_URL` and the `DB` binding resolves (read off the Cloudflare
+    request env; the binding name is shared with the deploy flow via
+    `src/lib/d1-binding.mjs`). It reuses the shared token rewrite, so `$n` and
+    `current_timestamp` resolve exactly as on SQLite, and it executes a
+    `Db.batch` as one atomic D1 batch. D1 has no interactive transactions, so
+    `Db.transaction` runs statements in order and logs
+    `d1_transaction_nonatomic` when more than one ran.
 - `sql/schema.sql` (idempotent) defines the `documents` table (`id` sequence,
   public `key`, `name`, `content`, `document_type` (text default),
   `tags` (JSON array default `[]`), `created_by`/`updated_by` attribution,
@@ -180,12 +189,12 @@ synchronizes through a small fetch-based JSON API.
   each insert then prunes every row beyond the newest `max_document_versions`
   (`MAX_DOCUMENT_VERSIONS`, default 20) for that document. The latest version
   therefore always mirrors the last saved body. `deleteDocument` removes the
-  document's shares, versions, and the row itself in one transaction (the
+  document's shares, versions, and the row itself in one `Db.batch` (the
   `on delete cascade` FKs also cover the children on Postgres), and because
   versions reference the immutable numeric
   `documents.id`, an admin rename of the key never requires migrating version
   rows; the version queries resolve the app-facing key to that numeric id via
-  a subquery. The production `db.ts` bootstrap creates
+  a subquery. The production `db/index.ts` bootstrap creates
   the table if it does not exist, matching the tags-column migration.
 - Tags are normalized on write: trimmed, deduplicated case-insensitively,
   sorted by name, with colors drawn from the fixed palette and same-family
