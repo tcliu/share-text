@@ -14,16 +14,21 @@ import { errorMessage, logEvent } from './log-event.mjs'
 import { ROOT_DIR, fail, runScript } from './_deploy/core.mjs'
 import { runDeployInterview } from './_deploy/interview.mjs'
 import {
-  AUTO_PLUGINS,
-  DEFAULT_PLUGINS,
   DEFAULT_TARGET,
   TARGETS,
-  expandTargetFlag,
-  resolvePlugins,
+  describeNoAvailableTargets,
+  linkableTargetValues,
+  requiredEnvFromConfig,
+  resolveConfiguredPlugins,
+  resolveRunTargets,
+  selectDefaultTargets,
 } from './_deploy/registry.mjs'
 import { HEARTBEAT_PROVIDERS, shouldAskHeartbeat } from './lib/heartbeat.mjs'
-import { isCloudflareD1Mode, runCloudflareFlow } from './_deploy/targets/cloudflare.mjs'
+import { preflightDeploy, targetAvailability } from './_deploy/preflight.mjs'
+import { resolveDeployBackend } from './_deploy/backend.mjs'
+import { runCloudflareFlow } from './_deploy/targets/cloudflare.mjs'
 import { runVercelFlow } from './_deploy/targets/vercel.mjs'
+import { loadTargetFileEnv } from './lib/target-env.mjs'
 
 function usage() {
   console.log(`Usage:
@@ -34,9 +39,17 @@ Targets (--target, prod profile only; repeatable, comma-separated, or all):
   vercel       Deploy the app to Vercel.
   cloudflare   Deploy the app to Cloudflare Pages (reads .env.prod +
                .env.cloudflare, syncs vars/secrets via wrangler, removes
-               forbidden keys, builds with CF_PAGES=1). Runs on D1 when
-               CLOUDFLARE_D1_DATABASE is set, otherwise on Neon.
-  all          Deploy to every target in parallel (the Neon schema applies once).
+               forbidden keys, builds with CF_PAGES=1).
+  all          Deploy to every target in parallel (the shared schema applies once).
+
+The database backend is configuration, not target identity: a configured D1
+database (CLOUDFLARE_D1_DATABASE) selects D1, everything else selects Neon.
+
+A target is offered only when its required config is present: Vercel needs a
+link, --project, or VERCEL_PROJECT (or an interactive run that can link);
+Cloudflare needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and
+CLOUDFLARE_PROJECT, plus any requiredEnv keys declared in
+scripts/deploy.config.mjs. --target all covers only the available targets.
 
 Options:
   --profile dev|prod   Backend profile to deploy (also read from $PROFILE).
@@ -44,7 +57,8 @@ Options:
                        Missing and non-interactive: abort.
   --target vercel|cloudflare|all
                        Deploy targets; only valid with the prod profile
-                       (dev has no deploy target). Defaults to vercel.
+                       (dev has no deploy target). Defaults to vercel when
+                       available, otherwise the first available target.
   --sync-env           Sync the target env file before a prod deploy.
   --no-sync-env        Skip the env sync. prod without a flag asks interactively
                        (default yes); non-interactive defaults to skip.
@@ -121,19 +135,17 @@ function parseArgs(argv) {
   }
   const options = {
     profileFlag: values.profile ?? '',
-    targetFlags: [],
+    // Raw `--target`/positional values; resolved against availability in main.
+    targetRaws: [...(values.target ?? [])],
     syncEnvFlag: values['sync-env'] ? 'yes' : values['no-sync-env'] ? 'no' : '',
     applySchemaFlag: values['apply-schema'] ? 'yes' : values['no-apply-schema'] ? 'no' : '',
     heartbeatFlag: values.heartbeat ?? '',
     projectFlag: values.project ?? '',
   }
-  for (const raw of values.target ?? []) {
-    options.targetFlags = expandTargetFlag(raw, options.targetFlags)
-  }
   for (const positional of positionals) {
     if (positional === 'vercel') {
       // Legacy `deploy.sh vercel` positional: treat as --target vercel.
-      if (!options.targetFlags.includes('vercel')) options.targetFlags.push('vercel')
+      options.targetRaws.push('vercel')
     } else if (positional === 'help') {
       usage()
       process.exit(0)
@@ -146,16 +158,34 @@ function parseArgs(argv) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
-  const unknown = options.targetFlags.filter(value => !TARGETS.some(entry => entry.value === value))
-  if (unknown.length > 0) {
-    fail(`Unknown target: ${unknown.join(', ')} (expected ${TARGETS.map(entry => entry.value).join('|')} or all).`)
+  // `dev` has no deploy target: report that before probing availability, so a
+  // missing link/token cannot mask the real reason.
+  const seededProfile = options.profileFlag || process.env.PROFILE || ''
+  if (seededProfile === 'dev') {
+    const label = options.targetRaws.length ? options.targetRaws.join(',') : DEFAULT_TARGET
+    fail(`Target '${label}' supports only the prod profile; dev has no deploy target.`)
   }
-  await deployWithTarget(options)
+  const config = await loadDeployConfig()
+  const requiredEnv = requiredEnvFromConfig(config)
+  const plugins = resolveConfiguredPlugins(config)
+  const linkTargets = linkableTargetValues(plugins)
+  // A target is available only when its required config resolves here, so the
+  // picker and `--target` never offer a target this checkout cannot deploy.
+  const availability = targetAvailability({ requiredEnv, projectFlag: options.projectFlag, linkTargets })
+  const availableValues = availability.filter(entry => entry.available).map(entry => entry.value)
+  // Reject an unknown or unavailable explicit target first — its message names
+  // the specific problem — then a run that names no deployable target at all.
+  options.targetFlags = resolveRunTargets({ raws: options.targetRaws, availableValues, availability })
+  if (availableValues.length === 0) {
+    fail(describeNoAvailableTargets(availability))
+  }
+  const availableEntries = TARGETS.filter(entry => availableValues.includes(entry.value))
+  await deployWithTarget(options, { availableEntries, availableValues, config, plugins, linkTargets })
 }
 
-async function deployWithTarget(options) {
+async function deployWithTarget(options, { availableEntries, availableValues, config, plugins, linkTargets }) {
   const seeded = [...options.targetFlags]
-  const targets = seeded.length > 0 ? seeded : [DEFAULT_TARGET]
+  const targets = selectDefaultTargets(seeded, availableValues)
   // Explicit invalid sources fail fast; the interview only fills gaps.
   if (options.profileFlag && options.profileFlag !== 'dev' && options.profileFlag !== 'prod') {
     fail('PROFILE is mandatory: pass --profile dev|prod, set $PROFILE, or run interactively.')
@@ -177,13 +207,16 @@ async function deployWithTarget(options) {
       !options.applySchemaFlag ||
       shouldAskHeartbeat({ heartbeat: options.heartbeatFlag }))
   ) {
-    const answers = await runDeployInterview(options)
+    const answers = await runDeployInterview(options, availableEntries)
     await runDeployTargets(answers.targets?.length ? answers.targets : targets, {
       profile: answers.profile,
       syncEnv: answers.syncEnv,
       applySchema: answers.applySchema,
       heartbeat: answers.heartbeat || 'skip',
       projectFlag: options.projectFlag,
+      config,
+      plugins,
+      linkTargets,
     })
     return
   }
@@ -208,37 +241,66 @@ async function deployWithTarget(options) {
     )
     heartbeat = 'skip'
   }
-  await runDeployTargets(targets, { profile: profileValue, syncEnv, applySchema, heartbeat, projectFlag: options.projectFlag })
+  await runDeployTargets(targets, {
+    profile: profileValue,
+    syncEnv,
+    applySchema,
+    heartbeat,
+    projectFlag: options.projectFlag,
+    config,
+    plugins,
+    linkTargets,
+  })
 }
 
-// Load the per-project plugin selection (`deploy.config.mjs`), unioned with the
-// auto-gated plugins; a project that ships no config uses the full default set.
-async function loadPlugins() {
-  const selected = existsSync(join(ROOT_DIR, 'scripts', 'deploy.config.mjs'))
-    ? (await import('./deploy.config.mjs')).plugins
-    : DEFAULT_PLUGINS
-  return resolvePlugins([...new Set([...AUTO_PLUGINS, ...(selected ?? [])])])
+// Load the per-project deploy config (`deploy.config.mjs`); `{}` when absent so
+// every reader falls back to its default.
+async function loadDeployConfig() {
+  if (!existsSync(join(ROOT_DIR, 'scripts', 'deploy.config.mjs'))) {
+    return {}
+  }
+  return import('./deploy.config.mjs')
 }
 
-// Runs each selected target. The schema apply is shared, so it runs once up
-// front whenever a Neon-backed flow needs it (Vercel always; Cloudflare only
-// outside D1 mode); the D1 flow applies its own schema. Env sync is per target.
-async function runDeployTargets(targets, { profile, syncEnv, applySchema, heartbeat, projectFlag }) {
-  const plugins = await loadPlugins()
-  const d1Mode = targets.includes('cloudflare') && isCloudflareD1Mode()
+// Runs each selected target. The database backend is resolved from each
+// target's config (never from the target name) and the schema apply is shared:
+// it runs once up front whenever a selected target uses Neon; a D1-backed flow
+// applies its own schema. Env sync is per target.
+async function runDeployTargets(
+  targets,
+  { profile, syncEnv, applySchema, heartbeat, projectFlag, config, plugins, linkTargets },
+) {
+  // Fail fast on missing per-target env props before any deploy CLI (or the
+  // shared schema apply) runs.
+  const requiredEnv = requiredEnvFromConfig(config)
+  for (const target of targets) {
+    preflightDeploy({ target, requiredEnv, projectFlag, linkTargets })
+  }
+  const backends = new Map(targets.map(target => [target, resolveDeployBackend(target, loadTargetFileEnv(target))]))
   let schema = applySchema
-  if (applySchema === 'yes' && (targets.includes('vercel') || (targets.includes('cloudflare') && !d1Mode))) {
+  const needsNeonSchema = targets.some(target => backends.get(target) === 'neon')
+  if (applySchema === 'yes' && needsNeonSchema) {
     logEvent({ action: 'neon_schema_apply' })
     runScript('apply-schema.mjs', { ...process.env, PROFILE: 'prod' })
     schema = 'done'
   }
   const runOne = async target => {
     const startedAt = Date.now()
-    logEvent({ action: 'deploy_start', details: { target, profile, sync_env: syncEnv, apply_schema: applySchema, heartbeat } })
+    const backend = backends.get(target)
+    logEvent({
+      action: 'deploy_start',
+      details: { target, backend, profile, sync_env: syncEnv, apply_schema: applySchema, heartbeat },
+    })
     try {
       const url =
         target === 'cloudflare'
-          ? await runCloudflareFlow({ syncEnv, applySchema: d1Mode ? applySchema : schema, d1Mode, heartbeat, plugins })
+          ? await runCloudflareFlow({
+              syncEnv,
+              applySchema: backend === 'd1' ? applySchema : schema,
+              backend,
+              heartbeat,
+              plugins,
+            })
           : await runVercelFlow({ profile, syncEnv, applySchema: schema, heartbeat, projectFlag, plugins })
       logEvent({ action: 'deploy_end', details: { target, url, elapsed_ms: Date.now() - startedAt } })
     } catch (error) {
