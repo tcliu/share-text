@@ -13,7 +13,7 @@
 // apply-d1-schema.mjs passes its qualifier explicitly instead.
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { toSqliteSql } from '../src/lib/sql-rewrite.mjs'
 
 export function translateSchemaForD1(schema, qualifier = '') {
@@ -60,7 +60,7 @@ export function parseD1TableNames(output) {
 
 const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const translated = translateSchemaForD1(
     readFileSync(join(ROOT_DIR, 'sql', 'schema.sql'), 'utf8'),
     process.env.D1_SCHEMA_QUALIFIER || '',
