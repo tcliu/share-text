@@ -121,8 +121,8 @@ async function main() {
   // Isolation policy follows the resolved backend, matching the deploy flow: a
   // D1-backed target forbids the Neon URL (it would silently win over the
   // binding); a Neon-backed target keeps DATABASE_URL in sync and forbids only
-  // Vercel creds. Detection uses the shared resolver over the shell-aware merge
-  // so a shell override agrees with what the deploy sees.
+  // Vercel creds. Detection uses the shared resolver over the same files-only
+  // push universe the deploy reads, so both agree.
   const backend = resolveDeployBackend('cloudflare', loadTargetFileEnv('cloudflare', ROOT_DIR))
   const forbiddenKeys = cloudflareForbiddenKeys(backend === 'd1')
   // Split shared with deploy.mjs (splitCloudflareEnv): local-only keys log as

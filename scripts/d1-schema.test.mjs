@@ -14,8 +14,9 @@ describe('translateSchemaForD1', () => {
     const ddl = translateSchemaForD1(schema)
     expect(ddl).not.toMatch(/timestamptz/i)
     expect(ddl).not.toMatch(/now\(\)/i)
+    expect(ddl).not.toMatch(/bigserial/i)
     expect(ddl).toContain('create table if not exists users (')
-    expect(ddl).toMatch(/current_timestamp/i)
+    expect(ddl).toContain("strftime('%Y-%m-%dT%H:%M:%fZ','now')")
   })
 
   it('strips a caller-supplied schema qualifier and nothing otherwise', () => {

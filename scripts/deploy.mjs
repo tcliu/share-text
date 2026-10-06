@@ -156,9 +156,13 @@ function parseArgs(argv) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
-  // `dev` has no deploy target: report that before probing availability, so a
-  // missing link/token cannot mask the real reason.
+  // Validate the profile before probing availability: an invalid value or `dev`
+  // (which has no deploy target) must report its own reason, not a missing link
+  // or token.
   const seededProfile = options.profileFlag || process.env.PROFILE || ''
+  if (seededProfile && seededProfile !== 'dev' && seededProfile !== 'prod') {
+    fail('PROFILE is mandatory: pass --profile dev|prod, set $PROFILE, or run interactively.')
+  }
   if (seededProfile === 'dev') {
     const label = options.targetRaws.length ? options.targetRaws.join(',') : DEFAULT_TARGET
     fail(`Target '${label}' supports only the prod profile; dev has no deploy target.`)
@@ -178,14 +182,6 @@ async function main() {
 async function deployWithTarget(options, { availableEntries, availableValues, config, plugins, linkTargets }) {
   const seeded = [...options.targetFlags]
   const targets = selectDefaultTargets(seeded, availableValues)
-  // Explicit invalid sources fail fast; the interview only fills gaps.
-  if (options.profileFlag && options.profileFlag !== 'dev' && options.profileFlag !== 'prod') {
-    fail('PROFILE is mandatory: pass --profile dev|prod, set $PROFILE, or run interactively.')
-  }
-  const envProfile = options.profileFlag ? '' : process.env.PROFILE || ''
-  if (envProfile && envProfile !== 'dev' && envProfile !== 'prod') {
-    fail('PROFILE is mandatory: pass --profile dev|prod, set $PROFILE, or run interactively.')
-  }
   if (options.heartbeatFlag && !HEARTBEAT_PROVIDERS.includes(options.heartbeatFlag)) {
     fail(`Unknown heartbeat: ${options.heartbeatFlag} (expected ${HEARTBEAT_PROVIDERS.join('|')}).`)
   }
