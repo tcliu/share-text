@@ -250,6 +250,11 @@
   let tableContainer = $state<HTMLElement | null>(null)
   let headerEls = $state<(HTMLElement | null)[]>([])
 
+  /** Scroll the body scrollport (used by scroll-chevron controls above the table). */
+  export function scrollBodyTo(options: ScrollToOptions): void {
+    tableContainer?.scrollTo(options)
+  }
+
   const managedWidths = $derived(resizable && columnWidths.length > 0)
 
   const totalWidth = $derived.by(() => {
