@@ -54,14 +54,14 @@ function renderTargetsPicker() {
 // Linear interview: target -> profile -> sync-env -> apply-schema -> heartbeat
 // -> exit. Flag/env seeds skip their node; q/Ctrl-C aborts via fail.
 // Non-interactive callers never enter the graph.
-function buildDeployGraph() {
+function buildDeployGraph(targets = TARGETS) {
   const graph = {
     target: {
       message: 'Select deploy targets (space to toggle, enter to confirm):',
       async process(ctx) {
         const valid = Array.isArray(ctx.targets) && ctx.targets.length > 0
-        if (!valid || !ctx.targets.every(value => TARGETS.some(entry => entry.value === value))) {
-          const picked = await ctx.selectMany(TARGETS, {
+        if (!valid || !ctx.targets.every(value => targets.some(entry => entry.value === value))) {
+          const picked = await ctx.selectMany(targets, {
             initialSelected: [0],
             render: renderTargetsPicker(),
           })
@@ -87,9 +87,8 @@ function buildDeployGraph() {
           ctx.profile = picked.value
         }
         if (ctx.profile !== 'prod') {
-          fail(
-            `Target '${(ctx.targets || [DEFAULT_TARGET]).join(',')}' supports only the prod profile; dev has no deploy target.`,
-          )
+          const label = ctx.targets?.length ? ctx.targets.join(',') : (targets[0]?.value ?? DEFAULT_TARGET)
+          fail(`Target '${label}' supports only the prod profile; dev has no deploy target.`)
         }
         return graph.syncEnv
       },
@@ -169,8 +168,8 @@ function buildDeployGraph() {
   return graph
 }
 
-export async function runDeployInterview(options) {
-  const graph = buildDeployGraph()
+export async function runDeployInterview(options, targets = TARGETS) {
+  const graph = buildDeployGraph(targets)
   return interactiveShell(graph.target, {
     options: {
       ctx: {

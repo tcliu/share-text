@@ -152,5 +152,8 @@ export async function ensureVercelLink(projectFlag) {
 export const vercelLinkPlugin = {
   name: 'vercel-link',
   target: 'vercel',
+  // Declares that a selected instance can link an unlinked checkout on demand,
+  // which the preflight turns into interactive availability for `target`.
+  providesLink: true,
   steps: ctx => [{ name: 'link', phase: 'link', run: () => ensureVercelLink(ctx.projectFlag) }],
 }

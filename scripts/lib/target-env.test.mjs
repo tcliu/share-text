@@ -3,7 +3,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { loadTargetEnv, loadTargetFileEnv, targetOverlayFile, targetSourceFiles } from './target-env.mjs'
+import {
+  loadTargetEnv,
+  loadTargetEnvFiles,
+  loadTargetFileEnv,
+  loadTargetOperatorEnv,
+  targetOverlayFile,
+  targetSourceFiles,
+  targetSourceLabel,
+} from './target-env.mjs'
 
 function fixture(files) {
   const dir = mkdtempSync(join(tmpdir(), 'target-env-'))
@@ -59,5 +67,28 @@ describe('loadTargetEnv', () => {
     expect(targetOverlayFile('vercel')).toBe('.env.vercel')
     expect(targetOverlayFile('cloudflare')).toBe('.env.cloudflare')
     expect(targetSourceFiles('cloudflare')).toEqual(['.env.prod', '.env.cloudflare'])
+  })
+
+  it('names each target push universe and its label', () => {
+    expect(targetSourceFiles('vercel')).toEqual(['.env.vercel'])
+    expect(targetSourceLabel('vercel')).toBe('.env.vercel')
+    expect(targetSourceLabel('cloudflare')).toBe('.env.prod + .env.cloudflare')
+  })
+
+  it('excludes .env.prod from the vercel push universe', () => {
+    const dir = fixture({ '.env.prod': 'PROD_ONLY=p\n', '.env.vercel': 'V=1\n' })
+    expect(loadTargetFileEnv('vercel', dir)).toEqual({ V: '1' })
+  })
+
+  it('merges every file layer without the shell', () => {
+    const dir = fixture({ '.env': 'A=env\n', '.env.local': 'B=local\n', '.env.prod': 'C=prod\n' })
+    expect(loadTargetEnvFiles('vercel', dir)).toEqual({ A: 'env', B: 'local', C: 'prod' })
+  })
+
+  it('reads the operator layer as .env.local overlaid by the shell', () => {
+    const dir = fixture({ '.env.local': 'LOCAL_ONLY=t\n', '.env.prod': 'SYNCED_ONLY=p\n' })
+    const operator = loadTargetOperatorEnv(dir)
+    expect(operator.LOCAL_ONLY).toBe('t')
+    expect(operator.SYNCED_ONLY).toBeUndefined()
   })
 })

@@ -33,6 +33,7 @@ import { parseEnvFile } from './env-file.mjs'
 import { parseFlags } from './lib/cloudflare-env-flags.mjs'
 import { logEvent } from './log-event.mjs'
 import { echoCommand } from './_run.mjs'
+import { resolveDeployBackend } from './_deploy/backend.mjs'
 import {
   CLOUDFLARE_LOCAL_ONLY_KEYS,
   cloudflareForbiddenKeys,
@@ -41,7 +42,6 @@ import {
   GENERATED_WRANGLER_CONFIG,
   generatedWranglerProjectName,
   renderWranglerConfig,
-  resolveD1DatabaseName,
   splitCloudflareEnv,
   wranglerBin,
 } from './lib/cloudflare.mjs'
@@ -53,14 +53,14 @@ import {
   patchPagesEnvVars,
 } from './lib/cloudflare-pages-env.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
-import { loadTargetEnv, loadTargetFileEnv } from './lib/target-env.mjs'
+import { loadTargetFileEnv, targetSourceFiles } from './lib/target-env.mjs'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(SCRIPT_DIR, '..')
 // Shared prod values (.env.prod) overlaid by Cloudflare-only values
 // (.env.cloudflare); the overlay wins on conflict. Files-only merge: shell
 // never invents synced keys (see loadTargetFileEnv).
-const SOURCE_FILES = ['.env.prod', '.env.cloudflare']
+const SOURCE_FILES = targetSourceFiles('cloudflare')
 const GENERATED_FILE = join(ROOT_DIR, GENERATED_WRANGLER_CONFIG)
 const SECRET_CONCURRENCY = 4
 
@@ -118,13 +118,13 @@ async function main() {
       process.env[key] = String(local[key]).trim()
     }
   }
-  // Isolation policy follows the backend, matching the deploy flow: a D1-backed
-  // target forbids the Neon URL (it would silently win over the binding); a
-  // Neon-backed target keeps DATABASE_URL in sync and forbids only Vercel
-  // creds. Detection uses the shell-aware merge so a shell override agrees with
-  // what the deploy sees.
-  const d1Mode = resolveD1DatabaseName(loadTargetEnv('cloudflare', ROOT_DIR)) !== ''
-  const forbiddenKeys = cloudflareForbiddenKeys(d1Mode)
+  // Isolation policy follows the resolved backend, matching the deploy flow: a
+  // D1-backed target forbids the Neon URL (it would silently win over the
+  // binding); a Neon-backed target keeps DATABASE_URL in sync and forbids only
+  // Vercel creds. Detection uses the shared resolver over the shell-aware merge
+  // so a shell override agrees with what the deploy sees.
+  const backend = resolveDeployBackend('cloudflare', loadTargetFileEnv('cloudflare', ROOT_DIR))
+  const forbiddenKeys = cloudflareForbiddenKeys(backend === 'd1')
   // Split shared with deploy.mjs (splitCloudflareEnv): local-only keys log as
   // skipped, empty values keep the remote value, secrets go to the store.
   const { project: overlayProject, vars, secrets } = splitCloudflareEnv(raw, { forbidden: forbiddenKeys })

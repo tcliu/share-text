@@ -2,7 +2,7 @@
 // _deploy/targets/cloudflare.mjs — Cloudflare Pages deploy target: project
 // assurance, env sync, D1 provisioning/binding, isolation gate, build, and
 // Pages deploy. Built on the shared deploy core (`../core.mjs`) and lib/.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { logEvent } from '../../log-event.mjs'
@@ -24,7 +24,8 @@ import {
   wranglerBin,
 } from '../../lib/cloudflare.mjs'
 import { diffDesiredVars, fetchPagesEnvState } from '../../lib/cloudflare-pages-env.mjs'
-import { loadTargetEnv, loadTargetFileEnv } from '../../lib/target-env.mjs'
+import { loadTargetEnv, loadTargetFileEnv, loadTargetOperatorEnv } from '../../lib/target-env.mjs'
+import { D1_BINDING_NAME } from '../../../src/lib/d1-binding.mjs'
 
 // Cloudflare Pages target. Reads `.env.prod` overlaid by `.env.cloudflare`
 // (never `.env.vercel`), so the two targets keep independent URLs; the Neon
@@ -76,13 +77,20 @@ function cloudflareProjectName() {
 }
 
 function seedWranglerToken() {
-  // Wrangler authenticates from the process env, but the operator token lives
-  // in `.env.local` (never synced anywhere): seed it so `wrangler` children
-  // see it. Shell values always win.
-  const merged = loadTargetEnv('cloudflare', ROOT_DIR)
-  for (const key of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']) {
-    if (!process.env[key] && String(merged[key] || '').trim()) {
-      process.env[key] = String(merged[key]).trim()
+  // Wrangler authenticates from the process env. The operator token lives in
+  // `.env.local`/shell only (never synced); the account id may come from either
+  // the operator layer or the synced `.env.cloudflare`, matching the preflight.
+  // Seed both so `wrangler` children see them; shell values always win.
+  const operator = loadTargetOperatorEnv(ROOT_DIR)
+  // Match the preflight's accepted layers for the account id exactly: the
+  // synced push universe plus the operator layer (never `.env`).
+  const accountIdEnv = { ...loadTargetFileEnv('cloudflare', ROOT_DIR), ...operator }
+  for (const [key, source] of [
+    ['CLOUDFLARE_API_TOKEN', operator],
+    ['CLOUDFLARE_ACCOUNT_ID', accountIdEnv],
+  ]) {
+    if (!process.env[key] && String(source[key] || '').trim()) {
+      process.env[key] = String(source[key]).trim()
     }
   }
 }
@@ -163,30 +171,10 @@ function runCloudflareDeploy(branch = '') {
   return match ? match[0] : ''
 }
 
-// D1 mode is explicit: the Cloudflare flow provisions, binds, and bootstraps
-// a D1 database only when CLOUDFLARE_D1_DATABASE names one; otherwise the
-// target runs on the existing Neon backend (same file deploys both kinds).
-export function isCloudflareD1Mode() {
-  return resolveD1DatabaseName(loadTargetEnv('cloudflare', ROOT_DIR)) !== ''
-}
-
-// D1 binding name derived from the package name (`my-app` -> `MY_APP_D1`), so
-// the file carries no per-app literals. Callers in
-// D1 mode always pass it explicitly to renderWranglerConfig.
+// D1 binding name is shared with the runtime selector (`src/lib/d1-binding.mjs`)
+// so the binding the deploy renders is the exact key the app reads.
 function d1BindingName() {
-  let pkg = ''
-  try {
-    pkg = String(JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf8')).name || '')
-  } catch {
-    pkg = ''
-  }
-  const slug = pkg
-    .trim()
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-    .replace(/^PROJECT_/, '')
-  return `PROJECT_${slug || 'APP'}_D1`
+  return D1_BINDING_NAME
 }
 
 // Hard isolation gate: forbidden keys on the Pages project are a fatal
@@ -246,7 +234,8 @@ async function verifyCloudflareEnvVars() {
 // (project assurance, isolation gate, D1 provisioning, schema apply, build,
 // ship). Cross-cutting capabilities are appended by the plugin pipeline.
 function cloudflareSteps(ctx) {
-  const { applySchema, d1Mode, state, syncEnv } = ctx
+  const { applySchema, backend = 'neon', state, syncEnv } = ctx
+  const d1Mode = backend === 'd1'
   // The auth step resolves the live URL from the Pages project (below); no
   // APP_BASE_URL exists on this target.
   return [
@@ -382,14 +371,11 @@ export const cloudflareTarget = {
   steps: cloudflareSteps,
 }
 
-export async function runCloudflareFlow({ syncEnv, applySchema, d1Mode, heartbeat, plugins = [] } = {}) {
+export async function runCloudflareFlow({ syncEnv, applySchema, backend = 'neon', heartbeat, plugins = [] } = {}) {
   const startedAt = Date.now()
   const state = { appUrl: '', deploymentUrl: '', productionHost: '', productionBranch: '', d1: null }
-  const ctx = { target: cloudflareTarget, syncEnv, applySchema, d1Mode, heartbeat, state }
-  const steps = assembleSteps(cloudflareTarget.slots, [
-    ...cloudflareTarget.steps(ctx),
-    ...pluginSteps(plugins, ctx),
-  ])
+  const ctx = { target: cloudflareTarget, syncEnv, applySchema, backend, heartbeat, state }
+  const steps = assembleSteps(cloudflareTarget.slots, [...cloudflareTarget.steps(ctx), ...pluginSteps(plugins, ctx)])
 
   await runSteps('cloudflare', steps)
 

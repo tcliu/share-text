@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { echoCommand } from './_run.mjs'
 import { parseEnvFile } from './env-file.mjs'
+import { targetSourceFiles } from './lib/target-env.mjs'
 import { errorMessage, logEvent } from './log-event.mjs'
 
 let PRUNE = false
@@ -26,7 +27,7 @@ try {
 }
 
 const TARGET = 'production'
-const SOURCE_FILES = ['.env.vercel']
+const SOURCE_FILES = targetSourceFiles('vercel')
 const STARTED_AT = Date.now()
 
 function loadDesiredEnv() {

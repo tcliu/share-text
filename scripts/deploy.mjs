@@ -15,17 +15,15 @@ import { ROOT_DIR, fail, runScript } from './_deploy/core.mjs'
 import { runDeployInterview } from './_deploy/interview.mjs'
 import {
   DEFAULT_TARGET,
-  TARGETS,
-  describeNoAvailableTargets,
   linkableTargetValues,
+  planTargetSelection,
   requiredEnvFromConfig,
   resolveConfiguredPlugins,
-  resolveRunTargets,
   selectDefaultTargets,
 } from './_deploy/registry.mjs'
 import { HEARTBEAT_PROVIDERS, shouldAskHeartbeat } from './lib/heartbeat.mjs'
 import { preflightDeploy, targetAvailability } from './_deploy/preflight.mjs'
-import { resolveDeployBackend } from './_deploy/backend.mjs'
+import { planDeployBackends } from './_deploy/backend.mjs'
 import { runCloudflareFlow } from './_deploy/targets/cloudflare.mjs'
 import { runVercelFlow } from './_deploy/targets/vercel.mjs'
 import { loadTargetFileEnv } from './lib/target-env.mjs'
@@ -172,15 +170,9 @@ async function main() {
   // A target is available only when its required config resolves here, so the
   // picker and `--target` never offer a target this checkout cannot deploy.
   const availability = targetAvailability({ requiredEnv, projectFlag: options.projectFlag, linkTargets })
-  const availableValues = availability.filter(entry => entry.available).map(entry => entry.value)
-  // Reject an unknown or unavailable explicit target first — its message names
-  // the specific problem — then a run that names no deployable target at all.
-  options.targetFlags = resolveRunTargets({ raws: options.targetRaws, availableValues, availability })
-  if (availableValues.length === 0) {
-    fail(describeNoAvailableTargets(availability))
-  }
-  const availableEntries = TARGETS.filter(entry => availableValues.includes(entry.value))
-  await deployWithTarget(options, { availableEntries, availableValues, config, plugins, linkTargets })
+  const { flags, availableValues, entries } = planTargetSelection({ raws: options.targetRaws, availability })
+  options.targetFlags = flags
+  await deployWithTarget(options, { availableEntries: entries, availableValues, config, plugins, linkTargets })
 }
 
 async function deployWithTarget(options, { availableEntries, availableValues, config, plugins, linkTargets }) {
@@ -276,9 +268,8 @@ async function runDeployTargets(
   for (const target of targets) {
     preflightDeploy({ target, requiredEnv, projectFlag, linkTargets })
   }
-  const backends = new Map(targets.map(target => [target, resolveDeployBackend(target, loadTargetFileEnv(target))]))
+  const { backends, needsNeonSchema } = planDeployBackends(targets, target => loadTargetFileEnv(target))
   let schema = applySchema
-  const needsNeonSchema = targets.some(target => backends.get(target) === 'neon')
   if (applySchema === 'yes' && needsNeonSchema) {
     logEvent({ action: 'neon_schema_apply' })
     runScript('apply-schema.mjs', { ...process.env, PROFILE: 'prod' })

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// Unified per-target env loader: `.env.prod` overlaid by the target file
-// (`.env.vercel` / `.env.cloudflare`), so both deploy targets resolve the
-// same way. Load order everywhere: `.env` < `.env.local` < `.env.prod` <
-// overlay < shell. `.env.local` carries operator-only keys (tokens,
-// CRONJOB_API_KEY) and is never synced; shell always wins.
-//
-// Deploy, heartbeat, and both env-sync scripts merge through
-// `loadTargetEnv`/`loadTargetFileEnv`; the remaining read-only tooling loaders
-// (`db-config.mjs`, `vercel.mjs`) keep their own Vercel-scoped merges.
+// Unified per-target env helpers. `loadTargetEnv` is the full resolution order
+// everywhere: `.env` < `.env.local` < `.env.prod` < overlay < shell, with
+// `.env.local` carrying operator-only keys (tokens, CRONJOB_API_KEY) that are
+// never synced and shell always winning. `loadTargetEnvFiles` is that order
+// without the shell (for callers that must not let an empty shell value mask a
+// file value) and `loadTargetOperatorEnv` is the operator layer alone
+// (`.env.local` overlaid by the shell). `targetSourceFiles`/`loadTargetFileEnv`
+// are the narrower push universe — the files a target's env sync actually
+// pushes (Vercel: `.env.vercel`; Cloudflare: `.env.prod` + its overlay), shared
+// by the deploy preflight and both env-sync scripts. The remaining read-only
+// tooling loaders (`db-config.mjs`, `vercel.mjs`) keep their own Vercel-scoped
+// merges.
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { dirname } from 'node:path'
@@ -21,26 +24,37 @@ export const TARGET_OVERLAYS = {
   cloudflare: '.env.cloudflare',
 }
 
-// Merged env for a target. `root` is injectable so tests can point at a
-// fixture dir; production callers omit it (repo root).
-export function loadTargetEnv(target = 'vercel', root = DEFAULT_ROOT) {
-  const overlay = TARGET_OVERLAYS[target] || TARGET_OVERLAYS.vercel
+// File-only resolution layers (`loadTargetEnv` without the shell): `.env` <
+// `.env.local` < `.env.prod` < overlay. Kept separate so a caller that must not
+// let an empty shell value mask a file value reads the same order.
+export function loadTargetEnvFiles(target = 'vercel', root = DEFAULT_ROOT) {
   return {
     ...parseEnvFile(join(root, '.env')),
     ...parseEnvFile(join(root, '.env.local')),
     ...parseEnvFile(join(root, '.env.prod')),
-    ...parseEnvFile(join(root, overlay)),
-    ...process.env,
+    ...parseEnvFile(join(root, targetOverlayFile(target))),
   }
 }
 
-// Files-only merge of the sync universe: `.env.prod` + overlay. `.env` and
-// `.env.local` are deliberately excluded — they hold local/operator keys
+// Merged env for a target: the file layers overlaid by the shell. `root` is
+// injectable so tests can point at a fixture dir; production callers omit it.
+export function loadTargetEnv(target = 'vercel', root = DEFAULT_ROOT) {
+  return { ...loadTargetEnvFiles(target, root), ...process.env }
+}
+
+// Operator layer: `.env.local` overlaid by the shell. Never synced; carries the
+// tokens/credentials the deploy preflight validates and the targets seed from.
+export function loadTargetOperatorEnv(root = DEFAULT_ROOT) {
+  return { ...parseEnvFile(join(root, '.env.local')), ...process.env }
+}
+
+// Files-only merge of the target's push universe (`targetSourceFiles`). `.env`
+// and `.env.local` are deliberately excluded — they hold local/operator keys
 // (dev overrides, tokens) that must never be pushed to a target. Shell never
 // invents synced keys either.
 export function loadTargetFileEnv(target = 'vercel', root = DEFAULT_ROOT) {
   const merged = {}
-  for (const file of ['.env.prod', targetOverlayFile(target)]) {
+  for (const file of targetSourceFiles(target)) {
     Object.assign(merged, parseEnvFile(join(root, file)))
   }
   return merged
@@ -51,7 +65,17 @@ export function targetOverlayFile(target = 'vercel') {
   return TARGET_OVERLAYS[target] || TARGET_OVERLAYS.vercel
 }
 
-// Source files merged into the remote target env, in order.
+// Files a target's env sync pushes to its remote env, in merge order, so the
+// deploy preflight and the per-target sync scripts share one list. Vercel
+// pushes only `.env.vercel`; Cloudflare pushes `.env.prod` overlaid by its
+// target file. Unknown targets fall back to the Vercel overlay.
 export function targetSourceFiles(target = 'vercel') {
+  if (target === 'vercel') {
+    return [TARGET_OVERLAYS.vercel]
+  }
   return ['.env.prod', targetOverlayFile(target)]
+}
+
+export function targetSourceLabel(target = 'vercel') {
+  return targetSourceFiles(target).join(' + ')
 }

@@ -20,7 +20,7 @@ function cfCtx(overrides = {}) {
     target: cloudflareTarget,
     syncEnv: 'no',
     applySchema: 'no',
-    d1Mode: false,
+    backend: 'neon',
     heartbeat: 'skip',
     state: { appUrl: '', deploymentUrl: '', productionHost: '', productionBranch: 'main', d1: null },
     ...overrides,
