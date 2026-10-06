@@ -39,7 +39,10 @@ export function boxClass(size: TextSize): string {
 // dropdown-chrome (single shared value); the literal stays inline so Tailwind
 // can see the class — keep them in sync.
 export function optionRowClass(size: TextSize): string {
-  return `${SIZE_CLASS[size].minW} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left outline-none transition motion-reduce:transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`
+  // No transition: the active-row highlight must paint instantly so held
+  // ArrowUp/ArrowDown repeat (via flushSync) reads as immediate instead of
+  // re-triggering a 150ms color fade on every repeat.
+  return `${SIZE_CLASS[size].minW} flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left outline-none transition-none max-[27.999rem]:min-h-11 ${SIZE_CLASS[size].pad} ${TEXT_SIZE[size]}`
 }
 
 export function emptyClass(size: TextSize): string {
