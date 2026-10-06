@@ -213,6 +213,14 @@
   }
 
   function handleFilterKeydown(event: KeyboardEvent) {
+    // Modified navigation keys edit the search text (Shift+Home selects to the
+    // start, Shift+Arrow extends the selection); let the browser handle them
+    // instead of moving the list highlight. Plain keys still drive the listbox.
+    const navKey =
+      event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End'
+    if (navKey && (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey)) {
+      return
+    }
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       moveHighlight('down')

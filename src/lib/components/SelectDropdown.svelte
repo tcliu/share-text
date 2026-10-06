@@ -81,9 +81,7 @@
   let controlRef = $state<HTMLButtonElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
   // Option elements by index (bound, never queried) for scrollport reveal.
-  // Plain array, not $state: it is only read imperatively in revealActive,
-  // so row mount/unmount writes skip the reactive proxy.
-  let optionEls: (HTMLElement | null)[] = []
+  let optionEls = $state<(HTMLElement | null)[]>([])
   // Whether the filterable control input holds focus (bound from its events,
   // never read from `document.activeElement`).
   let inputFocused = $state(false)
