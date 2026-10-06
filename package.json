@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "deploy": "node scripts/deploy.mjs",
     "heartbeat": "node scripts/heartbeat.mjs",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && node scripts/check-scripts.mjs",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo && node scripts/check-scripts.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
@@ -57,9 +57,10 @@
     "@types/diff": "^7.0.2",
     "@types/node": "^26.4.1",
     "@types/papaparse": "^5.5.2",
-    "@vitest/coverage-v8": "^4.1.11",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitest/coverage-v8": "^5.0.3",
     "dotenv": "^17.4.2",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.1.2",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
     "prettier-plugin-tailwindcss": "^0.8.1",
@@ -68,6 +69,6 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.1.0",
-    "vitest": "^4.1.9"
+    "vitest": "^5.0.3"
   }
 }

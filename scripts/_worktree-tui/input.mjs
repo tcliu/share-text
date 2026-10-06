@@ -101,12 +101,11 @@ function readEscape(s, i, events) {
  * for xterm modifier sequences), `control` the Ctrl-<letter> keys, `mouse` an
  * SGR mouse report, and `text` a single printable code point.
  *
- * @typedef {{
- *   | { type: 'key', name: string, dir?: string }
+ * @typedef {{ type: 'key', name: string, dir?: string }
  *   | { type: 'control', key: string }
  *   | { type: 'mouse', mouse: { button: number, x: number, y: number, release: boolean, len: number } }
  *   | { type: 'text', value: string }
- * }} InputEvent
+ * } InputEvent
  */
 
 /**
