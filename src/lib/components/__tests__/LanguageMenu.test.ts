@@ -54,7 +54,7 @@ describe('LanguageMenu', () => {
     await fireEvent.keyDown(trigger, { key: 'ArrowDown' })
 
     const traditional = getByRole('menuitemradio', { name: '繁體中文' })
-    await fireEvent.mouseEnter(traditional)
+    await fireEvent.mouseMove(traditional)
 
     expect(document.activeElement).toBe(traditional)
   })
