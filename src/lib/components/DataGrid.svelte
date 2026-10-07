@@ -892,12 +892,7 @@
       {#if model.rowCount === 0}
         <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
           <span>No content to preview</span>
-          <button
-            class="rounded border border-slate-700 px-3 py-1 text-slate-300 transition outline-none hover:bg-slate-800 focus:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
-            onclick={() => sel.addRow()}
-            disabled={!editable}>
-            Add row
-          </button>
+          <Button size="sm" variant="secondary" onClick={() => sel.addRow()} disabled={!editable}>Add row</Button>
         </div>
       {/if}
     </div>
