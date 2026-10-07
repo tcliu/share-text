@@ -107,7 +107,7 @@ describe('filterable SelectDropdown', () => {
     const markdownOption = document.querySelector('[role="option"][id$="-option-0"]') as HTMLElement
     const htmlOption = document.querySelector('[role="option"][id$="-option-1"]') as HTMLElement
 
-    await fireEvent.mouseEnter(htmlOption)
+    await fireEvent.mouseMove(htmlOption)
     expect(input.getAttribute('aria-activedescendant')).toBe(htmlOption.id)
 
     await fireEvent.keyDown(input, { key: 'ArrowUp' })

@@ -74,7 +74,7 @@ describe('KebabMenu', () => {
     await fireEvent.keyDown(trigger, { key: 'ArrowDown' })
 
     const history = getByRole('menuitem', { name: 'History' })
-    await fireEvent.mouseEnter(history)
+    await fireEvent.mouseMove(history)
 
     expect(history.getAttribute('tabindex')).toBe('0')
     expect(document.activeElement).toBe(history)

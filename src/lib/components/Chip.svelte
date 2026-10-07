@@ -55,7 +55,7 @@
       {#if onRemove}
         <button
           type="button"
-          aria-label={ariaLabel ?? i18n.t('combobox.remove', { name: label })}
+          aria-label={ariaLabel ?? i18n.t('chip.remove', { name: label })}
           onclick={onRemove}
           {disabled}
           style={removeButtonStyle}

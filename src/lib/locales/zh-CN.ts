@@ -239,6 +239,9 @@ export const zhCN = {
     show: '显示密码',
     hide: '隐藏密码',
   },
+  chip: {
+    remove: '移除 {name}',
+  },
   combobox: {
     placeholder: '选择或输入...',
     remove: '移除 {name}',
