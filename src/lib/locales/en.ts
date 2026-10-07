@@ -242,6 +242,9 @@ export const en = {
     show: 'Show password',
     hide: 'Hide password',
   },
+  chip: {
+    remove: 'Remove {name}',
+  },
   combobox: {
     placeholder: 'Select or type...',
     remove: 'Remove {name}',

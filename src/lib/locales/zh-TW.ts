@@ -239,6 +239,9 @@ export const zhTW = {
     show: '顯示密碼',
     hide: '隱藏密碼',
   },
+  chip: {
+    remove: '移除 {name}',
+  },
   combobox: {
     placeholder: '選擇或輸入...',
     remove: '移除 {name}',

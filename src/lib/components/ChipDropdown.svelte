@@ -1,8 +1,8 @@
 <script lang="ts">
   import { flushSync, tick } from 'svelte'
-  import { createFocusoutClose } from '$lib/actions/use-focusout-close'
-  import { useDropdown } from '$lib/actions/use-dropdown.svelte'
-  import { useListSelection, revealInScrollport } from '$lib/actions/use-list-selection.svelte'
+  import { useListbox } from '$lib/actions/use-listbox.svelte'
+  import { createOptionIndex, matchesOption, matchLabelParts } from '$lib/actions/option-index'
+  import { isModifiedNavKey } from '$lib/actions/listbox-keynav'
   import { positionPanel } from '$lib/position-panel.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import type { DropdownPanelProps } from '$lib/dropdown-chrome'
@@ -79,7 +79,6 @@
   const resolvedPanelClass = $derived(filterable ? `${CHIP_PANEL_BASE} overflow-hidden flex flex-col` : panelClass)
 
   let open = $state(false)
-  const selection = useListSelection()
   let containerRef = $state<HTMLDivElement | null>(null)
   let buttonRef = $state<HTMLButtonElement | null>(null)
   let panelRef = $state<HTMLDivElement | null>(null)
@@ -88,14 +87,36 @@
   let optionEls = $state<(HTMLElement | null)[]>([])
   let filterText = $state('')
 
+  // Lowercased once per options array (shared helper) so filtering does not
+  // re-lowercase every label/value on every keystroke.
+  const optionIndex = $derived(createOptionIndex(options))
+
+  // The lowercased filter needle, empty when filtering is off or the search is
+  // blank. The option list and the match highlight read the same value so they
+  // can never disagree.
+  const filterQuery = $derived(filterable ? filterText.trim().toLowerCase() : '')
+
   const filteredOptions = $derived.by(() => {
-    if (!filterable) return options
-    const needle = filterText.trim().toLowerCase()
-    if (!needle) return options
-    return options.filter(
-      option => option.label.toLowerCase().includes(needle) || option.value.toLowerCase().includes(needle),
-    )
+    if (filterQuery === '') return options
+    const matched: Option[] = []
+    for (const entry of optionIndex) {
+      if (matchesOption(entry, filterQuery)) {
+        matched.push(entry.option)
+      }
+    }
+    return matched
   })
+
+  // Emphasize the typed part of each label only while the query is ambiguous:
+  // with two or more matches the user needs to see which part matched, while a
+  // lone match is already the only row and needs no extra emphasis.
+  const highlightMatches = $derived(filterQuery !== '' && filteredOptions.length > 1)
+
+  // Split a label around its matched span (shared helper), or return null when
+  // highlighting is off for an unambiguous single match.
+  function labelParts(label: string) {
+    return highlightMatches ? matchLabelParts(label, filterQuery) : null
+  }
 
   // In filterable mode, keep the highlight anchored on the active value
   // whenever the visible list changes so a typed search that still includes
@@ -105,7 +126,7 @@
     if (!open || !filterable) return
     if (lastFiltered !== filteredOptions) {
       lastFiltered = filteredOptions
-      selection.syncToActive(filteredOptions, option => option.value === activeValue)
+      listbox.selection.syncToActive(filteredOptions, option => option.value === activeValue)
     }
   })
 
@@ -113,7 +134,7 @@
     if (!open) return
     // Clamp when the filtered list shrinks without a syncToActive run (e.g.
     // non-filterable options swap) so aria-activedescendant never dangles.
-    selection.clamp(filteredOptions.length)
+    listbox.selection.clamp(filteredOptions.length)
   })
 
   $effect(() => {
@@ -132,13 +153,6 @@
     open = false
   }
 
-  // Keep the highlighted option visible while arrowing through a scrollable
-  // panel: the option never receives focus (aria-activedescendant pattern),
-  // so the browser would otherwise let it drift out of the scrollport.
-  function revealActive() {
-    revealInScrollport(optionEls[selection.peek()])
-  }
-
   function toggle() {
     if (disabled) return
     if (open) close()
@@ -148,7 +162,7 @@
   function openPanel() {
     if (disabled) return
     // Highlight the active value when opening so keyboard and mouse share the same start.
-    selection.syncToActive(filteredOptions, option => option.value === activeValue)
+    listbox.selection.syncToActive(filteredOptions, option => option.value === activeValue)
     if (filterable) filterText = ''
     open = true
   }
@@ -164,20 +178,21 @@
     if (!open) {
       flushSync(() => {
         openPanel()
-        if (direction === 'up') selection.move('last', filteredOptions.length)
+        if (direction === 'up') listbox.selection.move('last', filteredOptions.length)
       })
       return
     }
-    // OS key auto-repeat fires back-to-back keydowns; Svelte batches $state
-    // until the next microtask, so the active highlight would only appear
-    // on keyup. Flush synchronously so each repeat paints immediately.
-    flushSync(() => {
-      selection.move(direction, filteredOptions.length)
-      revealActive()
-    })
+    // OS key auto-repeat fires back-to-back keydowns; flush synchronously so
+    // each repeat paints the newly active row immediately.
+    listbox.moveHighlight(direction)
   }
 
   function handleButtonKeydown(event: KeyboardEvent) {
+    // Non-filterable trigger has no text field: printable keys run type-ahead.
+    if (!filterable && listbox.handleTypeahead(event)) {
+      event.preventDefault()
+      return
+    }
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       moveHighlight('down')
@@ -187,18 +202,12 @@
     } else if (event.key === 'Home') {
       if (open && filteredOptions.length > 0) {
         event.preventDefault()
-        flushSync(() => {
-          selection.move('first', filteredOptions.length)
-          revealActive()
-        })
+        listbox.moveHighlight('first')
       }
     } else if (event.key === 'End') {
       if (open && filteredOptions.length > 0) {
         event.preventDefault()
-        flushSync(() => {
-          selection.move('last', filteredOptions.length)
-          revealActive()
-        })
+        listbox.moveHighlight('last')
       }
     } else if (event.key === 'Enter' || event.key === ' ') {
       if (!open) {
@@ -207,7 +216,7 @@
         return
       }
       event.preventDefault()
-      const option = filteredOptions[selection.index]
+      const option = filteredOptions[listbox.selection.index]
       if (option) select(option.value)
     }
   }
@@ -216,9 +225,7 @@
     // Modified navigation keys edit the search text (Shift+Home selects to the
     // start, Shift+Arrow extends the selection); let the browser handle them
     // instead of moving the list highlight. Plain keys still drive the listbox.
-    const navKey =
-      event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End'
-    if (navKey && (event.shiftKey || event.ctrlKey || event.metaKey || event.altKey)) {
+    if (isModifiedNavKey(event)) {
       return
     }
     if (event.key === 'ArrowDown') {
@@ -229,19 +236,13 @@
       moveHighlight('up')
     } else if (event.key === 'Home') {
       event.preventDefault()
-      flushSync(() => {
-        selection.move('first', filteredOptions.length)
-        revealActive()
-      })
+      listbox.moveHighlight('first')
     } else if (event.key === 'End') {
       event.preventDefault()
-      flushSync(() => {
-        selection.move('last', filteredOptions.length)
-        revealActive()
-      })
+      listbox.moveHighlight('last')
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      const option = filteredOptions[selection.index] ?? filteredOptions[0]
+      const option = filteredOptions[listbox.selection.index] ?? filteredOptions[0]
       if (option) select(option.value)
     } else if (event.key === 'Tab') {
       // Close on Tab so the listbox does not linger while focus continues
@@ -257,16 +258,17 @@
     }
   }
 
-  const handleFocusOut = createFocusoutClose(
-    () => open,
-    () => ({ container: containerRef, panel: panelRef }),
-    () => close(),
-  )
-
-  useDropdown(() => ({
+  const listbox = useListbox({
     isOpen: () => open,
-    container: () => containerRef,
-    onOutsideClick: () => close(),
+    onClose: close,
+    openPanel,
+    options: () => filteredOptions,
+    optionLabel: option => option.label,
+    getContainer: () => containerRef,
+    getPanel: () => panelRef,
+    getOptionEl: index => optionEls[index],
+    typeahead: true,
+    onOutsideClick: close,
     onEscape: () => {
       // If the filterable input has text, let its handler clear it first.
       if (filterable && filterText) return true
@@ -274,13 +276,13 @@
       buttonRef?.focus()
       return false
     },
-    onScrollClose: () => close(),
-    panel: () => panelRef,
-  }))
+    onScrollClose: close,
+  })
 </script>
 
 {#snippet optionList()}
   {#each filteredOptions as option, index}
+    {@const parts = labelParts(option.label)}
     <button
       type="button"
       bind:this={optionEls[index]}
@@ -290,10 +292,18 @@
       aria-selected={option.value === activeValue}
       onpointerdown={event => event.preventDefault()}
       onclick={() => select(option.value)}
-      onfocus={() => selection.set(index)}
-      onmouseenter={() => selection.set(index)}
-      class={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-none outline-none ${index === selection.index ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}>
-      <span class="min-w-0 truncate">{option.label}</span>
+      onfocus={() => listbox.selection.set(index)}
+      onmousemove={() => {
+        if (listbox.selection.peek() !== index) listbox.selection.set(index)
+      }}
+      class={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-none outline-none ${listbox.highlight.flags[index] ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}>
+      <span class="min-w-0 truncate">
+        {#if parts}
+          {parts.before}<span class="font-semibold text-cyan-300">{parts.match}</span>{parts.after}
+        {:else}
+          {option.label}
+        {/if}
+      </span>
     </button>
   {:else}
     <div role="presentation" class="px-3 py-6 text-center text-xs text-slate-400">{emptyText}</div>
@@ -304,7 +314,7 @@
   class="relative inline-flex"
   bind:this={containerRef}
   data-escape-capture={open ? '' : null}
-  onfocusout={handleFocusOut}>
+  onfocusout={listbox.handleFocusOut}>
   <button
     type="button"
     bind:this={buttonRef}
@@ -313,8 +323,8 @@
     aria-haspopup={filterable ? undefined : 'listbox'}
     aria-expanded={filterable ? undefined : open}
     aria-controls={!filterable && open ? panelId : undefined}
-    aria-activedescendant={!filterable && open && filteredOptions[selection.index]
-      ? `${panelId}-option-${selection.index}`
+    aria-activedescendant={!filterable && open && filteredOptions[listbox.selection.index]
+      ? `${panelId}-option-${listbox.selection.index}`
       : undefined}
     {disabled}
     onclick={toggle}
@@ -341,13 +351,17 @@
             aria-haspopup="listbox"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-activedescendant={open && filteredOptions[selection.index]
-              ? `${panelId}-option-${selection.index}`
+            aria-activedescendant={open && filteredOptions[listbox.selection.index]
+              ? `${panelId}-option-${listbox.selection.index}`
               : undefined}
             onkeydown={handleFilterKeydown}
             class="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-sky-500" />
         </div>
-        <div id={panelId} role="listbox" aria-label={ariaLabel} class="min-h-0 flex-1 overflow-y-auto p-1">
+        <div
+          id={panelId}
+          role="listbox"
+          aria-label={ariaLabel}
+          class="min-h-0 flex-1 overflow-y-auto p-1">
           {@render optionList()}
         </div>
       </div>
