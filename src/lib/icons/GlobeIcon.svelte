@@ -1,19 +1,18 @@
 <script lang="ts">
-  type IconSize = 'xs' | 'sm' | 'md' | 'lg'
+  import { resolveIconPx, type IconSizeInput } from './icon-size'
 
   interface Props {
     className?: string
-    size?: IconSize
+    size?: IconSizeInput
   }
 
   // Width/height attributes (not classes) so `size` composes with `className`:
   // explicit size classes in className still win, since CSS beats attributes.
-  const SIZE_PX: Record<IconSize, number> = { xs: 12, sm: 16, md: 20, lg: 24 }
 
   let { className = '', size = 'md' }: Props = $props()
 </script>
 
-<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width={SIZE_PX[size]} height={SIZE_PX[size]} class={className}>
+<svg viewBox="0 0 24 24" fill="none" aria-hidden="true" width={resolveIconPx(size)} height={resolveIconPx(size)} class={className}>
   <circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.5" fill="none" />
   <g stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none">
     <path d="M3.3 12H20.7M4.3 7Q12 9.5 19.7 7M4.3 17Q12 14.5 19.7 17" />

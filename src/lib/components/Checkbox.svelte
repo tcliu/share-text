@@ -1,5 +1,6 @@
 <script lang="ts">
   import CheckIcon from '$lib/icons/CheckIcon.svelte'
+  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
 
   interface Props {
     checked: boolean
@@ -9,7 +10,7 @@
     disabled?: boolean
     indeterminate?: boolean
     stopPropagation?: boolean
-    size?: 'sm' | 'md'
+    size?: SizeInput
     labelClass?: string
     wrapperClass?: string
     boxClass?: string
@@ -33,11 +34,17 @@
     onChange,
   }: Props = $props()
 
-  const gapClass = $derived(size === 'sm' ? 'gap-2' : 'gap-3')
-  const boxSizeClass = $derived(size === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
-  const iconSize = $derived(size === 'sm' ? 'xs' : 'sm')
+  // Stepped chrome (names render exactly as before); out-of-scale numbers
+  // settle on the nearest tier.
+  const step = $derived.by(() => {
+    const resolved = resolveSizeStep(size)
+    return resolved === 'xs' || resolved === 'sm' ? 'sm' : 'md'
+  })
+  const gapClass = $derived(step === 'sm' ? 'gap-2' : 'gap-3')
+  const boxSizeClass = $derived(step === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
+  const iconSize = $derived(step === 'sm' ? 'xs' : 'sm')
   const resolvedLabelClass = $derived(
-    labelClass ?? (size === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300'),
+    labelClass ?? (step === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300'),
   )
 
   $effect(() => {

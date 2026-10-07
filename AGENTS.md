@@ -76,6 +76,7 @@ Per-account preferences persist through the login-gated `GET`/`PUT /api/user/pre
 
 - When a code change establishes or revises a project-specific convention, update this `AGENTS.md` in the same change.
 - When a code change establishes or revises a generic reusable convention, update the appropriate file under `$AI_CONFIG_DIR/references/` in the same change rather than duplicating it here.
+- After a behavior-affecting change, invoke the `doc` skill to reconcile the managed docs (`README.md`, `ARCHITECTURE.md`, `docs/design.md`, `docs/spec.md`) in the same change, per `~/.agents/references/conventions-extraction.md` (Document roles).
 - Shared reference files under `$AI_CONFIG_DIR/references/` must remain generic and implementation-agnostic. Do not include project-specific file paths, component names, routes, or other internal identifiers in those references — put project-level details in this `AGENTS.md` instead. See `~/.agents/references/conventions-extraction.md` for the brief style guide.
 - This `AGENTS.md` holds project-specific *development conventions* — rules an agent must follow when writing code — not feature descriptions, implementation narratives, or user-facing behavior. Keep each bullet to the rule plus the briefest rationale. Implementation/architecture detail belongs in `docs/spec.md` and user-facing behavior in `docs/design.md`; generic reusable rules belong in `$AI_CONFIG_DIR/references/`.
 - When the user corrects a mistake, approves a fix, or states a new convention, invoke the `learn` skill so the lesson is not repeated.

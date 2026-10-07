@@ -15,6 +15,9 @@
     ariaLabel?: string
     panelClass: string
     optionRowClass: string
+    // Inline geometry for interpolated owner sizes; the class carries the
+    // static chrome either way.
+    optionRowStyle?: string
     options: T[]
     /** Per-row highlight flags from the owner's listbox core (O(1) updates). */
     highlightFlags: boolean[]
@@ -32,6 +35,7 @@
     autoPlace?: boolean
     emptyLabel?: string
     emptyClass?: string
+    emptyStyle?: string
     activeClass: string
     idleClass: string
     optionKey?: (option: T, index: number) => string | number
@@ -45,6 +49,7 @@
     ariaLabel,
     panelClass,
     optionRowClass,
+    optionRowStyle,
     options,
     highlightFlags,
     isActive,
@@ -58,6 +63,7 @@
     autoPlace,
     emptyLabel,
     emptyClass,
+    emptyStyle,
     activeClass,
     idleClass,
     optionKey,
@@ -94,7 +100,7 @@
   use:positionPanel={() => ({ getTrigger, getOpen, align, autoPlace })}
   class={panelClass}>
   {#if emptyLabel && options.length === 0}
-    <div role="presentation" class={emptyClass}>{emptyLabel}</div>
+    <div role="presentation" class={emptyClass} style={emptyStyle}>{emptyLabel}</div>
   {/if}
   {#each options as entry, index (optionKey ? optionKey(entry, index) : index)}
     {@const parts = matchParts?.(entry) ?? null}
@@ -109,7 +115,8 @@
       onclick={() => onSelect(entry, index)}
       onfocus={() => onActivate(index)}
       onmousemove={() => onActivate(index)}
-      class={`${optionRowClass} ${highlightFlags[index] ? activeClass : idleClass}`}>
+      class={`${optionRowClass} ${highlightFlags[index] ? activeClass : idleClass}`}
+      style={optionRowStyle}>
       {#if option}
         {@render option(entry)}
       {:else}

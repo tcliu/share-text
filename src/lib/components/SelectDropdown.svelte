@@ -8,8 +8,7 @@
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import type { DropdownPanelProps } from '$lib/dropdown-chrome'
-  import type { TextSize } from '$lib/text-size'
-  import { SIZE_CLASS, DEFAULT_PANEL_CLASS, boxClass, optionRowClass, emptyClass } from './select-dropdown-styles'
+  import { DEFAULT_PANEL_CLASS, TRIGGER_BASE, OPTION_BASE, EMPTY_BASE, boxClass, optionRowClass, emptyClass, resolveSelectGeometry, selectGeometryStyle, type SelectSize } from './select-dropdown-styles'
 
   interface Option {
     value: string
@@ -22,7 +21,11 @@
     activeValue?: string
     ariaLabel?: string
     filterable?: boolean
-    size?: TextSize
+    // Lets Enter commit the typed text via `onSelect` when it matches no
+    // option. Only applies to the filterable input; off by default so
+    // existing callers are unchanged.
+    allowCustomValue?: boolean
+    size?: SelectSize
     onSelect: (value: string) => void
     buttonClass?: string
     controlClass?: string
@@ -45,6 +48,7 @@
     align = 'left',
     autoPlace = true,
     filterable = false,
+    allowCustomValue = false,
     onSelect,
     size = 'sm',
     buttonClass,
@@ -60,19 +64,40 @@
   let id = $props.id()
   const panelId = `${id}-panel`
 
+  // Numeric sizes resolve to the shared named steps, so every `size` value
+  // renders through the same classes a name would produce; interpolated
+  // numbers additionally carry an inline geometry style (class overrides
+  // suppress it — the override owns the metrics).
+  const geometry = $derived(resolveSelectGeometry(size))
+  const triggerBoxClass = $derived(geometry.custom ? TRIGGER_BASE : boxClass(geometry.step))
+  const triggerBoxStyle = $derived(selectGeometryStyle(geometry))
+
   const resolvedButtonClass = $derived(
-    buttonClass ?? `${boxClass(size)} focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500`,
+    buttonClass ?? `${triggerBoxClass} focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500`,
   )
 
+  const resolvedButtonStyle = $derived(buttonClass ? undefined : triggerBoxStyle)
+
   const resolvedControlClass = $derived(
-    controlClass ?? `${boxClass(size)} focus-within:border-transparent focus-within:ring-2 focus-within:ring-cyan-500`,
+    controlClass ?? `${triggerBoxClass} focus-within:border-transparent focus-within:ring-2 focus-within:ring-cyan-500`,
   )
+
+  const resolvedControlStyle = $derived(controlClass ? undefined : triggerBoxStyle)
 
   const resolvedPanelClass = $derived(panelClass ?? DEFAULT_PANEL_CLASS)
 
-  const resolvedOptionRowClass = $derived(optionClass ?? optionRowClass(size))
+  const resolvedOptionRowClass = $derived(
+    optionClass ?? (geometry.custom ? OPTION_BASE : optionRowClass(geometry.step)),
+  )
 
-  const resolvedEmptyClass = $derived(emptyClass(size))
+  const resolvedOptionRowStyle = $derived(optionClass ? undefined : triggerBoxStyle)
+
+  const resolvedEmptyClass = $derived(geometry.custom ? EMPTY_BASE : emptyClass(geometry.step))
+
+  // No override exists for the empty row (callers only supply its label), so
+  // its class is always ours and the geometry style always applies with it —
+  // unlike the option rows, where `optionClass` takes over both.
+  const resolvedEmptyStyle = $derived(triggerBoxStyle)
   const resolvedClearLabel = $derived(clearLabel ?? 'Clear selection')
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
@@ -307,21 +332,13 @@
     void tick().then(() => (inputRef ?? controlRef)?.focus())
   }
 
-  async function select(value: string) {
-    const selectedOption = options.find(option => option.value === value)
+  // Shared commit tail: close the panel and hand focus back to the filterable
+  // input (the option never receives focus, so the input keeps the caret).
+  async function closeAndRestoreFocus(): Promise<void> {
+    close()
     // Always restore focus for a filterable control: the option never receives
     // focus (aria-activedescendant), so the input keeps (or regains) the caret.
-    const needsFocusRestore = filterable && inputRef !== null
-    onSelect(value)
-    if (filterable && selectedOption) {
-      // A confirmed value spends the typed query: store the confirmed label as
-      // the query so reopening filters by the value shown in the input rather
-      // than reverting it to what was typed.
-      filterText = selectedOption.label
-      activeQuery = selectedOption.label
-    }
-    close()
-    if (needsFocusRestore) {
+    if (filterable && inputRef !== null) {
       suppressOpenOnFocus = true
       await tick()
       inputRef?.focus()
@@ -330,6 +347,31 @@
       // would be swallowed and the panel would not reopen.
       suppressOpenOnFocus = false
     }
+  }
+
+  async function select(value: string) {
+    const selectedOption = options.find(option => option.value === value)
+    onSelect(value)
+    if (filterable && selectedOption) {
+      // A confirmed value spends the typed query: store the confirmed label as
+      // the query so reopening filters by the value shown in the input rather
+      // than reverting it to what was typed.
+      filterText = selectedOption.label
+      activeQuery = selectedOption.label
+    }
+    await closeAndRestoreFocus()
+  }
+
+  // Free entry: commit the typed text as the value even though it matches no
+  // option. The input keeps showing the committed text (as `select` does with
+  // a confirmed label), so reopening filters by it instead of reverting.
+  async function commitCustomValue(text: string): Promise<void> {
+    onSelect(text)
+    if (filterable) {
+      filterText = text
+      activeQuery = text
+    }
+    await closeAndRestoreFocus()
   }
 
   function handleControlKeydown(event: KeyboardEvent) {
@@ -411,6 +453,21 @@
         return
       }
       event.preventDefault()
+      // Free entry: typed text that matches no option commits as a custom
+      // value instead of falling back to the highlighted row. The match is
+      // case-insensitive like filtering, so `TWO` still selects `Two`
+      // instead of committing a duplicate. Pristine text (the echoed value,
+      // never edited) never commits — without this, Enter on a freshly
+      // opened panel would commit the current label as new.
+      const customText = filterText.trim()
+      const customLower = customText.toLowerCase()
+      const exactMatch = options.some(
+        option => option.label.toLowerCase() === customLower || option.value.toLowerCase() === customLower,
+      )
+      if (allowCustomValue && filterable && filterDirty && customText !== '' && !exactMatch) {
+        void commitCustomValue(customText)
+        return
+      }
       const option = filteredOptions[listbox.selection.index] ?? filteredOptions[0]
       if (option) {
         void select(option.value)
@@ -441,11 +498,11 @@
 
 <div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null} onfocusout={listbox.handleFocusOut}>
   {#snippet triggerChevron()}
-    <ChevronDownIcon size={SIZE_CLASS[size].icon} variant="solid" className="-mr-1.5 shrink-0 text-slate-400" />
+    <ChevronDownIcon size={geometry.iconPx} variant="solid" className="-mr-1.5 shrink-0 text-slate-400" />
   {/snippet}
   {#snippet triggerControl()}
     {#if filterable}
-      <label class={resolvedControlClass}>
+      <label class={resolvedControlClass} style={resolvedControlStyle}>
         <input
           bind:this={inputRef}
           type="text"
@@ -480,7 +537,8 @@
           : undefined}
         onclick={toggle}
         onkeydown={handleControlKeydown}
-        class={resolvedButtonClass}>
+        class={resolvedButtonClass}
+        style={resolvedButtonStyle}>
         <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
         {@render triggerChevron()}
       </button>
@@ -511,6 +569,7 @@
       ariaLabel={ariaLabel}
       panelClass={`fixed top-0 left-0 z-40 will-change-transform ${resolvedPanelClass}`}
       optionRowClass={resolvedOptionRowClass}
+      optionRowStyle={resolvedOptionRowStyle}
       options={filteredOptions}
       highlightFlags={listbox.highlight.flags}
       isActive={option => option.value === activeValue}
@@ -525,6 +584,7 @@
       autoPlace={autoPlace}
       emptyLabel={emptyLabel}
       emptyClass={resolvedEmptyClass}
+      emptyStyle={resolvedEmptyStyle}
       activeClass="bg-slate-800 text-cyan-200"
       idleClass="text-slate-300"
       labelOf={option => option.label}

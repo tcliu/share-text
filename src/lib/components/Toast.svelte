@@ -8,12 +8,13 @@
   import Button from '$lib/components/Button.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
+  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
 
   interface Props {
     message: string
     closeLabel: string
     position?: ToastPosition
-    size?: ToastSize
+    size?: SizeInput
     type?: ToastType
     // Paired: the action button renders only when both are set.
     actionLabel?: string
@@ -47,6 +48,13 @@
     md: 'text-base leading-6',
   }
 
+  // Stepped text (names render exactly as before); out-of-scale numbers
+  // settle on the nearest tier.
+  const step = $derived.by(() => {
+    const resolved = resolveSizeStep(size)
+    return resolved === 'xs' || resolved === 'sm' ? 'sm' : 'md'
+  })
+
   const typeClasses: Record<ToastType, string> = {
     success:
       'border border-transparent border-l-8 border-l-[var(--toast-success-border)] bg-[var(--toast-success-bg)] text-[var(--toast-success-fg)]',
@@ -78,7 +86,7 @@
   role="status"
   aria-live="polite"
   class={`fixed z-40 flex items-start gap-3 rounded-md px-4 py-3 shadow-lg shadow-slate-950/25 backdrop-blur-sm ${typeClasses[type]} ${positionClasses[position]}`}>
-  <p class={`min-w-0 flex-1 font-medium ${sizeClasses[size]}`}>{message}</p>
+  <p class={`min-w-0 flex-1 font-medium ${sizeClasses[step]}`}>{message}</p>
   {#if actionLabel && onAction}
     <Button variant="ghost" size="sm" onClick={onAction} className="shrink-0 px-2.5 py-1.5 font-semibold">
       {actionLabel}

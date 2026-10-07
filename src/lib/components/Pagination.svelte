@@ -5,13 +5,14 @@
   import ChevronLeftIcon from '$lib/icons/ChevronLeftIcon.svelte'
   import ChevronRightIcon from '$lib/icons/ChevronRightIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
+  import { resolveSelectStep, type SelectSize } from './select-dropdown-styles'
   const i18n = getI18nContext()
 
   interface Props {
     total: number
     pageSize: number
     currentPage: number
-    size?: 'xs' | 'sm' | 'md' | 'lg'
+    size?: SelectSize
     className?: string
     pageSizeOptions?: number[]
     onPageChange: (page: number) => void
@@ -91,6 +92,10 @@
   const canGoPrev = $derived(currentPage > 1)
   const canGoNext = $derived(currentPage < totalPages)
 
+  // Stepped chrome for the buttons and text; the raw size flows to the inner
+  // page-size dropdown, which interpolates it. Names render exactly as before.
+  const step = $derived(resolveSelectStep(size))
+
   const pageNumbers = $derived.by(() => {
     if (totalPages <= 7) {
       return Array.from({ length: totalPages }, (_, index) => index + 1)
@@ -104,11 +109,11 @@
   const showEndEllipsis = $derived(pageNumbers[pageNumbers.length - 1] < totalPages)
 
   const iconButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[size].iconButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
+    `relative inline-flex ${SIZE_CLASS[step].iconButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
   )
 
   const pageButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
+    `relative inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
   )
 
   let pageJumpInputValue = $state('')
@@ -147,7 +152,7 @@
   // runtime widths must not be utilities.
   const pageInputDigits = $derived(Math.max(1, String(totalPages).length, pageJumpInputValue.length))
   const pageInputStyle = $derived.by(() => {
-    const pad = SIZE_CLASS[size].pageInputPad
+    const pad = SIZE_CLASS[step].pageInputPad
     return `padding-left:${pad};padding-right:${pad};width:calc(${pageInputDigits}ch + 2 * ${pad} + 4px)`
   })
 
@@ -208,19 +213,19 @@
 
 <nav
   aria-label={resolvedPaginationLabel}
-  class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[size].text} text-slate-400 {className}">
+  class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[step].text} text-slate-400 {className}">
   <button
     type="button"
     aria-label={resolvedPreviousLabel}
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
-    <ChevronLeftIcon size={SIZE_CLASS[size].iconSize} />
+    <ChevronLeftIcon size={SIZE_CLASS[step].iconSize} />
   </button>
 
   {#if showStartEllipsis}
     <button type="button" onclick={() => goToPage(1)} class={pageButtonClass}>1</button>
-    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}
+    <span class={`inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center font-semibold text-slate-500`}
       >…</span>
   {/if}
 
@@ -236,14 +241,14 @@
         onkeydown={handlePageInputKeydown}
         ariaLabel={resolvedCurrentPageLabel}
         showControls={false}
-        className={`${SIZE_CLASS[size].pageInput} rounded-md border border-cyan-500 bg-slate-950 text-center ${SIZE_CLASS[size].text} font-semibold text-cyan-300 outline-none focus-visible:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-500/40`} />
+        className={`${SIZE_CLASS[step].pageInput} rounded-md border border-cyan-500 bg-slate-950 text-center ${SIZE_CLASS[step].text} font-semibold text-cyan-300 outline-none focus-visible:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-500/40`} />
     {:else}
       <button type="button" onclick={() => goToPage(pageNum)} class={pageButtonClass}>{pageNum}</button>
     {/if}
   {/each}
 
   {#if showEndEllipsis}
-    <span class={`inline-flex ${SIZE_CLASS[size].pageButton} items-center justify-center font-semibold text-slate-500`}
+    <span class={`inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center font-semibold text-slate-500`}
       >…</span>
     <button type="button" onclick={() => goToPage(totalPages)} class={pageButtonClass}>{totalPages}</button>
   {/if}
@@ -254,7 +259,7 @@
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
-    <ChevronRightIcon size={SIZE_CLASS[size].iconSize} />
+    <ChevronRightIcon size={SIZE_CLASS[step].iconSize} />
   </button>
 
   <div class="flex items-center gap-1.5">

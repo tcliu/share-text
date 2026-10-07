@@ -3,6 +3,7 @@
 
   import SearchIcon from '$lib/icons/SearchIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
+  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
 
   const i18n = getI18nContext()
 
@@ -12,7 +13,7 @@
     value: string
     ariaLabel: string
     placeholder?: string
-    size?: SearchInputSize
+    size?: SizeInput
     wrapperClass?: string
     inputClass?: string
     inputRef?: HTMLInputElement | null
@@ -63,9 +64,18 @@
 
   // Derived (not a plain const) so locale switches re-resolve the placeholder.
   const resolvedPlaceholder = $derived(placeholder ?? i18n.t('search.placeholder'))
-  const resolvedInputClass = $derived(inputClass ?? inputVariants({ size }))
-  const resolvedIconClass = $derived(SIZE_ICON_CLASSES[size])
-  const resolvedIconSize = $derived(SIZE_ICON_SIZE[size])
+  // Stepped chrome for the input box (names render exactly as before; `xs`
+  // has no chrome tier and falls back to `sm`); the icon takes the raw
+  // number so it scales continuously.
+  const chromeStep = $derived.by(() => {
+    const step = resolveSizeStep(size)
+    return step === 'xs' ? 'sm' : step
+  })
+  const resolvedInputClass = $derived(inputClass ?? inputVariants({ size: chromeStep }))
+  const resolvedIconClass = $derived(SIZE_ICON_CLASSES[chromeStep])
+  const resolvedIconSize = $derived(
+    typeof size === 'number' && Number.isFinite(size) ? Math.max(1, size) : SIZE_ICON_SIZE[chromeStep],
+  )
 </script>
 
 <div class={wrapperClass}>

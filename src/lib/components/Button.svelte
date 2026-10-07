@@ -2,11 +2,12 @@
   import type { Snippet } from 'svelte'
   import Tooltip from './Tooltip.svelte'
   import { tooltip as tooltipAction } from '$lib/actions/tooltip.svelte'
+  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
     accent?: 'cyan' | 'emerald' | 'amber' | 'violet' | 'rose'
-    size?: 'xs' | 'sm' | 'md' | 'lg'
+    size?: SizeInput
     disabled?: boolean
     pending?: boolean
     type?: 'button' | 'submit' | 'reset'
@@ -131,7 +132,12 @@
     },
   } as const
 
-  const iconSizeClass = $derived(iconClass || SIZE_CLASS[size].iconBox)
+  // Stepped chrome for the button itself; a numeric size resolves to its
+  // nearest step, so names render exactly as before. Icons inside stay the
+  // caller's snippet (sized by the caller, now also numerically).
+  const step = $derived(resolveSizeStep(size))
+
+  const iconSizeClass = $derived(iconClass || SIZE_CLASS[step].iconBox)
 
   const disabledState = $derived(disabled || pending)
 
@@ -171,7 +177,7 @@
     return ringClasses.cyan
   })
   const baseClass = $derived.by(() => {
-    const sizeClasses = SIZE_CLASS[size]
+    const sizeClasses = SIZE_CLASS[step]
     const boxClass = isIconOnly ? sizeClasses.iconOnly : sizeClasses.withChildren
     const padClass = variant === 'ghost' ? '' : isIconOnly ? sizeClasses.iconOnlyPad : sizeClasses.withChildrenPad
     const common = `${[boxClass, padClass].filter(Boolean).join(' ')} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
@@ -187,7 +193,7 @@
     if (variant === 'ghost') {
       return `${common} text-slate-400 hover:text-cyan-300 focus:text-cyan-300 ${ringClass}`
     }
-    if (size === 'sm') {
+    if (step === 'sm') {
       return `${common} border border-slate-700 bg-slate-950 text-slate-200 hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 focus-visible:border-transparent ${ringClass}`
     }
     return `${common} border border-slate-700 bg-slate-950 hover:border-slate-500 hover:text-slate-100 focus:border-slate-500 focus:text-slate-100 focus-visible:border-transparent ${ringClass}`

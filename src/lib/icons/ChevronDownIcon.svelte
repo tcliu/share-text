@@ -1,16 +1,15 @@
 <script lang="ts">
-  type IconSize = 'xs' | 'sm' | 'md' | 'lg'
+  import { resolveIconPx, type IconSizeInput } from './icon-size'
   type ChevronVariant = 'outline' | 'solid'
 
   interface Props {
     className?: string
-    size?: IconSize
+    size?: IconSizeInput
     variant?: ChevronVariant
   }
 
   // Width/height attributes (not classes) so `size` composes with `className`:
   // explicit size classes in className still win, since CSS beats attributes.
-  const SIZE_PX: Record<IconSize, number> = { xs: 12, sm: 16, md: 20, lg: 24 }
 
   let { className = '', size = 'md', variant = 'outline' }: Props = $props()
 </script>
@@ -20,8 +19,8 @@
     viewBox="0 0 20 20"
     fill="currentColor"
     aria-hidden="true"
-    width={SIZE_PX[size]}
-    height={SIZE_PX[size]}
+    width={resolveIconPx(size)}
+    height={resolveIconPx(size)}
     class={className}>
     <path
       fill-rule="evenodd"
@@ -37,8 +36,8 @@
     stroke-linecap="round"
     stroke-linejoin="round"
     aria-hidden="true"
-    width={SIZE_PX[size]}
-    height={SIZE_PX[size]}
+    width={resolveIconPx(size)}
+    height={resolveIconPx(size)}
     class={className}>
     <path d="M3 4.5 6 7.5 9 4.5" />
   </svg>

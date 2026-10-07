@@ -4,6 +4,7 @@
   import CopyButton from './CopyButton.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
   import { TEXT_SIZE, type TextSize } from '$lib/text-size'
+  import { resolveFontPx } from '$lib/size-scale'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -12,7 +13,7 @@
     // Return false to reject the committed value (e.g. duplicate name);
     // the component then restores the previous text and keeps editing.
     onChange: (text: string) => void | boolean
-    size?: TextSize
+    size?: TextSize | number
     className?: string
     onActivate?: () => void
     // maximum width (in px) the editable input may expand to; actual max
@@ -151,6 +152,20 @@
   onDestroy(() => {
     if (clickTimer) clearTimeout(clickTimer)
   })
+
+  // Text sizing: names render through the literal text class (exactly as
+  // before); numbers interpolate the font on the shared axis.
+  const customFontPx = $derived(
+    typeof size === 'number' && Number.isFinite(size) ? resolveFontPx(size) : undefined,
+  )
+  // Non-finite numbers fall back to the default step's class (never a
+  // literal "undefined" in the class list).
+  const textClass = $derived(customFontPx === undefined ? TEXT_SIZE[typeof size === 'string' ? size : 'md'] : '')
+  const textStyle = $derived(customFontPx === undefined ? undefined : `font-size:${customFontPx}px`)
+  const inputStyle = $derived.by(() => {
+    const width = inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'
+    return textStyle ? `${width}; ${textStyle}` : width
+  })
 </script>
 
 {#if editing}
@@ -169,15 +184,16 @@
       onblur={commit}
       data-escape-capture
       aria-label={i18n.t('edit.editText')}
-      style={inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'}
-      class={`${TEXT_SIZE[size]} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
+      style={inputStyle}
+      class={`${textClass} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
   </div>
 {:else}
   {#snippet displayContent()}
     <button
       bind:this={displayBtn}
       type="button"
-      class={`${TEXT_SIZE[size]} min-w-0 truncate bg-transparent p-0 py-1 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
+      class={`${textClass} min-w-0 truncate bg-transparent p-0 py-1 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
+      style={textStyle}
       title={i18n.t('edit.doubleClickToEdit')}
       onclick={e => {
         e.stopPropagation()
