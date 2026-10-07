@@ -242,10 +242,6 @@ export const zhCN = {
   chip: {
     remove: '移除 {name}',
   },
-  combobox: {
-    placeholder: '选择或输入...',
-    remove: '移除 {name}',
-  },
   tagInput: {
     suggestions: '标签建议',
     remove: '移除 {name}',

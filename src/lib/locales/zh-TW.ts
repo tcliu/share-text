@@ -242,10 +242,6 @@ export const zhTW = {
   chip: {
     remove: '移除 {name}',
   },
-  combobox: {
-    placeholder: '選擇或輸入...',
-    remove: '移除 {name}',
-  },
   tagInput: {
     suggestions: '標籤建議',
     remove: '移除 {name}',

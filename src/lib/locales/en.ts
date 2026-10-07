@@ -245,10 +245,6 @@ export const en = {
   chip: {
     remove: 'Remove {name}',
   },
-  combobox: {
-    placeholder: 'Select or type...',
-    remove: 'Remove {name}',
-  },
   tagInput: {
     suggestions: 'Tag suggestions',
     remove: 'Remove {name}',

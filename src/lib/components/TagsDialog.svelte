@@ -141,7 +141,7 @@
               style={tagChipStyle(colorFor(name))}
               removeButtonClass={tagRemoveBtnClass()}
               removeButtonStyle={tagRemoveBtnStyle(colorFor(name))}
-              ariaLabel={i18n.t('combobox.remove', { name })}
+              ariaLabel={i18n.t('chip.remove', { name })}
               onRemove={remove} />
           {/snippet}
           {#snippet option(name)}

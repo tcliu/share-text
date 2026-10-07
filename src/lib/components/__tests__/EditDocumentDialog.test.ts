@@ -181,7 +181,7 @@ describe('EditDocumentDialog', () => {
     expect(getByText('bob')).toBeTruthy()
   })
 
-  it('renders an empty combobox when the document has no sharees', () => {
+  it('renders an empty sharee input when the document has no sharees', () => {
     const { getByPlaceholderText } = renderDialog({ sharedWith: [] })
 
     expect(getByPlaceholderText('Add by username or email')).toBeTruthy()
@@ -213,9 +213,9 @@ describe('EditDocumentDialog', () => {
     const onSave = vi.fn()
     const { getByText, getByLabelText } = renderDialog({ onSave })
 
-    const combobox = getByLabelText('Shared with') as HTMLInputElement
-    fireEvent.input(combobox, { target: { value: 'carol' } })
-    fireEvent.keyDown(combobox, { key: 'Enter' })
+    const shareeInput = getByLabelText('Shared with') as HTMLInputElement
+    fireEvent.input(shareeInput, { target: { value: 'carol' } })
+    fireEvent.keyDown(shareeInput, { key: 'Enter' })
 
     expect(getByText('carol')).toBeTruthy()
     expect((getByText('OK').closest('button') as HTMLButtonElement).disabled).toBe(false)

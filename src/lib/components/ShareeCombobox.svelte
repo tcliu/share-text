@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import Chip from './Chip.svelte'
-  import Combobox, { type ComboboxOption } from './Combobox.svelte'
+  import TagInput from './TagInput.svelte'
   import { getDefaultTagColor, tagChipClass, tagChipStyle, tagRemoveBtnClass, tagRemoveBtnStyle } from '$lib/tag-colors'
   import type { User } from '$lib/documents'
 
@@ -29,14 +29,19 @@
     debounceMs = 250,
   }: Props = $props()
 
-  let userSuggestions = $state<ComboboxOption[]>([])
+  let suggestionUsers = $state<User[]>([])
   let searchTimer: ReturnType<typeof setTimeout> | null = null
-  let comboboxRef = $state<ReturnType<typeof Combobox> | null>(null)
+  let tagInputRef = $state<ReturnType<typeof TagInput> | null>(null)
 
-  const options = $derived(selected.map(username => ({ value: username, label: username })))
+  // Object options map to string[] at this boundary; the caller-side
+  // lookup below restores each suggestion's email for the option rows.
+  const availableNames = $derived(suggestionUsers.map(user => user.username))
+  const emailByUsername = $derived(
+    new Map(suggestionUsers.map(user => [user.username.toLowerCase(), user.email])),
+  )
 
   export function focus() {
-    comboboxRef?.focus()
+    tagInputRef?.focus()
   }
 
   onMount(() => {
@@ -48,11 +53,11 @@
   async function refreshSuggestions(query: string) {
     try {
       const users = await search(query)
-      userSuggestions = users
-        .filter(user => !selected.some(name => name.toLowerCase() === user.username.toLowerCase()))
-        .map(user => ({ value: user.username, label: user.username, detail: user.email }))
+      suggestionUsers = users.filter(
+        user => !selected.some(name => name.toLowerCase() === user.username.toLowerCase()),
+      )
     } catch {
-      userSuggestions = []
+      suggestionUsers = []
     }
   }
 
@@ -65,7 +70,7 @@
       clearTimeout(searchTimer)
     }
     if (!query.trim() && !searchOnEmpty) {
-      userSuggestions = []
+      suggestionUsers = []
       return
     }
     if (debounceMs === 0) {
@@ -78,40 +83,55 @@
     }, debounceMs)
   }
 
-  function addSharee(username: string) {
-    const normalized = username.trim()
-    const isSelf = selfUsername ? normalized.toLowerCase() === selfUsername.toLowerCase() : false
-    if (!normalized || isSelf || selected.some(name => name.toLowerCase() === normalized.toLowerCase())) {
-      return
+  // TagInput reports the whole next value; re-apply the sharee invariants
+  // (non-empty, not self, case-insensitive dedupe) so a typed draft can
+  // never commit a name `addSharee` would have rejected.
+  function handleChange(next: string[]): void {
+    const kept = new Set(selected.map(name => name.toLowerCase()))
+    const result: string[] = []
+    for (const name of next) {
+      const normalized = name.trim()
+      const lower = normalized.toLowerCase()
+      if (!normalized || result.some(existing => existing.toLowerCase() === lower)) continue
+      if (kept.has(lower)) {
+        result.push(selected.find(existing => existing.toLowerCase() === lower) ?? normalized)
+        continue
+      }
+      if (selfUsername && lower === selfUsername.toLowerCase()) continue
+      result.push(normalized)
     }
-    selected = [...selected, normalized]
-    userSuggestions = []
-  }
-
-  function removeSharee(username: string) {
-    selected = selected.filter(value => value !== username)
+    selected = result
+    suggestionUsers = suggestionUsers.filter(
+      user => !selected.some(name => name.toLowerCase() === user.username.toLowerCase()),
+    )
   }
 </script>
 
-<Combobox
-  bind:this={comboboxRef}
-  {id}
-  selected={options}
-  suggestions={userSuggestions}
-  {placeholder}
+<TagInput
+  bind:this={tagInputRef}
+  value={selected}
+  availableTags={availableNames}
+  onChange={handleChange}
   onQueryChange={handleQueryChange}
-  onAdd={item => addSharee(item.value)}
-  onRemove={removeSharee}>
-  {#snippet chip(item: ComboboxOption, remove: (value: string) => void)}
-    {@const color = getDefaultTagColor(item.value)}
+  {placeholder}
+  inputId={id}>
+  {#snippet chip(username: string, remove: () => void)}
+    {@const color = getDefaultTagColor(username)}
     <Chip
-      label={item.label}
+      label={username}
       chipClass={tagChipClass()}
       style={tagChipStyle(color)}
-      tooltip={chipTooltip?.(item.value)}
+      tooltip={chipTooltip?.(username)}
       removeButtonClass={tagRemoveBtnClass()}
       removeButtonStyle={tagRemoveBtnStyle(color)}
-      ariaLabel={`Remove ${item.label}`}
-      onRemove={() => remove(item.value)} />
+      onRemove={remove} />
   {/snippet}
-</Combobox>
+  {#snippet option(username: string)}
+    <span class="flex w-full items-center justify-between gap-2">
+      <span>{username}</span>
+      {#if emailByUsername.get(username.toLowerCase())}
+        <span class="text-xs text-slate-400">{emailByUsername.get(username.toLowerCase())}</span>
+      {/if}
+    </span>
+  {/snippet}
+</TagInput>

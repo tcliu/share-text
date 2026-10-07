@@ -29,13 +29,13 @@
 
   let draftIsPublic = $state(false)
   let draftSharees = $state<string[]>([])
-  let comboboxRef = $state<ReturnType<typeof ShareeCombobox> | null>(null)
+  let shareeRef = $state<ReturnType<typeof ShareeCombobox> | null>(null)
   let discardPromptOpen = $state(false)
   let recentUsersPromise: Promise<User[]> | null = null
 
   $effect(() => {
     if (!open) return
-    tick().then(() => comboboxRef?.focus())
+    tick().then(() => shareeRef?.focus())
   })
 
   $effect(() => {
@@ -110,7 +110,7 @@
 
       <FormField label={i18n.t('share.sharedWith')} htmlFor="share-user-input">
         <ShareeCombobox
-          bind:this={comboboxRef}
+          bind:this={shareeRef}
           bind:selected={draftSharees}
           search={isAdmin ? searchUsers : recentShareesSearch}
           id="share-user-input"
