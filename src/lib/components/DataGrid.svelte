@@ -229,13 +229,13 @@
       cellRefs.colSelector(ci)?.focus()
     },
     isCellInputFocused(ri: number, ci: number) {
-      return document.activeElement === cellRefs.cellInput(ri, ci)
+      return editingCell?.ri === ri && editingCell?.ci === ci
     },
   }
 
   const clipboard = createGridClipboard()
   const selState = $state(createInitialSelectionState())
-  const sel = createGridSelection({ model, focus, clipboard, state: selState })
+  const sel = createGridSelection({ model, focus, clipboard, state: selState, isEditable: () => editable })
 
   let historyState = $state({ canUndo: false, canRedo: false })
   $effect(() => {
@@ -261,6 +261,7 @@
   }
 
   function handleHistoryKeydown(event: KeyboardEvent) {
+    if (!editable) return
     if (!(event.ctrlKey || event.metaKey)) return
     const key = event.key.toLowerCase()
     if (key === 'z') {
@@ -439,24 +440,26 @@
   }
 
   function handleInputKeydown(event: KeyboardEvent, ri: number, ci: number) {
-    if (event.key === 'Tab' && !event.shiftKey) {
-      event.preventDefault()
-      if (ci < model.columnCount - 1) {
-        focus.cellInput(ri, ci + 1)
-        return
+    if (event.key === 'Tab') {
+      let next: { ri: number; ci: number } | null = null
+      if (event.shiftKey) {
+        if (ci > 0) {
+          next = { ri, ci: ci - 1 }
+        } else if (ri > 0) {
+          next = { ri: ri - 1, ci: model.columnCount - 1 }
+        }
+      } else if (ci < model.columnCount - 1) {
+        next = { ri, ci: ci + 1 }
       } else if (ri < model.rowCount - 1) {
-        focus.cellInput(ri + 1, 0)
-        return
+        next = { ri: ri + 1, ci: 0 }
       }
-    } else if (event.key === 'Tab' && event.shiftKey) {
+      // No in-grid target at the boundary: leave the key alone so Tab carries
+      // focus out of the grid in natural document order instead of trapping it
+      // on the edge cell.
+      if (next === null) return
       event.preventDefault()
-      if (ci > 0) {
-        focus.cellInput(ri, ci - 1)
-        return
-      } else if (ri > 0) {
-        focus.cellInput(ri - 1, model.columnCount - 1)
-        return
-      }
+      focus.cellInput(next.ri, next.ci)
+      return
     } else if (event.key === 'Enter' && event.shiftKey) {
       // Insert a newline (default textarea behavior); the oninput handler
       // persists it and the cell grows to double height.
@@ -484,13 +487,12 @@
   }
 
   function handleBoxPaste(event: ClipboardEvent, ri: number, ci: number) {
+    if (!editable) return
     if (event.target !== event.currentTarget) return
     const text = event.clipboardData?.getData('text') ?? ''
     if (!text) return
     event.preventDefault()
-    const cell = model.rows[ri]?.cells[ci]
-    if (!cell) return
-    model.setValue(ri, ci, text)
+    model.applyPastedText(ri, ci, text)
     sel.setActiveCell(ri, ci)
     focus.cellInput(ri, ci)
   }

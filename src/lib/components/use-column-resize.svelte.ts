@@ -165,36 +165,82 @@ export function createColumnResize(config: ColumnResizeConfig) {
     }
   }
 
-  // Restore persisted widths when their column count matches the current grid.
-  // The result is cached: the first call loads from storage and later calls
-  // return the same value, so a consumer can assign the result from a setup
-  // $effect without a local once-flag.
-  let persistedWidths: number[] | null | undefined = undefined
+  // Restore persisted widths when their layout matches the current grid.
+  // Storage is read once and re-read whenever the column count changes, so a
+  // grid that mounts before its columns are known (a length mismatch) still
+  // restores the saved layout once the count lines up, and a stale layout from
+  // a previous column count is never returned. Consumers can assign the result
+  // from a setup $effect without a local once-flag.
+  let persistedWidths: number[] | null = null
+  let persistedCount = -1
   function loadPersistedWidths(): number[] | null {
-    if (persistedWidths === undefined) {
+    const count = getColumnCount()
+    if (persistedCount !== count) {
       const storageKey = getStorageKey()
       const stored = storageKey ? loadColumnWidths(storageKey) : null
-      persistedWidths = stored && stored.length === getColumnCount() ? stored : null
+      persistedWidths = stored && stored.length === count ? stored : null
+      persistedCount = count
     }
     return persistedWidths
   }
 
   // Drop the persisted widths so a width reset (or a cleared table) never
-  // restores them on the next mount. The cached first-load result is reset
-  // alongside, so a later load in the same session re-reads storage.
+  // restores them on the next mount. Resetting the cached count makes a later
+  // load in the same session re-read storage, and cancelling the pending write
+  // stops an armed debounce from saving the pre-reset widths back.
   function clearPersistedWidths(): void {
     const storageKey = getStorageKey()
     if (storageKey) clearColumnWidths(storageKey)
     persistedWidths = null
+    persistedCount = -1
+    cancelSave()
   }
 
   // Persist resized column widths so the user's splitter positions survive a
-  // reload. Only fires after a resize (columnWidths non-empty).
+  // reload. The write is debounced because an in-flight drag re-partitions the
+  // widths every animation frame; the pending write is flushed when the effect
+  // tears down so the final drag still lands.
+  const SAVE_DEBOUNCE_MS = 200
+  let saveTimer: ReturnType<typeof setTimeout> | null = null
+  let pendingSave: { key: string; widths: number[] } | null = null
+
+  function cancelSave() {
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    pendingSave = null
+  }
+
+  function flushSave() {
+    if (saveTimer !== null) {
+      clearTimeout(saveTimer)
+      saveTimer = null
+    }
+    if (pendingSave === null) return
+    const { key, widths: w } = pendingSave
+    pendingSave = null
+    saveColumnWidths(key, w)
+    // Keep the restore cache in step with what was just saved, so a later load
+    // for the same column count returns the current widths instead of the
+    // pre-drag layout captured at mount.
+    persistedWidths = w
+    persistedCount = w.length
+  }
+
   $effect(() => {
     const storageKey = getStorageKey()
-    if (!storageKey || widths().length === 0) return
-    saveColumnWidths(storageKey, widths())
+    const w = widths()
+    if (!storageKey || w.length === 0) {
+      cancelSave()
+      return
+    }
+    pendingSave = { key: storageKey, widths: w.slice() }
+    if (saveTimer !== null) clearTimeout(saveTimer)
+    saveTimer = setTimeout(flushSave, SAVE_DEBOUNCE_MS)
   })
+
+  $effect(() => () => flushSave())
 
   return {
     startColumnResize,

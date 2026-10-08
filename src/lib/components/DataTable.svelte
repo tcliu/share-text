@@ -331,9 +331,10 @@
     widthKeys = keys
   })
 
-  // Restore persisted column widths on first mount so the user's splitter
-  // positions survive a reload. loadPersistedWidths caches its result, so the
-  // assignment below never re-fires.
+  // Restore persisted column widths on mount so the user's splitter positions
+  // survive a reload. loadPersistedWidths re-reads storage when the column count
+  // changes and returns the saved layout only when its width matches, so this
+  // assignment re-runs on a count change and a matching layout exists.
   $effect(() => {
     const persisted = resize.loadPersistedWidths()
     if (persisted != null) columnWidths = persisted

@@ -62,8 +62,13 @@ export function createGridSelection(opts: {
   focus: SelectionFocusHooks
   clipboard: Clipboard
   state: SelectionState
+  // Reflects the owning grid's `editable` prop at event time. A read-only grid
+  // still navigates, selects, and copies, but every mutation (typing, delete,
+  // navigation-driven append, paste) is refused.
+  isEditable?: () => boolean
 }) {
   const { model, focus, clipboard, state: s } = opts
+  const readOnly = () => opts.isEditable != null && !opts.isEditable()
 
   const noSelection = $derived(
     s.selectedRows.size === 0 && s.selectedCols.size === 0 && s.selectedSet.size === 0 && s.selectedCell === null,
@@ -331,7 +336,7 @@ export function createGridSelection(opts: {
     const next = currentIndex + dir
     if (next < minIndex) return
     if (next >= count) {
-      if (dir === 1) appendFn()
+      if (dir === 1 && !readOnly()) appendFn()
       return
     }
     setSelected(new Set([next]))
@@ -354,6 +359,7 @@ export function createGridSelection(opts: {
     }
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
+      if (readOnly()) return
       if (s.selectedRows.size === 0) return
       const target = Math.min(...s.selectedRows)
       deleteSelectedRows()
@@ -445,6 +451,7 @@ export function createGridSelection(opts: {
     }
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
+      if (readOnly()) return
       if (s.selectedCols.size === 0) return
       const target = Math.min(...s.selectedCols)
       deleteSelectedColumns()
@@ -486,7 +493,7 @@ export function createGridSelection(opts: {
       selectAllCells()
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
-      clearSelectedCellValues()
+      if (!readOnly()) clearSelectedCellValues()
     } else if ((event.key === 'a' || event.key === 'A') && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       selectAllCells()
@@ -550,11 +557,11 @@ export function createGridSelection(opts: {
       focus.cellBox(ri, ci)
     } else if (event.key.startsWith('Arrow')) {
       event.preventDefault()
-      if (event.key === 'ArrowDown' && ri === model.rowCount - 1 && !event.shiftKey) {
+      if (!readOnly() && event.key === 'ArrowDown' && ri === model.rowCount - 1 && !event.shiftKey) {
         appendArrowRow(ci)
         return
       }
-      if (event.key === 'ArrowRight' && ci === model.columnCount - 1 && !event.shiftKey) {
+      if (!readOnly() && event.key === 'ArrowRight' && ci === model.columnCount - 1 && !event.shiftKey) {
         const newCi = model.appendPendingColumn()
         s.selectedSet = new Set()
         s.selectionAnchor = { ri, ci: newCi }
@@ -592,6 +599,7 @@ export function createGridSelection(opts: {
       }
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault()
+      if (readOnly()) return
       if (s.selectedCols.size > 0) {
         const target = Math.min(...s.selectedCols)
         deleteSelectedColumns()
@@ -608,14 +616,20 @@ export function createGridSelection(opts: {
     } else if ((event.key === 'c' || event.key === 'C') && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       copySelection()
+    } else if ((event.key === 'x' || event.key === 'X') && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      if (readOnly()) return
+      cutSelection()
     } else if ((event.key === 'a' || event.key === 'A') && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       selectAllCells()
     } else if ((event.key === 'v' || event.key === 'V') && (event.ctrlKey || event.metaKey)) {
       event.preventDefault()
+      if (readOnly()) return
       pasteSelection()
     } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault()
+      if (readOnly()) return
       if (!model.rows[ri]?.cells[ci]) return
       focus.startEdit(ri, ci, event.key)
     }
@@ -664,6 +678,14 @@ export function createGridSelection(opts: {
     }
     const text = lines.join('\n')
     if (text) clipboard.copy(text)
+  }
+
+  // Cut mirrors copy: the copied rectangle stays in the clipboard while the
+  // source cells are blanked. The selection is kept, matching copy.
+  function cutSelection() {
+    if (highlightKeys.size === 0) return
+    copySelection()
+    clearSelectedCellValues()
   }
 
   function pasteSelection() {
