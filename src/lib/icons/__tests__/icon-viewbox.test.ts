@@ -1,0 +1,259 @@
+// Guards the shared icon viewport convention: every square glyph is authored
+// directly in the one square viewBox — its artwork already normalized to fill
+// the viewBox on the dominant axis and written on the 0.01 unit grid, so no
+// per-icon `<g transform>` fit sits between the artwork and the grid — and only
+// the sort pair keeps a non-square, tight crop. See AGENTS.md (Project
+// conventions).
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const dir = join(process.cwd(), 'src/lib/icons')
+const files = readdirSync(dir).filter(f => f.endsWith('.svelte'))
+const nonSquare = new Set(['SortAscIcon.svelte', 'SortDescIcon.svelte'])
+const BOX = 20
+const FILL = 0.97
+const SLACK = 0.6
+
+const read = (f: string) => readFileSync(join(dir, f), 'utf8')
+
+// Geometry attributes whose values are painted coordinates: the bake writes
+// them on the icon grid, so each number is an integer or a two-decimal step.
+const GEOMETRY_ATTRS = / (?:d|cx|cy|r|rx|ry|x|y|width|height|x1|y1|x2|y2)="([^"]+)"/g
+
+// ---- path geometry ------------------------------------------------------
+// The ink box has to be exact: a curve can reach past its endpoints, so cubic
+// and quadratic control points are collected (a superset of the curve, so the
+// box is only ever widened) along with the axis extrema an ellipse arc sweeps
+// through.
+const ARITY: Record<string, number> = { m: 2, l: 2, h: 1, v: 1, c: 6, s: 4, q: 4, t: 2, a: 7 }
+
+function arcPoints(
+  x1: number,
+  y1: number,
+  rx: number,
+  ry: number,
+  largeArc: number,
+  sweep: number,
+  x2: number,
+  y2: number,
+): number[][] {
+  // Endpoint -> center parameterization for an axis-aligned arc (SVG spec).
+  let dx = (x1 - x2) / 2
+  let dy = (y1 - y2) / 2
+  const lambda = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry)
+  if (lambda > 1) {
+    const scale = Math.sqrt(lambda)
+    rx *= scale
+    ry *= scale
+    dx /= scale
+    dy /= scale
+  }
+  const rx2 = rx * rx
+  const ry2 = ry * ry
+  const numerator = rx2 * ry2 - rx2 * dy * dy - ry2 * dx * dx
+  const denominator = rx2 * dy * dy + ry2 * dx * dx
+  const factor = (largeArc === sweep ? -1 : 1) * Math.sqrt(Math.max(0, numerator / denominator))
+  const cx = factor * ((rx * dy) / ry) + (x1 + x2) / 2
+  const cy = factor * ((-ry * dx) / rx) + (y1 + y2) / 2
+  const start = Math.atan2((y1 - cy) / ry, (x1 - cx) / rx)
+  const end = Math.atan2((y2 - cy) / ry, (x2 - cx) / rx)
+  const TAU = Math.PI * 2
+  let delta = end - start
+  if (sweep === 1) while (delta < 0) delta += TAU
+  else while (delta > 0) delta -= TAU
+
+  const points = [
+    [x1, y1],
+    [x2, y2],
+  ]
+  for (let quadrant = 0; quadrant < 4; quadrant += 1) {
+    const angle = (quadrant * Math.PI) / 2
+    const offset = (((angle - start) % TAU) + TAU) % TAU
+    const swept = delta >= 0 ? offset <= delta : offset >= TAU + delta
+    if (swept) points.push([cx + rx * Math.cos(angle), cy + ry * Math.sin(angle)])
+  }
+  return points
+}
+
+function pathPoints(d: string): number[][] {
+  const tokens = d.match(/[MmLlHhVvCcSsQqTtAaZz]|-?(?:\d+\.?\d*|\.\d+)/g) ?? []
+  const points: number[][] = []
+  let cmd: string | null = null
+  let x = 0
+  let y = 0
+  let cubic: number[] | null = null
+  let quadratic: number[] | null = null
+  for (let i = 0; i < tokens.length;) {
+    const token = tokens[i]!
+    if (/[A-Za-z]/.test(token)) {
+      cmd = token === 'Z' || token === 'z' ? null : token
+      i += 1
+      continue
+    }
+    if (!cmd) throw new Error(`number without a command in "${d}"`)
+    const arity = ARITY[cmd.toLowerCase()] ?? 0
+    const args = tokens.slice(i, i + arity).map(Number)
+    if (args.length !== arity || args.some(Number.isNaN)) throw new Error(`bad arguments for ${cmd} in "${d}"`)
+    i += arity
+    const relative = cmd === cmd.toLowerCase()
+    const upper = cmd.toUpperCase()
+    const atX = (k: number) => (relative ? x + args[k]! : args[k]!)
+    const atY = (k: number) => (relative ? y + args[k]! : args[k]!)
+    // Each command resolves every coordinate from the pre-command current
+    // point, so relative arguments never compound.
+    switch (upper) {
+      case 'M':
+      case 'L': {
+        x = atX(0)
+        y = atY(1)
+        points.push([x, y])
+        cubic = quadratic = null
+        break
+      }
+      case 'H': {
+        x = atX(0)
+        points.push([x, y])
+        cubic = quadratic = null
+        break
+      }
+      case 'V': {
+        y = atY(0)
+        points.push([x, y])
+        cubic = quadratic = null
+        break
+      }
+      case 'C': {
+        // Bezier control points bound the curve, so they stand in for it.
+        const c1 = [atX(0), atY(1)]
+        const c2 = [atX(2), atY(3)]
+        points.push(c1, c2)
+        cubic = c2
+        quadratic = null
+        x = atX(4)
+        y = atY(5)
+        points.push([x, y])
+        break
+      }
+      case 'S': {
+        const c1 = cubic ? [2 * x - cubic[0]!, 2 * y - cubic[1]!] : [x, y]
+        const c2 = [atX(0), atY(1)]
+        points.push(c1, c2)
+        cubic = c2
+        quadratic = null
+        x = atX(2)
+        y = atY(3)
+        points.push([x, y])
+        break
+      }
+      case 'Q': {
+        const c1 = [atX(0), atY(1)]
+        points.push(c1)
+        quadratic = c1
+        cubic = null
+        x = atX(2)
+        y = atY(3)
+        points.push([x, y])
+        break
+      }
+      case 'T': {
+        const c1: number[] = quadratic ? [2 * x - quadratic[0]!, 2 * y - quadratic[1]!] : [x, y]
+        points.push(c1)
+        quadratic = c1
+        cubic = null
+        x = atX(0)
+        y = atY(1)
+        points.push([x, y])
+        break
+      }
+      case 'A': {
+        const end = [atX(5), atY(6)]
+        points.push(...arcPoints(x, y, args[0]!, args[1]!, args[3]!, args[4]!, end[0]!, end[1]!))
+        cubic = quadratic = null
+        x = end[0]!
+        y = end[1]!
+        break
+      }
+      default:
+        throw new Error(`unsupported command ${cmd} in "${d}"`)
+    }
+  }
+  return points
+}
+
+// Every painted point of one icon, in viewBox units.
+function geometryPoints(markup: string): number[][] {
+  const points: number[][] = []
+  for (const [, d] of markup.matchAll(/<path\b[^>]*\sd="([^"]*)"/g)) points.push(...pathPoints(d!))
+  for (const [, attrs] of markup.matchAll(/<circle\b([^>]*)>/g)) {
+    const cx = Number(attrs!.match(/\scx="([^"]*)"/)![1])
+    const cy = Number(attrs!.match(/\scy="([^"]*)"/)![1])
+    const r = Number(attrs!.match(/\sr="([^"]*)"/)![1])
+    points.push([cx - r, cy - r], [cx + r, cy + r])
+  }
+  for (const [, attrs] of markup.matchAll(/<rect\b([^>]*)>/g)) {
+    const x = Number(attrs!.match(/\sx="([^"]*)"/)![1])
+    const y = Number(attrs!.match(/\sy="([^"]*)"/)![1])
+    const w = Number(attrs!.match(/\swidth="([^"]*)"/)![1])
+    const h = Number(attrs!.match(/\sheight="([^"]*)"/)![1])
+    points.push([x, y], [x + w, y + h])
+  }
+  for (const [, attrs] of markup.matchAll(/<line\b([^>]*)>/g)) {
+    points.push(
+      [Number(attrs!.match(/\sx1="([^"]*)"/)![1]), Number(attrs!.match(/\sy1="([^"]*)"/)![1])],
+      [Number(attrs!.match(/\sx2="([^"]*)"/)![1]), Number(attrs!.match(/\sy2="([^"]*)"/)![1])],
+    )
+  }
+  return points
+}
+
+describe('icon viewport', () => {
+  it('every square glyph is authored in the one square viewBox with no fit transform', () => {
+    for (const f of files) {
+      if (nonSquare.has(f)) continue
+      const src = read(f)
+      expect(src, f).toContain(`viewBox="0 0 ${BOX} ${BOX}"`)
+      expect(src, f).not.toContain('transform=')
+    }
+  })
+
+  it('square glyph geometry stays on the 0.01 unit icon grid', () => {
+    for (const f of files) {
+      if (nonSquare.has(f)) continue
+      for (const [, value] of read(f).matchAll(GEOMETRY_ATTRS)) {
+        for (const number of value!.match(/-?(?:\d+\.?\d*|\.\d+)/g) ?? []) {
+          expect(number, `${f}: ${value}`).toMatch(/^-?\d+(?:\.\d{1,2})?$/)
+        }
+      }
+    }
+  })
+
+  it('square glyph ink fills the viewBox on its dominant axis and stays inside it', () => {
+    for (const f of files) {
+      if (nonSquare.has(f)) continue
+      const markup = read(f).match(/<svg\b[\s\S]*<\/svg>/)![0]
+      const strokes = [...markup.matchAll(/stroke-width="([^"]*)"/g)].map(m => Number(m[1]))
+      const half = (strokes.length ? Math.max(...strokes) : 0) / 2
+      const points = geometryPoints(markup)
+      const xs = points.map(p => p[0]!)
+      const ys = points.map(p => p[1]!)
+      const x0 = Math.min(...xs) - half
+      const x1 = Math.max(...xs) + half
+      const y0 = Math.min(...ys) - half
+      const y1 = Math.max(...ys) + half
+      expect(Math.max(x1 - x0, y1 - y0) / BOX, `${f} fill`).toBeGreaterThan(FILL)
+      expect(x0, `${f} overhang`).toBeGreaterThan(-SLACK)
+      expect(y0, `${f} overhang`).toBeGreaterThan(-SLACK)
+      expect(x1, `${f} overhang`).toBeLessThan(BOX + SLACK)
+      expect(y1, `${f} overhang`).toBeLessThan(BOX + SLACK)
+    }
+  })
+
+  it('the sort pair keeps its tight non-square crop', () => {
+    for (const f of nonSquare) {
+      const src = read(f)
+      expect(src, f).toMatch(/viewBox="4 \d+ 12 8"/)
+      expect(src, f).toContain('height={(resolveIconPx(size) * 8) / 12}')
+    }
+  })
+})

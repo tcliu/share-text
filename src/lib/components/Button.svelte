@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte'
+  import type { ComponentProps, Snippet } from 'svelte'
   import Tooltip from './Tooltip.svelte'
-  import { tooltip as tooltipAction } from '$lib/actions/tooltip.svelte'
-  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
+  import { ICON_RATIO, type SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, iconPadRatio, sizeVarStyle } from './size-metrics'
 
   interface Props {
     variant?: 'primary' | 'secondary' | 'danger' | 'outline' | 'ghost'
@@ -23,13 +23,9 @@
     focusRing?: boolean
     ariaLabel?: string
     ariaExpanded?: boolean
-    dataTip?: string
     tooltip?: string
-    tooltipAlign?: 'center' | 'left' | 'right'
-    badge?: string | number
+    tooltipAlign?: ComponentProps<typeof Tooltip>['align']
     icon?: Snippet
-    /** Override the icon box class (defaults to the size's icon box). */
-    iconClass?: string
     children?: Snippet
     buttonEl?: HTMLButtonElement | null
   }
@@ -49,12 +45,9 @@
     ariaLabel,
     ariaPressed,
     ariaExpanded,
-    dataTip,
     tooltip,
     tooltipAlign = 'center',
-    badge,
     icon,
-    iconClass,
     children,
     buttonEl = $bindable<HTMLButtonElement | null>(null),
   }: Props = $props()
@@ -86,118 +79,73 @@
     rose: 'border border-rose-500/40 bg-rose-500/10 text-rose-200 hover:border-rose-400 hover:text-rose-100 focus:border-rose-400 focus:text-rose-100 focus-visible:border-transparent',
   }
 
-  // Full xs–lg scale with literal classes (never interpolated) so the
-  // Tailwind scanner emits every size. sm/md reproduce the original sizing
-  // exactly; xs compacts below sm and lg expands past md. Hit-area insets
-  // mirror the nearest original tier. Padding lives in its own key so the
-  // `ghost` variant can drop it by selecting no pad class instead of
-  // overriding with an important `p-0` (which would also block callers from
-  // restoring padding via `className`).
-  const SIZE_CLASS = {
-    xs: {
-      iconBox: 'h-3 w-3',
-      iconOnly:
-        "relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
-      iconOnlyPad: 'p-1',
-      withChildren:
-        "text-xs relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
-      withChildrenPad: 'px-2 py-1',
-    },
-    sm: {
-      iconBox: 'h-4 w-4',
-      iconOnly:
-        "relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-2 before:content-['']",
-      iconOnlyPad: 'p-1.5',
-      withChildren:
-        "text-sm relative inline-flex items-center justify-center rounded-md before:absolute before:-inset-1.5 before:content-['']",
-      withChildrenPad: 'px-2.5 py-1.5',
-    },
-    md: {
-      iconBox: 'h-5 w-5',
-      iconOnly:
-        "relative inline-flex items-center justify-center rounded-lg before:absolute before:-inset-0.5 before:content-['']",
-      iconOnlyPad: 'p-2.5',
-      withChildren:
-        "relative inline-flex items-center justify-center rounded-lg text-sm font-semibold before:absolute before:-inset-0.5 before:content-['']",
-      withChildrenPad: 'px-4 py-2.5',
-    },
-    lg: {
-      iconBox: 'h-6 w-6',
-      iconOnly:
-        "relative inline-flex items-center justify-center rounded-lg before:absolute before:-inset-0.5 before:content-['']",
-      iconOnlyPad: 'p-3',
-      withChildren:
-        "relative inline-flex items-center justify-center rounded-lg text-base font-semibold before:absolute before:-inset-0.5 before:content-['']",
-      withChildrenPad: 'px-5 py-3',
-    },
-  } as const
+  // Every metric is a fixed ratio of the size dimension, so each keeps a
+  // constant metric:dimension ratio across the range; the icon slot is the
+  // dimension itself (ratio 1) and the glyph inside renders at the shared icon
+  // ratio, matching every other icon at the same size. Font weight is an
+  // emphasis tier, not a length. The ratios reproduce a compact 13px toolbar
+  // button at the default `md` dimension. `iconPad` is derived so an icon-only
+  // button's box (`icon + 2·iconPad`) equals a text button's (`line + 2·padY`)
+  // and the glyph reads as a square at the text row height instead of a shorter
+  // box — see `iconPadRatio`.
+  const BUTTON_RATIOS = { font: 0.8125, line: 1.1607, radius: 0.375, padX: 0.65, padY: 0.45, icon: 1 }
+  const BUTTON_METRICS = { ...BUTTON_RATIOS, iconPad: iconPadRatio(BUTTON_RATIOS), glyph: ICON_RATIO }
 
-  // Stepped chrome for the button itself; a numeric size resolves to its
-  // nearest step, so names render exactly as before. Icons inside stay the
-  // caller's snippet (sized by the caller, now also numerically).
-  const step = $derived(resolveSizeStep(size))
-
-  const iconSizeClass = $derived(iconClass || SIZE_CLASS[step].iconBox)
+  const metrics = $derived({ ...dimensionMetrics(size, BUTTON_METRICS) })
+  const boxStyle = $derived(sizeVarStyle('btn', metrics))
 
   const disabledState = $derived(disabled || pending)
 
-  // The `data-tip` engine rides the element that receives pointer events: the
-  // button normally, or the wrapper span when the button is disabled (a
-  // disabled button fires no mouse events). Exactly one element carries the tip.
-  const tipOwnedByButton = $derived(!(disabledState && dataTip))
-
-  const badgeClasses: Record<string, string> = {
-    cyan: 'bg-cyan-500',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    violet: 'bg-violet-500',
-    rose: 'bg-rose-500',
-  }
-
-  // Count pill overhanging the button's top-right corner; omit the prop to hide it.
-  // The pill is `min-h-5` at `-top-2`, so it sticks 8px out above the button's box:
-  // the enclosing scroll/clip container must give it that much room inside its
-  // scrollport, or the clip line shaves the pill's top.
-  const hasBadge = $derived(badge !== undefined && badge !== null && badge !== '')
-
   const isIconOnly = $derived(!!icon && !children)
 
-  // Ghost buttons carry no padding (tight inline actions for either icons
-  // or text); text labels restore breathing room through `className`.
-  // `relative` anchors the `before:` hit-area expansion that brings every size
-  // to the 44px touch target: do not remove it, and callers must not pass
-  // position utilities via `className` (`relative` outranks `absolute` in the
-  // stylesheet, so the override silently loses). Position the Button with a wrapper or in-flow layout instead.
-  // The keyboard focus ring follows the variant's accent; `focusRing={false}`
-  // drops it while keeping the focus tints, so focus still shows.
+  // `relative` anchors the `before:` hit-area expansion that brings every size to
+  // the 44px touch target: do not remove it. The keyboard focus ring follows the
+  // variant's accent; `focusRing={false}` drops it while keeping the focus tints.
   const ringClass = $derived.by(() => {
     if (!focusRing) return ''
     if (variant === 'primary' || variant === 'outline') return ringClasses[accent]
     if (variant === 'danger') return ringClasses.rose
     return ringClasses.cyan
   })
+
+  const BOX_BASE =
+    'relative inline-flex items-center justify-center cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40'
+
   const baseClass = $derived.by(() => {
-    const sizeClasses = SIZE_CLASS[step]
-    const boxClass = isIconOnly ? sizeClasses.iconOnly : sizeClasses.withChildren
-    const padClass = variant === 'ghost' ? '' : isIconOnly ? sizeClasses.iconOnlyPad : sizeClasses.withChildrenPad
-    const common = `${[boxClass, padClass].filter(Boolean).join(' ')} cursor-pointer outline-none transition motion-reduce:transition-none disabled:cursor-not-allowed disabled:opacity-40`
+    // Shape carries the layout, the interpolated metrics, and the hit-area
+    // inset (a constant per shape, not per size). Ghost drops padding only, so
+    // the icon-only box floors at the text line height: the bordered padding
+    // already fills the row, while a paddingless ghost glyph still matches it.
+    const shape = isIconOnly
+      ? `${BOX_BASE} min-h-[var(--btn-line)] min-w-[var(--btn-line)] rounded-[var(--btn-radius)] max-[27.999rem]:min-h-11 max-[27.999rem]:min-w-11 before:absolute before:-inset-2 before:content-['']`
+      : `${BOX_BASE} text-[length:var(--btn-font)] leading-[var(--btn-line)] rounded-[var(--btn-radius)] before:absolute before:-inset-1.5 before:content-['']`
+    const pad =
+      variant === 'ghost' ? '' : isIconOnly ? 'p-[var(--btn-icon-pad)]' : 'py-[var(--btn-pad-y)] px-[var(--btn-pad-x)]'
+    const common = `${shape} ${pad}`.trim()
+    // Primary carries semibold emphasis, so dialog confirms read bold.
     if (variant === 'primary') {
-      return `${common} ${primaryClasses[accent]} ${ringClass}`
+      return `${common} font-semibold ${primaryClasses[accent]} ${ringClass}`
     }
     if (variant === 'danger') {
       return `${common} bg-rose-500 text-onaccent hover:bg-rose-400 focus:bg-rose-400 ${ringClass}`
     }
+    // Outline carries the same semibold emphasis as primary, so dialog
+    // Cancel/Reset buttons read bold like their confirms.
     if (variant === 'outline') {
-      return `${common} ${outlineClasses[accent]} ${ringClass}`
+      return `${common} font-semibold ${outlineClasses[accent]} ${ringClass}`
     }
     if (variant === 'ghost') {
       return `${common} text-slate-400 hover:text-cyan-300 focus:text-cyan-300 ${ringClass}`
     }
-    if (step === 'sm') {
-      return `${common} border border-slate-700 bg-slate-950 text-slate-200 hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 focus-visible:border-transparent ${ringClass}`
-    }
-    return `${common} border border-slate-700 bg-slate-950 hover:border-slate-500 hover:text-slate-100 focus:border-slate-500 focus:text-slate-100 focus-visible:border-transparent ${ringClass}`
+    // Secondary keeps its original light-blue highlight: the border and label
+    // shift to cyan on hover/focus, matching the bordered dropdown surfaces.
+    return `${common} border border-slate-700 bg-slate-950 text-slate-200 hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 focus-visible:border-transparent ${ringClass}`
   })
+
+  const iconBoxClass = 'h-[var(--btn-icon)] w-[var(--btn-icon)]'
+  // The slot is the size dimension, but the glyph inside renders at the shared
+  // icon ratio so a button icon matches an icon anywhere else at that size.
+  const iconGlyphClass = '[&_svg]:h-[var(--btn-glyph)] [&_svg]:w-[var(--btn-glyph)]'
 
   function handlePreventFocusSteal(event: PointerEvent) {
     event.preventDefault()
@@ -209,7 +157,7 @@
 {#snippet buttonInner()}
   {#if icon}
     <span class="inline-flex items-center gap-2">
-      <span class={`${iconSizeClass} [&_svg]:h-full [&_svg]:w-full`}>{@render icon()}</span>
+      <span class={`inline-flex items-center justify-center ${iconBoxClass} ${iconGlyphClass}`}>{@render icon()}</span>
       {@render children?.()}
     </span>
   {:else}
@@ -218,27 +166,22 @@
 {/snippet}
 
 {#snippet buttonElement()}
-  <!-- Two tooltip systems, applied independently: `dataTip` renders the
-      `data-tip` custom-tooltip attribute, `tooltip` wraps the button with the
-      positioned Tooltip component. Existing callers use one or the other. -->
+  <!-- `tooltip` wraps the button with the positioned Tooltip component. The
+    wrapper span owns the trigger, so the tip also works when the button is
+    disabled (a disabled button fires no mouse events). -->
   <button
     bind:this={buttonEl}
     {type}
     aria-label={ariaLabel}
     aria-pressed={ariaPressed}
     aria-expanded={ariaExpanded}
-    use:tooltipAction data-tip={tipOwnedByButton ? dataTip : undefined}
     onclick={onClick}
     onkeydown={onKeyDown}
     onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined}
     disabled={disabledState}
-    class={`${baseClass} ${hasBadge ? 'relative' : ''} ${className}`}>
+    style={boxStyle}
+    class={`${baseClass} ${className}`}>
     {@render buttonInner()}
-    {#if hasBadge}
-      <span
-        class={`absolute -top-2 -right-2 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-semibold text-onaccent ${badgeClasses[accent]}`}
-        >{badge}</span>
-    {/if}
   </button>
 {/snippet}
 
@@ -246,12 +189,6 @@
   <span bind:this={triggerEl} class="group relative inline-flex">
     {@render buttonElement()}
     <Tooltip align={tooltipAlign} trigger={triggerEl}>{tooltip}</Tooltip>
-  </span>
-{:else if disabledState && dataTip}
-  <!-- Disabled buttons fire no mouse events, so the tip rides on a
-    non-disabled wrapper instead; the button's own `data-tip` is gated off. -->
-  <span class="inline-flex" use:tooltipAction data-tip={dataTip}>
-    {@render buttonElement()}
   </span>
 {:else}
   {@render buttonElement()}

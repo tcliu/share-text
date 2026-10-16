@@ -1,6 +1,7 @@
 <script lang="ts">
   import CheckIcon from '$lib/icons/CheckIcon.svelte'
-  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
+  import type { SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
 
   interface Props {
     checked: boolean
@@ -11,9 +12,7 @@
     indeterminate?: boolean
     stopPropagation?: boolean
     size?: SizeInput
-    labelClass?: string
     wrapperClass?: string
-    boxClass?: string
     inputRef?: HTMLInputElement | null
     onChange?: (checked: boolean) => void
   }
@@ -27,25 +26,19 @@
     indeterminate = false,
     stopPropagation = true,
     size = 'md',
-    labelClass,
     wrapperClass = '',
-    boxClass = '',
     inputRef = $bindable(null),
     onChange,
   }: Props = $props()
 
-  // Stepped chrome (names render exactly as before); out-of-scale numbers
-  // settle on the nearest tier.
-  const step = $derived.by(() => {
-    const resolved = resolveSizeStep(size)
-    return resolved === 'xs' || resolved === 'sm' ? 'sm' : 'md'
-  })
-  const gapClass = $derived(step === 'sm' ? 'gap-2' : 'gap-3')
-  const boxSizeClass = $derived(step === 'sm' ? 'h-4 w-4' : 'h-5 w-5')
-  const iconSize = $derived(step === 'sm' ? 'xs' : 'sm')
-  const resolvedLabelClass = $derived(
-    labelClass ?? (step === 'sm' ? 'text-xs text-slate-300' : 'text-sm text-slate-300'),
-  )
+  // Every metric is a fixed ratio of the size dimension, so each keeps a
+  // constant metric:dimension ratio across the whole range (calibrated at the
+  // md default); the icon box scales with the dimension itself.
+  const CBX_RATIOS = { gap: 0.75, box: 1.25, font: 0.875, icon: 1 }
+
+  const metrics = $derived(dimensionMetrics(size, CBX_RATIOS))
+  const boxStyle = $derived(sizeVarStyle('cbx', metrics))
+  const iconPx = $derived(metrics.icon)
 
   $effect(() => {
     if (!inputRef) return
@@ -54,7 +47,8 @@
 </script>
 
 <label
-  class={`relative inline-flex cursor-pointer items-center before:absolute before:-inset-1 before:content-[''] ${gapClass} ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${wrapperClass}`}>
+  style={boxStyle}
+  class={`relative inline-flex cursor-pointer items-center gap-[var(--cbx-gap)] before:absolute before:-inset-1 before:content-[''] ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${wrapperClass}`}>
   <input
     bind:checked
     bind:this={inputRef}
@@ -71,10 +65,10 @@
     onchange={event => onChange?.((event.currentTarget as HTMLInputElement).checked)} />
   <span
     aria-hidden="true"
-    class={`inline-flex ${boxSizeClass} items-center justify-center rounded-md border transition peer-focus-visible:border-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/70 ${checked ? 'border-cyan-500 bg-cyan-300 text-slate-950' : 'border-slate-700 bg-slate-950 text-transparent'} ${boxClass}`}>
-    <CheckIcon size={iconSize} />
+    class={`inline-flex h-[var(--cbx-box)] w-[var(--cbx-box)] items-center justify-center rounded-md border transition peer-focus-visible:border-transparent peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500/70 ${checked ? 'border-cyan-500 bg-cyan-300 text-slate-950' : 'border-slate-700 bg-slate-950 text-transparent'}`}>
+    <CheckIcon size={iconPx} />
   </span>
   {#if label}
-    <span class={resolvedLabelClass}>{label}</span>
+    <span class="text-[length:var(--cbx-font)] text-slate-300">{label}</span>
   {/if}
 </label>

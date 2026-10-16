@@ -1,79 +1,39 @@
 // Canonical named-step scale shared by every sized component, so a numeric
-// size means the same thing everywhere. Names are aliases for icon-scale
-// pixels (the same steps the icons render); numbers are positions on that
-// axis — interpolated or extrapolated by the caller, never a second scale.
+// size means the same thing everywhere. Names are aliases for the shared
+// dimension pixels; numbers are positions on that axis — scaled by a constant
+// ratio from the dimension, never a second scale.
 
-export type SizeName = 'xs' | 'sm' | 'md' | 'lg'
+export type SizeName = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 
 export type SizeInput = SizeName | number
 
-export const SIZE_PX: Record<SizeName, number> = { xs: 12, sm: 16, md: 20, lg: 24 }
+export const SIZE_PX: Record<SizeName, number> = { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }
 
-export const SIZE_ORDER: SizeName[] = ['xs', 'sm', 'md', 'lg']
+// Step names in ascending pixel order, derived from the map so the order can
+// never drift from the values.
+export const SIZE_ORDER: SizeName[] = (Object.entries(SIZE_PX) as [SizeName, number][])
+  .sort((a, b) => a[1] - b[1])
+  .map(([step]) => step)
 
-// Themed font pixels behind the text scale (see styles.css `@theme`).
-export const FONT_PX: Record<SizeName, number> = { xs: 11, sm: 13, md: 15, lg: 18 }
+// Fixed font ratio: font size is always the size dimension times this.
+export const FONT_RATIO = 0.875
 
-export function nearestStep(size: number): SizeName {
-  // Ties keep the earlier (smaller) step.
-  let nearest: SizeName = SIZE_ORDER[0]
-  let nearestGap = Math.abs(size - SIZE_PX[nearest])
-  for (const step of SIZE_ORDER) {
-    const gap = Math.abs(size - SIZE_PX[step])
-    if (gap < nearestGap) {
-      nearest = step
-      nearestGap = gap
-    }
-  }
-  return nearest
-}
+// Fixed icon ratio: an icon renders at this fraction of its size — the same
+// ratio the text-like controls give their font, so a glyph sits at its label's
+// size. Glyphs fill their viewBox, so this is what holds a filled glyph at the
+// optical size the component around it was tuned for (the artwork it replaced
+// filled ~0.79 of its box); the control's own icon slot stays the size
+// dimension.
+export const ICON_RATIO = 0.8125
 
-// Nearest named step for components that keep stepped chrome while accepting
-// numbers. Names pass through; numbers resolve on the unbounded scale
-// (minimum 1px).
-export function resolveSizeStep(size: SizeInput): SizeName {
-  if (typeof size !== 'number' || !Number.isFinite(size)) {
-    return typeof size === 'string' ? size : 'sm'
-  }
-  return nearestStep(Math.max(1, size))
-}
-
-// Tenth-pixel lerp, floored at zero so far-below-scale extrapolation cannot
-// emit negative lengths.
-export function lerp(lo: number, hi: number, t: number): number {
-  return Math.max(0, Math.round((lo + (hi - lo) * t) * 10) / 10)
-}
-
-// Bracketing steps and blend factor for a bounded value on the axis.
-export function bracketSteps(bounded: number): { lo: SizeName; hi: SizeName; t: number } {
-  let lo: SizeName
-  let hi: SizeName
-  if (bounded < SIZE_PX.xs) {
-    lo = 'xs'
-    hi = 'sm'
-  } else if (bounded > SIZE_PX.lg) {
-    lo = 'md'
-    hi = 'lg'
-  } else {
-    hi = SIZE_ORDER.find(candidate => SIZE_PX[candidate] > bounded) ?? 'lg'
-    lo = [...SIZE_ORDER].reverse().find(candidate => SIZE_PX[candidate] < bounded) ?? 'xs'
-  }
-  return { lo, hi, t: (bounded - SIZE_PX[lo]) / (SIZE_PX[hi] - SIZE_PX[lo]) }
-}
-
-// Interpolated font size for a numeric input on the shared axis (names and
-// exact hits return their step value). Used by text-only components that
-// scale continuously instead of stepping.
+// Ratio-scaled font size for any input on the shared axis: names resolve to
+// their step dimension, numbers pass through (minimum 1px), non-finite input
+// falls back to the md step. Used by text-only components that scale
+// continuously instead of stepping.
 export function resolveFontPx(size: SizeInput): number {
-  if (typeof size !== 'number' || !Number.isFinite(size)) {
-    const step = typeof size === 'string' ? size : 'sm'
-    return FONT_PX[step]
+  if (typeof size === 'number' && Number.isFinite(size)) {
+    return Math.max(1, size) * FONT_RATIO
   }
-  const bounded = Math.max(1, size)
-  const exact = nearestStep(bounded)
-  if (bounded === SIZE_PX[exact]) {
-    return FONT_PX[exact]
-  }
-  const { lo, hi, t } = bracketSteps(bounded)
-  return lerp(FONT_PX[lo], FONT_PX[hi], t)
+  const step = typeof size === 'string' ? size : 'md'
+  return (SIZE_PX[step] ?? SIZE_PX.md) * FONT_RATIO
 }

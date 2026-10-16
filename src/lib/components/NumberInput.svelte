@@ -1,11 +1,18 @@
 <script lang="ts">
   import ChevronUpIcon from '$lib/icons/ChevronUpIcon.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
+  import TextInput from './TextInput.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
+  import type { SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
+  import type { ClearableProps } from './clearable-props'
   const i18n = getI18nContext()
 
-  interface Props {
+  interface Props extends ClearableProps {
     value: string
+    // Baseline the clear affordance compares against; forwarded to TextInput,
+    // whose fallback clear writes it back.
+    defaultValue?: string
     min?: number
     max?: number
     step?: number
@@ -19,8 +26,12 @@
     inputStyle?: string
     id?: string
     ariaLabel: string
+    size?: SizeInput
     incrementLabel?: string
     decrementLabel?: string
+    // The steppers own the field's right edge, so `clearPlacement` `auto`
+    // renders the clear outside the input (an explicit `inside` sits left of
+    // the steppers instead of over them).
     onkeydown?: (event: KeyboardEvent) => void
     oninput?: (event: Event) => void
     onblur?: (event: FocusEvent) => void
@@ -28,6 +39,7 @@
 
   let {
     value = $bindable(),
+    defaultValue,
     min,
     max,
     step = 1,
@@ -38,16 +50,46 @@
     inputStyle,
     id,
     ariaLabel,
+    size = 'md',
     incrementLabel,
     decrementLabel,
+    clearable = false,
+    clearLabel,
+    clearPlacement = 'auto',
+    onClear,
     onkeydown,
     oninput,
     onblur,
   }: Props = $props()
 
+  // The input box rides TextInput's shared base metrics; the stepper glyph and
+  // the gutter that clears it are the only metrics NumberInput adds. The glyph
+  // is the size dimension itself, the same slot rule every sized control uses.
+  const NUM_RATIOS = { icon: 1, padRight: 1.25, radius: 0.375 }
+
+  const numMetrics = $derived(dimensionMetrics(size, NUM_RATIOS))
+  const numStyle = $derived(sizeVarStyle('num', numMetrics))
+
+  // A trailing stepper column is overlaid on the input's right gutter, so the
+  // box keeps exactly TextInput's height instead of growing to the steppers.
+  const framedClass = $derived(`pr-[var(--num-pad-right)]${className ? ` ${className}` : ''}`)
+  // Steppers hidden: the caller owns the whole visual (Pagination sizes it), so
+  // replace the base chrome and keep only the input plumbing.
+  const bareClass = $derived(
+    `flex-1 text-slate-100 transition outline-none disabled:opacity-40 motion-reduce:transition-none${className ? ` ${className}` : ''}`,
+  )
+
   // Derived (not plain consts) so locale switches re-resolve the labels.
   const resolvedIncrementLabel = $derived(incrementLabel ?? i18n.t('number.increment'))
   const resolvedDecrementLabel = $derived(decrementLabel ?? i18n.t('number.decrement'))
+
+  // An explicit `inside` clear must sit left of the steppers, not over them.
+  // The stepper gutter is published as `--input-clear-offset` for TextInput's
+  // clear affordance to consume (TextInput reserves both gutters in the input);
+  // `auto` already renders outside while the steppers are present.
+  const wrapperStyle = $derived(
+    clearable && clearPlacement === 'inside' && showControls ? '--input-clear-offset:var(--num-pad-right)' : undefined,
+  )
 
   let inputEl = $state<HTMLInputElement | null>(null)
   let pointerFocused = false
@@ -209,19 +251,54 @@
   }
 </script>
 
-<div
-  onwheel={handleWheel}
-  class={`flex ${showControls ? 'items-stretch overflow-hidden rounded-lg border border-slate-700 bg-slate-950 transition focus-within:border-cyan-500 motion-reduce:transition-none' : 'flex-none items-stretch'}`}>
-  <input
-    bind:this={inputEl}
+{#snippet steppers()}
+  <!-- The column paints no border of its own: it only reserves the input's
+       border ring with a transparent border and lets the input's border show
+       through, so its focus/disabled color always tracks the field's. -->
+  <div
+    class="absolute inset-y-0 right-0 flex w-[var(--num-pad-right)] flex-col overflow-hidden rounded-r-[var(--num-radius)] border-y border-r border-transparent">
+    <button
+      type="button"
+      onclick={() => adjust(1)}
+      disabled={disabled || isAtMax}
+      tabindex="-1"
+      aria-label={resolvedIncrementLabel}
+      class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
+      <ChevronUpIcon size={numMetrics.icon} />
+    </button>
+    <button
+      type="button"
+      onclick={() => adjust(-1)}
+      disabled={disabled || isAtMin}
+      tabindex="-1"
+      aria-label={resolvedDecrementLabel}
+      class="flex flex-1 items-center justify-center bg-slate-900 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
+      <ChevronDownIcon size={numMetrics.icon} />
+    </button>
+  </div>
+{/snippet}
+
+<div onwheel={handleWheel} class={showControls ? '' : 'flex flex-none items-stretch'} style={numStyle}>
+  <TextInput
+    bind:inputRef={inputEl}
     {id}
     type="text"
     inputmode={inputType}
     {placeholder}
     {disabled}
-    style={inputStyle}
-    aria-label={ariaLabel}
-    {value}
+    {ariaLabel}
+    {size}
+    {inputStyle}
+    bind:value
+    {defaultValue}
+    inputClass={showControls ? undefined : bareClass}
+    className={showControls ? framedClass : undefined}
+    trailing={showControls ? steppers : undefined}
+    {clearable}
+    {clearLabel}
+    {clearPlacement}
+    {wrapperStyle}
+    {onClear}
     onpointerdown={() => {
       pointerFocused = true
     }}
@@ -239,39 +316,5 @@
       oninput?.(e)
     }}
     onblur={handleBlur}
-    onkeydown={handleKeydown}
-    class={`flex-1 text-slate-100 transition outline-none disabled:opacity-40 motion-reduce:transition-none ${showControls ? 'min-w-0 border-0 bg-transparent px-3 py-2 text-sm' : ''} ${className}`} />
-  {#if showControls}
-    <div class="flex flex-col">
-      <button
-        type="button"
-        onclick={() => adjust(1)}
-        disabled={disabled || isAtMax}
-        tabindex="-1"
-        aria-label={resolvedIncrementLabel}
-        class="flex flex-1 items-center justify-center border-b border-slate-700 bg-slate-900 px-0.5 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronUpIcon size="xs" />
-      </button>
-      <button
-        type="button"
-        onclick={() => adjust(-1)}
-        disabled={disabled || isAtMin}
-        tabindex="-1"
-        aria-label={resolvedDecrementLabel}
-        class="flex flex-1 items-center justify-center bg-slate-900 px-0.5 text-slate-400 transition outline-none hover:text-cyan-300 focus:text-cyan-300 focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-inset disabled:opacity-40 motion-reduce:transition-none [@media(pointer:coarse)]:min-h-6">
-        <ChevronDownIcon size="xs" />
-      </button>
-    </div>
-  {/if}
+    onkeydown={handleKeydown} />
 </div>
-
-<style>
-  /* 16px on touch pointers so iOS Safari does not auto-zoom on focus. Plain
-     scoped CSS on purpose: a stacked Tailwind variant inside a class
-     expression never reaches the scanner, so it would silently not exist. */
-  @media (pointer: coarse) {
-    input {
-      font-size: 1rem;
-    }
-  }
-</style>

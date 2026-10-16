@@ -599,24 +599,25 @@ closed (the button mode lets the native Enter/Space toggle open instead).
 Mouse hover and arrow keys share the single `highlightIndex`, exposed to
 assistive tech via `aria-activedescendant`.
 
-### Plain-Text Hints (`data-tip`)
+### Plain-Text Hints (`tooltip`)
 
-Plain-text tooltips use the `use:tooltip` action
+Plain-text tooltips on the shared controls use the `tooltip` prop (`Button`, and
+the `DataTable` column `headerTip`), rendered through the shared `Tooltip`
+component; rich positioned content keeps that component too. A disabled button
+fires no pointer events, so a disabled `Button`'s hint rides a non-disabled
+wrapper span instead of the trigger, and still shows.
+
+App-private markup can still use the per-element `use:tooltip` action
 (`src/lib/actions/tooltip.svelte.ts`) with a `data-tip` attribute on the
-triggering element; `Button`'s `dataTip` prop and the `DataTable` column
-`headerTip` (plus `headerTipPlace`) feed it. The action reads its own element's
-`dataset.tip` and publishes text plus geometry into the shared `tipState`; the
-root layout renders the single `#tip` host box (registered through `setTipBox`)
-from that state, so no module writes to the DOM. The box is anchored to the
-element (centered below, flipped above when there is no room, clamped inside the
-viewport) and hidden on pointer-leave/blur, on scroll (one shared capture
-listener), and on teardown. It carries `role="tooltip"`, is inert to pointer
-events, and sits in the `--z-index-tooltip` token (45) so it paints above the
-portalled `z-40` dialogs while staying below the `z-50` dev tag. A disabled
-button fires no pointer events, so `Button` moves the `data-tip` onto a
-non-disabled wrapper span (and gates the button's own `data-tip` off) — a
-disabled icon button with a `dataTip` still shows its hint. Rich positioned
-content keeps the `Tooltip` component.
+triggering element: the action reads its own element's `dataset.tip` and
+publishes text plus geometry into the shared `tipState`; the root layout renders
+the single `#tip` host box (registered through `setTipBox`) from that state, so
+no module writes to the DOM. The box is anchored to the element (centered below,
+flipped above when there is no room, clamped inside the viewport) and hidden on
+pointer-leave/blur, on scroll (one shared capture listener), and on teardown. It
+carries `role="tooltip"`, is inert to pointer events, and sits in the
+`--z-index-tooltip` token (45) so it paints above the portalled `z-40` dialogs
+while staying below the `z-50` dev tag.
 
 ### UI Localization (i18n)
 

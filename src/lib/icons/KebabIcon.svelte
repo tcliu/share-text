@@ -19,5 +19,6 @@
   width={resolveIconPx(size)}
   height={resolveIconPx(size)}
   class={className}>
-  <path d="M10 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Zm0 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" />
+  <path
+    d="M 10 5a 2.5 2.5 0 1 1 0 -5a 2.5 2.5 0 0 1 0 5Zm 0 7.5a 2.5 2.5 0 1 1 0 -5a 2.5 2.5 0 0 1 0 5Zm 0 7.5a 2.5 2.5 0 1 1 0 -5a 2.5 2.5 0 0 1 0 5Z" />
 </svg>

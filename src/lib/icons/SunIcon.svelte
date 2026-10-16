@@ -1,14 +1,13 @@
 <script lang="ts">
-  type IconSize = 'xs' | 'sm' | 'md' | 'lg'
+  import { resolveIconPx, type IconSizeInput } from './icon-size'
 
   interface Props {
     className?: string
-    size?: IconSize
+    size?: IconSizeInput
   }
 
   // Width/height attributes (not classes) so `size` composes with `className`:
   // explicit size classes in className still win, since CSS beats attributes.
-  const SIZE_PX: Record<IconSize, number> = { xs: 12, sm: 16, md: 20, lg: 24 }
 
   let { className = '', size = 'md' }: Props = $props()
 </script>
@@ -17,9 +16,9 @@
   viewBox="0 0 20 20"
   fill="currentColor"
   aria-hidden="true"
-  width={SIZE_PX[size]}
-  height={SIZE_PX[size]}
+  width={resolveIconPx(size)}
+  height={resolveIconPx(size)}
   class={className}>
   <path
-    d="M10 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 2ZM10 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 15ZM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM15.657 5.404a.75.75 0 1 0-1.06-1.06l-1.061 1.06a.75.75 0 0 0 1.06 1.06l1.06-1.06ZM6.464 14.596a.75.75 0 1 0-1.06-1.06l-1.06 1.06a.75.75 0 0 0 1.06 1.06l1.06-1.06ZM18 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 18 10ZM5 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5A.75.75 0 0 1 5 10ZM14.596 15.657a.75.75 0 0 0 1.06-1.06l-1.06-1.061a.75.75 0 1 0-1.06 1.06l1.06 1.06ZM5.404 6.464a.75.75 0 0 0 1.06-1.06l-1.06-1.06a.75.75 0 1 0-1.061 1.06l1.06 1.06Z" />
+    d="M 10 0a 0.94 0.94 0 0 1 0.94 0.94v 1.87a 0.94 0.94 0 0 1 -1.88 0v -1.87A 0.94 0.94 0 0 1 10 0ZM 10 16.25a 0.94 0.94 0 0 1 0.94 0.94v 1.87a 0.94 0.94 0 0 1 -1.88 0v -1.87A 0.94 0.94 0 0 1 10 16.25ZM 10 6.25a 3.75 3.75 0 1 0 0 7.5a 3.75 3.75 0 0 0 0 -7.5ZM 17.07 4.26a 0.94 0.94 0 1 0 -1.32 -1.33l -1.33 1.33a 0.94 0.94 0 0 0 1.33 1.32l 1.32 -1.32ZM 5.58 15.75a 0.94 0.94 0 1 0 -1.32 -1.33l -1.33 1.33a 0.94 0.94 0 0 0 1.33 1.32l 1.32 -1.32ZM 20 10a 0.94 0.94 0 0 1 -0.94 0.94h -1.87a 0.94 0.94 0 0 1 0 -1.88h 1.87A 0.94 0.94 0 0 1 20 10ZM 3.75 10a 0.94 0.94 0 0 1 -0.94 0.94h -1.87a 0.94 0.94 0 0 1 0 -1.88h 1.87A 0.94 0.94 0 0 1 3.75 10ZM 15.75 17.07a 0.94 0.94 0 0 0 1.32 -1.32l -1.32 -1.33a 0.94 0.94 0 1 0 -1.33 1.33l 1.33 1.32ZM 4.26 5.58a 0.94 0.94 0 0 0 1.32 -1.32l -1.32 -1.33a 0.94 0.94 0 1 0 -1.33 1.33l 1.32 1.32Z" />
 </svg>

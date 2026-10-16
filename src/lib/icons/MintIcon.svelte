@@ -1,14 +1,13 @@
 <script lang="ts">
-  type IconSize = 'xs' | 'sm' | 'md' | 'lg'
+  import { resolveIconPx, type IconSizeInput } from './icon-size'
 
   interface Props {
     className?: string
-    size?: IconSize
+    size?: IconSizeInput
   }
 
   // Width/height attributes (not classes) so `size` composes with `className`:
   // explicit size classes in className still win, since CSS beats attributes.
-  const SIZE_PX: Record<IconSize, number> = { xs: 12, sm: 16, md: 20, lg: 24 }
 
   let { className = '', size = 'md' }: Props = $props()
 </script>
@@ -17,11 +16,11 @@
   viewBox="0 0 20 20"
   fill="currentColor"
   aria-hidden="true"
-  width={SIZE_PX[size]}
-  height={SIZE_PX[size]}
+  width={resolveIconPx(size)}
+  height={resolveIconPx(size)}
   class={className}>
   <path
     fill-rule="evenodd"
     clip-rule="evenodd"
-    d="M8.5 3.528V8.172a3 3 0 0 0-.805 1.944L3.66 14.15a2 2 0 0 0 1.34 3.07A18.5 18.5 0 0 0 10 18c1.86 0 3.69-.26 5.45-.78a2 2 0 0 0 1.14-2.77L12.56 10.116A3 3 0 0 0 11.5 8.172V3.528A11.5 11.5 0 0 0 8.5 3.528ZM10 2c-.77 0-1.54.02-2.29.07a.75.75 0 0 0 .29 1.47c.74-.04 1.48-.06 2.28-.06h.4c.52 0 1.03.02 1.54.05a.75.75 0 0 0 .08-1.5A23.5 23.5 0 0 0 10 2Z" />
+    d="M 8.05 1.93V 7.73a 3.75 3.75 0 0 0 -1.01 2.42L 2 15.19a 2.5 2.5 0 0 0 1.68 3.84A 23.1 23.1 0 0 0 9.92 20c 2.32 0 4.61 -0.32 6.81 -0.97a 2.5 2.5 0 0 0 1.42 -3.46L 13.12 10.15A 3.75 3.75 0 0 0 11.79 7.73V 1.93A 14.36 14.36 0 0 0 8.05 1.93ZM 9.92 0.02c -0.96 0 -1.92 0.02 -2.86 0.09a 0.94 0.94 0 0 0 0.36 1.83c 0.93 -0.05 1.85 -0.07 2.85 -0.07h 0.5c 0.65 0 1.29 0.02 1.92 0.06a 0.94 0.94 0 0 0 0.1 -1.87A 29.35 29.35 0 0 0 9.92 0.02Z" />
 </svg>

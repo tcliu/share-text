@@ -19,5 +19,5 @@
   width={resolveIconPx(size)}
   height={resolveIconPx(size)}
   class={className}>
-  <path d="M10 2.5L4.5 10h2.2L3.5 16.5H6l1.2 2h5.6l1.2-2h2.5l-3.2-6.5H16L10 2.5Z" />
+  <path d="M 10 0L 3.13 9.38h 2.75L 1.88 17.5H 5l 1.5 2.5h 7l 1.5 -2.5h 3.13l -4 -8.12H 17.5L 10 0Z" />
 </svg>
