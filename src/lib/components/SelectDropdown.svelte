@@ -593,7 +593,8 @@
           ondblclick={handleControlDblClick}
           oninput={handleControlInput}
           onkeydown={handleControlKeydown}
-          inputClass="field-sizing-content min-w-0 bg-transparent text-left outline-none" />
+          variant="embedded"
+          className="field-sizing-content min-w-0 text-left" />
         {@render triggerChevron()}
       </label>
     {:else}

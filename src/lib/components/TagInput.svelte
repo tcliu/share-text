@@ -373,6 +373,7 @@
             label={tag}
             chipClass={`rounded-full border ${resolveChipClass(tag)}`}
             size={size}
+            removable
             removeLabel={i18n.t('tagInput.remove', { name: tag })}
             onRemove={() => removeAt(index)}
             {disabled}
@@ -384,7 +385,8 @@
         bind:value={draft}
         id={id}
         {size}
-        inputClass="min-w-24 flex-1 bg-transparent py-[var(--tag-input-pad-y)] text-[length:var(--tag-font)] leading-[var(--tag-line)] text-slate-100 outline-none placeholder:text-slate-500"
+        variant="embedded"
+        className="min-w-24 flex-1 py-[var(--tag-input-pad-y)] text-[length:var(--tag-font)] leading-[var(--tag-line)] text-slate-100 placeholder:text-slate-500"
         {placeholder}
         {disabled}
         role="combobox"

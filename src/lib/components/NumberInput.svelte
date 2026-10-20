@@ -79,9 +79,10 @@
   const STEPPER_GUTTER_CLASS = 'pr-[var(--num-pad-right)]'
   const framedClass = $derived([STEPPER_GUTTER_CLASS, className].filter(Boolean).join(' '))
   // Steppers hidden: the caller owns the whole visual (Pagination sizes it), so
-  // replace the base chrome and keep only the input plumbing.
+  // the field is embedded in it — no chrome of its own, only the input
+  // plumbing and the text rules it owns.
   const bareClass = $derived(
-    `flex-1 text-slate-100 transition outline-none disabled:opacity-40 motion-reduce:transition-none${className ? ` ${className}` : ''}`,
+    `flex-1 text-slate-100 transition disabled:opacity-40 motion-reduce:transition-none${className ? ` ${className}` : ''}`,
   )
 
   // Derived (not plain consts) so locale switches re-resolve the labels.
@@ -312,8 +313,8 @@
     {inputStyle}
     bind:value
     {defaultValue}
-    inputClass={showControls ? undefined : bareClass}
-    className={showControls ? framedClass : undefined}
+    variant={showControls ? 'bordered' : 'embedded'}
+    className={showControls ? framedClass : bareClass}
     trailing={showControls ? steppers : undefined}
     {clearable}
     {clearLabel}

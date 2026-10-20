@@ -6,7 +6,7 @@
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import Button from './Button.svelte'
   import { dimensionMetrics, sizeVarStyle } from './size-metrics'
-  import { INPUT_CHROME, INPUT_METRIC_CLASS, INPUT_RATIOS } from './input-chrome'
+  import { INPUT_CHROME, INPUT_EMBEDDED, INPUT_METRIC_CLASS, INPUT_RATIOS } from './input-chrome'
   import type { ClearableProps } from './clearable-props'
 
   const i18n = getI18nContext()
@@ -31,8 +31,14 @@
     inputStyle?: string
     // Replaces the whole input class string (the override owns the metrics).
     inputClass?: string
-    // Extra classes appended after the base (or the inputClass override), for
-    // gutter offsets such as clearing a leading icon or trailing adornment.
+    // Chrome variant: `bordered` (default) is the shared chrome; `embedded` is
+    // the chrome-less base for a field inside another surface (the container
+    // owns the border, the background, and the focus ring), for a field that
+    // supplies its own text rules.
+    variant?: 'bordered' | 'embedded'
+    // Extra classes appended after the base (or the inputClass override): gutter
+    // offsets such as clearing a leading icon or a trailing adornment, and — for
+    // an embedded field — the text rules and metrics it owns.
     className?: string
     // Adornment blocks rendered inside the field frame, before and after the
     // text. Each positions itself (the frame is `relative`), so the caller owns
@@ -57,6 +63,7 @@
     inputRef = $bindable(null),
     inputStyle,
     inputClass,
+    variant = 'bordered',
     className = '',
     leading,
     trailing,
@@ -122,8 +129,13 @@
     ].filter(Boolean).join(';'),
   )
 
+  // The base chrome: the shared bordered chrome, or the chrome-less base for
+  // a field embedded in another surface. An `inputClass` override replaces it
+  // entirely (the override owns the metrics).
+  const baseClass = $derived(variant === 'embedded' ? INPUT_EMBEDDED : `${INPUT_CHROME} ${INPUT_METRIC_CLASS}`)
+
   const resolvedClass = $derived(
-    `${inputClass ?? `${INPUT_CHROME} ${INPUT_METRIC_CLASS}`}${className ? ` ${className}` : ''}`,
+    `${inputClass ?? baseClass}${className ? ` ${className}` : ''}`,
   )
 
   // The frame carries the caller's adornment metrics plus the clear metrics, so

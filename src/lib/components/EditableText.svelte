@@ -7,6 +7,7 @@
   import { copyToClipboard } from './copy-to-clipboard'
   import { INPUT_METRIC_CLASS, INPUT_RATIOS } from './input-chrome'
   import { dimensionMetrics, sizeVarStyle } from './size-metrics'
+  import TextInput from './TextInput.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -168,10 +169,9 @@
   const metrics = $derived(dimensionMetrics(size, INPUT_RATIOS))
   const sizeStyle = $derived(sizeVarStyle('input', metrics))
   const metricClass = INPUT_METRIC_CLASS
-  const inputStyle = $derived.by(() => {
-    const width = inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'
-    return `${width}; ${sizeStyle}`
-  })
+  // The edit field rides TextInput, which emits the same `--input-*` vars for
+  // the shared size, so the field needs only its measured width on top.
+  const widthStyle = $derived(inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0')
 </script>
 
 {#if editing}
@@ -179,19 +179,25 @@
        sibling tag chips don't shift. Fallback to min-width only if we
        couldn't measure. -->
   <div class="flex min-w-0 items-center">
-    <input
-      bind:this={input}
+    <!-- The field rides TextInput, which owns the input element, the ref, and
+         the size metrics. Its chrome stays EditableText's own — an outline
+         ring standing in for the text — so it rides the base override, not the
+         embedded variant: the embedded base drops the surface, and this field
+         paints its own. -->
+    <TextInput
+      bind:inputRef={input}
       bind:value
+      inputClass={`${metricClass} max-w-full bg-slate-950 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`}
+      inputStyle={widthStyle}
+      {size}
+      ariaLabel={i18n.t('edit.editText')}
       onclick={e => e.stopPropagation()}
       onkeydown={e => {
         e.stopPropagation()
         handleKeydown(e)
       }}
       onblur={commit}
-      data-escape-capture
-      aria-label={i18n.t('edit.editText')}
-      style={inputStyle}
-      class={`${metricClass} max-w-full bg-slate-950 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
+      data-escape-capture />
   </div>
 {:else}
   {#snippet displayContent()}
@@ -270,12 +276,12 @@
 <style>
   /* 16px on touch pointers so iOS Safari does not auto-zoom on focus, matching
      the guard on TextInput's field; it covers the display label too, so the
-     label keeps the field's rendered size. Plain scoped CSS on purpose: a
-     stacked Tailwind variant inside a class expression never reaches the
-     scanner, so it would silently not exist. */
+     label keeps the field's rendered size (the edit field carries the same
+     guard inside TextInput). Plain scoped CSS on purpose: a stacked Tailwind
+     variant inside a class expression never reaches the scanner, so it would
+     silently not exist. */
   @media (pointer: coarse) {
-    button,
-    input {
+    button {
       font-size: 1rem;
     }
   }
