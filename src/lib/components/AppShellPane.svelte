@@ -45,7 +45,7 @@
   data-suppressed={suppressed ? '' : null}
   aria-hidden={suppressed ? 'true' : undefined}
   class={floating
-    ? `app-shell-pane absolute inset-y-0 z-20 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
+    ? `app-shell-pane absolute inset-y-0 z-40 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
     : 'app-shell-pane flex min-h-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] min-w-0 shrink-0 flex-row'}
   style={`--pane-w: ${drawer.effectiveSize}px;${suppressed ? 'visibility:hidden;' : ''}`}>
   {#if !floating && side === 'right'}
