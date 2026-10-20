@@ -4,7 +4,7 @@ export const zhTW = {
   },
   common: {
     ok: '確定',
-    reset: '重置',
+    reset: '重設',
     save: '儲存',
     copy: '複製',
     delete: '刪除',
@@ -110,7 +110,7 @@ export const zhTW = {
     },
     uploadConfirmTitle: '放棄未儲存的變更？',
     uploadConfirmMessage: '您有未儲存的變更。上傳檔案將放棄這些變更並取代編輯器內容。',
-    loadFailed: '載入編輯器失敗',
+    loadFailed: '編輯器載入失敗',
     loading: '正在載入編輯器...',
     content: '內容',
   },
@@ -253,11 +253,24 @@ export const zhTW = {
     remove: '移除 {name}',
   },
   range: {
-    selectDates: '選擇日期',
-    calendar: '選擇日期範圍',
+    from: '開始',
+    to: '結束',
+  },
+  date: {
+    select: '選擇日期',
+    selectTime: '選擇日期與時間',
+    calendar: '選擇日期',
     prevMonth: '上個月',
     nextMonth: '下個月',
     clear: '清除日期',
+  },
+  time: {
+    hour: '小時',
+    minute: '分鐘',
+    second: '秒',
+  },
+  chart: {
+    label: '圖表',
   },
   dropdown: {
     noOptions: '沒有選項',
@@ -290,7 +303,6 @@ export const zhTW = {
     noContent: '沒有可預覽的內容',
   },
   structure: {
-    copyNode: '複製節點',
     copyValue: '複製 {name}',
     collapse: '摺疊 {name}',
     expand: '展開 {name}',

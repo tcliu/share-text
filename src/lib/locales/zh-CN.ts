@@ -110,7 +110,7 @@ export const zhCN = {
     },
     uploadConfirmTitle: '放弃未保存的更改？',
     uploadConfirmMessage: '您有未保存的更改。上传文件将放弃这些更改并替换编辑器内容。',
-    loadFailed: '加载编辑器失败',
+    loadFailed: '编辑器加载失败',
     loading: '正在加载编辑器...',
     content: '内容',
   },
@@ -253,11 +253,24 @@ export const zhCN = {
     remove: '移除 {name}',
   },
   range: {
-    selectDates: '选择日期',
-    calendar: '选择日期范围',
+    from: '开始',
+    to: '结束',
+  },
+  date: {
+    select: '选择日期',
+    selectTime: '选择日期和时间',
+    calendar: '选择日期',
     prevMonth: '上个月',
     nextMonth: '下个月',
     clear: '清除日期',
+  },
+  time: {
+    hour: '小时',
+    minute: '分钟',
+    second: '秒',
+  },
+  chart: {
+    label: '图表',
   },
   dropdown: {
     noOptions: '没有选项',
@@ -290,7 +303,6 @@ export const zhCN = {
     noContent: '没有可预览的内容',
   },
   structure: {
-    copyNode: '复制节点',
     copyValue: '复制 {name}',
     collapse: '折叠 {name}',
     expand: '展开 {name}',

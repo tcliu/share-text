@@ -256,11 +256,24 @@ export const en = {
     remove: 'Remove {name}',
   },
   range: {
-    selectDates: 'Select dates',
-    calendar: 'Choose a date range',
+    from: 'From',
+    to: 'To',
+  },
+  date: {
+    select: 'Select date',
+    selectTime: 'Select date and time',
+    calendar: 'Choose a date',
     prevMonth: 'Previous month',
     nextMonth: 'Next month',
-    clear: 'Clear dates',
+    clear: 'Clear date',
+  },
+  time: {
+    hour: 'Hour',
+    minute: 'Minute',
+    second: 'Second',
+  },
+  chart: {
+    label: 'Chart',
   },
   dropdown: {
     noOptions: 'No options',
@@ -293,7 +306,6 @@ export const en = {
     noContent: 'No content to preview',
   },
   structure: {
-    copyNode: 'Copy node',
     copyValue: 'Copy {name}',
     collapse: 'Collapse {name}',
     expand: 'Expand {name}',
