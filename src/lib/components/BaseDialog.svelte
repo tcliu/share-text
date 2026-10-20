@@ -1,5 +1,10 @@
 <script module>
-  let openDialogCount = 0
+  // Ids of the dialogs currently mounted. The topmost dialog is the most
+  // recently mounted one still mounted; a live id set (rather than a mount-time
+  // counter) stays correct when a base dialog unmounts while a stacked confirm
+  // is still open, so the confirm keeps handling Escape and the focus trap
+  // instead of wedging behind a stale index.
+  const liveDialogIds = new Set<number>()
   // Monotonic id sequence: title ids must never be reused across mounts, or a
   // lingering title element from a previous dialog can hijack the new dialog's
   // accessible name (the first matching id wins).
@@ -82,7 +87,7 @@
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
 
-  let dialogIndex = 0
+  let dialogId = 0
   let dialogRef = $state<HTMLElement | null>(null)
   let titleId = $state('')
   let previouslyFocused: Element | null = null
@@ -136,9 +141,9 @@
   })
 
   onMount(() => {
-    openDialogCount += 1
-    dialogIndex = openDialogCount
-    titleId = `dialog-title-${++dialogIdSeq}`
+    dialogId = ++dialogIdSeq
+    liveDialogIds.add(dialogId)
+    titleId = `dialog-title-${dialogId}`
     previouslyFocused = document.activeElement
     void tick().then(() => {
       const firstInput = dialogRef?.querySelector<HTMLElement>(
@@ -149,14 +154,19 @@
   })
 
   onDestroy(() => {
-    openDialogCount -= 1
+    liveDialogIds.delete(dialogId)
     if (browser && previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
       previouslyFocused.focus()
     }
   })
 
   function isTopmostDialog() {
-    return dialogIndex === openDialogCount
+    if (liveDialogIds.size === 0) return true
+    let highest = 0
+    for (const id of liveDialogIds) {
+      if (id > highest) highest = id
+    }
+    return dialogId === highest
   }
 
   function handleCancelRequest() {

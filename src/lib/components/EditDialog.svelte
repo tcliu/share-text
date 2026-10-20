@@ -85,13 +85,13 @@
 {#snippet dialogFooter()}
   <Buttons align="right">
     {@render actions?.()}
-    <Button variant="primary" accent="cyan" type="button" disabled={pending || saveDisabled} {pending} onClick={requestSave}
+    <Button variant="primary" accent="cyan" type="button" disabled={pending || saveDisabled || !dirty} {pending} onClick={requestSave}
       >{saveLabel}</Button>
     <Button variant="outline" type="button" disabled={pending || !dirty} onClick={onReset}>{resetLabel}</Button>
   </Buttons>
 {/snippet}
 
-<BaseDialog {title} {header} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending} onCancel={handleCancelRequest} footer={dialogFooter}>
+<BaseDialog {title} {header} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending || discardOpen} onCancel={handleCancelRequest} footer={dialogFooter}>
   <form class="w-full min-w-0" onsubmit={handleSubmit}>
     {@render children?.()}
   </form>
