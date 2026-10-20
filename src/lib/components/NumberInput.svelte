@@ -73,7 +73,11 @@
 
   // A trailing stepper column is overlaid on the input's right gutter, so the
   // box keeps exactly TextInput's height instead of growing to the steppers.
-  const framedClass = $derived(`pr-[var(--num-pad-right)]${className ? ` ${className}` : ''}`)
+  // The gutter is a standalone literal the scanner can extract: glued to the
+  // following interpolation it was never emitted, and the digits rendered
+  // under the steppers.
+  const STEPPER_GUTTER_CLASS = 'pr-[var(--num-pad-right)]'
+  const framedClass = $derived([STEPPER_GUTTER_CLASS, className].filter(Boolean).join(' '))
   // Steppers hidden: the caller owns the whole visual (Pagination sizes it), so
   // replace the base chrome and keep only the input plumbing.
   const bareClass = $derived(

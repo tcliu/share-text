@@ -55,6 +55,12 @@
   const pwdMetrics = $derived(dimensionMetrics(size, { icon: 1, box: 2.25, inset: 0.25 }))
   const pwdStyle = $derived(sizeVarStyle('pwd', pwdMetrics))
 
+  // The toggle overlays the field's right edge, so the input reserves that
+  // gutter. A standalone literal the scanner can extract: glued to a `${`
+  // interpolation inside the class expression, Tailwind never emitted it and
+  // the password rendered under the button.
+  const TOGGLE_GUTTER_CLASS = 'pr-[calc(var(--pwd-box)+var(--pwd-inset)*2)]'
+
   // Derived (not plain consts) so locale switches re-resolve the labels.
   const resolvedShowLabel = $derived(showLabel ?? i18n.t('password.show'))
   const resolvedHideLabel = $derived(hideLabel ?? i18n.t('password.hide'))
@@ -91,7 +97,7 @@
   {clearLabel}
   {clearPlacement}
   {onClear}
-  className={`pr-[calc(var(--pwd-box)+var(--pwd-inset)*2)]${className ? ` ${className}` : ''}`}
+  className={[TOGGLE_GUTTER_CLASS, className].filter(Boolean).join(' ')}
   wrapperStyle={pwdStyle}>
   {#snippet trailing()}
     <button
