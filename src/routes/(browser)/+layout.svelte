@@ -23,11 +23,7 @@
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
   import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
-  import {
-    APP_SHELL_DEFAULT_WIDTH,
-    APP_SHELL_MAX_WIDTH,
-    APP_SHELL_MIN_WIDTH,
-  } from '$lib/app-shell'
+  import { APP_SHELL_DEFAULT_WIDTH, APP_SHELL_MAX_WIDTH, APP_SHELL_MIN_WIDTH } from '$lib/app-shell'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
@@ -141,6 +137,11 @@
 
   function closeDrawer() {
     leftPaneOpen = false
+  }
+
+  function handleLeftOpenChange(open: boolean) {
+    leftPaneOpen = open
+    if (!paneFloating) void tick().then(() => editorFocus?.())
   }
 
   async function closeDrawerAndFocus() {
@@ -313,7 +314,6 @@
   <div class="flex items-center gap-2">
     <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
     <Button
-      size="sm"
       className="-ml-1"
       ariaLabel={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
       tooltip={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
@@ -321,7 +321,7 @@
       preventFocusSteal
       onClick={() => api.toggleLeft()}>
       {#snippet icon()}
-        <MenuIcon size="sm" />
+        <MenuIcon />
       {/snippet}
     </Button>
     <h1 class="text-base font-semibold tracking-tight whitespace-nowrap text-slate-200 sm:text-lg">
@@ -333,7 +333,6 @@
     <LanguageMenu align="right" />
     {#if profileIdentity}
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.settings')}
         tooltip={i18n.t('list.settingsWith', { name: profileIdentity.username })}
         onClick={handleSettings}>
@@ -342,7 +341,6 @@
         {/snippet}
       </Button>
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.signOut')}
         tooltip={i18n.t('list.signedInAs', { name: profileIdentity.username })}
         onClick={handleSignOutClick}>
@@ -352,7 +350,6 @@
       </Button>
     {:else}
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.login')}
         tooltip={i18n.t('list.login')}
         onClick={() => (loginOpen = true)}>
@@ -369,34 +366,37 @@
   class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
   >Skip to content</a>
 
-<AppShell
-  bind:open={leftPaneOpen}
-  bind:paneSize={leftPaneWidth}
-  min={leftPaneMinWidth}
-  max={APP_SHELL_MAX_WIDTH}
-  defaultSize={APP_SHELL_DEFAULT_WIDTH}
-  storageKey="share-text:split-pane-width"
-  headerClassName="flex-wrap"
-  leftPaneLabel={i18n.t('editor.documentList')}
-  onLayoutModeChange={floating => (paneFloating = floating)}
-  onOpenChange={() => {
-    if (!paneFloating) void tick().then(() => editorFocus?.())
-  }}
-  header={browserHeader}>
-  {#snippet leftPane()}
-    {@render documentList()}
-  {/snippet}
-  <div bind:this={mainRef} id="main-content" tabindex="-1" class="flex min-h-full flex-1 flex-col outline-none">
-    {@render children()}
-  </div>
-</AppShell>
+<div class="h-dvh">
+  <AppShell
+    classNames={{ header: 'flex-wrap' }}
+    left={{
+      open: leftPaneOpen,
+      size: leftPaneWidth,
+      min: leftPaneMinWidth,
+      max: APP_SHELL_MAX_WIDTH,
+      defaultSize: APP_SHELL_DEFAULT_WIDTH,
+      storageKey: 'share-text:split-pane-width',
+      paneLabel: i18n.t('editor.documentList'),
+      onOpenChange: handleLeftOpenChange,
+      onSizeChange: v => (leftPaneWidth = v),
+    }}
+    onLayoutModeChange={floating => (paneFloating = floating)}
+    header={browserHeader}>
+    {#snippet leftPane()}
+      {@render documentList()}
+    {/snippet}
+    <div bind:this={mainRef} id="main-content" tabindex="-1" class="flex min-h-full flex-1 flex-col outline-none">
+      {@render children()}
+    </div>
+  </AppShell>
+</div>
 
 {#if editorGuardState.discardDialogOpen}
   <ConfirmDialog
     title={i18n.t('discard.title')}
     message={i18n.t('discard.message')}
     confirmLabel={i18n.t('common.ok')}
-    confirmColor="amber"
+    accent="amber"
     onConfirm={handleConfirmDiscard}
     confirmOnDismiss />
 {/if}
@@ -406,7 +406,7 @@
     title={i18n.t('delete.title')}
     message={i18n.t('delete.message')}
     confirmLabel={i18n.t('common.delete')}
-    confirmColor="rose"
+    accent="rose"
     onConfirm={confirmDelete}
     onCancel={() => (deleteTarget = null)} />
 {/if}
@@ -414,7 +414,7 @@
 {#if loginOpen}
   <BaseDialog
     title={loginMode === 'signin' ? i18n.t('auth.login') : i18n.t('auth.createAccount')}
-    maxWidth="md"
+    widthVariant="md"
     onCancel={() => (loginOpen = false)}>
     <UserAuthPanel
       embedded

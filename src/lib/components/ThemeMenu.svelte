@@ -60,16 +60,15 @@
   {autoPlace}
   itemRole="menuitemradio"
   itemChecked={option => option.value === themeState.theme}
-  triggerClass="p-1.5 relative before:absolute before:-inset-1.5 before:content-['']"
   phoneSheetTitle={i18n.t('theme.label')}
   closeLabel={i18n.t('common.close')}
   {itemClass}>
   {#snippet icon()}
-    <PaletteIcon size="sm" />
+    <PaletteIcon />
   {/snippet}
   {#snippet item(option: ThemeOption, _state: MenuItemState)}
     {@const OptionIcon = option.icon}
-    <OptionIcon size="sm" className="shrink-0" />
+    <OptionIcon className="shrink-0" />
     <span>{option.label}</span>
   {/snippet}
 </Menu>

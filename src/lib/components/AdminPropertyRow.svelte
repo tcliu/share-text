@@ -97,7 +97,6 @@
     {/if}
     {#if property.source === 'database'}
       <Button
-        size="sm"
         ariaLabel={i18n.t('admin.revertLabelToDefault', { name: label })}
         tooltip={i18n.t('admin.revertToDefault')}
         tooltipAlign="right"

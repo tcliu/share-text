@@ -116,7 +116,6 @@
       <ThemeMenu align="right" />
       <LanguageMenu align="right" />
       <Button
-        size="sm"
         ariaLabel={i18n.t('auth.goToDocuments')}
         tooltip={i18n.t('auth.goToDocuments')}
         onClick={() => goto('/')}>
@@ -125,7 +124,6 @@
         {/snippet}
       </Button>
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.signOut')}
         tooltip={i18n.t('list.signOut')}
         onClick={() => void authState.handleLogout()}>
@@ -163,7 +161,6 @@
       {/snippet}
       {#snippet documentsToolbar(state: AdminState)}
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.documents.add')}
           tooltip={i18n.t('admin.documents.add')}
           onClick={() => state.documentsState.openAdd()}>
@@ -172,7 +169,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.documents.import')}
           tooltip={i18n.t('admin.documents.import')}
           onClick={() => state.documentsState.openImport()}>
@@ -181,7 +177,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.documents.export')}
           tooltip={i18n.t('admin.documents.export')}
           pending={state.documentsState.exportPending}
@@ -191,7 +186,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.documents.editSelected')}
           tooltip={i18n.t('admin.documents.editSelected')}
           disabled={state.documentsState.selectedCount !== 1}
@@ -201,7 +195,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.deleteSelected')}
           tooltip={i18n.t('admin.deleteSelected')}
           disabled={state.documentsState.selectedCount === 0}
@@ -213,7 +206,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('common.reload')}
           tooltip={i18n.t('common.reload')}
           disabled={state.documentsState.loading}
@@ -228,7 +220,6 @@
       {/snippet}
       {#snippet usersToolbar(state: AdminState)}
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.users.add')}
           tooltip={i18n.t('admin.users.add')}
           onClick={() => state.usersState.openAdd()}>
@@ -237,7 +228,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.users.import')}
           tooltip={i18n.t('admin.users.import')}
           onClick={() => state.usersState.openImport()}>
@@ -246,7 +236,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.users.export')}
           tooltip={i18n.t('admin.users.export')}
           pending={state.usersState.exportPending}
@@ -256,7 +245,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={state.usersState.selectedCount === 1
             ? i18n.t('admin.users.editSelected')
             : i18n.t('admin.users.setStatus')}
@@ -270,7 +258,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.deleteSelected')}
           tooltip={i18n.t('admin.deleteSelected')}
           disabled={state.usersState.selectedCount === 0}
@@ -282,7 +269,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('common.reload')}
           tooltip={i18n.t('common.reload')}
           disabled={state.usersState.loading}
@@ -325,7 +311,7 @@
           state={{ preferencesState, settingsState, documentsState, usersState }}
           pathname={page.url.pathname}
           ariaLabel={i18n.t('admin.sections')}
-          class="pt-4" />
+          className="pt-4" />
       </div>
     {/if}
     {#if children}{@render children()}{/if}
@@ -337,7 +323,7 @@
     title={i18n.t('admin.discardSettingsTitle')}
     message={i18n.t('admin.discardSettingsMessage')}
     confirmLabel={i18n.t('admin.discard')}
-    confirmColor="amber"
+    accent="amber"
     onConfirm={handleDiscardAndNavigate}
     confirmOnDismiss />
 {/if}

@@ -39,12 +39,11 @@
   {ariaLabel}
   {align}
   {autoPlace}
-  triggerClass="p-2"
   panelClass="w-44"
   {itemClass}
   itemDisabled={item => item.disabled ?? false}>
   {#snippet icon()}
-    <KebabIcon size="sm" />
+    <KebabIcon />
   {/snippet}
   {#snippet item(it: KebabMenuItem, _state: MenuItemState)}
     {#if it.icon}

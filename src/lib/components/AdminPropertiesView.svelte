@@ -73,7 +73,7 @@
               onclick={() => toggleTag(tag)} />
           {/each}
           {#if selectedTags.size > 0}
-            <Button size="sm" ariaLabel={i18n.t('admin.clearTagFilters')} onClick={() => (selectedTags = new Set())}>
+            <Button ariaLabel={i18n.t('admin.clearTagFilters')} onClick={() => (selectedTags = new Set())}>
               {#snippet icon()}
                 <CloseIcon />
               {/snippet}

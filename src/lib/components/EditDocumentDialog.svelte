@@ -275,10 +275,9 @@
 
 <BaseDialog
   title={mode === 'add' ? i18n.t('admin.dialog.addDocument') : i18n.t('admin.dialog.editDocument')}
-  maxWidth="3xl"
+  widthVariant="3xl"
   onCancel={handleCancelRequest}
-  dismissKeydownCapture={!discardPromptOpen}
-  {pending}>
+  dismissDisabled={pending}>
   <div class="flex min-h-0 flex-1 flex-col gap-4">
     <div class="min-h-0 flex-1 overflow-y-auto">
       <div class="flex flex-wrap items-start gap-4">

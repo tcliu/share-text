@@ -95,11 +95,13 @@
   someSelected={usersState.currentPageSomeSelected}
   rowSelectAriaLabel={user => i18n.t('admin.selectUser', { name: user.username })}
   selectAllAriaLabel={i18n.t('admin.users.selectAll')}
-  total={usersState.total}
-  pageSize={usersState.pageSize}
-  currentPage={usersState.page}
-  onPageChange={nextPage => usersState.handlePageChange(nextPage)}
-  onPageSizeChange={size => usersState.handlePageSizeChange(size)}
+  pagination={{
+    total: usersState.total,
+    pageSize: usersState.pageSize,
+    currentPage: usersState.page,
+    onPageChange: nextPage => usersState.handlePageChange(nextPage),
+    onPageSizeChange: size => usersState.handlePageSizeChange(size),
+  }}
   sortKey={usersState.sortBy}
   sortDirection={usersState.sortDir}
   onSort={(key, direction) => usersState.handleSort(key, direction)}
@@ -120,7 +122,6 @@
   {#if supportsHover.value}
     <EditableText
       text={user.username}
-      size="sm"
       className="text-slate-200"
       copyable
       onChange={username => void usersState.updateUsername(user.id, username)} />
@@ -133,7 +134,6 @@
   {#if supportsHover.value}
     <EditableText
       text={user.email}
-      size="sm"
       className="text-slate-400"
       copyable
       onChange={email => void usersState.updateEmail(user.id, email)} />
@@ -177,9 +177,9 @@
 {#if usersState.bulkStatusOpen}
   <BaseDialog
     title={i18n.t('admin.users.setStatus')}
-    maxWidth="md"
+    widthVariant="md"
     onCancel={() => (usersState.bulkStatusOpen = false)}
-    pending={usersState.bulkStatusPending}>
+    dismissDisabled={usersState.bulkStatusPending}>
     <div class="flex flex-col gap-4">
       <p class="text-sm text-slate-400">
         {usersState.selectedCount === 1
@@ -215,7 +215,7 @@
       : i18n.t('admin.deleteUsersTitlePlural', { count: usersState.selectedCount })}
     message={i18n.t('admin.deleteUsersMessage')}
     confirmLabel={i18n.t('common.delete')}
-    confirmColor="rose"
+    accent="rose"
     onConfirm={() => void usersState.confirmBulkDelete()}
     onCancel={() => (usersState.bulkDeleteOpen = false)} />
 {/if}

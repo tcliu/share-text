@@ -19,22 +19,22 @@ describe('Copyable', () => {
   })
 
   it('copies the text when the copy button is clicked', async () => {
-    render(Copyable, { text: 'aaaaaa', copyAriaLabel: 'Copy document ID' })
+    render(Copyable, { text: 'aaaaaa', ariaLabel: 'Copy document ID' })
     await fireEvent.click(screen.getByLabelText('Copy document ID'))
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('aaaaaa')
   })
 
   it('copies copyText when provided instead of text', async () => {
-    render(Copyable, { text: 'shown', copyText: 'copied value', copyAriaLabel: 'Copy' })
+    render(Copyable, { text: 'shown', copyText: 'copied value', ariaLabel: 'Copy' })
     await fireEvent.click(screen.getByLabelText('Copy'))
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('copied value')
   })
 
-  it('renders an always-visible copy button in top-right position', async () => {
+  it('renders a copy button in top-right position', async () => {
     render(Copyable, {
       text: 'hello world',
       copyPosition: 'top-right',
-      copyAriaLabel: 'Copy top-right',
+      ariaLabel: 'Copy top-right',
       containerClass: 'rounded-lg border',
     })
 
@@ -45,7 +45,7 @@ describe('Copyable', () => {
   })
 
   it('gates the inline copy button reveal behind the hover media query', () => {
-    render(Copyable, { text: 'hello world', copyAriaLabel: 'Copy inline' })
+    render(Copyable, { text: 'hello world', ariaLabel: 'Copy inline' })
 
     const button = screen.getByLabelText('Copy inline')
     const wrapper = findRevealWrapper(button)
@@ -55,7 +55,7 @@ describe('Copyable', () => {
   })
 
   it('hides the copy button in top-right position when there is nothing to copy', () => {
-    render(Copyable, { text: '   ', copyPosition: 'top-right', copyAriaLabel: 'Copy top-right' })
+    render(Copyable, { text: '   ', copyPosition: 'top-right', ariaLabel: 'Copy top-right' })
 
     expect(screen.queryByLabelText('Copy top-right')).toBeNull()
   })

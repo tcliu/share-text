@@ -29,6 +29,19 @@ function makeItems(log: string[]): KebabMenuItem[] {
 }
 
 describe('KebabMenu', () => {
+  it('renders its trigger from the shared Button with menu semantics', async () => {
+    const { getByRole } = render(KebabMenu, { props: { items: makeItems([]) } })
+    const trigger = getByRole('button', { name: 'More actions' })
+
+    expect(trigger.getAttribute('aria-haspopup')).toBe('menu')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+
+    await fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    expect(trigger.getAttribute('aria-controls')).toBeTruthy()
+  })
+
   it('opens with ArrowDown on the closed trigger and focuses the first enabled item', async () => {
     const log: string[] = []
     const { getByRole } = render(KebabMenu, { props: { items: makeItems(log) } })

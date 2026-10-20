@@ -123,9 +123,9 @@
 
 <BaseDialog
   title={kind === 'documents' ? i18n.t('admin.import.documentsTitle') : i18n.t('admin.import.usersTitle')}
-  maxWidth="3xl"
+  widthVariant="3xl"
   onCancel={onClose}
-  {pending}>
+  dismissDisabled={pending}>
   <div class="flex min-h-0 flex-col gap-4">
     <div class="flex min-h-0 flex-col gap-1">
       <div class="flex items-start justify-between gap-3">
@@ -136,7 +136,6 @@
         </p>
         <div class="flex items-center gap-1.5">
           <Button
-            size="sm"
             variant="ghost"
             ariaLabel={i18n.t('admin.import.uploadAria')}
             tooltip={i18n.t('editor.upload')}
@@ -147,7 +146,6 @@
             {/snippet}
           </Button>
           <Button
-            size="sm"
             variant="ghost"
             ariaLabel={i18n.t('admin.import.showSamples')}
             tooltip={i18n.t('admin.import.showSamples')}
@@ -184,7 +182,7 @@
 </BaseDialog>
 
 {#if samplesOpen}
-  <BaseDialog title={i18n.t('admin.import.samples')} maxWidth="2xl" onCancel={() => (samplesOpen = false)}>
+  <BaseDialog title={i18n.t('admin.import.samples')} widthVariant="2xl" onCancel={() => (samplesOpen = false)}>
     <div class="flex min-h-0 flex-col gap-4">
       <p class="text-sm text-slate-400">
         {i18n.t('admin.import.samplesHint')}
@@ -195,8 +193,7 @@
           { label: i18n.t('admin.import.multiple'), path: 'multiple', content: multipleSample },
         ]}
         state={{}}
-        ariaLabel={i18n.t('admin.import.sampleTypes')}
-        headerClass="sticky top-0 z-10 flex w-full flex-wrap items-center justify-between gap-2 bg-slate-900/95 pb-3 backdrop-blur" />
+        ariaLabel={i18n.t('admin.import.sampleTypes')} />
     </div>
   </BaseDialog>
 {/if}
@@ -204,8 +201,8 @@
 {#snippet sampleCard(sample: { label: string; json: string })}
   <Copyable
     copyText={sample.json}
-    copyAriaLabel={i18n.t('admin.import.copySampleAria', { name: sample.label })}
-    copyTooltip={i18n.t('admin.import.copySample')}
+    ariaLabel={i18n.t('admin.import.copySampleAria', { name: sample.label })}
+    tooltip={i18n.t('admin.import.copySample')}
     copyPosition="top-right"
     containerClass="overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
     <pre

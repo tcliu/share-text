@@ -42,7 +42,7 @@ function counter(root: HTMLElement): string {
 describe('PropertiesPreview', () => {
   it('renders key/value pairs in a two-column grid', async () => {
     render(PropertiesPreview, { content: 'name=Alice\ncount=3' })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(counter(root)).toBe('2 rows · 2 columns')
     expect(hasCellValue(root, 'name')).toBe(true)
     expect(hasCellValue(root, 'Alice')).toBe(true)
@@ -52,7 +52,7 @@ describe('PropertiesPreview', () => {
 
   it('labels the two columns Key and Value', async () => {
     render(PropertiesPreview, { content: 'a=1' })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const selectorRow = root.querySelector('thead tr') as HTMLElement
     const headers = Array.from(selectorRow.querySelectorAll('th')) as HTMLElement[]
     expect(headers[0].textContent?.trim()).toBe('')
@@ -62,7 +62,7 @@ describe('PropertiesPreview', () => {
 
   it('does not offer the Toggle header control for the properties grid', async () => {
     render(PropertiesPreview, { content: 'a=1' })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(within(root).queryByRole('button', { name: 'Toggle header' })).toBeNull()
   })
 
@@ -75,7 +75,7 @@ describe('PropertiesPreview', () => {
   it('shows a placeholder for empty content and allows adding a row', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: '', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(root.textContent).toContain('No content to preview')
     await fireEvent.click(within(root).getByRole('button', { name: /Add row/i }))
     await vi.waitFor(() => expect(counter(root)).toBe('1 rows · 2 columns'))
@@ -84,7 +84,7 @@ describe('PropertiesPreview', () => {
   it('edits a value via the grid input and reports the change', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice\ncount=3', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Bob' } })
@@ -96,7 +96,7 @@ describe('PropertiesPreview', () => {
   it('renders a read-only grid when editable is false', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice\ncount=3', onContentChange: onChange, editable: false })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     expect(input.readOnly).toBe(true)
     expect((within(root).getByRole('button', { name: 'Insert row below' }) as HTMLButtonElement).disabled).toBe(true)
@@ -108,7 +108,7 @@ describe('PropertiesPreview', () => {
   it('renames a key via the grid input and reports the change', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'name')
     input.focus()
     await fireEvent.input(input, { target: { value: 'person' } })
@@ -120,7 +120,7 @@ describe('PropertiesPreview', () => {
   it('adds an entry with a typed key and value via Insert row below', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'a=1', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert row below' }))
     await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 2 columns'))
     const keyInput = gridCell(root, 1, 0) as HTMLTextAreaElement
@@ -142,7 +142,7 @@ describe('PropertiesPreview', () => {
   it('removes an entry via the Delete rows toolbar button', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice\ncount=3', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(selectorCellOfRow(root, 'Alice'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Delete rows' }))
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled())
@@ -152,7 +152,7 @@ describe('PropertiesPreview', () => {
   it('supports undo and redo for cell edits', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'name=Alice', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Alicia' } })
@@ -174,7 +174,7 @@ describe('PropertiesPreview', () => {
 
   it('supports range selection by dragging across cells', async () => {
     render(PropertiesPreview, { content: 'a=1\nb=2' })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(boxOf(root, 0, 0))
     await fireEvent.mouseEnter(boxOf(root, 1, 1))
     await fireEvent.mouseUp(window)
@@ -185,7 +185,7 @@ describe('PropertiesPreview', () => {
   it('locks the grid to two columns: no column insert/delete or growth', async () => {
     const onChange = vi.fn()
     render(PropertiesPreview, { content: 'a=1\nb=2', onContentChange: onChange })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(within(root).queryByRole('button', { name: 'Insert column before' })).toBeNull()
     expect(within(root).queryByRole('button', { name: 'Insert column after' })).toBeNull()
     expect(within(root).queryByRole('button', { name: 'Delete columns' })).toBeNull()
@@ -198,10 +198,10 @@ describe('PropertiesPreview', () => {
 
   it('does not loop when content does not round-trip (e.g. comments) and re-parses on change', async () => {
     const { rerender } = render(PropertiesPreview, { content: '# comment\nname=Alice' })
-    let root = await screen.findByTestId('properties-preview')
+    let root = await screen.findByTestId('data-grid')
     expect(hasCellValue(root, 'Alice')).toBe(true)
     await rerender({ content: 'other=1\n# ignored' })
-    root = await screen.findByTestId('properties-preview')
+    root = await screen.findByTestId('data-grid')
     await vi.waitFor(() => expect(hasCellValue(root, '1')).toBe(true))
   })
 
@@ -213,7 +213,7 @@ describe('PropertiesPreview', () => {
         emitted = v
       },
     })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Bob' } })
@@ -225,7 +225,7 @@ describe('PropertiesPreview', () => {
 
   it('switches to fixed-width 35/65 layout after adding a row to an empty properties doc', async () => {
     render(PropertiesPreview, { content: '', onContentChange: vi.fn() })
-    const root = await screen.findByTestId('properties-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(root.querySelector('colgroup')).toBeNull()
     await fireEvent.click(within(root).getByText('Add row'))
     await vi.waitFor(() => expect(root.querySelector('colgroup')).not.toBeNull())

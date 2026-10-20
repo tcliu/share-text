@@ -23,7 +23,6 @@
     currentContent: string
     currentType: string
     hasUnsavedChanges: boolean
-    isMobile?: boolean
     onClose: () => void
     onRestore: (version: DocumentVersion) => void
   }
@@ -34,7 +33,6 @@
     currentContent,
     currentType,
     hasUnsavedChanges,
-    isMobile = false,
     onClose,
     onRestore,
   }: Props = $props()
@@ -164,10 +162,8 @@
 {#if open}
   <BaseDialog
     title={i18n.t('history.title')}
-    maxWidth="3xl"
-    fullscreen={isMobile}
-    onCancel={onClose}
-    dismissKeydownCapture={!restorePromptOpen}>
+    widthVariant="3xl"
+    onCancel={onClose}>
     <div class="flex min-h-0 flex-col gap-3">
       <p class="text-xs text-slate-400">
         {i18n.t('history.description')}
@@ -175,7 +171,6 @@
 
       <div class="flex items-center gap-1">
         <Button
-          size="sm"
           ariaLabel={i18n.t('history.compareWithCurrent')}
           tooltip={actionsDisabled ? undefined : i18n.t('history.compareWithCurrent')}
           tooltipAlign="right"
@@ -188,7 +183,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('history.restoreVersion')}
           tooltip={actionsDisabled ? undefined : i18n.t('history.restore')}
           tooltipAlign="right"
@@ -314,7 +308,7 @@
     title={i18n.t('history.restoreTitle')}
     message={i18n.t('history.restoreMessage')}
     confirmLabel={i18n.t('history.restore')}
-    confirmColor="cyan"
+    accent="cyan"
     onConfirm={confirmRestore}
     onCancel={cancelRestore} />
 {/if}

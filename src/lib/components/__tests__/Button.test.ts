@@ -3,6 +3,30 @@ import { render, fireEvent } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import Button from '../Button.svelte'
 
+describe('Button menu trigger semantics', () => {
+  it('forwards aria-haspopup, aria-controls, and aria-expanded', () => {
+    const { getByRole } = render(Button, {
+      ariaLabel: 'More actions',
+      ariaHaspopup: 'menu',
+      ariaControls: 'menu-1',
+      ariaExpanded: true,
+    })
+    const button = getByRole('button', { name: 'More actions' })
+
+    expect(button.getAttribute('aria-haspopup')).toBe('menu')
+    expect(button.getAttribute('aria-controls')).toBe('menu-1')
+    expect(button.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('omits the trigger attributes when unset', () => {
+    const { getByRole } = render(Button, { ariaLabel: 'Toggle' })
+    const button = getByRole('button', { name: 'Toggle' })
+
+    expect(button.hasAttribute('aria-haspopup')).toBe(false)
+    expect(button.hasAttribute('aria-controls')).toBe(false)
+  })
+})
+
 describe('Button preventFocusSteal', () => {
   it('calls preventDefault on pointerdown so the button never takes focus', () => {
     const { getByRole } = render(Button, { ariaLabel: 'Toggle', preventFocusSteal: true })

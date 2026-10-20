@@ -103,7 +103,6 @@
   <div bind:this={headerRef} class="flex items-center gap-1 px-2 pt-2">
     {#if onToggleCollapse}
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.collapse')}
         tooltip={i18n.t('list.collapse')}
         ariaExpanded={true}
@@ -114,12 +113,12 @@
         {/snippet}
       </Button>
     {/if}
-    <Button size="sm" ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={onNew}>
+    <Button ariaLabel={i18n.t('list.newDocument')} tooltip={i18n.t('list.newDocument')} onClick={onNew}>
       {#snippet icon()}
         <PlusIcon />
       {/snippet}
     </Button>
-    <Button size="sm" ariaLabel={i18n.t('list.refresh')} tooltip={i18n.t('list.refresh')} onClick={onRefresh} disabled={loading}>
+    <Button ariaLabel={i18n.t('list.refresh')} tooltip={i18n.t('list.refresh')} onClick={onRefresh} disabled={loading}>
       {#snippet icon()}
         <RefreshIcon />
       {/snippet}

@@ -184,9 +184,9 @@
       <Copyable
         text={document.name}
         copyText={document.name}
-        copyAriaLabel={`Copy document name ${document.name}`}
-        copyTooltip="Copy"
-        className="truncate font-semibold text-slate-200" />
+        ariaLabel={`Copy document name ${document.name}`}
+        tooltip="Copy"
+        textClass="truncate font-semibold text-slate-200" />
     {/if}
   {/snippet}
 
@@ -199,7 +199,6 @@
           activeValue={docType}
           ariaLabel={i18n.t('editor.documentType')}
           filterable={true}
-          size="sm"
           onSelect={actions.handleTypeSelect}
           align="right"
           emptyLabel={i18n.t('dropdown.noOptions')}
@@ -222,7 +221,6 @@
 
   {#snippet previewToggles()}
     <Button
-      size="sm"
       ariaLabel={i18n.t('editor.editorView')}
       tooltip={i18n.t('editor.editorView')}
       variant={previewState.editorActive ? 'outline' : 'secondary'}
@@ -239,7 +237,6 @@
       {/snippet}
     </Button>
     <Button
-      size="sm"
       ariaLabel={i18n.t('editor.previewView')}
       tooltip={i18n.t('editor.previewView')}
       variant={previewState.previewActive ? 'outline' : 'secondary'}
@@ -267,7 +264,6 @@
       {/await}
     {/if}
     <Button
-      size="sm"
       ariaLabel={i18n.t('common.copy')}
       tooltip={i18n.t('common.copy')}
       onClick={actions.handleCopy}
@@ -279,7 +275,6 @@
     {#if !context.isMobile}
       {#if editable}
         <Button
-          size="sm"
           ariaLabel={i18n.t('editor.upload')}
           tooltip={i18n.t('editor.upload')}
           onClick={actions.handleUploadClick}>
@@ -289,7 +284,6 @@
         </Button>
       {/if}
       <Button
-        size="sm"
         ariaLabel={i18n.t('editor.export')}
         tooltip={i18n.t('editor.export')}
         onClick={actions.handleExport}
@@ -300,7 +294,6 @@
       </Button>
       {#if currentType.format}
         <Button
-          size="sm"
           ariaLabel={currentType.format.title}
           tooltip={i18n.t('editor.format')}
           onClick={formatState.openDialog}
@@ -355,7 +348,6 @@
       {/if}
     {:else if onClone || cloneDisabled}
       <Button
-        size="sm"
         ariaLabel={i18n.t('editor.cloneDocument')}
         tooltip={i18n.t('editor.clone')}
         onClick={onClone}
@@ -366,7 +358,7 @@
       </Button>
     {/if}
     {#if onShare}
-      <Button size="sm" ariaLabel={i18n.t('editor.share')} tooltip={i18n.t('editor.share')} onClick={onShare}>
+      <Button ariaLabel={i18n.t('editor.share')} tooltip={i18n.t('editor.share')} onClick={onShare}>
         {#snippet icon()}
           <ShareIcon />
         {/snippet}
@@ -374,7 +366,6 @@
     {/if}
     {#if onDelete}
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.deleteDocument')}
         tooltip={i18n.t('common.delete')}
         onClick={() => onDelete(document.id)}
@@ -386,7 +377,6 @@
     {/if}
     {#if editable}
       <Button
-        size="sm"
         ariaLabel={i18n.t('editor.reset')}
         tooltip={i18n.t('editor.reset')}
         onClick={handleResetClick}
@@ -396,7 +386,6 @@
         {/snippet}
       </Button>
       <Button
-        size="sm"
         ariaLabel={i18n.t('editor.save')}
         tooltip={i18n.t('editor.save')}
         onClick={handleSave}
@@ -447,7 +436,6 @@
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex min-w-[min(12rem,60%)] flex-1 items-center gap-2">
           <Button
-            size="sm"
             ariaLabel={i18n.t('editor.openDocumentList')}
             tooltip={i18n.t('editor.documentList')}
             className="shrink-0"
@@ -612,7 +600,7 @@
     title={i18n.t('editor.uploadConfirmTitle')}
     message={i18n.t('editor.uploadConfirmMessage')}
     confirmLabel={i18n.t('common.ok')}
-    confirmColor="amber"
+    accent="amber"
     onConfirm={actions.handleUploadConfirm}
     onCancel={() => actions.closeUploadConfirm()} />
 {/if}
@@ -642,7 +630,6 @@
     currentContent={content}
     currentType={docType}
     hasUnsavedChanges={dirty}
-    isMobile={context.isMobile}
     onClose={() => (historyOpen = false)}
     onRestore={version => {
       content = version.content

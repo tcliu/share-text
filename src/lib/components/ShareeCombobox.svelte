@@ -110,11 +110,11 @@
 <TagInput
   bind:this={tagInputRef}
   value={selected}
-  availableTags={availableNames}
+  options={availableNames}
   onChange={handleChange}
   onQueryChange={handleQueryChange}
   {placeholder}
-  inputId={id}>
+  id={id}>
   {#snippet chip(username: string, remove: () => void)}
     {@const color = getDefaultTagColor(username)}
     <Chip

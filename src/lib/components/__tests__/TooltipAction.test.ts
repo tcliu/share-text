@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
 import { render, fireEvent } from '@testing-library/svelte'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import Button from '../Button.svelte'
-import { setTipBox, tipState } from '../../actions/tooltip.svelte'
+import { setTipBox, tipState, tooltip } from '../../actions/tooltip.svelte'
 
-describe('Button dataTip shared engine', () => {
+describe('tooltip engine and Button tooltip', () => {
+  const cleanups: Array<() => void> = []
+
   afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
     setTipBox(null)
     document.body.innerHTML = ''
+    vi.unstubAllGlobals()
   })
 
   function registerHost(): void {
@@ -19,41 +23,50 @@ describe('Button dataTip shared engine', () => {
     setTipBox(host)
   }
 
-  it('publishes the dataTip text on hover and hides on leave', async () => {
-    registerHost()
-    const { getByRole, unmount } = render(Button, { ariaLabel: 'Info', dataTip: 'More info' })
-    const button = getByRole('button', { name: 'Info' })
+  function attachTip(text: string): HTMLElement {
+    const node = document.createElement('span')
+    node.dataset.tip = text
+    document.body.appendChild(node)
+    const action = tooltip(node)
+    if (action) cleanups.push(() => action.destroy?.())
+    return node
+  }
 
-    await fireEvent.pointerEnter(button)
+  it('publishes the data-tip text on hover and hides on leave', async () => {
+    registerHost()
+    const node = attachTip('More info')
+
+    await fireEvent.pointerEnter(node)
     expect(tipState.visible).toBe(true)
     expect(tipState.text).toBe('More info')
 
-    await fireEvent.pointerLeave(button)
+    await fireEvent.pointerLeave(node)
     expect(tipState.visible).toBe(false)
-    unmount()
   })
 
   it('publishes on keyboard focus and hides on blur', async () => {
     registerHost()
-    const { getByRole, unmount } = render(Button, { ariaLabel: 'Info', dataTip: 'Focused hint' })
-    const button = getByRole('button', { name: 'Info' })
+    const node = attachTip('Focused hint')
 
-    await fireEvent.focus(button)
+    await fireEvent.focus(node)
     expect(tipState.visible).toBe(true)
     expect(tipState.text).toBe('Focused hint')
 
-    await fireEvent.blur(button)
+    await fireEvent.blur(node)
     expect(tipState.visible).toBe(false)
-    unmount()
   })
 
-  it('moves the tip to the wrapper and off the disabled button', () => {
-    const { getByRole, unmount } = render(Button, { ariaLabel: 'Info', dataTip: 'Disabled hint', disabled: true })
+  it('shows the Button tooltip on the wrapper when the button is disabled', () => {
+    // A disabled button fires no mouse events, so the positioned Tooltip
+    // rides the non-disabled wrapper span instead of the button itself.
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }))
+    const { getByRole } = render(Button, { ariaLabel: 'Info', tooltip: 'Disabled hint', disabled: true })
     const button = getByRole('button', { name: 'Info' }) as HTMLButtonElement
 
     expect(button.disabled).toBe(true)
-    expect(button.hasAttribute('data-tip')).toBe(false)
-    expect(button.parentElement?.getAttribute('data-tip')).toBe('Disabled hint')
-    unmount()
+    const trigger = button.parentElement!
+
+    fireEvent.mouseEnter(trigger)
+    expect(getByRole('tooltip').textContent).toBe('Disabled hint')
   })
 })

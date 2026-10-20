@@ -131,11 +131,13 @@
   someSelected={documentsState.currentPageSomeSelected}
   rowSelectAriaLabel={document => i18n.t('admin.selectDocument', { name: document.name })}
   selectAllAriaLabel={i18n.t('admin.documents.selectAll')}
-  total={documentsState.total}
-  pageSize={documentsState.pageSize}
-  currentPage={documentsState.page}
-  onPageChange={nextPage => documentsState.handlePageChange(nextPage)}
-  onPageSizeChange={size => documentsState.handlePageSizeChange(size)}
+  pagination={{
+    total: documentsState.total,
+    pageSize: documentsState.pageSize,
+    currentPage: documentsState.page,
+    onPageChange: nextPage => documentsState.handlePageChange(nextPage),
+    onPageSizeChange: size => documentsState.handlePageSizeChange(size),
+  }}
   sortKey={documentsState.sortBy}
   sortDirection={documentsState.sortDir}
   onSort={(key, direction) => documentsState.handleSort(key, direction)}
@@ -152,7 +154,6 @@
   {#if supportsHover.value}
     <EditableText
       text={document.id}
-      size="sm"
       className="font-mono text-slate-400 transition-colors hover:text-cyan-300"
       copyable
       onActivate={() => window.open(`/${document.id}`, '_blank', 'noopener')}
@@ -166,7 +167,6 @@
   {#if supportsHover.value}
     <EditableText
       text={document.name}
-      size="sm"
       className="text-slate-200"
       copyable
       onChange={name => void documentsState.rename(document.id, name)} />
@@ -179,8 +179,8 @@
   {#if supportsHover.value}
     <Copyable
       text={document.documentType}
-      className="text-slate-400 capitalize"
-      copyAriaLabel={i18n.t('admin.copyDocumentType', { name: document.documentType })} />
+      textClass="text-slate-400 capitalize"
+      ariaLabel={i18n.t('admin.copyDocumentType', { name: document.documentType })} />
   {:else}
     <PlainCell value={document.documentType} className="capitalize text-slate-400" />
   {/if}
@@ -199,8 +199,8 @@
     {#if supportsHover.value}
       <Copyable
         text={formatTagNames(document.tags)}
-        className="block text-slate-400"
-        copyAriaLabel={i18n.t('admin.copyTagsFor', { name: document.name })}>
+        textClass="block text-slate-400"
+        ariaLabel={i18n.t('admin.copyTagsFor', { name: document.name })}>
         {@render tagsChips(document)}
       </Copyable>
     {:else}
@@ -217,8 +217,8 @@
   {#if supportsHover.value}
     <Copyable
       text={document.createdBy}
-      className="block truncate text-slate-400"
-      copyAriaLabel={i18n.t('admin.copyCreatedBy', { name: document.createdBy })} />
+      textClass="block truncate text-slate-400"
+      ariaLabel={i18n.t('admin.copyCreatedBy', { name: document.createdBy })} />
   {:else}
     <PlainCell value={document.createdBy} className="text-slate-400" />
   {/if}
@@ -228,8 +228,8 @@
   {#if supportsHover.value}
     <Copyable
       text={document.updatedBy}
-      className="block truncate text-slate-400"
-      copyAriaLabel={i18n.t('admin.copyUpdatedBy', { name: document.updatedBy })} />
+      textClass="block truncate text-slate-400"
+      ariaLabel={i18n.t('admin.copyUpdatedBy', { name: document.updatedBy })} />
   {:else}
     <PlainCell value={document.updatedBy} className="text-slate-400" />
   {/if}
@@ -278,7 +278,7 @@
       : i18n.t('admin.deleteDocumentsTitlePlural', { count: documentsState.selectedCount })}
     message={i18n.t('admin.deleteDocumentsMessage')}
     confirmLabel={i18n.t('common.delete')}
-    confirmColor="rose"
+    accent="rose"
     onConfirm={() => void documentsState.confirmBulkDelete()}
     onCancel={() => (documentsState.bulkDeleteOpen = false)} />
 {/if}

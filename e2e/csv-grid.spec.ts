@@ -20,10 +20,10 @@ test('csv grid: edit a cell, Tab across the registry, and persist', async ({ pag
   await expect(page.getByRole('region', { name: docName })).toBeVisible()
 
   // The default mode is editor-only; the grid renders in the preview pane.
-  // Scope under the preview's testid: the grid uses split header/body tables
+  // Scope under the grid's testid: the grid uses split header/body tables
   // that both carry role="grid".
   await page.getByRole('button', { name: 'Preview view' }).click()
-  const grid = page.getByTestId('csv-preview')
+  const grid = page.getByTestId('data-grid')
   await expect(grid).toBeVisible()
 
   const firstCell = grid.locator('textarea[data-row="1"][data-col="0"]')

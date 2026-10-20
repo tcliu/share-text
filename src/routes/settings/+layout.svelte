@@ -124,7 +124,6 @@
       <ThemeMenu align="right" />
       <LanguageMenu align="right" />
       <Button
-        size="sm"
         ariaLabel={i18n.t('auth.goToDocuments')}
         tooltip={i18n.t('auth.goToDocuments')}
         onClick={() => goto('/')}>
@@ -133,7 +132,6 @@
         {/snippet}
       </Button>
       <Button
-        size="sm"
         ariaLabel={i18n.t('list.signOut')}
         tooltip={i18n.t('list.signOut')}
         onClick={() => void handleSignedOut()}>
@@ -157,7 +155,6 @@
       {/snippet}
       {#snippet documentsToolbar(state: SettingsState)}
         <Button
-          size="sm"
           ariaLabel={i18n.t('settings.documents.add')}
           tooltip={i18n.t('settings.documents.add')}
           onClick={() => goto('/new')}>
@@ -166,7 +163,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('settings.documents.openSelected')}
           tooltip={i18n.t('settings.documents.openSelected')}
           disabled={state.documentsState.selectedCount !== 1}
@@ -176,7 +172,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('admin.deleteSelected')}
           tooltip={i18n.t('admin.deleteSelected')}
           disabled={state.documentsState.selectedCount === 0}
@@ -188,7 +183,6 @@
           {/snippet}
         </Button>
         <Button
-          size="sm"
           ariaLabel={i18n.t('common.reload')}
           tooltip={i18n.t('common.reload')}
           disabled={state.documentsState.loading}
@@ -225,7 +219,7 @@
           state={{ settingsState, documentsState }}
           pathname={page.url.pathname}
           ariaLabel={i18n.t('settings.title')}
-          class="pt-4" />
+          className="pt-4" />
         {#if page.url.pathname !== DOCUMENTS_PATH && page.url.pathname !== PROFILE_PATH}
           <Buttons align="right">
             {#snippet children()}
@@ -259,7 +253,7 @@
     title={i18n.t('settings.discardTitle')}
     message={i18n.t('settings.discardMessage')}
     confirmLabel={i18n.t('common.ok')}
-    confirmColor="amber"
+    accent="amber"
     onConfirm={handleDiscardAndNavigate}
     confirmOnDismiss />
 {/if}

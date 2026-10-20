@@ -38,4 +38,4 @@
   ]}
   {state}
   {pathname}
-  class={className} />
+  className={className} />

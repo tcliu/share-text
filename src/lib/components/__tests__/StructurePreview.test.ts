@@ -63,7 +63,7 @@ describe('StructurePreview', () => {
     await fireEvent.click(parentToggle)
     await vi.waitFor(() => expect(root.textContent).toContain('child'))
 
-    const childCopy = within(root).getByRole('button', { name: 'Copy child' }) as HTMLButtonElement
+    const childCopy = within(root).getByRole('button', { name: 'Copy $.parent.child' }) as HTMLButtonElement
     await fireEvent.click(childCopy)
 
     expect(writeText).toHaveBeenCalledWith('{\n  "grand": 1\n}')
@@ -76,8 +76,8 @@ describe('StructurePreview', () => {
     const root = await screen.findByTestId('structure-preview')
     await waitForNode(root, 'name')
 
-    expect(within(root).queryByRole('button', { name: 'Edit name' })).toBeNull()
-    expect(within(root).getByRole('button', { name: 'Copy name' })).toBeTruthy()
+    expect(within(root).queryByRole('button', { name: 'Edit $.name' })).toBeNull()
+    expect(within(root).getByRole('button', { name: 'Copy $.name' })).toBeTruthy()
 
     const row = within(root).getByText('name').closest('div.group') as HTMLElement
     await fireEvent.dblClick(row)
@@ -92,10 +92,8 @@ describe('StructurePreview', () => {
     await waitForNode(root, 'name')
     await waitForNode(root, '"root"')
 
-    const editBtn = within(root).getByRole('button', { name: 'Edit name' })
-    const row = editBtn.closest('div.group') as HTMLElement
-    expect(row).not.toBeNull()
-    await fireEvent.dblClick(row)
+    const valueBtn = await within(root).findByRole('button', { name: '"root"' })
+    await fireEvent.dblClick(valueBtn)
 
     const input = root.querySelector('input') as HTMLInputElement
     expect(input).not.toBeNull()
@@ -114,9 +112,8 @@ describe('StructurePreview', () => {
     const root = await screen.findByTestId('structure-preview')
     await waitForNode(root, 'name')
 
-    const editBtn = within(root).getByRole('button', { name: 'Edit name' })
-    const row = editBtn.closest('div.group') as HTMLElement
-    await fireEvent.dblClick(row)
+    const valueBtn = await within(root).findByRole('button', { name: '"root"' })
+    await fireEvent.dblClick(valueBtn)
     expect(root.querySelector('input')).not.toBeNull()
 
     await fireEvent.keyDown(root.querySelector('input')!, { key: 'Escape' })
@@ -130,7 +127,7 @@ describe('StructurePreview', () => {
     const root = await screen.findByTestId('structure-preview')
     await waitForNode(root, 'name')
 
-    const editBtn = within(root).getByRole('button', { name: 'Edit name' }) as HTMLButtonElement
+    const editBtn = within(root).getByRole('button', { name: 'Edit $.name' }) as HTMLButtonElement
     await fireEvent.click(editBtn)
 
     const input = root.querySelector('input') as HTMLInputElement
@@ -203,10 +200,8 @@ describe('StructurePreview', () => {
     const root = await screen.findByTestId('structure-preview')
     await waitForNode(root, 'Alice')
 
-    const editBtn = within(root).getByRole('button', { name: 'Edit children' })
-    const row = editBtn.closest('div.group') as HTMLElement
-    expect(row).not.toBeNull()
-    await fireEvent.dblClick(row)
+    const valueBtn = await within(root).findByRole('button', { name: '"Alice"' })
+    await fireEvent.dblClick(valueBtn)
 
     const input = root.querySelector('input') as HTMLInputElement
     expect(input).not.toBeNull()

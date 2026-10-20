@@ -127,7 +127,8 @@ describe('Splitter', () => {
     })
     const horizontalHandle = getByRole('separator')
     expect(horizontalHandle.getAttribute('aria-orientation')).toBe('horizontal')
-    expect(horizontalHandle.className).toContain('-my-1.5 h-3')
+    expect(horizontalHandle.className).toContain('inset-x-0')
+    expect(horizontalHandle.className).toContain('h-3')
     expect(horizontalHandle.querySelector('span')?.className).toContain('cursor-row-resize')
   })
 

@@ -36,12 +36,11 @@
   {autoPlace}
   itemRole="menuitemradio"
   itemChecked={option => i18n.locale === option.code}
-  triggerClass="p-1.5 relative before:absolute before:-inset-1.5 before:content-['']"
   phoneSheetTitle={i18n.t('language.label')}
   closeLabel={i18n.t('common.close')}
   {itemClass}>
   {#snippet icon()}
-    <GlobeIcon size="sm" />
+    <GlobeIcon />
   {/snippet}
   {#snippet item(option: LocaleOption, _state: MenuItemState)}
     <span>{option.label}</span>

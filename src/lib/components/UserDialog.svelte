@@ -94,10 +94,9 @@
 
 <BaseDialog
   title={mode === 'add' ? i18n.t('admin.dialog.addUser') : i18n.t('admin.dialog.editUser')}
-  maxWidth="md"
+  widthVariant="md"
   onCancel={handleCancelRequest}
-  dismissKeydownCapture={!discardPromptOpen}
-  {pending}>
+  dismissDisabled={pending}>
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     <FormField label={i18n.t('admin.users.username')} htmlFor="user-username">
       <input

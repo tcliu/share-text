@@ -568,8 +568,11 @@ unmount. The owning component keeps its own open/close, keyboard, and
 outside-click handling.
 
 Both overlays with a trigger-and-item-menu shape share the `Menu`
-(`src/lib/components/Menu.svelte`) primitive, which owns the trigger button,
-the `positionPanel` panel, open/close/toggle, and the roving real-focus
+(`src/lib/components/Menu.svelte`) primitive, which owns the trigger button —
+the shared icon-only `Button`, carrying `aria-haspopup="menu"`/`aria-controls`,
+so the trigger's box, glyph ratio, focus ring, and hit area match every other
+icon button (`triggerClass` adds extra classes only, never padding); the
+`positionPanel` panel, open/close/toggle, and the roving real-focus
 keyboard model: opening (trigger click or ArrowDown/ArrowUp on the closed
 trigger) moves focus to the first enabled item, ArrowUp/ArrowDown/Home/End
 navigate with disabled-skip, mouse hover syncs `activeIndex` (and real focus,

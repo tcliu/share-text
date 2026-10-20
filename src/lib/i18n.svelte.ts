@@ -133,6 +133,8 @@ export function setI18nContext(store: I18nStore): I18nStore {
   return store
 }
 
+// Browser-only fallback cache: islands outside the layout tree share one store.
+// The server never reuses it, so concurrent SSR requests cannot share a locale.
 let defaultStore: I18nStore | null = null
 
 export function getI18nContext(): I18nStore {
@@ -145,6 +147,9 @@ export function getI18nContext(): I18nStore {
   // fails loudly instead of silently staying English.
   if (import.meta.env.DEV) {
     console.warn('getI18nContext: no i18n provider above; using the default English store')
+  }
+  if (!browser) {
+    return createAppI18n()
   }
   if (!defaultStore) {
     defaultStore = createAppI18n()

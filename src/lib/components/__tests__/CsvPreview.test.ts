@@ -61,7 +61,7 @@ function colSelector(root: HTMLElement, ci: number): HTMLElement {
 describe('CsvPreview (custom grid)', () => {
   it('renders the option panel and an editable grid', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30\nBob,25' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(within(root).getByRole('button', { name: 'Toggle header' })).not.toBeNull()
     expect(hasCellValue(root, 'Alice')).toBe(true)
     expect(hasCellValue(root, 'Bob')).toBe(true)
@@ -70,7 +70,7 @@ describe('CsvPreview (custom grid)', () => {
   it('edits a cell and reports the change', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Alicia' } })
@@ -82,7 +82,7 @@ describe('CsvPreview (custom grid)', () => {
   it('renders a read-only grid when editable is false', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange, editable: false })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     expect(input.readOnly).toBe(true)
     expect((within(root).getByRole('button', { name: 'Insert row below' }) as HTMLButtonElement).disabled).toBe(true)
@@ -93,7 +93,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('renders the header row as <thead> with <th> cells', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(root.querySelector('thead')).not.toBeNull()
     const headerCellVal = root.querySelector('thead th') as HTMLElement
     expect(headerCellVal.tagName).toBe('TH')
@@ -101,19 +101,19 @@ describe('CsvPreview (custom grid)', () => {
 
   it('does not loop when content does not round-trip (e.g. JSON shown in a CSV preview)', async () => {
     const { rerender } = render(CsvPreview, { content: '{"name": "John", "age": 30}' })
-    let root = await screen.findByTestId('csv-preview')
+    let root = await screen.findByTestId('data-grid')
     expect(root).toBeTruthy()
     await rerender({ content: 'a,b\n1,2' })
-    root = await screen.findByTestId('csv-preview')
+    root = await screen.findByTestId('data-grid')
     expect(hasCellValue(root, '1')).toBe(true)
     await rerender({ content: '{"nested": {"a": 1}, "list": [1, 2]}' })
-    root = await screen.findByTestId('csv-preview')
+    root = await screen.findByTestId('data-grid')
     expect(root).toBeTruthy()
   })
 
   it('keeps the header row sticky and uses single-edge borders (no overlap)', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const headerRow = root.querySelector('thead tr') as HTMLElement
     expect(headerRow.className).toContain('sticky')
     const headerCells = root.querySelectorAll('thead th')
@@ -126,7 +126,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('exposes row/column insert buttons in the toolbar', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     for (const label of ['Insert row above', 'Insert row below', 'Insert column before', 'Insert column after']) {
       expect(within(root).getByRole('button', { name: label })).not.toBeNull()
     }
@@ -135,7 +135,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Delete columns toolbar button removes the selected column', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(counter(root)).toBe('2 rows · 2 columns')
     await fireEvent.mouseDown(colSelector(root, 0))
     await fireEvent.click(within(root).getByRole('button', { name: 'Delete columns' }))
@@ -146,7 +146,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Insert column before toolbar button inserts an empty column before the active column', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(colSelector(root, 0))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column before' }))
     await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
@@ -156,7 +156,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Insert column after toolbar button inserts an empty column after the active column', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(colSelector(root, 0))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
     expect(onChange.mock.calls[0][0].startsWith(',name')).toBe(false)
@@ -165,7 +165,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Delete rows toolbar button removes a selected row', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30\nBob,25', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(counter(root)).toBe('3 rows · 2 columns')
     await fireEvent.mouseDown(selectorCellOfRow(root, 'Alice'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Delete rows' }))
@@ -177,7 +177,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Insert row below toolbar button inserts a row after the active row', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(selectorCellOfRow(root, 'Alice'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert row below' }))
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
@@ -187,7 +187,7 @@ describe('CsvPreview (custom grid)', () => {
   it('Insert row above toolbar button inserts a row before the active row', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(selectorCellOfRow(root, 'Alice'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert row above' }))
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
@@ -202,7 +202,7 @@ describe('CsvPreview (custom grid)', () => {
         emitted = v
       },
     })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 1, 1)
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
@@ -226,7 +226,7 @@ describe('CsvPreview (custom grid)', () => {
         emitted = v
       },
     })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 1, 1)
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowDown' })
@@ -249,7 +249,7 @@ describe('CsvPreview (custom grid)', () => {
         emitted = v
       },
     })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 0, 1)
     box.focus()
     await fireEvent.keyDown(box, { key: 'ArrowRight' })
@@ -259,7 +259,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('toggles Show headers without throwing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const toggle = within(root).getByRole('button', { name: 'Toggle header' })
     const headerRows = () => root.querySelectorAll('thead tr').length
     expect(headerRows()).toBe(2)
@@ -274,7 +274,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('shows an empty state and allows adding a row', async () => {
     render(CsvPreview, { content: '' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(root.textContent).toContain('No content to preview')
     await fireEvent.click(within(root).getByRole('button', { name: /Add row/i }))
     await vi.waitFor(() => expect(counter(root)).toBe('1 rows · 1 columns'))
@@ -282,7 +282,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Insert row below toolbar button appends a row and focuses its first cell when nothing is selected', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert row below' }))
     await vi.waitFor(() => expect(counter(root)).toBe('3 rows · 2 columns'))
     const newRow = gridCell(root, 2, 0) as HTMLTextAreaElement
@@ -291,7 +291,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Insert column after toolbar button appends a column and focuses its header cell when nothing is selected', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
     await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
     const newHeader = gridCell(root, 0, 2) as HTMLTextAreaElement
@@ -300,7 +300,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Delete rows toolbar button is disabled without a selection and enabled with one', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30\nBob,25' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const deleteBtn = within(root).getByRole('button', { name: 'Delete rows' }) as HTMLButtonElement
     expect(deleteBtn.disabled).toBe(true)
     const aliceSelector = selectorCellOfRow(root, 'Alice') as HTMLElement
@@ -313,7 +313,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('navigates between cells with Tab / Shift+Tab', async () => {
     render(CsvPreview, { content: 'a,b,c\n1,2,3\n4,5,6' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const cell = (r: number, c: number) =>
       root.querySelector(`[data-row="${r}"][data-col="${c}"]`) as HTMLTextAreaElement
 
@@ -328,7 +328,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Enter finishes editing, moves the selection to (r+1, c) as non-editing cell', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     c00.focus()
     await fireEvent.input(c00, { target: { value: 'edited' } })
@@ -340,7 +340,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Enter on a selected (non-editing) cell switches to edit mode, Enter again finishes', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const c00Box = boxOf(root, 0, 0)
     c00Box.focus()
     await fireEvent.keyDown(c00Box, { key: 'Enter' })
@@ -354,7 +354,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Enter on the last row just confirms and stays non-editing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const last = gridCell(root, 1, 0) as HTMLTextAreaElement
     last.focus()
     await fireEvent.input(last, { target: { value: 'edited' } })
@@ -366,7 +366,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('typing on a highlighted cell switches to edit mode and updates the value', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 0, 0)
     box.focus()
     await fireEvent.keyDown(box, { key: 'x' })
@@ -377,7 +377,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('pasting into a highlighted cell switches to edit mode and updates the value', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const box = boxOf(root, 0, 0)
     const text = 'hello'
     await fireEvent.paste(box, { clipboardData: { getData: () => text } })
@@ -388,7 +388,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('Esc in edit mode discards the change and returns to non-editing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const c00 = gridCell(root, 0, 0) as HTMLTextAreaElement
     c00.focus()
     await fireEvent.input(c00, { target: { value: 'changed' } })
@@ -401,7 +401,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('arrow keys navigate the selection highlight across cells without typing', async () => {
     render(CsvPreview, { content: 'a,b\n1,2\n3,4' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const c10Box = boxOf(root, 1, 0)
     c10Box.focus()
     await fireEvent.keyDown(c10Box, { key: 'ArrowRight' })
@@ -415,7 +415,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('deletes all selected rows when the clicked row is selected', async () => {
     render(CsvPreview, { content: 'h1,h2\na1,a2\nb1,b2\nc1,c2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const aSelector = selectorCellOfRow(root, 'a1') as HTMLElement
     const bSelector = selectorCellOfRow(root, 'b1') as HTMLElement
     await fireEvent.mouseDown(aSelector)
@@ -429,7 +429,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('pads ragged columns to uniform column count', async () => {
     render(CsvPreview, { content: 'a,b,c\n1,2' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     expect(counter(root)).toBe('2 rows · 3 columns')
     for (const tr of allRows(root)) {
       expect(tr.querySelectorAll('td, th').length).toBe(4) // 1 selector + 3 data cells
@@ -438,7 +438,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('focuses the new header cell after inserting a column', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.mouseDown(headerCell(root, 'name'))
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column before' }))
     const newInput = gridCell(root, 0, 0) as HTMLTextAreaElement
@@ -447,7 +447,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('keeps a column when a header cell is cleared and blurred', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'name')
     input.focus()
     await fireEvent.input(input, { target: { value: '' } })
@@ -457,7 +457,7 @@ describe('CsvPreview (custom grid)', () => {
 
   it('undo and redo toolbar buttons are disabled without history', async () => {
     render(CsvPreview, { content: 'name,age\nAlice,30' })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const undoButton = within(root).getByRole('button', { name: 'Undo' }) as HTMLButtonElement
     const redoButton = within(root).getByRole('button', { name: 'Redo' }) as HTMLButtonElement
     expect(undoButton.disabled).toBe(true)
@@ -467,7 +467,7 @@ describe('CsvPreview (custom grid)', () => {
   it('undo button reverts a cell edit and redo reapplies it', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Alicia' } })
@@ -490,7 +490,7 @@ describe('CsvPreview (custom grid)', () => {
   it('undoes row inserts through the undo button', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     await fireEvent.click(within(root).getByRole('button', { name: 'Insert column after' }))
     await vi.waitFor(() => expect(counter(root)).toBe('2 rows · 3 columns'))
 
@@ -501,7 +501,7 @@ describe('CsvPreview (custom grid)', () => {
   it('supports Ctrl+Z undo and Ctrl+Shift+Z redo', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Alicia' } })
@@ -518,7 +518,7 @@ describe('CsvPreview (custom grid)', () => {
   it('redo via Ctrl+Shift+Z works after undo rebuilt the grid and dropped focus', async () => {
     const onChange = vi.fn()
     render(CsvPreview, { content: 'name,age\nAlice,30', onContentChange: onChange })
-    const root = await screen.findByTestId('csv-preview')
+    const root = await screen.findByTestId('data-grid')
     const input = cellInput(root, 'Alice')
     input.focus()
     await fireEvent.input(input, { target: { value: 'Alicia' } })

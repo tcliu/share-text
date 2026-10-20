@@ -166,13 +166,13 @@ describe('HistoryDialog', () => {
     expect(getByText('text')).toBeTruthy()
   })
 
-  it('fills the entire screen on mobile', () => {
-    const { getByTestId } = renderDialog({ isMobile: true })
+  it('expands to the full viewport on narrow screens', () => {
+    const { getByRole } = renderDialog()
 
-    const overlay = getByTestId('dialog-overlay')
-    expect(overlay.className).toContain('bg-slate-950')
-    expect(overlay.className).not.toContain('/80')
-    expect(overlay.className).not.toContain('px-4')
+    const panel = getByRole('dialog')
+    expect(panel.className).toContain('@max-md:h-dvh')
+    expect(panel.className).toContain('@max-md:w-full')
+    expect(panel.className).toContain('@max-md:rounded-none')
   })
 
   it('keeps the centered modal layout on desktop', () => {

@@ -122,18 +122,17 @@
 {#if open}
   <BaseDialog
     title={i18n.t('tags.title')}
-    maxWidth="lg"
-    onCancel={handleCancelRequest}
-    dismissKeydownCapture={!discardPromptOpen}>
+    widthVariant="lg"
+    onCancel={handleCancelRequest}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
         <TagInput
           bind:this={tagInputRef}
           value={tagNames}
-          availableTags={availableTagNames}
+          options={availableTagNames}
           onChange={handleTagsChange}
           placeholder={i18n.t('tags.placeholder')}
-          inputId="document-tags-input">
+          id="document-tags-input">
           {#snippet chip(name, remove)}
             <Chip
               label={name}
@@ -141,7 +140,7 @@
               style={tagChipStyle(colorFor(name))}
               removeButtonClass={tagRemoveBtnClass()}
               removeButtonStyle={tagRemoveBtnStyle(colorFor(name))}
-              ariaLabel={i18n.t('chip.remove', { name })}
+              removeLabel={i18n.t('chip.remove', { name })}
               onRemove={remove} />
           {/snippet}
           {#snippet option(name)}

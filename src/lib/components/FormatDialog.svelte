@@ -16,7 +16,7 @@
     initialIndent?: number
     buttonLabel?: string
     className?: string
-    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
+    widthVariant?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'fit'
     onConfirm: (indent: number) => void
     onCancel: () => void
   }
@@ -28,7 +28,7 @@
     initialIndent = 2,
     buttonLabel,
     className = '',
-    maxWidth = 'md',
+    widthVariant = 'md',
     onConfirm,
     onCancel,
   }: Props = $props()
@@ -57,7 +57,7 @@
 </script>
 
 {#if show}
-  <BaseDialog {title} {className} {maxWidth} {onCancel}>
+  <BaseDialog {title} {className} {widthVariant} {onCancel}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       {#if hasIndent}
         <FormField label={i18n.t('format.indentation')} htmlFor="format-indent-input">

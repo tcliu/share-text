@@ -8,8 +8,7 @@ describe('AppShell floating drawer', () => {
     const onOpenChange = vi.fn()
     const { getByRole, queryByRole } = render(AppShell, {
       mode: 'floating',
-      open: true,
-      onOpenChange,
+      left: { open: true, onOpenChange },
     })
 
     const backdrop = getByRole('button', { name: 'Close pane' })
@@ -25,9 +24,7 @@ describe('AppShell floating drawer', () => {
     const onOpenChange = vi.fn()
     const { getByRole, queryByRole } = render(AppShell, {
       mode: 'floating',
-      open: true,
-      leftPaneLabel: 'Documents',
-      onOpenChange,
+      left: { open: true, paneLabel: 'Documents', onOpenChange },
     })
 
     expect(getByRole('button', { name: 'Close pane' })).toBeTruthy()
@@ -42,8 +39,7 @@ describe('AppShell floating drawer', () => {
   it('keeps focus on the main column when closed via the backdrop', async () => {
     const { getByRole, queryByRole, container } = render(AppShell, {
       mode: 'floating',
-      open: true,
-      leftPaneLabel: 'Documents',
+      left: { open: true, paneLabel: 'Documents' },
     })
 
     const backdrop = getByRole('button', { name: 'Close pane' })
@@ -70,7 +66,7 @@ describe('AppShell floating drawer', () => {
 
 describe('AppShell docked pane', () => {
   it('renders the splitter and no backdrop', () => {
-    const { getByRole, queryByRole } = render(AppShell, { open: true })
+    const { getByRole, queryByRole } = render(AppShell, { left: { open: true } })
 
     expect(getByRole('separator', { name: 'Resize pane' })).toBeTruthy()
     expect(queryByRole('button', { name: 'Close pane' })).toBeNull()
@@ -79,7 +75,7 @@ describe('AppShell docked pane', () => {
 
 describe('AppShell first-paint guard', () => {
   it('marks the shell measured once the container is observed', async () => {
-    const { container } = render(AppShell, { mode: 'auto', open: true })
+    const { container } = render(AppShell, { mode: 'auto', left: { open: true } })
 
     await waitFor(() => {
       expect(container.querySelector('[data-shell-measured]')?.getAttribute('data-shell-measured')).toBe('true')
@@ -87,7 +83,7 @@ describe('AppShell first-paint guard', () => {
   })
 
   it('omits the guard for a pinned presentation', () => {
-    const { container } = render(AppShell, { mode: 'docked', open: true })
+    const { container } = render(AppShell, { mode: 'docked', left: { open: true } })
 
     expect(container.querySelector('[data-shell-measured]')).toBeNull()
   })

@@ -16,7 +16,7 @@
 </script>
 
 {#if type.format}
-  <Button size="sm" ariaLabel={type.format.title} tooltip={type.format.title} onClick={formatState.openDialog}>
+  <Button ariaLabel={type.format.title} tooltip={type.format.title} onClick={formatState.openDialog}>
     {#snippet icon()}
       <FormatIcon />
     {/snippet}

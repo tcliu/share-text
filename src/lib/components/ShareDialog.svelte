@@ -101,10 +101,9 @@
 {#if open}
   <BaseDialog
     title={i18n.t('share.title')}
-    maxWidth="lg"
+    widthVariant="lg"
     onCancel={handleCancelRequest}
-    dismissKeydownCapture={!discardPromptOpen}
-    {pending}>
+    dismissDisabled={pending}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
 

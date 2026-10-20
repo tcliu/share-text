@@ -18,5 +18,4 @@
   value={reconcile.rows}
   onChange={reconcile.handleChange}
   {editable}
-  testId="csv-preview"
   storageKey="csv-preview" />
