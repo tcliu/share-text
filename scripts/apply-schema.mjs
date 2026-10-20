@@ -140,9 +140,13 @@ if (profile === 'dev') {
     try {
       // A schema-qualified sql/schema.sql needs its schema present in SQLite:
       // attach the target file under SCHEMA_NAME so `"schema".table` resolves.
-      if (schemaName) {
+      // `:memory:` is the exception: attaching it opens a second, empty in-memory
+      // database, so the DDL (which targets `main`) would be invisible to the
+      // verification query and a successful apply would report as incomplete.
+      const attachedSchema = path === ':memory:' ? '' : schemaName
+      if (attachedSchema) {
         const escaped = path.replace(/'/g, "''")
-        database.exec(`attach database '${escaped}' as ${quoteIdentifier(schemaName)}`)
+        database.exec(`attach database '${escaped}' as ${quoteIdentifier(attachedSchema)}`)
       }
       database.exec(toSqliteSql(sql))
       // An app with no schema file (or no tables in it) verifies nothing: the
@@ -151,7 +155,7 @@ if (profile === 'dev') {
         verifyTables.length > 0
           ? database
               .prepare(
-                `select name from ${schemaName ? `${quoteIdentifier(schemaName)}.` : ''}sqlite_master where type = 'table' and name in (${verifyTables.map(() => '?').join(', ')}) order by name`,
+                `select name from ${attachedSchema ? `${quoteIdentifier(attachedSchema)}.` : ''}sqlite_master where type = 'table' and name in (${verifyTables.map(() => '?').join(', ')}) order by name`,
               )
               .all(...verifyTables)
               .map(row => row.name)
