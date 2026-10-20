@@ -29,7 +29,7 @@ export const PHONE_SHEET_MAX = '27.999rem'
 export const PHONE_SHEET_QUERY = `(max-width: ${PHONE_SHEET_MAX})`
 
 export const CHIP_PANEL_BASE =
-  'fixed left-0 top-0 z-40 max-h-[min(50vh,20rem)] rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur'
+  'fixed left-0 top-0 z-40 max-h-[min(50vh,20rem)] rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur will-change-transform'
 
 // The tag-suggestion panel keeps one fixed, comfortable width; the dropdown
 // menu panel instead tracks its trigger/content (see `ChipDropdown`).

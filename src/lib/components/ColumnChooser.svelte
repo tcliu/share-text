@@ -93,7 +93,7 @@
     <div
       bind:this={panelRef}
       use:positionPanel={() => ({ getTrigger: () => triggerRef, getOpen: () => open, align: 'right' })}
-      class="panel fixed top-0 left-0 z-40 max-h-[50dvh] min-w-36 overflow-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 shadow-2xl shadow-slate-950/60 backdrop-blur"
+      class="panel fixed top-0 left-0 z-40 max-h-[50dvh] min-w-36 overflow-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 shadow-2xl shadow-slate-950/60 backdrop-blur will-change-transform"
       role="group"
       aria-label={triggerLabel}
       onpointerdown={event => event.preventDefault()}>

@@ -9,8 +9,8 @@
 export const SELECT_RATIOS = {
   font: 0.8125,
   line: 1.1875,
-  padX: 0.675,
-  padY: 0.39375,
+  padX: 0.75,
+  padY: 0.5,
   minW: 7,
   gap: 0.375,
   icon: 1,
