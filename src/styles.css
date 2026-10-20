@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @theme {
+  /* `md` is not in Tailwind's default font-size scale, so it needs an
+     explicit token matching the shared size axis (16px); xs/sm/lg/xl resolve
+     to the Tailwind defaults, which equal the axis steps. */
+  --text-md: 1rem; /* 16px */
+
   /* Transient hint layer: above portalled z-40 dialogs (which paint after the
      layout host in body order) and below the z-50 dev tag. The token lives in
      Tailwind's `--z-index-*` namespace so the `z-tooltip` utility resolves. */
@@ -9,7 +14,7 @@
   --color-onaccent: rgb(2 6 23);
 }
 
-@source inline("text-xs text-sm text-md text-lg");
+@source inline("text-xs text-sm text-md text-lg text-xl");
 
 @layer base {
   :root {
