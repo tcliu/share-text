@@ -215,7 +215,7 @@
     {:else if outsideField}
       <span
         aria-hidden="true"
-        class="h-[var(--clear-box)] w-[var(--clear-box)] shrink-0 max-[27.999rem]:h-11 max-[27.999rem]:w-11"></span>
+        class="h-[var(--clear-box)] w-[var(--clear-box)] shrink-0 max-phone:h-11 max-phone:w-11"></span>
     {/if}
     {#if trailer}{@render trailer()}{/if}
   </span>

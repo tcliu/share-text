@@ -37,6 +37,9 @@
     disabled?: boolean
     pending?: boolean
     type?: 'button' | 'submit' | 'reset'
+    // Associates the button with a form it is not nested in (e.g. a dialog
+    // footer outside the scrolling body), so submit/Enter keep native semantics.
+    form?: string
     className?: string
     ariaPressed?: boolean
     onClick?: (event: MouseEvent) => void
@@ -65,6 +68,7 @@
     disabled = false,
     pending = false,
     type = 'button',
+    form,
     className = '',
     onClick,
     onKeyDown,
@@ -135,7 +139,7 @@
     // the icon-only box floors at the text line height: the bordered padding
     // already fills the row, while a paddingless ghost glyph still matches it.
     const shape = isIconOnly
-      ? `${BOX_BASE} min-h-[var(--btn-line)] min-w-[var(--btn-line)] rounded-[var(--btn-radius)] max-[27.999rem]:min-h-11 max-[27.999rem]:min-w-11 before:absolute before:-inset-2 before:content-['']`
+      ? `${BOX_BASE} min-h-[var(--btn-line)] min-w-[var(--btn-line)] rounded-[var(--btn-radius)] max-phone:min-h-11 max-phone:min-w-11 before:absolute before:-inset-2 before:content-['']`
       : `${BOX_BASE} text-[length:var(--btn-font)] leading-[var(--btn-line)] rounded-[var(--btn-radius)] before:absolute before:-inset-1.5 before:content-['']`
     const pad =
       variant === 'ghost' ? '' : isIconOnly ? 'p-[var(--btn-icon-pad)]' : 'py-[var(--btn-pad-y)] px-[var(--btn-pad-x)]'
@@ -190,6 +194,7 @@
   <button
     bind:this={buttonEl}
     {type}
+    {form}
     aria-label={ariaLabel}
     aria-pressed={ariaPressed}
     aria-expanded={ariaExpanded}

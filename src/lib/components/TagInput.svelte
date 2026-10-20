@@ -443,7 +443,7 @@
     id={listboxId}
     ariaLabel={i18n.t('tagInput.suggestions')}
     panelClass={DEFAULT_CHIP_PANEL_CLASS}
-    optionRowClass="flex w-full cursor-pointer items-center gap-2 rounded-md px-[var(--tag-pad-x)] py-[var(--tag-pad-y)] text-left text-[length:var(--tag-font)] leading-[var(--tag-line)] transition-none outline-none max-[27.999rem]:min-h-11"
+    optionRowClass="flex w-full cursor-pointer items-center gap-2 rounded-md px-[var(--tag-pad-x)] py-[var(--tag-pad-y)] text-left text-[length:var(--tag-font)] leading-[var(--tag-line)] transition-none outline-none max-phone:min-h-11"
     optionRowStyle={style}
     options={suggestions}
     highlightFlags={listbox.highlight.flags}

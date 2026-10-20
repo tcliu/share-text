@@ -6,6 +6,11 @@
      to the Tailwind defaults, which equal the axis steps. */
   --text-md: 1rem; /* 16px */
 
+  /* Phone cutoff shared with PHONE_SHEET_MAX in dropdown-chrome (matchMedia).
+     Named so the touch-row height floors use `max-phone:` instead of an
+     arbitrary media value. */
+  --breakpoint-phone: 27.999rem;
+
   /* Transient hint layer: above portalled z-40 dialogs (which paint after the
      layout host in body order) and below the z-50 dev tag. The token lives in
      Tailwind's `--z-index-*` namespace so the `z-tooltip` utility resolves. */

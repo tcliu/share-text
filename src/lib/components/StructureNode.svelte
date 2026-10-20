@@ -378,7 +378,7 @@
             parentIsArray={Array.isArray(value)} />
         {:else if editValue.key === entry.key && onChange && editable}
           <div class={`${STRUCTURE_ROW_BASE_CLASS} ${leafRowClass || DEFAULT_LEAF_ROW_CLASS}`}>
-            <span class="w-[var(--tree-gutter)] shrink-0 max-[27.999rem]:w-12"></span>
+            <span class="w-[var(--tree-gutter)] shrink-0 max-phone:w-12"></span>
             <span class="shrink-0 text-slate-300">{entry.key}</span>
             <span class="shrink-0 text-slate-600">:</span>
             <div class="flex-1">
@@ -409,7 +409,7 @@
           </div>
         {:else if editName.key === entry.key && onRenameKey && editable}
           <div class={`${STRUCTURE_ROW_BASE_CLASS} ${leafRowClass || DEFAULT_LEAF_ROW_CLASS}`}>
-            <span class="w-[var(--tree-gutter)] shrink-0 max-[27.999rem]:w-12"></span>
+            <span class="w-[var(--tree-gutter)] shrink-0 max-phone:w-12"></span>
             <input
               bind:this={editName.input}
               bind:value={editName.text}
@@ -435,7 +435,7 @@
           </div>
         {:else}
           <div class={`${STRUCTURE_ROW_BASE_CLASS} ${leafRowClass || DEFAULT_LEAF_ROW_CLASS}`}>
-            <span class="w-[var(--tree-gutter)] shrink-0 max-[27.999rem]:w-12"></span>
+            <span class="w-[var(--tree-gutter)] shrink-0 max-phone:w-12"></span>
             {#if onRenameKey && editable}
               <span
                 class="shrink-0 cursor-pointer rounded text-slate-300 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-cyan-500"

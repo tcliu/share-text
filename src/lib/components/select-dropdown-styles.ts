@@ -55,5 +55,5 @@ export const DEFAULT_PANEL_CLASS =
 export const TRIGGER_BASE =
   'inline-flex cursor-pointer items-center justify-between gap-2 rounded-md border border-slate-700 bg-slate-950 text-left text-slate-100 outline-none transition motion-reduce:transition-none hover:border-cyan-500'
 export const OPTION_BASE =
-  'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left outline-none transition-none max-[27.999rem]:min-h-11'
+  'flex w-full cursor-pointer items-center justify-between gap-2 rounded-md text-left outline-none transition-none max-phone:min-h-11'
 export const EMPTY_BASE = 'text-slate-400'

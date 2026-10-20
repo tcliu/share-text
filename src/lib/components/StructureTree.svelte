@@ -22,12 +22,6 @@
     $props()
 
   const treeStyle = $derived(structureStyle(size))
-
-  function containerLabel(value: unknown): string {
-    return Array.isArray(value)
-      ? `array[${value.length}]`
-      : `object{${Object.keys(value as Record<string, unknown>).length}}`
-  }
 </script>
 
 <div class={`text-slate-300 ${STRUCTURE_TEXT_CLASS}`} style={treeStyle}>
