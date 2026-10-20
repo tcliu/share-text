@@ -1,3 +1,7 @@
 {
-  "plugins": ["env-sync", "vercel-link"]
+  "plugins": ["env-sync", "vercel-link"],
+  "requiredEnv": {
+    "vercel": ["DATABASE_URL"],
+    "cloudflare": ["CLOUDFLARE_PROJECT", "DATABASE_URL|CLOUDFLARE_D1_DATABASE"]
+  }
 }

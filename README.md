@@ -162,6 +162,27 @@ npm test
    This builds, deploys to production, waits for the deployment to reach
    `READY`, and syncs the project's production domain to `APP_BASE_URL`.
 
+## Deploy to Cloudflare Pages
+
+Second deploy target: `CF_PAGES=1` selects `@sveltejs/adapter-cloudflare` (see
+`svelte.config.js`).
+
+```bash
+npm run deploy -- --target cloudflare --sync-env --apply-schema
+```
+
+The database backend is configuration, not target identity: a configured D1
+database (`CLOUDFLARE_D1_DATABASE`) selects D1, everything else selects Neon
+(`DATABASE_URL`). The two are mutually exclusive — a D1-backed target forbids a
+synced Neon URL, since it would silently win over the D1 binding — and the D1
+schema is applied with `scripts/apply-d1-schema.mjs`.
+
+Cloudflare-only values live in the git-ignored `.env.cloudflare`
+(`CLOUDFLARE_PROJECT`, `CLOUDFLARE_ACCOUNT_ID`), overlaid on `.env.prod`; sync
+with `npm run env:sync:cloudflare`. The live URL is the Pages production
+hostname derived from `CLOUDFLARE_PROJECT` — no `APP_BASE_URL` exists on this
+target. See `.env.example` for all knobs.
+
 ## Scripts
 
 | Command | Description |
@@ -175,4 +196,5 @@ npm test
 | `npm run schema:recreate` | Drop and recreate the schema (`PROFILE=prod` required, idempotent in `dev`) |
 | `ADMIN_PASSWORD=secret node scripts/hash-password.mjs` | Generate a scrypt password hash for `ADMIN_PASSWORD_HASH` (or pipe the password on stdin) |
 | `npm run env:sync:vercel` | Sync `.env` + `.env.vercel` to Vercel |
-| `npm run deploy` | Deploy to Vercel |
+| `npm run env:sync:cloudflare` | Sync `.env.prod` + `.env.cloudflare` to Cloudflare Pages |
+| `npm run deploy` | Deploy to Vercel (add `--target cloudflare` for Cloudflare Pages) |
