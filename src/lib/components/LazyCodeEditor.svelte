@@ -1,15 +1,19 @@
 <script lang="ts">
   import { getI18nContext } from '$lib/i18n.svelte'
-  import CodeEditor, {
-    CODE_EDITOR_CLASS,
-    CODE_EDITOR_CONTAINER_CLASS,
-    type Props as CodeEditorProps,
-  } from './CodeEditor.svelte'
+  import type CodeEditor from './CodeEditor.svelte'
+  import type { ComponentProps } from 'svelte'
+  import { CODE_EDITOR_CLASS, CODE_EDITOR_CONTAINER_CLASS } from './code-editor-styles'
   const i18n = getI18nContext()
 
   // The lazy surface is derived from the eager editor's props so the two can
-  // never drift; the eager-only theme/selection controls are dropped.
-  type Props = Omit<CodeEditorProps, 'theme' | 'selectionEnabled' | 'onSelectionChange'>
+  // never drift; the eager-only theme/selection controls are dropped. The
+  // `CodeEditor` import stays type-only: a value import would pull its module
+  // graph (all of CodeMirror) into the eager bundle and defeat the dynamic
+  // import below.
+  type Props = Omit<
+    ComponentProps<typeof CodeEditor>,
+    'theme' | 'selectionEnabled' | 'onSelectionChange'
+  >
 
   let {
     content = $bindable(),
