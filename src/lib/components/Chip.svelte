@@ -2,7 +2,7 @@
   import Tooltip from './Tooltip.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
-  import type { SizeInput } from '$lib/size-scale'
+  import { type SizeInput } from '$lib/size-scale'
   import { dimensionMetrics, sizeVarStyle } from './size-metrics'
   const i18n = getI18nContext()
 
@@ -16,6 +16,11 @@
     removeButtonStyle?: string
     tooltip?: string
     disabled?: boolean
+    // Removable mode: the chip offers a remove affordance next to the label.
+    // `onRemove` is the handler; the affordance renders when both are set, so
+    // a chip never shows a cross it cannot act on. The toggle mode (`onclick`)
+    // owns the whole pill and takes no affordance.
+    removable?: boolean
     onRemove?: () => void
     // Toggle mode: renders an `aria-pressed` button instead of the static
     // pill. `chipClass` supplies the color; the pressed frame swaps border
@@ -34,6 +39,7 @@
     removeButtonStyle = '',
     tooltip,
     disabled = false,
+    removable = false,
     onRemove,
     active = false,
     onclick,
@@ -42,11 +48,26 @@
   // Derived (not read inline) so a locale switch re-resolves the label.
   const resolvedRemoveLabel = $derived(removeLabel ?? i18n.t('chip.remove', { name: label }))
 
+  // The affordance needs a handler: a removable chip without one shows no
+  // cross, so the pill never offers an action that does nothing.
+  const showRemove = $derived(removable && Boolean(onRemove))
+
   // Every metric is a fixed ratio of the size dimension, calibrated so the
   // default `md` reproduces the pill's current metrics: a 12px label, 8/2
-  // padding, a 4px label→remove gap, and the 9.75px remove cross. Chip owns the
+  // padding, a 4px label→remove gap, and the 7.3px remove cross. Chip owns the
   // size-scaled spacing; `chipClass` supplies color and shape (radius) only.
-  const CHIP_RATIOS = { font: 0.75, line: 1, padX: 0.5, padY: 0.125, gap: 0.25, icon: 0.75 }
+  // The cross reads at 0.75 of the size dimension, which is 0.75 of the
+  // previous cross: the slot is 0.75 of the dimension and the cross is 0.75 of
+  // the slot. The slot carries that ratio, because a glyph fills its box and
+  // the shared icon ratio trims the artwork inside it.
+  const CHIP_RATIOS = {
+    font: 0.75,
+    line: 1,
+    padX: 0.5,
+    padY: 0.125,
+    gap: 0.25,
+    icon: 0.75 * 0.75,
+  }
 
   const metrics = $derived(dimensionMetrics(size, CHIP_RATIOS))
   const chipStyle = $derived(sizeVarStyle('chip', metrics))
@@ -68,7 +89,7 @@
   {:else}
     <span {style} class={`${chipClass} inline-flex items-center gap-[var(--chip-gap)] px-[var(--chip-pad-x)] py-[var(--chip-pad-y)] text-[length:var(--chip-font)] leading-[var(--chip-line)]`}>
       {label}
-      {#if onRemove}
+      {#if showRemove}
         <button
           type="button"
           aria-label={resolvedRemoveLabel}
