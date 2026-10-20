@@ -21,6 +21,7 @@
     "schema:recreate": "node ./scripts/recreate-schema.mjs"
   },
   "dependencies": {
+    "@babel/runtime": "^8.0.5",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-html": "^6.4.11",
@@ -76,7 +77,7 @@
   },
   "allowScripts": {
     "better-sqlite3": true,
-    "esbuild": true,
+    "esbuild@0.28.2": true,
     "fsevents": true,
     "workerd": true
   }
