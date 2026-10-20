@@ -177,7 +177,7 @@
   function trapFocus(event: KeyboardEvent) {
     if (!dialogRef) return
     const focusable = dialogRef.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
     )
     if (focusable.length === 0) return
     const first = focusable[0]
@@ -246,7 +246,7 @@
     aria-label={resolvedCloseLabel}
     aria-disabled={dismissDisabled || undefined}
     tabindex="-1"
-    class="absolute inset-0 bg-slate-950/80 outline-none {dismissDisabled ? 'pointer-events-none' : ''}"
+    class="absolute inset-0 bg-slate-950/80 outline-none"
     onclick={handleCancelRequest}></button>
   <div class="relative flex min-h-full items-center justify-center px-4 py-6 @max-md:p-0">
     <div
@@ -262,9 +262,9 @@
         aria-label={resolvedCloseLabel}
         aria-disabled={dismissDisabled || undefined}
         onclick={handleCancelRequest}
-        class={`absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] motion-reduce:transition-none ${dismissDisabled
+        class={`absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] focus:text-slate-200 motion-reduce:transition-none ${dismissDisabled
           ? 'cursor-not-allowed opacity-40'
-          : 'hover:text-slate-200 focus:text-slate-200'}`}>
+          : 'hover:text-slate-200'}`}>
         <CloseIcon />
       </button>
       {#if header || title}

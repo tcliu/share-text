@@ -78,7 +78,9 @@
   }
 
   function requestSave(): void {
-    if (pending || saveDisabled) return
+    // A clean draft has nothing to persist, so the submit path (the form's
+    // `onsubmit`, reached by Enter) must respect the same gate as the button.
+    if (pending || saveDisabled || !dirty) return
     onSave()
   }
 

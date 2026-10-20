@@ -65,17 +65,21 @@ export function colorThemeExtensions(theme: string): Extension[] {
       '.cm-selectionBackground, ::selection': {
         backgroundColor: 'var(--cm-selection, rgba(56, 139, 253, 0.35))',
       },
+      // Playback marks take their color from a theme token. Without a fallback
+      // a host that defines no token paints no highlight at all, because the
+      // unresolved `var()` drops the whole declaration. The defaults match
+      // the dark palette the other CodeMirror chrome fallbacks above use.
       '.cm-playbackHighlight': {
-        backgroundColor: 'var(--cm-playbackHighlight)',
+        backgroundColor: 'var(--cm-playbackHighlight, rgba(34, 211, 238, 0.28))',
         borderRadius: '0.125rem',
       },
       '.cm-playbackHighlightSelected': {
-        backgroundColor: 'var(--cm-playbackHighlightSelected)',
+        backgroundColor: 'var(--cm-playbackHighlightSelected, rgba(52, 211, 153, 0.32))',
         borderRadius: '0.125rem',
       },
       '.cm-selectionBackground .cm-playbackHighlight, .cm-playbackHighlight.cm-selectionBackground, .cm-content:has(.cm-selectionBackground) .cm-playbackHighlight':
         {
-          backgroundColor: 'var(--cm-playbackHighlightSelected) !important',
+          backgroundColor: 'var(--cm-playbackHighlightSelected, rgba(52, 211, 153, 0.32)) !important',
         },
       '.cm-selectionDisabled': {
         userSelect: 'none',
