@@ -262,7 +262,7 @@
         aria-label={resolvedCloseLabel}
         aria-disabled={dismissDisabled || undefined}
         onclick={handleCancelRequest}
-        class={`absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] focus:text-slate-200 motion-reduce:transition-none ${dismissDisabled
+        class={`absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] focus:text-slate-200 focus-visible:ring-2 focus-visible:ring-cyan-500 motion-reduce:transition-none ${dismissDisabled
           ? 'cursor-not-allowed opacity-40'
           : 'hover:text-slate-200'}`}>
         <CloseIcon />
