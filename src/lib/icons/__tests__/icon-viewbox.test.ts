@@ -326,12 +326,14 @@ describe('icon viewport', () => {
   it('the caret family keeps its tight non-square crop', () => {
     // Up/down crop 12x8 and render two-thirds tall; left/right are the same
     // triangle a quarter turn round, so they crop 8x12 and render two-thirds
-    // wide.
-    for (const f of ['CaretUpIcon.svelte', 'CaretDownIcon.svelte']) {
+    // wide. The family is optional: an app that ships no caret icon (nothing
+    // in it renders the sort arrows) has nothing to assert here.
+    const present = carets.filter(f => files.includes(f))
+    for (const f of present.filter(f => f.startsWith('CaretUp') || f.startsWith('CaretDown'))) {
       expect(read(f), f).toMatch(/viewBox="4 \d+ 12 8"/)
       expect(read(f), f).toContain('height={(resolveIconPx(size) * 8) / 12}')
     }
-    for (const f of ['CaretLeftIcon.svelte', 'CaretRightIcon.svelte']) {
+    for (const f of present.filter(f => f.startsWith('CaretLeft') || f.startsWith('CaretRight'))) {
       expect(read(f), f).toMatch(/viewBox="\d+ 4 8 12"/)
       expect(read(f), f).toContain('width={(resolveIconPx(size) * 8) / 12}')
     }
