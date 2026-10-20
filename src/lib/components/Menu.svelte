@@ -14,6 +14,7 @@
   import { positionPanel } from '$lib/position-panel.svelte'
   import { useListbox } from '$lib/actions/use-listbox.svelte'
   import { PHONE_SHEET_QUERY, type DropdownPanelProps } from '$lib/dropdown-chrome'
+  import type { SizeInput } from '$lib/size-scale'
   import Button from './Button.svelte'
   import MenuSheet from './MenuSheet.svelte'
 
@@ -21,13 +22,20 @@
     items: T[]
     itemKey: (item: T) => string
     onSelect: (index: number) => void
+    // The trigger glyph. It carries no `size`: the trigger is the shared
+    // `Button`, which sizes the icon from the button's own size axis.
     icon: Snippet
     item: Snippet<[T, MenuItemState]>
     ariaLabel: string
     id?: string
+    // Scale of the trigger button, on the shared size axis. The panel chrome
+    // keeps its own metrics.
+    size?: SizeInput
     // Extra classes for the shared Button trigger. Never padding: the trigger
     // takes its box from Button's icon-only metrics so it matches every other
-    // icon button.
+    // icon button. Never restate a variant utility either — the Button's own
+    // classes win on source order, so the extra class would read as applied
+    // while changing nothing.
     triggerClass?: string
     triggerTooltip?: { text: string; align?: 'left' | 'center' | 'right' }
     itemClass?: (item: T, state: MenuItemState) => string
@@ -52,6 +60,7 @@
     item,
     ariaLabel,
     id,
+    size = 'md',
     align = 'right',
     autoPlace = true,
     triggerClass = '',
@@ -67,9 +76,6 @@
   }: Props = $props()
 
   const fallbackId = $props.id()
-  // The icon snippet is re-exposed as a `Button` icon prop; keep an alias so
-  // the local `{#snippet icon()}` declaration does not shadow the prop.
-  const triggerIcon = $derived(icon)
   const menuId = $derived(`menu-${id ?? fallbackId}`)
   const sheetTitleId = $derived(`${menuId}-title`)
   // closeLabel is required alongside phoneSheetTitle (see Props); the
@@ -252,21 +258,21 @@
 </script>
 
 {#snippet triggerButton()}
+  <!-- The trigger is the shared `Button`: it owns the box, the hit area, the
+    focus ring, and the glyph's size, so the icon carries no size of its own. -->
   <Button
     ariaLabel={ariaLabel}
     ariaHaspopup="menu"
     ariaExpanded={open}
     ariaControls={open ? menuId : undefined}
+    {size}
     tooltip={triggerTooltip?.text}
     tooltipAlign={triggerTooltip?.align ?? 'center'}
     className={triggerClass}
     bind:buttonEl={triggerRef}
     onClick={toggle}
-    onKeyDown={handleTriggerKeydown}>
-    {#snippet icon()}
-      {@render triggerIcon()}
-    {/snippet}
-  </Button>
+    onKeyDown={handleTriggerKeydown}
+    {icon} />
 {/snippet}
 
 {#snippet menuOptions()}
