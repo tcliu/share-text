@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 import { __unstable__loadDesignSystem } from 'tailwindcss'
 
@@ -11,6 +12,9 @@ import { __unstable__loadDesignSystem } from 'tailwindcss'
 // that the class name appears in markup cannot catch a wrong namespace.
 const styles = readFileSync('src/styles.css', 'utf8')
 const layout = readFileSync('src/routes/+layout.svelte', 'utf8')
+// Resolve the framework stylesheet through module resolution, not the cwd: a
+// worktree under `.worktrees/` has no local `node_modules/tailwindcss`.
+const tailwindIndex = createRequire(import.meta.url).resolve('tailwindcss/index.css')
 
 async function designSystem() {
   return __unstable__loadDesignSystem(styles, {
@@ -18,7 +22,7 @@ async function designSystem() {
     loadStylesheet: async (id, base) => ({
       path: id,
       base,
-      content: id === 'tailwindcss' ? readFileSync('node_modules/tailwindcss/index.css', 'utf8') : '',
+      content: id === 'tailwindcss' ? readFileSync(tailwindIndex, 'utf8') : '',
     }),
   })
 }
