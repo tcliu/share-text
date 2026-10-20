@@ -20,6 +20,25 @@ export interface GridSelectorsOptions {
   addPendingColumnAndSelect: () => void
 }
 
+// One directional step on a selected row/column block. The row and column
+// handlers differ only in their setters, bounds, and focus target, so they pass
+// them here instead of repeating the shift/extend logic.
+interface SelectorDirectionNavOptions {
+  event: KeyboardEvent
+  currentIndex: number
+  dir: number
+  isRow: boolean
+  selectedSet: Set<number>
+  setSelected: (selection: Set<number>) => void
+  anchor: number | null
+  setAnchor: (anchor: number) => void
+  minIndex: number
+  count: number
+  focus: (index: number) => void
+  append: () => void
+  prune: (index: number) => void
+}
+
 export function createGridSelectors(opts: GridSelectorsOptions) {
   const { model, focus, state: s, readOnly } = opts
 
@@ -70,21 +89,22 @@ export function createGridSelectors(opts: GridSelectorsOptions) {
     s.selectedRows = next
   }
 
-  function handleSelectorDirectionNav(
-    event: KeyboardEvent,
-    currentIndex: number,
-    dir: number,
-    isRow: boolean,
-    selectedSet: Set<number>,
-    setSelected: (s: Set<number>) => void,
-    anchor: number | null,
-    setAnchor: (a: number) => void,
-    minIndex: number,
-    count: number,
-    focusFn: (i: number) => void,
-    appendFn: () => void,
-    pruneFn: (i: number) => void,
-  ) {
+  function handleSelectorDirectionNav(options: SelectorDirectionNavOptions) {
+    const {
+      event,
+      currentIndex,
+      dir,
+      isRow,
+      selectedSet,
+      setSelected,
+      anchor,
+      setAnchor,
+      minIndex,
+      count,
+      focus,
+      append,
+      prune,
+    } = options
     event.preventDefault()
     if (selectedSet.size === 0) return
     s.selectedSet = new Set()
@@ -105,19 +125,19 @@ export function createGridSelectors(opts: GridSelectorsOptions) {
       const next = new Set<number>()
       for (let i = min; i <= max; i++) next.add(i)
       setSelected(next)
-      focusFn(dir === 1 ? max : min)
+      focus(dir === 1 ? max : min)
       return
     }
     const next = currentIndex + dir
     if (next < minIndex) return
     if (next >= count) {
-      if (dir === 1 && !readOnly()) appendFn()
+      if (dir === 1 && !readOnly()) append()
       return
     }
     setSelected(new Set([next]))
     setAnchor(next)
-    pruneFn(next)
-    focusFn(next)
+    prune(next)
+    focus(next)
   }
 
   function handleRowSelectorKeydown(event: KeyboardEvent, ri: number) {
@@ -144,25 +164,25 @@ export function createGridSelectors(opts: GridSelectorsOptions) {
     }
     const dir = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0
     if (dir === 0) return
-    handleSelectorDirectionNav(
+    handleSelectorDirectionNav({
       event,
-      ri,
+      currentIndex: ri,
       dir,
-      true,
-      s.selectedRows,
-      v => {
+      isRow: true,
+      selectedSet: s.selectedRows,
+      setSelected: v => {
         s.selectedRows = v
       },
-      s.rowAnchor,
-      v => {
+      anchor: s.rowAnchor,
+      setAnchor: v => {
         s.rowAnchor = v
       },
-      model.headers ? 1 : 0,
-      model.rowCount,
-      focus.rowSelector,
-      opts.appendPendingRowAndSelect,
-      model.pruneTrailingPendingRows,
-    )
+      minIndex: model.headers ? 1 : 0,
+      count: model.rowCount,
+      focus: focus.rowSelector,
+      append: opts.appendPendingRowAndSelect,
+      prune: model.pruneTrailingPendingRows,
+    })
   }
 
   function handleColumnSelectorMousedown(event: MouseEvent, ci: number) {
@@ -236,25 +256,25 @@ export function createGridSelectors(opts: GridSelectorsOptions) {
     }
     const dir = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
     if (dir === 0) return
-    handleSelectorDirectionNav(
+    handleSelectorDirectionNav({
       event,
-      ci,
+      currentIndex: ci,
       dir,
-      false,
-      s.selectedCols,
-      v => {
+      isRow: false,
+      selectedSet: s.selectedCols,
+      setSelected: v => {
         s.selectedCols = v
       },
-      s.colAnchor,
-      v => {
+      anchor: s.colAnchor,
+      setAnchor: v => {
         s.colAnchor = v
       },
-      0,
-      model.columnCount,
-      focus.columnSelector,
-      opts.addPendingColumnAndSelect,
-      model.pruneTrailingPendingColumns,
-    )
+      minIndex: 0,
+      count: model.columnCount,
+      focus: focus.columnSelector,
+      append: opts.addPendingColumnAndSelect,
+      prune: model.pruneTrailingPendingColumns,
+    })
   }
 
   return {
