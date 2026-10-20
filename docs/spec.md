@@ -47,6 +47,13 @@ synchronizes through a small fetch-based JSON API.
   if any entry resolves to no user — matched case-insensitively against
   usernames and emails — it returns 400 with `{ error, missing }` and writes
   nothing, so a partially-valid share list is never persisted.
+- `/api/info` — the public self-card a project-catalog scanner reads. The route
+  supplies this app's own props (id, name, icon, description, branch, repo,
+  status, url, profile, tags, active) and the shared normalizer
+  (`src/lib/server/card.ts`) owns the response shape and the value rules: a
+  missing `id`/`name` is an error, `status` is validated against
+  `Active`/`Inactive`, tags are trimmed and deduped, and `active` is coerced
+  (only `0`/`false`/`no`/`off` opt out). The response is `no-store`.
 - `/api/auth/login` — `POST` verifies credentials against a registered user
   (by username or email) or the configured admin (when the identifier matches
   `ADMIN_USERNAME`), sets the matching HTTP-only session cookie, claims
@@ -767,7 +774,7 @@ before the title; it stays visible on every viewport so a closed pane can
 always be reopened. `DocumentList` owns only a list toolbar (New,
 Refresh, search): its header collapse button renders only when the layout
 passes `onToggleCollapse`, i.e. solely as the narrow-viewport close affordance —
-it is absent on desktop. Collapsing hides the pane entirely (no collapsed rail, matching tts);
+it is absent on desktop. Collapsing hides the pane entirely (no collapsed rail);
 the header toggle reopens it with a width slide (200ms, instant under
 `prefers-reduced-motion`), and docked toggles restore the registered
 editor focus. Identity actions live in the browser header: a Login button
@@ -1113,3 +1120,7 @@ Writes are last-write-wins with no conflict detection or merge.
 - `scripts/deploy.mjs` is the deploy entry (Vercel by default, or Cloudflare
   Pages via `--target`); it runs each selected target's steps in slot order and
   syncs the Vercel project's production domain to `APP_BASE_URL`.
+  `deploy.config.json` selects the plugins and the per-target required env
+  keys: Vercel requires `DATABASE_URL`, Cloudflare requires
+  `CLOUDFLARE_PROJECT` plus one of `DATABASE_URL` (Neon) or
+  `CLOUDFLARE_D1_DATABASE` (D1).

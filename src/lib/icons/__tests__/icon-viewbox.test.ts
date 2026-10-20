@@ -2,8 +2,9 @@
 // directly in the one square viewBox — its artwork already normalized to fill
 // the viewBox on the dominant axis and written on the 0.01 unit grid, so no
 // per-icon `<g transform>` fit sits between the artwork and the grid — and only
-// the caret family keeps a non-square, tight crop. See ARCHITECTURE.md (Icon
-// glyphs).
+// the caret family keeps a non-square, tight crop. See AGENTS.md (Project
+// conventions → "Icons live as single-purpose components in
+// `src/lib/icons/`").
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
