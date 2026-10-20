@@ -244,7 +244,7 @@
       <span class="shrink-0 transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
         <Button
           variant="ghost"
-          ariaLabel={`Copy ${text}`}
+          ariaLabel={i18n.t('common.copy')}
           tooltip={i18n.t('common.copy')}
           onClick={event => {
             event.preventDefault()
