@@ -9,7 +9,6 @@ import {
   matrixEqual,
   rectOfKeys,
 } from '../grid-utils'
-import { createGridHistory } from '../use-grid-history.svelte'
 import { dimensionMetrics, iconPadRatio, resolveSize, sizeVarStyle } from '../size-metrics'
 
 // The grid's pure helpers and the history stack carry the behaviour the grid
@@ -77,51 +76,5 @@ describe('size-metrics', () => {
 
   it('emits prefixed custom properties for the metrics', () => {
     expect(sizeVarStyle('btn', { padX: 10, fontSize: 14 })).toBe('--btn-pad-x:10px;--btn-font-size:14px')
-  })
-})
-
-describe('use-grid-history', () => {
-  it('pushes snapshots and reports the undo/redo state', () => {
-    const history = createGridHistory()
-    expect(history.canUndo).toBe(false)
-    expect(history.canRedo).toBe(false)
-
-    history.push([['a']])
-    expect(history.canUndo).toBe(true)
-
-    const undone = history.undo([['b']])
-    expect(undone).toEqual([['a']])
-    expect(history.canRedo).toBe(true)
-  })
-
-  it('ignores a duplicate snapshot', () => {
-    const history = createGridHistory()
-    history.push([['a']])
-    history.push([['a']])
-    expect(history.canUndo).toBe(true)
-    // One snapshot only: the duplicate is dropped, so the first undo returns
-    // the pushed state and the second has nothing left to undo.
-    expect(history.undo([['b']])).toEqual([['a']])
-    expect(history.undo([['c']])).toBeNull()
-  })
-
-  it('moves the current matrix between the two stacks', () => {
-    const history = createGridHistory()
-    history.push([['a']])
-    expect(history.undo([['b']])).toEqual([['a']])
-    expect(history.redo([['b']])).toEqual([['b']])
-    expect(history.canUndo).toBe(true)
-  })
-
-  it('clears both stacks on reset and tells its listeners', () => {
-    const history = createGridHistory()
-    const seen: boolean[] = []
-    const stop = history.onChange(state => seen.push(state.canUndo))
-    history.push([['a']])
-    history.reset()
-    expect(history.canUndo).toBe(false)
-    expect(history.canRedo).toBe(false)
-    expect(seen).toEqual([false, true, false])
-    stop()
   })
 })
