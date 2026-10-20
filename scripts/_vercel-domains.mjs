@@ -6,7 +6,7 @@
 // on `_vercel-cli.mjs`.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { parseEnvFile } from './env-file.mjs'
+import { parseEnvFile, readJsonFile } from './env-file.mjs'
 import { logEvent } from './log-event.mjs'
 import { ROOT_DIR, fail } from './_deploy/core.mjs'
 import { runVercelApi } from './_vercel-cli.mjs'
@@ -37,12 +37,8 @@ function configuredDomain() {
 }
 
 function projectId() {
-  try {
-    const data = JSON.parse(readFileSync(join(ROOT_DIR, '.vercel', 'project.json'), 'utf8'))
-    return String(data.projectId || '')
-  } catch {
-    return ''
-  }
+  const data = readJsonFile(join(ROOT_DIR, '.vercel', 'project.json'), {})
+  return String(data?.projectId || '')
 }
 
 function readManagedDomainState() {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createInterface } from 'node:readline'
+import { parseArgs as parseCliArgs } from 'node:util'
 
 const c = {
   reset: '\x1b[0m',
@@ -19,6 +20,28 @@ const c = {
 export { c }
 export { displayWidth, padRight, wrapText, truncate } from './_tui.mjs'
 import { truncate as truncateToWidth } from './_tui.mjs'
+
+// Shared CLI arg parsing: parse `argv` with the stdlib parser, route a parse
+// error to `onError` (which may exit or throw), and print `usage` before
+// exiting 0 on --help. Returns the parsed `{ values, positionals }`.
+export function parseCliArgsOrExit(
+  argv,
+  options,
+  usage,
+  { help = cli => cli.values.help, onError = message => { console.error(message); process.exit(1) } } = {},
+) {
+  let cli
+  try {
+    cli = parseCliArgs({ args: argv, options, allowPositionals: true, strict: true })
+  } catch (error) {
+    return onError(error.message)
+  }
+  if (usage && help(cli)) {
+    usage()
+    process.exit(0)
+  }
+  return cli
+}
 
 // Line prompt in the convert-yaml style: cyan label, yellow hint.
 // `output` carries the query so prompt drivers consumed via stdout

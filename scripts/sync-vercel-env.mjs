@@ -8,13 +8,12 @@
 // they never appear in the process argv where other local processes can read
 // them.
 
-import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { echoCommand } from './_run.mjs'
 import { parseEnvFile } from './env-file.mjs'
 import { targetSourceFiles } from './lib/target-env.mjs'
 import { errorMessage, logEvent } from './log-event.mjs'
+import { runVercelCliAsync } from './_vercel-cli.mjs'
 
 let PRUNE = false
 try {
@@ -34,68 +33,19 @@ function loadDesiredEnv() {
   return SOURCE_FILES.reduce((merged, file) => ({ ...merged, ...parseEnvFile(join(process.cwd(), file)) }), {})
 }
 
-function spawnVercelBin(bin, args, { input } = {}) {
-  echoCommand(bin, args)
-  return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, {
-      cwd: process.cwd(),
-      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
-      env: process.env,
-    })
-
-    let stdout = ''
-    let stderr = ''
-
-    child.stdout.on('data', chunk => {
-      stdout += chunk
-    })
-    child.stderr.on('data', chunk => {
-      stderr += chunk
-    })
-
-    child.on('error', reject)
-    child.on('close', code => {
-      if (code === 0) {
-        resolve(stdout)
-      } else {
-        const message = stderr.trim() || stdout.trim() || `vercel exited with code ${code}`
-        reject(new Error(message))
-      }
-    })
-
-    if (input !== undefined) {
-      // A closed stdin (spawn failure) surfaces on the child 'error' event.
-      child.stdin.on('error', () => {})
-      child.stdin.end(input)
-    }
-  })
-}
-
-async function runVercelCommand(args, options) {
-  try {
-    return await spawnVercelBin('vercel', args, options)
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-      return await spawnVercelBin(npx, ['vercel@latest', ...args], options)
-    }
-    throw error
-  }
-}
-
 async function listVercelEnvKeys() {
-  const output = await runVercelCommand(['env', 'ls', TARGET, '--format', 'json'])
+  const output = await runVercelCliAsync(['env', 'ls', TARGET, '--format', 'json'], { cwd: process.cwd() })
   const parsed = JSON.parse(output)
   return new Set((parsed.envs || []).map(entry => entry.key))
 }
 
 async function upsertVercelEnv(key, value) {
   // The value goes on stdin: `--value` would expose it in the process argv.
-  await runVercelCommand(['env', 'add', key, TARGET, '--force', '--yes'], { input: value })
+  await runVercelCliAsync(['env', 'add', key, TARGET, '--force', '--yes'], { cwd: process.cwd(), input: value })
 }
 
 async function removeVercelEnv(key) {
-  await runVercelCommand(['env', 'rm', key, TARGET, '--yes'])
+  await runVercelCliAsync(['env', 'rm', key, TARGET, '--yes'], { cwd: process.cwd() })
 }
 
 async function main() {

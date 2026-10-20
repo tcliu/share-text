@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { parseArgs as parseCliArgs } from 'node:util'
 
-import { c } from './_terminal.mjs'
+import { c, parseCliArgsOrExit } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
+import { askCancellable } from './_pickers.mjs'
 import {
   getWorktreesRoot,
   isValidBranchName,
@@ -20,26 +20,20 @@ function printUsage() {
 }
 
 function parseArgs(argv) {
-  let cli
-  try {
-    cli = parseCliArgs({
-      args: argv.slice(2),
-      options: {
-        interactive: { type: 'boolean', short: 'i' },
-        help: { type: 'boolean', short: 'h' },
+  const { values, positionals } = parseCliArgsOrExit(
+    argv.slice(2),
+    {
+      interactive: { type: 'boolean', short: 'i' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    printUsage,
+    {
+      onError: message => {
+        console.error(`${c.red}${message}${c.reset}`)
+        process.exit(1)
       },
-      allowPositionals: true,
-      strict: true,
-    })
-  } catch (error) {
-    console.error(`${c.red}${error.message}${c.reset}`)
-    process.exit(1)
-  }
-  const { values, positionals } = cli
-  if (values.help) {
-    printUsage()
-    process.exit(0)
-  }
+    },
+  )
   return {
     interactive: Boolean(values.interactive) || positionals.length === 0,
     branch: positionals[0] ?? null,
@@ -58,7 +52,7 @@ function buildBranchGraph(root) {
       async process(ctx) {
         const prompt = `${c.cyan}Branch name${c.reset} (${c.dim}leave empty to cancel${c.reset}): `
         for (;;) {
-          const raw = await askBranchName(ctx, prompt)
+          const raw = await askCancellable(ctx, prompt)
           // EOF (Ctrl-D / exhausted pipe) cancels, matching the old
           // for-await readline loop which ended on stream close.
           if (raw === null) {
@@ -81,23 +75,6 @@ function buildBranchGraph(root) {
     },
   }
   return graph
-}
-
-// ctx.ask never settles once stdin is closed (readline drops the pending
-// question), so race it against stream end and map EOF to cancel. Without
-// this the process would exit silently instead of printing `Cancelled.`.
-function askBranchName(ctx, prompt) {
-  if (process.stdin.readableEnded) {
-    return Promise.resolve(null)
-  }
-  let onEnd
-  const eof = new Promise(resolve => {
-    onEnd = () => resolve(null)
-    process.stdin.once('end', onEnd)
-  })
-  return Promise.race([ctx.ask(prompt), eof]).finally(() => {
-    process.stdin.removeListener('end', onEnd)
-  })
 }
 
 async function runBranchInterview(root) {

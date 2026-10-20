@@ -4,11 +4,12 @@
 // import them without installing `@neondatabase/serverless`.
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { ROOT } from './lib/root.mjs'
 
 // Absolute path of the schema source both apply flows read (apply-schema.mjs
 // for Neon/SQLite, apply-d1-schema.mjs for D1). `root` is injectable so tests
 // can point at a fixture dir; production callers omit it (repo root).
-export function neonSchemaPath(root = process.cwd()) {
+export function neonSchemaPath(root = ROOT) {
   return join(root, 'sql', 'schema.sql')
 }
 

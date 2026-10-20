@@ -37,11 +37,17 @@ export function wranglerBin() {
   return resolvedWranglerBin
 }
 
+// Full argv for the resolved wrangler binary: `npx` needs the shim name
+// prepended, a PATH `wrangler` does not. Shared so every spawn site agrees.
+export function wranglerArgs(args, bin = wranglerBin()) {
+  return bin === 'npx' ? ['wrangler', ...args] : args
+}
+
 export function defaultWranglerRunner(args, { cwd, input, capture = false } = {}) {
   const bin = wranglerBin()
   // No `--config`: Pages rejects custom config paths, and the generated root
   // config is auto-discovered from `cwd`.
-  const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
+  const fullArgs = wranglerArgs(args, bin)
   // Echo before every run, including captured ones, so logs show what executed.
   echoCommand(bin, fullArgs)
   const result = spawnSync(bin, fullArgs, {
@@ -77,7 +83,7 @@ export function listPagesProjects(runner = defaultWranglerRunner, cwd = process.
   return output
 }
 
-function parsePagesProjects(output) {
+function parseJsonArray(output) {
   try {
     const parsed = JSON.parse(String(output || ''))
     return Array.isArray(parsed) ? parsed : []
@@ -87,7 +93,7 @@ function parsePagesProjects(output) {
 }
 
 function projectEntry(project, output) {
-  return parsePagesProjects(output).find(entry => String(entry?.['Project Name'] || '').trim() === project)
+  return parseJsonArray(output).find(entry => String(entry?.['Project Name'] || '').trim() === project)
 }
 
 // Production hostname for a Pages project, from `pages project list --json`
@@ -157,7 +163,7 @@ export function ensurePagesProject(
 ) {
   const output = listPagesProjects(runner, cwd)
   // JSON entries: match the name exactly (prefix names must not collide).
-  const exists = parsePagesProjects(output).some(
+  const exists = parseJsonArray(output).some(
     entry => String(entry?.['Project Name'] || '').trim() === project,
   )
   if (exists) {
@@ -342,19 +348,10 @@ export function resolveD1DatabaseName(merged = {}) {
   return String(merged?.CLOUDFLARE_D1_DATABASE || '').trim()
 }
 
-function parseD1Databases(output) {
-  try {
-    const parsed = JSON.parse(String(output || ''))
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
 // D1 database id from `wrangler d1 list --json`; '' when absent. Field names
 // vary across wrangler versions (uuid vs database_id), so accept both.
 export function findD1DatabaseId(listOutput, name) {
-  const entry = parseD1Databases(listOutput).find(db => String(db?.name || '').trim() === name)
+  const entry = parseJsonArray(listOutput).find(db => String(db?.name || '').trim() === name)
   return entry ? String(entry.uuid || entry.database_id || '').trim() : ''
 }
 

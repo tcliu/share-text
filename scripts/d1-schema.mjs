@@ -12,9 +12,10 @@
 // environment so the standalone output matches what planD1Bootstrap applies;
 // apply-d1-schema.mjs passes its qualifier explicitly instead.
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { toSqliteSql } from '../src/lib/sql-rewrite.mjs'
+import { ROOT as ROOT_DIR } from './lib/root.mjs'
 
 export function translateSchemaForD1(schema, qualifier = '') {
   const unqualified = qualifier ? String(schema).split(qualifier).join('') : String(schema)
@@ -57,8 +58,6 @@ export function parseD1TableNames(output) {
   const rows = Array.isArray(parsed) ? parsed.flatMap(entry => entry?.results ?? []) : []
   return rows.map(row => String(row?.name || '').trim()).filter(Boolean)
 }
-
-const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const translated = translateSchemaForD1(

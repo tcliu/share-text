@@ -12,12 +12,8 @@
 // tooling loaders (`db-config.mjs`, `vercel.mjs`) keep their own Vercel-scoped
 // merges.
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
 import { parseEnvFile } from '../env-file.mjs'
-
-const LIB_DIR = dirname(fileURLToPath(import.meta.url))
-const DEFAULT_ROOT = join(LIB_DIR, '..', '..')
+import { ROOT as DEFAULT_ROOT } from './root.mjs'
 
 export const TARGET_OVERLAYS = {
   vercel: '.env.vercel',
@@ -78,4 +74,20 @@ export function targetSourceFiles(target = 'vercel') {
 
 export function targetSourceLabel(target = 'vercel') {
   return targetSourceFiles(target).join(' + ')
+}
+
+// Seeds the Cloudflare operator credentials into `process.env` from the
+// caller's already-resolved layers: each key is written only when the shell has
+// not set it and the resolved value is non-empty (shell values always win).
+// Callers resolve different layers (deploy target, standalone sync, heartbeat),
+// so each passes its own `token`/`accountId` maps and shares the write here.
+export function seedCloudflareCredentials({ token = {}, accountId = {} } = {}) {
+  for (const [key, source] of [
+    ['CLOUDFLARE_API_TOKEN', token],
+    ['CLOUDFLARE_ACCOUNT_ID', accountId],
+  ]) {
+    if (!process.env[key] && String(source[key] || '').trim()) {
+      process.env[key] = String(source[key]).trim()
+    }
+  }
 }

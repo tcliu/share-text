@@ -64,30 +64,8 @@ export function decideLinkAction({ linked = '', requested = '' } = {}) {
   return { action: 'switch', name: want, from: current }
 }
 
-function escapeRegExp(value) {
-  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 // Line-preserving KEY=value upsert for a dotenv file: an existing
 // uncommented entry is replaced in place (comments and ordering untouched),
 // otherwise the entry is appended. Always ends the file with exactly one
-// newline.
-export function upsertEnvLine(content, key, value) {
-  const lines = String(content ?? '').split('\n')
-  if (lines.length > 0 && lines[lines.length - 1] === '') {
-    lines.pop()
-  }
-  const pattern = new RegExp(`^\\s*${escapeRegExp(key)}\\s*=`)
-  let done = false
-  const out = lines.map(line => {
-    if (!done && pattern.test(line) && !line.trimStart().startsWith('#')) {
-      done = true
-      return `${key}=${value}`
-    }
-    return line
-  })
-  if (!done) {
-    out.push(`${key}=${value}`)
-  }
-  return `${out.join('\n')}\n`
-}
+// newline. Backed by the shared dotenv writer.
+export { writeEnvLine as upsertEnvLine } from './lib/dotenv-write.mjs'

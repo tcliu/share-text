@@ -23,6 +23,15 @@ export function renderList({ formatRow, hint, checkboxes = false }) {
   }
 }
 
+// Single-choice option list (green label + gray description) with a fixed
+// hint; shared by the deploy/heartbeat interviews and the delete confirm.
+export function renderOptionPicker(hint = 'default yes') {
+  return renderList({
+    hint: `Up/Down: move | Enter: confirm (${hint}) | q: cancel`,
+    formatRow: item => `${c.green}${item.label}${c.reset} ${c.gray}(${item.description})${c.reset}`,
+  })
+}
+
 // ctx.ask never settles once stdin is closed (readline drops the pending
 // question), so race it against stream end and map EOF to cancel. Without
 // this the process would exit silently instead of reporting the cancellation.

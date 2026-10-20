@@ -16,6 +16,7 @@ import {
 import path from 'node:path'
 
 import { parseEnvFile } from './env-file.mjs'
+import { writeEnvLine } from './lib/dotenv-write.mjs'
 
 // Worktree location: `<project>/.worktrees` unless the project overrides it
 // through `WORKTREES_DIR` in its gitignored `.env.local` (see
@@ -207,12 +208,13 @@ export function listRegisterTargets(root = process.cwd(), worktreesDir = DEFAULT
   return listNestedGitDirs(root, worktreesDir).filter(item => !registered.has(item.path))
 }
 
-export function readBranchFromGitDir(worktreePath) {
+export function readBranchFromGitDir(worktreePath, { timeout } = {}) {
   try {
     return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
       cwd: worktreePath,
       encoding: 'utf-8',
       stdio: 'pipe',
+      ...(timeout === undefined ? {} : { timeout }),
     }).trim()
   } catch {
     return null
@@ -826,33 +828,15 @@ export function setDevTag(worktreeRoot, tag) {
 
 // Set, replace, or clear one key in a gitignored dotenv file, preserving
 // comments and unrelated lines. `value === null` removes the line; duplicate
-// keys collapse to the last write. Creating the file is allowed — it is the
-// project's local-only config surface.
+// keys collapse to the first write. Creating the file is allowed — it is the
+// project's local-only config surface. The shared writer's `trimTail` also
+// collapses the blank tail `split` leaves so a rewrite cannot grow the file.
 function setLocalEnvValue(filePath, key, value) {
   const content = existsSync(filePath) ? readFileSync(filePath, 'utf8') : ''
-  const kept = []
-  let replaced = false
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim()
-    const separatorIndex = trimmed && !trimmed.startsWith('#') ? trimmed.indexOf('=') : -1
-    if (separatorIndex !== -1 && trimmed.slice(0, separatorIndex).trim() === key) {
-      if (value === null) continue // cleared
-      if (!replaced) {
-        kept.push(`${key}=${value}`)
-        replaced = true
-      }
-      continue // a duplicate key collapses into the first write
-    }
-    kept.push(line)
-  }
-  if (value !== null && !replaced) {
-    // Collapse trailing blank lines first: `split` leaves an empty tail when
-    // the file ends with a newline, so a plain join would append a blank line
-    // on every rewrite and grow the file without bound.
-    while (kept.length > 0 && kept[kept.length - 1].trim() === '') kept.pop()
-    kept.push(`${key}=${value}`)
-  }
-  writeFileSync(filePath, `${kept.join('\n').replace(/\s*$/, '')}\n`)
+  writeFileSync(
+    filePath,
+    writeEnvLine(content, key, value, { dedupe: true, removeNull: true, crlf: true, trimTail: true }),
+  )
 }
 
 export function copyDevFiles(sourceRoot, targetRoot) {

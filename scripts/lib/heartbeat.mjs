@@ -6,16 +6,13 @@
 // Hard failures throw (callers turn them into their own fail path). Secrets
 // pass in memory only, never via argv, and are never printed.
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { loadTargetEnv } from './target-env.mjs'
 import { logEvent } from '../log-event.mjs'
-import { c, promptYesNo } from '../_terminal.mjs'
+import { promptYesNo } from '../_terminal.mjs'
 import { setScanJobEnabled, syncScanJob } from './cron-job.mjs'
 import { withPrompt } from './prompt-queue.mjs'
-
-const LIB_DIR = dirname(fileURLToPath(import.meta.url))
-const DEFAULT_ROOT = join(LIB_DIR, '..', '..')
+import { ROOT as DEFAULT_ROOT } from './root.mjs'
 
 export const HEARTBEAT_PROVIDERS = ['cron-job', 'none']
 
@@ -44,21 +41,6 @@ export function shouldAskHeartbeat({ heartbeat = '', root = DEFAULT_ROOT, apiKey
     return false
   }
   return isHeartbeatSupported(root) && isHeartbeatConfigurable(apiKey === undefined ? {} : { apiKey })
-}
-
-// Picker chrome shared by the deploy and heartbeat interviews; hint names the
-// default the picker preselects via defaultValue.
-export function renderOptionPicker(hint = 'default yes') {
-  return (entries, state) => {
-    const lines = []
-    for (let i = 0; i < entries.length; i++) {
-      const item = entries[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      lines.push(` ${cursor} ${c.green}${item.label}${c.reset} ${c.gray}(${item.description})${c.reset}`)
-    }
-    lines.push('', `${c.dim}Up/Down: move | Enter: confirm (${hint}) | q: cancel${c.reset}`)
-    return lines
-  }
 }
 
 export function heartbeatSecrets(target = 'vercel') {

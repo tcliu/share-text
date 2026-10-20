@@ -8,7 +8,17 @@
 //
 // The row constants are shared by the renderers and the mouse hit-test so the
 // two cannot drift apart.
-import { buildDialogBox, c, charWidth, displayWidth, padRight, takeRight, truncate, wrapText } from '../_tui.mjs'
+import {
+  buildDialogBox,
+  c,
+  charWidth,
+  displayWidth,
+  frameParts,
+  padRight,
+  takeRight,
+  truncate,
+  wrapText,
+} from '../_tui.mjs'
 
 export const PRESET_COMMANDS = [
   { label: 'npm install', value: 'npm install' },
@@ -443,8 +453,7 @@ export function buildChangesDialog({
 }) {
   const inner = dialogW - 2
   const contentW = inner - 2
-  const border = s => `${c.cyan}${s}${c.reset}`
-  const side = t => `${c.cyan}│${c.reset} ${t}${c.cyan} │${c.reset}`
+  const { border, side } = frameParts()
   const labels = Array.isArray(entries) ? entries.map(entry => changesEntryLabel({ entry })) : []
   const { leftW, rightW } = paneWidthsForLabels({ contentW, labels })
   const separator = `${c.cyan}│${c.reset}`

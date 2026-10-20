@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { formatCommand, maskCommandLine } from './_run.mjs'
+import { echoCommand, formatCommand, maskCommandLine } from './_run.mjs'
 
 const argvWithValue = (key, value = 's3cr3t', extra = []) => ['env', 'add', key, 'production', '--value', value, ...extra]
 
@@ -77,6 +77,22 @@ describe('maskCommandLine', () => {
     )
   })
 
+  it('masks a quoted secret value that contains whitespace', () => {
+    expect(maskCommandLine('vercel env add SESSION_SECRET production --value "my secret" --force')).toBe(
+      'vercel env add SESSION_SECRET production --value *** *** --force',
+    )
+  })
+
+  it('masks the whole quoted value of a secret flag, not just its first fragment', () => {
+    expect(maskCommandLine('vercel env add SESSION_SECRET production --value "my s3cr3t value"')).toBe(
+      'vercel env add SESSION_SECRET production --value *** *** ***',
+    )
+  })
+
+  it('masks the fragments after an inline quoted secret value', () => {
+    expect(maskCommandLine('curl --token="multi word secret" https://x')).toBe('curl --token=*** *** *** https://x')
+  })
+
   it('preserves whitespace outside masked values', () => {
     expect(maskCommandLine('  git   rev-parse   HEAD  ')).toBe('  git   rev-parse   HEAD  ')
   })
@@ -89,13 +105,17 @@ describe('maskCommandLine', () => {
     expect(maskCommandLine('--MONKEY=visible --api-key=hidden')).toBe('--MONKEY=visible --api-key=***')
   })
 
-  it('masks the whole quoted value of a secret flag, not just its first fragment', () => {
-    expect(maskCommandLine('vercel env add SESSION_SECRET production --value "my s3cr3t value"')).toBe(
-      'vercel env add SESSION_SECRET production --value *** *** ***',
-    )
+  it('masks a secret-named assignment but leaves an ordinary one visible', () => {
+    expect(maskCommandLine('ADMIN_PASSWORD=abc vercel deploy')).toBe('ADMIN_PASSWORD=*** vercel deploy')
+    expect(maskCommandLine('PROFILE=dev vercel deploy')).toBe('PROFILE=dev vercel deploy')
   })
+})
 
-  it('masks the fragments after an inline quoted secret value', () => {
-    expect(maskCommandLine('curl --token="multi word secret" https://x')).toBe('curl --token=*** *** *** https://x')
+describe('echoCommand', () => {
+  it('writes the masked command to stderr', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    echoCommand('vercel', ['env', 'add', 'SESSION_SECRET', 'production', '--value', 's3cr3t'])
+    expect(spy).toHaveBeenCalledWith('$ vercel env add SESSION_SECRET production --value ***')
+    spy.mockRestore()
   })
 })

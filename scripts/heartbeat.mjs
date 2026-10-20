@@ -6,17 +6,13 @@
 //   node scripts/heartbeat.mjs [--target vercel|cloudflare] [--provider cron-job|none]
 // Missing and interactive: arrow-key picker (default cron-job).
 // Missing and non-interactive: abort.
-import { parseArgs as parseCliArgs } from 'node:util'
-import { applyHeartbeat, HEARTBEAT_CHOICES, HEARTBEAT_PROVIDERS, renderOptionPicker } from './lib/heartbeat.mjs'
+import { applyHeartbeat, HEARTBEAT_CHOICES, HEARTBEAT_PROVIDERS } from './lib/heartbeat.mjs'
 import { resolveCloudflareAppUrl } from './lib/cloudflare.mjs'
-import { loadTargetEnv } from './lib/target-env.mjs'
-import { c } from './_terminal.mjs'
+import { loadTargetEnv, seedCloudflareCredentials } from './lib/target-env.mjs'
+import { c, parseCliArgsOrExit } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
-
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
+import { renderOptionPicker } from './_pickers.mjs'
+import { failExit } from './_deploy/core.mjs'
 
 function usage() {
   console.log(`Usage:
@@ -46,28 +42,18 @@ Examples:
 }
 
 function parseArgs(argv) {
-  let cli
-  try {
-    cli = parseCliArgs({
-      args: argv,
-      options: {
-        target: { type: 'string' },
-        provider: { type: 'string' },
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-      strict: true,
-    })
-  } catch (error) {
-    fail(error.message)
-  }
-  const { values, positionals } = cli
-  if (values.help || positionals.includes('help')) {
-    usage()
-    process.exit(0)
-  }
+  const { values, positionals } = parseCliArgsOrExit(
+    argv,
+    {
+      target: { type: 'string' },
+      provider: { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    usage,
+    { help: cli => cli.values.help || cli.positionals.includes('help') },
+  )
   if (positionals.length > 0) {
-    fail(`Unknown argument: ${positionals[0]}`)
+    failExit(`Unknown argument: ${positionals[0]}`)
   }
   return { targetFlag: values.target ?? '', providerFlag: values.provider ?? '' }
 }
@@ -81,7 +67,7 @@ async function pickProvider() {
         render: renderOptionPicker('default cron-job.org'),
       })
       if (!picked) {
-        fail('Heartbeat switch cancelled.')
+        failExit('Heartbeat switch cancelled.')
       }
       ctx.provider = picked.value
       return null
@@ -97,16 +83,16 @@ async function pickProvider() {
 async function main() {
   const options = parseArgs(process.argv.slice(2))
   if (options.targetFlag && options.targetFlag !== 'vercel' && options.targetFlag !== 'cloudflare') {
-    fail(`Unknown target: ${options.targetFlag} (expected vercel|cloudflare).`)
+    failExit(`Unknown target: ${options.targetFlag} (expected vercel|cloudflare).`)
   }
   const target = options.targetFlag || 'vercel'
   if (options.providerFlag && !HEARTBEAT_PROVIDERS.includes(options.providerFlag)) {
-    fail(`Unknown provider: ${options.providerFlag} (expected cron-job|none).`)
+    failExit(`Unknown provider: ${options.providerFlag} (expected cron-job|none).`)
   }
   let provider = options.providerFlag
   if (!provider) {
     if (!process.stdin.isTTY) {
-      fail('Missing provider: pass --provider cron-job|none or run interactively.')
+      failExit('Missing provider: pass --provider cron-job|none or run interactively.')
     }
     provider = await pickProvider()
   }
@@ -118,16 +104,12 @@ async function main() {
     let baseUrl
     if (target === 'cloudflare') {
       const merged = loadTargetEnv('cloudflare', process.cwd())
-      for (const key of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']) {
-        if (!process.env[key] && String(merged[key] || '').trim()) {
-          process.env[key] = String(merged[key]).trim()
-        }
-      }
+      seedCloudflareCredentials({ token: merged, accountId: merged })
       baseUrl = resolveCloudflareAppUrl()
     }
     await applyHeartbeat(provider, undefined, target, { baseUrl })
   } catch (error) {
-    fail(error?.message || error)
+    failExit(error?.message || error)
   }
   console.log(`OK heartbeat -> ${provider} (${target})`)
 }

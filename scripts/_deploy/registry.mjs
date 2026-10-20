@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // _deploy/registry.mjs — deploy target registry shared by the entry point and
 // the interview. Plugin capability selection lives in the project's
-// `deploy.config.mjs`; a target's availability is derived from its required
+// `deploy.config.json`; a target's availability is derived from its required
 // config at runtime (see `_deploy/preflight.mjs`), never from a support flag.
 
 import { envSyncPlugin } from './plugins/env-sync.mjs'
 import { heartbeatPlugin } from './plugins/heartbeat.mjs'
 import { vercelLinkPlugin } from './plugins/vercel-link.mjs'
 
-// Selectable capabilities, keyed by the name used in deploy.config.mjs.
+// Selectable capabilities, keyed by the name used in deploy.config.json.
 export const PLUGINS = new Map([
   [envSyncPlugin.name, envSyncPlugin],
   [heartbeatPlugin.name, heartbeatPlugin],
@@ -19,7 +19,7 @@ export const PLUGINS = new Map([
 // only when CRONJOB_API_KEY resolves), so a project never lists them.
 export const AUTO_PLUGINS = [heartbeatPlugin.name]
 
-// Selection used when a project ships no deploy.config.mjs.
+// Selection used when a project ships no deploy.config.json.
 export const DEFAULT_PLUGINS = [...PLUGINS.keys()]
 
 export function resolvePlugins(names = DEFAULT_PLUGINS) {
@@ -39,7 +39,7 @@ export function resolveConfiguredPlugins(config = {}) {
   return resolvePlugins([...new Set([...AUTO_PLUGINS, ...selected])])
 }
 
-// Per-project required env props (`deploy.config.mjs` → `requiredEnv`); empty
+// Per-project required env props (`deploy.config.json` → `requiredEnv`); empty
 // when the project declares none. Enforced by the preflight before any CLI.
 export function requiredEnvFromConfig(config = {}) {
   return config.requiredEnv ?? {}

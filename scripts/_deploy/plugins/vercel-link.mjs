@@ -4,9 +4,9 @@
 // interactive prompt persisted to the overlay), confirm a switch, create the
 // remote project when absent, and link. A matching link (or nothing requested
 // on a linked checkout) keeps the existing link untouched.
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseEnvFile } from '../../env-file.mjs'
+import { parseEnvFile, readJsonFile } from '../../env-file.mjs'
 import { logEvent } from '../../log-event.mjs'
 import { ask, c, promptYesNo } from '../../_terminal.mjs'
 import { withPrompt } from '../../lib/prompt-queue.mjs'
@@ -22,12 +22,8 @@ import { ROOT_DIR, fail } from '../core.mjs'
 import { persistEnvValue } from '../env-overlay.mjs'
 
 function linkedProjectName() {
-  try {
-    const data = JSON.parse(readFileSync(join(ROOT_DIR, '.vercel', 'project.json'), 'utf8'))
-    return String(data.projectName || '')
-  } catch {
-    return ''
-  }
+  const data = readJsonFile(join(ROOT_DIR, '.vercel', 'project.json'), {})
+  return String(data?.projectName || '')
 }
 
 function mergedProjectEnv() {
@@ -35,12 +31,8 @@ function mergedProjectEnv() {
 }
 
 function packageDefaultProjectName() {
-  try {
-    const data = JSON.parse(readFileSync(join(ROOT_DIR, 'package.json'), 'utf8'))
-    return defaultProjectName(data.name)
-  } catch {
-    return ''
-  }
+  const data = readJsonFile(join(ROOT_DIR, 'package.json'), {})
+  return defaultProjectName(data?.name)
 }
 
 async function promptProjectName() {

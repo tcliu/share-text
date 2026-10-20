@@ -4,19 +4,24 @@
 // dependency-light and free of target-specific code so targets and plugins can
 // import it without a cycle.
 import { spawnSync } from 'node:child_process'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import { promptYesNo } from '../_terminal.mjs'
 import { formatCommand } from '../_run.mjs'
 import { errorMessage, logEvent } from '../log-event.mjs'
 import { withPrompt } from '../lib/prompt-queue.mjs'
+import { ROOT } from '../lib/root.mjs'
 
-const MODULE_DIR = dirname(fileURLToPath(import.meta.url))
-export const SCRIPT_DIR = join(MODULE_DIR, '..')
-export const ROOT_DIR = join(SCRIPT_DIR, '..')
+export const ROOT_DIR = ROOT
+export const SCRIPT_DIR = join(ROOT_DIR, 'scripts')
 
 export function fail(message) {
   throw new Error(message)
+}
+
+// Terminal failure for standalone scripts: report to stderr and exit 1.
+export function failExit(message) {
+  console.error(message)
+  process.exit(1)
 }
 
 export function formatElapsedTime(totalSeconds) {

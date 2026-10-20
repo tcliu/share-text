@@ -4,8 +4,8 @@
 // interactive shell.
 import { logEvent } from '../log-event.mjs'
 import { hasNeonSchema } from '../db-schema-path.mjs'
-import { HEARTBEAT_CHOICES, renderOptionPicker, shouldAskHeartbeat } from '../lib/heartbeat.mjs'
-import { renderList } from '../_pickers.mjs'
+import { HEARTBEAT_CHOICES, shouldAskHeartbeat } from '../lib/heartbeat.mjs'
+import { renderList, renderOptionPicker } from '../_pickers.mjs'
 import { c } from '../_terminal.mjs'
 import { interactiveShell } from '../_interactive-shell.mjs'
 import { ROOT_DIR, fail } from './core.mjs'
@@ -38,17 +38,11 @@ function renderProfilePicker() {
 }
 
 function renderTargetsPicker() {
-  return (entries, state) => {
-    const lines = []
-    for (let i = 0; i < entries.length; i++) {
-      const item = entries[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      const mark = state.selected.has(i) ? `${c.green}[x]${c.reset}` : '[ ]'
-      lines.push(` ${cursor} ${mark} ${c.green}${item.value}${c.reset} ${c.gray}(${item.description})${c.reset}`)
-    }
-    lines.push('', `${c.dim}Up/Down: move | Space: toggle | Enter: confirm | q: cancel${c.reset}`)
-    return lines
-  }
+  return renderList({
+    checkboxes: true,
+    hint: 'Up/Down: move | Space: toggle | Enter: confirm | q: cancel',
+    formatRow: item => `${c.green}${item.value}${c.reset} ${c.gray}(${item.description})${c.reset}`,
+  })
 }
 
 // Linear interview: target -> profile -> sync-env -> apply-schema -> heartbeat

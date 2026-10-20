@@ -9,9 +9,9 @@
 //     [--sync-env|--no-sync-env] [--apply-schema|--no-apply-schema]
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseArgs as parseCliArgs } from 'node:util'
 import { errorMessage, logEvent } from './log-event.mjs'
 import { ROOT_DIR, fail, runScript } from './_deploy/core.mjs'
+import { parseCliArgsOrExit } from './_terminal.mjs'
 import { runDeployInterview } from './_deploy/interview.mjs'
 import {
   DEFAULT_TARGET,
@@ -47,7 +47,7 @@ A target is offered only when its required config is present: Vercel needs a
 link, --project, or VERCEL_PROJECT (or an interactive run that can link);
 Cloudflare needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, and
 CLOUDFLARE_PROJECT, plus any requiredEnv keys declared in
-scripts/deploy.config.mjs. --target all covers only the available targets.
+deploy.config.json. --target all covers only the available targets.
 
 Options:
   --profile dev|prod   Backend profile to deploy (also read from $PROFILE).
@@ -99,32 +99,22 @@ function resolveProdConfirmSync(profile, flag, skipNotice) {
 }
 
 function parseArgs(argv) {
-  let cli
-  try {
-    cli = parseCliArgs({
-      args: argv,
-      options: {
-        profile: { type: 'string' },
-        target: { type: 'string', multiple: true },
-        'sync-env': { type: 'boolean' },
-        'no-sync-env': { type: 'boolean' },
-        'apply-schema': { type: 'boolean' },
-        'no-apply-schema': { type: 'boolean' },
-        heartbeat: { type: 'string' },
-        project: { type: 'string' },
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-      strict: true,
-    })
-  } catch (error) {
-    fail(error.message)
-  }
-  const { values, positionals } = cli
-  if (values.help) {
-    usage()
-    process.exit(0)
-  }
+  const { values, positionals } = parseCliArgsOrExit(
+    argv,
+    {
+      profile: { type: 'string' },
+      target: { type: 'string', multiple: true },
+      'sync-env': { type: 'boolean' },
+      'no-sync-env': { type: 'boolean' },
+      'apply-schema': { type: 'boolean' },
+      'no-apply-schema': { type: 'boolean' },
+      heartbeat: { type: 'string' },
+      project: { type: 'string' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    usage,
+    { onError: fail },
+  )
   if (values['sync-env'] && values['no-sync-env']) {
     fail('Conflicting --sync-env/--no-sync-env.')
   }
@@ -238,8 +228,9 @@ async function deployWithTarget(options, { availableEntries, availableValues, co
   })
 }
 
-// Load the per-project deploy config (`deploy.config.mjs`); `{}` when absent so
-// every reader falls back to its default.
+// Load the shared deploy-config loader (`deploy.config.mjs`), which reads the
+// project-owned `deploy.config.json`; `{}` when the loader is absent so every
+// reader falls back to its default.
 async function loadDeployConfig() {
   if (!existsSync(join(ROOT_DIR, 'scripts', 'deploy.config.mjs'))) {
     return {}

@@ -9,6 +9,7 @@ import {
   getDatabaseURL,
   getSchemaName,
   getSqlitePath,
+  getVerifyTables,
   quoteIdentifier,
   resolveScriptProfile,
   toSqliteSql,
@@ -103,15 +104,24 @@ let sql
 try {
   sql = await readFile(new URL('../sql/schema.sql', import.meta.url), 'utf8')
 } catch (error) {
+  if (error?.code === 'ENOENT') {
+    logEvent({
+      action: 'schema_apply_skip',
+      details: { profile, source: 'sql/schema.sql', reason: 'missing sql/schema.sql', level: 'WARN' },
+    })
+    process.exit(0)
+  }
   logEvent({
     action: 'schema_apply_error',
     details: { profile, source: 'sql/schema.sql', elapsed_ms: Date.now() - startedAt, error: errorMessage(error) },
   })
   process.exit(1)
 }
+const verifyTables = getVerifyTables()
 
 if (profile === 'dev') {
   const path = getSqlitePath()
+  const schemaName = getSchemaName()
   logEvent({ action: 'schema_apply_start', details: { profile, source: 'sql/schema.sql', sqlite_path: path } })
   try {
     const { default: Database } = await import('better-sqlite3')
@@ -122,14 +132,31 @@ if (profile === 'dev') {
 
     const database = new Database(path)
     try {
+      // A schema-qualified sql/schema.sql needs its schema present in SQLite:
+      // attach the target file under SCHEMA_NAME so `"schema".table` resolves.
+      if (schemaName) {
+        const escaped = path.replace(/'/g, "''")
+        database.exec(`attach database '${escaped}' as ${quoteIdentifier(schemaName)}`)
+      }
       database.exec(toSqliteSql(sql))
       const tables = database
-        .prepare("select name from sqlite_master where type = 'table' and name in ('users', 'documents') order by name")
+        .prepare(
+          `select name from ${schemaName ? `${quoteIdentifier(schemaName)}.` : ''}sqlite_master where type = 'table' and name in (${verifyTables.map(() => '?').join(', ')}) order by name`,
+        )
+        .all(...verifyTables)
         .map(row => row.name)
       logEvent({
         action: 'schema_apply_end',
         details: { profile, sqlite_path: path, elapsed_ms: Date.now() - startedAt, tables },
       })
+      const missing = verifyTables.filter(table => !tables.includes(table))
+      if (missing.length > 0) {
+        logEvent({
+          action: 'schema_apply_incomplete',
+          details: { profile, sqlite_path: path, missing, level: 'ERROR' },
+        })
+        process.exitCode = 1
+      }
     } finally {
       database.close()
     }
@@ -141,7 +168,14 @@ if (profile === 'dev') {
     process.exitCode = 1
   }
 } else {
-  const { host: db_host, database: db_name } = describeDatabaseTarget(getDatabaseURL())
+  const databaseURL = getDatabaseURL()
+  if (!databaseURL) {
+    logEvent({
+      action: 'schema_apply_skip',
+      details: { profile, source: 'sql/schema.sql', reason: 'missing DATABASE_URL', level: 'WARN' },
+    })
+  } else {
+  const { host: db_host, database: db_name } = describeDatabaseTarget(databaseURL)
   const schemaName = getSchemaName()
   const schema = schemaName || 'public'
   logEvent({
@@ -151,9 +185,9 @@ if (profile === 'dev') {
   const pool = createDbPool()
   try {
     // One client for the whole apply so `set search_path` covers the DDL and
-    // the verification query. The app reads through the same search_path (see
-    // src/lib/server/db/neon.ts), so DDL must land in SCHEMA_NAME — without
-    // this the tables are created in public while the app looks in SCHEMA_NAME.
+    // the verification query. The app reads through the same search_path, so
+    // DDL must land in SCHEMA_NAME — without this the tables are created in
+    // public while the app looks in SCHEMA_NAME.
     const client = await pool.connect()
     try {
       if (schemaName) {
@@ -164,10 +198,11 @@ if (profile === 'dev') {
       for (const statement of statements) {
         await client.query(statement)
       }
+      const placeholders = verifyTables.map((_, index) => `$${index + 2}`).join(', ')
       const tables = (
         await client.query(
-          'select table_name from information_schema.tables where table_schema = $1 and table_name in ($2, $3) order by table_name',
-          [schema, 'users', 'documents'],
+          `select table_name from information_schema.tables where table_schema = $1 and table_name in (${placeholders}) order by table_name`,
+          [schema, ...verifyTables],
         )
       ).rows.map(row => row.table_name)
       const location = (
@@ -186,6 +221,14 @@ if (profile === 'dev') {
           current_schema: location.current_schema,
         },
       })
+      const missing = verifyTables.filter(table => !tables.includes(table))
+      if (missing.length > 0) {
+        logEvent({
+          action: 'schema_apply_incomplete',
+          details: { profile, db_host, db_name, schema, missing, level: 'ERROR' },
+        })
+        process.exitCode = 1
+      }
     } finally {
       client.release()
     }
@@ -197,5 +240,6 @@ if (profile === 'dev') {
     process.exitCode = 1
   } finally {
     await pool.end()
+  }
   }
 }

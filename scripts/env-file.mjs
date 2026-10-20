@@ -32,3 +32,13 @@ export function parseEnvFile(filePath) {
 
   return values
 }
+
+// Parse a JSON file, returning `fallback` when it is missing or malformed.
+// Callers that must fail loudly on bad JSON keep their own try/catch.
+export function readJsonFile(filePath, fallback = null) {
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8'))
+  } catch {
+    return fallback
+  }
+}

@@ -27,12 +27,14 @@
 // (the remote value survives); local-only keys are never synced.
 import { spawn } from 'node:child_process'
 import { existsSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { parseEnvFile } from './env-file.mjs'
 import { parseFlags } from './lib/cloudflare-env-flags.mjs'
 import { logEvent } from './log-event.mjs'
 import { echoCommand } from './_run.mjs'
+import { failExit } from './_deploy/core.mjs'
+import { ROOT as ROOT_DIR } from './lib/root.mjs'
 import { resolveDeployBackend } from './_deploy/backend.mjs'
 import {
   CLOUDFLARE_LOCAL_ONLY_KEYS,
@@ -43,6 +45,7 @@ import {
   generatedWranglerProjectName,
   renderWranglerConfig,
   splitCloudflareEnv,
+  wranglerArgs,
   wranglerBin,
 } from './lib/cloudflare.mjs'
 import {
@@ -53,10 +56,8 @@ import {
   patchPagesEnvVars,
 } from './lib/cloudflare-pages-env.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
-import { loadTargetFileEnv, targetSourceFiles } from './lib/target-env.mjs'
+import { loadTargetFileEnv, seedCloudflareCredentials, targetSourceFiles } from './lib/target-env.mjs'
 
-const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
-const ROOT_DIR = join(SCRIPT_DIR, '..')
 // Shared prod values (.env.prod) overlaid by Cloudflare-only values
 // (.env.cloudflare); the overlay wins on conflict. Files-only merge: shell
 // never invents synced keys (see loadTargetFileEnv).
@@ -64,15 +65,10 @@ const SOURCE_FILES = targetSourceFiles('cloudflare')
 const GENERATED_FILE = join(ROOT_DIR, GENERATED_WRANGLER_CONFIG)
 const SECRET_CONCURRENCY = 4
 
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
-
 function runWranglerAsync(args, { input } = {}) {
   return new Promise((resolve, reject) => {
     const bin = wranglerBin()
-    const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
+    const fullArgs = wranglerArgs(args, bin)
     // The secret value goes on stdin, never argv, so the echoed command is
     // safe; per-key completion events below carry the progress signal.
     echoCommand(bin, fullArgs)
@@ -104,7 +100,7 @@ async function main() {
   const { dryRun, prune, secrets: secretsMode } = parseFlags(process.argv.slice(2))
   const missing = SOURCE_FILES.filter(file => !existsSync(join(ROOT_DIR, file)))
   if (missing.length > 0) {
-    fail(
+    failExit(
       `Missing ${missing.join(', ')}: shared prod values live in .env.prod, Cloudflare-only values in .env.cloudflare.`,
     )
   }
@@ -117,14 +113,7 @@ async function main() {
   // so `secret put` and the remote read work standalone; shell always wins.
   const local = parseEnvFile(join(ROOT_DIR, '.env.local'))
   const accountIdEnv = { ...raw, ...local }
-  for (const [key, source] of [
-    ['CLOUDFLARE_API_TOKEN', local],
-    ['CLOUDFLARE_ACCOUNT_ID', accountIdEnv],
-  ]) {
-    if (!process.env[key] && String(source[key] || '').trim()) {
-      process.env[key] = String(source[key]).trim()
-    }
-  }
+  seedCloudflareCredentials({ token: local, accountId: accountIdEnv })
   // Isolation policy follows the resolved backend, matching the deploy flow: a
   // D1-backed target forbids the Neon URL (it would silently win over the
   // binding); a Neon-backed target keeps DATABASE_URL in sync and forbids only
@@ -144,7 +133,7 @@ async function main() {
   }
   const project = overlayProject || generatedWranglerProjectName(ROOT_DIR)
   if (!project) {
-    fail('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Pages project name.')
+    failExit('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Pages project name.')
   }
   logEvent({ action: 'cloudflare_env_sync_start', details: { project, dry_run: dryRun, secrets_mode: secretsMode } })
 
@@ -165,7 +154,7 @@ async function main() {
     })
   } catch (error) {
     if (secretsMode === 'missing') {
-      fail(`Cannot use --secrets=missing without remote env vars: ${error?.message || error}`)
+      failExit(`Cannot use --secrets=missing without remote env vars: ${error?.message || error}`)
     }
     logEvent({
       action: 'cloudflare_env_read_fallback',

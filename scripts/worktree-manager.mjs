@@ -52,7 +52,6 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { stdin, stdout } from 'node:process'
 import { StringDecoder } from 'node:string_decoder'
-import { parseArgs as parseCliArgs } from 'node:util'
 
 import { maskCommandLine } from './_run.mjs'
 
@@ -88,9 +87,11 @@ import {
   createScreenRenderer,
   createTerminalManager,
   displayWidth,
+  frameParts,
   padRight,
   truncate,
 } from './_tui.mjs'
+import { parseCliArgsOrExit } from './_terminal.mjs'
 
 // Pure layout/menu model lives in _worktree-tui/layout.mjs; the adapters below
 // bind terminal size and live state to it, so that module stays testable.
@@ -806,8 +807,7 @@ function draw() {
   const box = renderBoxRows()
   const listLines = box.lines
   const { listH, cmdH } = currentFrameSplit()
-  const border = s => `${c.cyan}${s}${c.reset}`
-  const side = t => `${c.cyan}│${c.reset} ${t}${c.cyan} │${c.reset}`
+  const { border, side } = frameParts()
 
   const header =
     `${c.bold}WORKTREE MANAGER${c.reset} ${c.dim}· ${path.basename(state.mainRoot)}` +
@@ -2009,19 +2009,18 @@ const state = {
 }
 
 async function main() {
-  let cli
-  try {
-    cli = parseCliArgs({
-      args: process.argv.slice(2),
-      options: { help: { type: 'boolean', short: 'h' } },
-      allowPositionals: true,
-      strict: true,
-    })
-  } catch (error) {
-    console.error(error.message)
-    process.exitCode = 1
-    return
-  }
+  const cli = parseCliArgsOrExit(
+    process.argv.slice(2),
+    { help: { type: 'boolean', short: 'h' } },
+    null,
+    {
+      onError: message => {
+        console.error(message)
+        process.exitCode = 1
+      },
+    },
+  )
+  if (!cli) return
   if (cli.values.help) {
     console.log(
       'Usage: worktree-manager [dir]\n\nManage git worktrees rooted at the repository containing [dir] (default: current directory).',

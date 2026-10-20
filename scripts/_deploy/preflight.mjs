@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // _deploy/preflight.mjs — decide which targets this checkout can deploy and
 // fail fast before any deploy CLI runs. A target is available when every
-// required env prop declared in `scripts/deploy.config.mjs` resolves, the
+// required env prop declared in `deploy.config.json` resolves, the
 // credentials it needs are present (Cloudflare: CLOUDFLARE_API_TOKEN in the
 // operator layer and CLOUDFLARE_ACCOUNT_ID in either layer), and its link intent
 // resolves (Vercel: a link, `--project`, VERCEL_PROJECT, or an interactive run

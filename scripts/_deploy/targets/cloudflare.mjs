@@ -21,10 +21,16 @@ import {
   resolveCloudflareProjectName,
   resolveD1DatabaseName,
   splitCloudflareEnv,
+  wranglerArgs,
   wranglerBin,
 } from '../../lib/cloudflare.mjs'
 import { diffDesiredVars, fetchPagesEnvState } from '../../lib/cloudflare-pages-env.mjs'
-import { loadTargetEnv, loadTargetFileEnv, loadTargetOperatorEnv } from '../../lib/target-env.mjs'
+import {
+  loadTargetEnv,
+  loadTargetFileEnv,
+  loadTargetOperatorEnv,
+  seedCloudflareCredentials,
+} from '../../lib/target-env.mjs'
 import { D1_BINDING_NAME } from '../../../src/lib/d1-binding.mjs'
 
 // Cloudflare Pages target. Reads `.env.prod` overlaid by `.env.cloudflare`
@@ -85,14 +91,7 @@ function seedWranglerToken() {
   // Match the preflight's accepted layers for the account id exactly: the
   // synced push universe plus the operator layer (never `.env`).
   const accountIdEnv = { ...loadTargetFileEnv('cloudflare', ROOT_DIR), ...operator }
-  for (const [key, source] of [
-    ['CLOUDFLARE_API_TOKEN', operator],
-    ['CLOUDFLARE_ACCOUNT_ID', accountIdEnv],
-  ]) {
-    if (!process.env[key] && String(source[key] || '').trim()) {
-      process.env[key] = String(source[key]).trim()
-    }
-  }
+  seedCloudflareCredentials({ token: operator, accountId: accountIdEnv })
 }
 
 // Regenerates the gitignored root `wrangler.toml` from the overlay
@@ -156,7 +155,7 @@ function runCloudflareDeploy(branch = '') {
   if (branch) {
     args.push('--branch', branch)
   }
-  const fullArgs = bin === 'npx' ? ['wrangler', ...args] : args
+  const fullArgs = wranglerArgs(args, bin)
   console.log(formatCommand(bin, fullArgs))
   const result = spawnSync(bin, fullArgs, {
     cwd: ROOT_DIR,

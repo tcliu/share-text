@@ -9,20 +9,16 @@
 //   CLOUDFLARE_D1_DATABASE=<name> node scripts/apply-d1-schema.mjs
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parseD1TableNames, planD1Bootstrap, translateSchemaForD1 } from './d1-schema.mjs'
 import { defaultWranglerRunner, resolveD1DatabaseName } from './lib/cloudflare.mjs'
 import { errorMessage, logEvent } from './log-event.mjs'
+import { failExit } from './_deploy/core.mjs'
+import { ROOT as ROOT_DIR } from './lib/root.mjs'
 
-const ROOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..')
 const LIST_TABLES_SQL = "select name from sqlite_master where type = 'table'"
-
-function fail(message) {
-  console.error(message)
-  process.exit(1)
-}
 
 // Schema qualifier from `CREATE SCHEMA "name"` (`"name".`, or '' when the
 // schema is unqualified). Pure so tests can assert it without wrangler.
@@ -79,13 +75,13 @@ function main() {
   const startedAt = Date.now()
   const database = resolveD1DatabaseName(process.env)
   if (!database) {
-    fail('CLOUDFLARE_D1_DATABASE is empty: set it to the D1 database name to bootstrap.')
+    failExit('CLOUDFLARE_D1_DATABASE is empty: set it to the D1 database name to bootstrap.')
   }
   let existingTables
   try {
     existingTables = listExistingTables(database, defaultWranglerRunner)
   } catch (error) {
-    fail(error.message)
+    failExit(error.message)
   }
   let schema
   try {
@@ -112,7 +108,7 @@ function main() {
   try {
     applySchema(database, plan.sql, defaultWranglerRunner)
   } catch (error) {
-    fail(error.message)
+    failExit(error.message)
   }
   logEvent({ action: 'd1_schema_end', details: { database, elapsed_ms: Date.now() - startedAt } })
 }

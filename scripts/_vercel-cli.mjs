@@ -6,7 +6,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 import { echoCommand } from './_run.mjs'
 import { logEvent } from './log-event.mjs'
 import { ROOT_DIR, fail } from './_deploy/core.mjs'
@@ -35,6 +35,49 @@ export function runVercelCli(args, { cwd = ROOT_DIR, capture = false } = {}) {
   }
   const result = spawnSync(command, fullArgs, { cwd, encoding: 'utf8' })
   return { status: result.status ?? 1, output: `${result.stdout ?? ''}${result.stderr ?? ''}` }
+}
+
+// Async sibling of `runVercelCli` for callers that stream a value on the
+// child's stdin (the env sync): captures stdout/stderr and rejects with the
+// child's own message on a non-zero exit. Same binary resolution as the sync
+// wrapper so both agree on PATH-vs-npx.
+export function runVercelCliAsync(args, { cwd = ROOT_DIR, input } = {}) {
+  const bin = vercelBin()
+  const command = bin ?? 'npx'
+  const fullArgs = bin ? args : ['vercel@latest', ...args]
+  echoCommand(command, fullArgs)
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, fullArgs, {
+      cwd,
+      stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout.on('data', chunk => {
+      stdout += chunk
+    })
+    child.stderr.on('data', chunk => {
+      stderr += chunk
+    })
+
+    child.on('error', reject)
+    child.on('close', code => {
+      if (code === 0) {
+        resolve(stdout)
+      } else {
+        const message = stderr.trim() || stdout.trim() || `vercel exited with code ${code}`
+        reject(new Error(message))
+      }
+    })
+
+    if (input !== undefined) {
+      // A closed stdin (spawn failure) surfaces on the child 'error' event.
+      child.stdin.on('error', () => {})
+      child.stdin.end(input)
+    }
+  })
 }
 
 export function runVercelApi(path, extraArgs = [], { capture = true } = {}) {

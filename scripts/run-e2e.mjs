@@ -14,13 +14,14 @@
 // Defaults: project from package.json `name` (/api/info id),
 // branch = this checkout's git branch.
 
-import { execFileSync, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import net from 'node:net'
 import { parseArgs as parseCliArgs } from 'node:util'
 import { pathToFileURL } from 'node:url'
 import { findRunningApps } from './find-running-apps.mjs'
 import { echoCommand } from './_run.mjs'
+import { readBranchFromGitDir } from './_worktrees.mjs'
 
 const START_TIMEOUT_MS = 120_000
 const POLL_MS = 500
@@ -36,15 +37,8 @@ const defaultProject = typeof manifest.name === 'string' && manifest.name ? mani
 const extraSpawnEnv = manifest.e2eEnv != null && typeof manifest.e2eEnv === 'object' ? manifest.e2eEnv : {}
 
 function currentBranch() {
-  try {
-    const out = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-      encoding: 'utf8',
-      timeout: 5000,
-    }).trim()
-    return out && out !== 'HEAD' ? out : null
-  } catch {
-    return null
-  }
+  const branch = readBranchFromGitDir(process.cwd(), { timeout: 5000 })
+  return branch && branch !== 'HEAD' ? branch : null
 }
 
 function isPortFree(port, host) {

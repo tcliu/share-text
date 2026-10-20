@@ -10,8 +10,18 @@
 //
 // All functions take an injectable fetchImpl so unit tests never touch the
 // network; nothing in this module prints secrets.
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 export const CRON_JOB_API_BASE = 'https://api.cron-job.org'
-export const SCAN_JOB_TITLE = 'share-text auto-scan'
+// The scan-job title is namespaced by the owning app so two apps sharing one
+// cron-job.org account never match each other's job by the title fallback. The
+// name comes from the app's own package.json, keeping this module identical
+// across apps.
+const APP_PACKAGE_PATH = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'package.json')
+const APP_NAME = JSON.parse(readFileSync(APP_PACKAGE_PATH, 'utf8')).name
+export const SCAN_JOB_TITLE = `${APP_NAME} auto-scan`
 
 // One scan job per running app, told apart by title: the Vercel job keeps the
 // original title so the live job migrates in place (URL match + title patch,

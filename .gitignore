@@ -3,20 +3,23 @@ build/
 archive/
 log/
 node_modules/
+.history/
+.worktrees/
+coverage/
 .svelte-kit/
 test-results/
 .tmp/
 .data/
+data/
 .opencode/
 .commandcode/
+.playwright-cli/
 .vercel/
 .env
-.sqlite
 .env.*
 !.env.example
 !.env.*.example
-.worktrees/
-coverage/
+.sqlite
 
 # Generated Cloudflare Pages config (npm run env:sync:cloudflare); never commit.
 wrangler.toml

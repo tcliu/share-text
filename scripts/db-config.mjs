@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { Pool } from '@neondatabase/serverless'
 import { parseEnvFile } from './env-file.mjs'
 import { quoteIdentifier, toSqliteSql } from '../src/lib/sql-rewrite.mjs'
 
 export { parseEnvFile, quoteIdentifier, toSqliteSql }
+// Schema-source path helpers live in the dependency-free db-schema-path.mjs so
+// the deploy interview can import them without the Neon driver.
+export { hasNeonSchema, neonSchemaPath } from './db-schema-path.mjs'
 
 export function loadScriptEnv(env = process.env) {
   return {
@@ -41,23 +41,13 @@ export function getSchemaName(env = process.env) {
   const loadedEnv = loadScriptEnv(env)
   return (loadedEnv.SCHEMA_NAME || '').trim()
 }
-
-// Absolute path of the schema source both apply flows read
-// (apply-schema.mjs for Neon/SQLite, apply-d1-schema.mjs for D1).
-// `root` is injectable so tests can point at a fixture dir; production
-// callers omit it (repo root).
-export function neonSchemaPath(root = join(dirname(fileURLToPath(import.meta.url)), '..')) {
-  return join(root, 'sql', 'schema.sql')
-}
-
-// Whether there is a schema file to apply: without one the deploy
-// interview skips the apply-schema question instead of asking it.
-export function hasNeonSchema(root) {
-  try {
-    return existsSync(neonSchemaPath(root))
-  } catch {
-    return false
-  }
+export function getVerifyTables(env = process.env) {
+  const raw = (loadScriptEnv(env).SCHEMA_VERIFY_TABLES || 'app_meta').trim()
+  const tables = raw
+    .split(',')
+    .map(name => name.trim())
+    .filter(Boolean)
+  return tables.length > 0 ? tables : ['app_meta']
 }
 
 // Host/database identifiers for log lines. Never returns credentials —
@@ -73,11 +63,6 @@ export function describeDatabaseTarget(databaseURL) {
     return { host: 'unknown', database: 'unknown' }
   }
 }
-
-// Quote a Postgres identifier for DDL. Identifiers cannot be parameterized,
-// so quoting is the only safe path for values that are legitimately
-// interpolated. Implementation is shared with the server runtime via
-// `src/lib/sql-rewrite.mjs` (see `quoteIdentifier` there).
 
 export function createDbPool(env = process.env) {
   const databaseURL = getDatabaseURL(env)

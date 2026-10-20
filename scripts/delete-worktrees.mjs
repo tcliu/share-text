@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import path from 'node:path'
-import { parseArgs as parseCliArgs } from 'node:util'
 
-import { c, selectOne } from './_terminal.mjs'
+import { c, parseCliArgsOrExit, selectOne } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
+import { CHECKLIST_HINT, renderList, renderOptionPicker } from './_pickers.mjs'
+import { failExit } from './_deploy/core.mjs'
 import { errorMessage, logEvent } from './log-event.mjs'
 import {
   countDirtyFiles,
@@ -16,8 +17,7 @@ import {
 } from './_worktrees.mjs'
 
 function fail(message) {
-  console.error(`${c.red}${message}${c.reset}`)
-  process.exit(1)
+  failExit(`${c.red}${message}${c.reset}`)
 }
 
 function printUsage() {
@@ -33,28 +33,18 @@ function printUsage() {
 }
 
 function parseArgs(argv) {
-  let cli
-  try {
-    cli = parseCliArgs({
-      args: argv,
-      options: {
-        interactive: { type: 'boolean', short: 'i' },
-        yes: { type: 'boolean', short: 'y' },
-        force: { type: 'boolean', short: 'f' },
-        kill: { type: 'boolean', short: 'k' },
-        help: { type: 'boolean', short: 'h' },
-      },
-      allowPositionals: true,
-      strict: true,
-    })
-  } catch (error) {
-    fail(error.message)
-  }
-  const { values, positionals } = cli
-  if (values.help) {
-    printUsage()
-    process.exit(0)
-  }
+  const { values, positionals } = parseCliArgsOrExit(
+    argv,
+    {
+      interactive: { type: 'boolean', short: 'i' },
+      yes: { type: 'boolean', short: 'y' },
+      force: { type: 'boolean', short: 'f' },
+      kill: { type: 'boolean', short: 'k' },
+      help: { type: 'boolean', short: 'h' },
+    },
+    printUsage,
+    { onError: fail },
+  )
   return {
     interactive: Boolean(values.interactive) || positionals.length === 0,
     yes: Boolean(values.yes),
@@ -65,34 +55,15 @@ function parseArgs(argv) {
 }
 
 function renderWorktreePicker() {
-  return (items, state) => {
-    const lines = []
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      const marker = state.selected.has(i) ? `${c.green}[x]${c.reset}` : '[ ]'
+  return renderList({
+    checkboxes: true,
+    hint: CHECKLIST_HINT,
+    formatRow: item => {
       const branch = item.branch ?? '(detached)'
       const suffix = item.registered === false ? ` ${c.yellow}[unregistered]${c.reset}` : ''
-      lines.push(` ${cursor} ${marker} ${item.name} ${c.gray}(${branch})${c.reset}${suffix}`)
-    }
-    lines.push('')
-    lines.push(`${c.dim}Space: toggle | Enter: confirm | q: cancel${c.reset}`)
-    return lines
-  }
-}
-
-function renderConfirmPicker(defaultWord) {
-  return (entries, state) => {
-    const lines = []
-    for (let i = 0; i < entries.length; i++) {
-      const item = entries[i]
-      const cursor = i === state.cursor ? `${c.cyan}>${c.reset}` : ' '
-      lines.push(` ${cursor} ${c.green}${item.label}${c.reset} ${c.gray}(${item.description})${c.reset}`)
-    }
-    lines.push('')
-    lines.push(`${c.dim}Up/Down: move | Enter: confirm (default ${defaultWord}) | q: cancel${c.reset}`)
-    return lines
-  }
+      return `${item.name} ${c.gray}(${branch})${c.reset}${suffix}`
+    },
+  })
 }
 
 const DANGER_CHOICES = [
@@ -182,7 +153,7 @@ async function confirmDeletion({ selected, yes, force, kill }) {
       }
       const answer = await selectOne(KILL_CHOICES, {
         defaultValue: 'no',
-        render: renderConfirmPicker('no'),
+        render: renderOptionPicker('default no'),
       })
       terminate = answer?.value === 'yes'
     }
@@ -224,7 +195,7 @@ async function confirmDeletion({ selected, yes, force, kill }) {
   }
   const answer = await selectOne(DANGER_CHOICES, {
     defaultValue: 'no',
-    render: renderConfirmPicker('no'),
+    render: renderOptionPicker('default no'),
   })
   if (!answer || answer.value !== 'yes') {
     fail('Cancelled.')

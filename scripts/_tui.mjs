@@ -242,6 +242,15 @@ export function parseSgrMouse(s, i) {
 // that hit-test dialog content (tabs, options) must offset by this much.
 export const DIALOG_SIDE_PAD_COLS = 2
 
+// Dialog frame chrome: `border` paints a full-width rule and `side` wraps a
+// content row between the box's vertical rules. `accent` defaults to cyan.
+export function frameParts(accent = c.cyan) {
+  return {
+    border: s => `${accent}${s}${c.reset}`,
+    side: t => `${accent}│${c.reset} ${t}${accent} │${c.reset}`,
+  }
+}
+
 /**
  * Build a bordered option box as render-ready lines: accent frame, optional
  * header lines (title extras such as tabs), a separator, `listH` option rows
@@ -274,8 +283,7 @@ export function buildDialogBox({
 }) {
   const inner = dialogW - 2
   const content = inner - 2
-  const border = s => `${accent}${s}${c.reset}`
-  const side = t => `${accent}│${c.reset} ${t}${accent} │${c.reset}`
+  const { border, side } = frameParts(accent)
   const lines = [border(`┌ ${title} ${'─'.repeat(Math.max(1, inner - title.length - 2))}┐`)]
   for (const header of headerLines) {
     lines.push(side(padRight(truncate(header, content), content)))
