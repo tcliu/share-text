@@ -12,6 +12,7 @@ import {
   CATALOG_APP_URL,
 } from '$lib/server/catalog-app'
 import { getAppActive } from '$lib/server/admin-properties'
+import { normalizeCard } from '$lib/server/card'
 import { resolveProfile } from '$lib/server/profile'
 
 const NO_STORE = { 'cache-control': 'no-store, max-age=0' }
@@ -19,23 +20,24 @@ const NO_STORE = { 'cache-control': 'no-store, max-age=0' }
 export const GET: RequestHandler = async () => {
   // Runtime branch, not a static prop: worktree tag in dev, commit ref on Vercel.
   const branch = (process.env.DEV_TAG || process.env.VERCEL_GIT_COMMIT_REF || '').trim() || null
-  const profile = resolveProfile()
   return json(
-    {
+    // The shared card contract owns the response shape: this app supplies its
+    // own props, the shared normalizer owns the key set and the value rules.
+    normalizeCard({
       id: CATALOG_APP_ID,
       name: CATALOG_APP_NAME,
       icon: CATALOG_APP_ICON,
       description: CATALOG_APP_DESCRIPTION,
+      branch,
       repo: CATALOG_APP_REPO,
       status: CATALOG_APP_STATUS,
       url: CATALOG_APP_URL,
+      profile: resolveProfile(),
       tags: [...CATALOG_APP_TAGS, CATALOG_APP_FRAMEWORK],
-      branch,
-      profile,
       // `APP_ACTIVE` opt-out (database → environment → default true): a catalog
       // scan elsewhere skips this instance entirely when false.
       active: await getAppActive(),
-    },
+    }),
     { headers: NO_STORE },
   )
 }
