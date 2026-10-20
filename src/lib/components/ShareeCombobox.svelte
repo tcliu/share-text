@@ -122,6 +122,7 @@
       chipClass={tagChipClass()}
       style={tagChipStyle(color)}
       tooltip={chipTooltip?.(username)}
+      removable
       removeButtonClass={tagRemoveBtnClass()}
       removeButtonStyle={tagRemoveBtnStyle(color)}
       onRemove={remove} />

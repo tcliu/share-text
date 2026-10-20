@@ -138,6 +138,7 @@
               label={name}
               chipClass={tagChipClass()}
               style={tagChipStyle(colorFor(name))}
+              removable
               removeButtonClass={tagRemoveBtnClass()}
               removeButtonStyle={tagRemoveBtnStyle(colorFor(name))}
               removeLabel={i18n.t('chip.remove', { name })}
