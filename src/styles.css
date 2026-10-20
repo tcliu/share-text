@@ -51,8 +51,7 @@
 }
 
 /*
- * Alternate themes (ported from the tts project: keep the per-theme slate /
- * accent mappings in sync).
+ * Alternate themes (keep the per-theme slate / accent mappings in sync).
  *
  * Components keep their literal default-theme utility classes; because
  * Tailwind v4 compiles every palette utility to a `var(--color-<name>-<grade>)`
