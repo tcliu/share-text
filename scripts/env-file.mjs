@@ -33,12 +33,21 @@ export function parseEnvFile(filePath) {
   return values
 }
 
-// Parse a JSON file, returning `fallback` when it is missing or malformed.
-// Callers that must fail loudly on bad JSON keep their own try/catch.
+// Parse a JSON file, returning `fallback` only when it is missing. A file that
+// is present but malformed stops the run with the path and the parser message:
+// silently degrading to "no data" turns a typo'd `package.json` or
+// `.vercel/project.json` into a misleading "not linked" state.
 export function readJsonFile(filePath, fallback = null) {
+  let content
   try {
-    return JSON.parse(readFileSync(filePath, 'utf8'))
-  } catch {
-    return fallback
+    content = readFileSync(filePath, 'utf8')
+  } catch (error) {
+    if (error?.code === 'ENOENT') return fallback
+    throw error
+  }
+  try {
+    return JSON.parse(content)
+  } catch (error) {
+    throw new Error(`Invalid JSON in ${filePath}: ${error.message}`)
   }
 }
