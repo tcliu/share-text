@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { hasNeonSchema, neonSchemaPath, quoteIdentifier, toSqliteSql } from './db-config.mjs'
+import { hasNeonSchema, neonSchemaPath, getVerifyTables, quoteIdentifier, toSqliteSql } from './db-config.mjs'
 
 describe('neonSchemaPath', () => {
   it('points at sql/schema.sql under the root', () => {
@@ -21,6 +21,35 @@ describe('hasNeonSchema', () => {
 
   it('reports a missing schema file', () => {
     expect(hasNeonSchema(mkdtempSync(join(tmpdir(), 'schema-missing-')))).toBe(false)
+  })
+})
+
+describe('getVerifyTables', () => {
+  function schemaDir(sql) {
+    const dir = mkdtempSync(join(tmpdir(), 'verify-tables-'))
+    mkdirSync(join(dir, 'sql'), { recursive: true })
+    writeFileSync(join(dir, 'sql', 'schema.sql'), sql)
+    return dir
+  }
+
+  it('derives the tables from the app schema file', () => {
+    const dir = schemaDir(
+      [
+        'create table if not exists users (id bigserial primary key);',
+        'create table if not exists user_documents (id text not null);',
+        'create index if not exists idx_users on users (id);',
+      ].join('\n'),
+    )
+    expect(getVerifyTables({}, dir)).toEqual(['users', 'user_documents'])
+  })
+
+  it('lets an explicit list win over the schema file', () => {
+    const dir = schemaDir('create table if not exists users (id bigserial primary key);')
+    expect(getVerifyTables({ SCHEMA_VERIFY_TABLES: 'one, two' }, dir)).toEqual(['one', 'two'])
+  })
+
+  it('verifies nothing when the app has no schema file', () => {
+    expect(getVerifyTables({}, mkdtempSync(join(tmpdir(), 'verify-empty-')))).toEqual([])
   })
 })
 

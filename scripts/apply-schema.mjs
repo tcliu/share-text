@@ -139,12 +139,17 @@ if (profile === 'dev') {
         database.exec(`attach database '${escaped}' as ${quoteIdentifier(schemaName)}`)
       }
       database.exec(toSqliteSql(sql))
-      const tables = database
-        .prepare(
-          `select name from ${schemaName ? `${quoteIdentifier(schemaName)}.` : ''}sqlite_master where type = 'table' and name in (${verifyTables.map(() => '?').join(', ')}) order by name`,
-        )
-        .all(...verifyTables)
-        .map(row => row.name)
+      // An app with no schema file (or no tables in it) verifies nothing: the
+      // query below is skipped rather than run with an empty `in ()` list.
+      const tables =
+        verifyTables.length > 0
+          ? database
+              .prepare(
+                `select name from ${schemaName ? `${quoteIdentifier(schemaName)}.` : ''}sqlite_master where type = 'table' and name in (${verifyTables.map(() => '?').join(', ')}) order by name`,
+              )
+              .all(...verifyTables)
+              .map(row => row.name)
+          : []
       logEvent({
         action: 'schema_apply_end',
         details: { profile, sqlite_path: path, elapsed_ms: Date.now() - startedAt, tables },
@@ -199,12 +204,17 @@ if (profile === 'dev') {
         await client.query(statement)
       }
       const placeholders = verifyTables.map((_, index) => `$${index + 2}`).join(', ')
-      const tables = (
-        await client.query(
-          `select table_name from information_schema.tables where table_schema = $1 and table_name in (${placeholders}) order by table_name`,
-          [schema, ...verifyTables],
-        )
-      ).rows.map(row => row.table_name)
+      // An app with no schema file (or no tables in it) verifies nothing: the
+      // query below is skipped rather than run with an empty `in ()` list.
+      const tables =
+        verifyTables.length > 0
+          ? (
+              await client.query(
+                `select table_name from information_schema.tables where table_schema = $1 and table_name in (${placeholders}) order by table_name`,
+                [schema, ...verifyTables],
+              )
+            ).rows.map(row => row.table_name)
+          : []
       const location = (
         await client.query('select current_database() as current_database, current_schema() as current_schema')
       ).rows[0]
