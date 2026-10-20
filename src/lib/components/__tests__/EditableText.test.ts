@@ -12,13 +12,13 @@ describe('EditableText', () => {
 
   it('does not render a copy button by default', () => {
     render(EditableText, { text: 'Hello', onChange: vi.fn() })
-    expect(screen.queryByLabelText('Copy Hello')).toBeNull()
+    expect(screen.queryByLabelText('Copy')).toBeNull()
   })
 
   it('renders a copy button when copyable is true', async () => {
     vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
     render(EditableText, { text: 'Hello', onChange: vi.fn(), copyable: true })
-    const copyButton = screen.getByLabelText('Copy Hello')
+    const copyButton = screen.getByLabelText('Copy')
     expect(copyButton).toBeTruthy()
     await fireEvent.click(copyButton)
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Hello')
@@ -51,7 +51,7 @@ describe('EditableText', () => {
   it('gates the copyable copy button reveal behind the hover media query', () => {
     render(EditableText, { text: 'Hello', onChange: vi.fn(), copyable: true })
 
-    const wrapper = findRevealWrapper(screen.getByLabelText('Copy Hello'))
+    const wrapper = findRevealWrapper(screen.getByLabelText('Copy'))
     expect(wrapper).not.toBeNull()
     expect(wrapper?.classList.contains(GATED_HIDDEN_CLASS)).toBe(true)
     expect(wrapper?.classList.contains('opacity-0')).toBe(false)
