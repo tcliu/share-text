@@ -77,7 +77,7 @@
         data-drag-ignore
         onclick={onClose}
         class="relative shrink-0 rounded-md p-2.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-100 focus-visible:text-slate-100 motion-reduce:transition-none">
-        <CloseIcon className="pointer-events-none" />
+        <CloseIcon size="sm" className="pointer-events-none" />
       </button>
     </div>
     <div

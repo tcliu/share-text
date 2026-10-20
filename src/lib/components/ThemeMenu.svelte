@@ -68,7 +68,7 @@
   {/snippet}
   {#snippet item(option: ThemeOption, _state: MenuItemState)}
     {@const OptionIcon = option.icon}
-    <OptionIcon className="shrink-0" />
+    <OptionIcon size="sm" className="shrink-0" />
     <span>{option.label}</span>
   {/snippet}
 </Menu>
