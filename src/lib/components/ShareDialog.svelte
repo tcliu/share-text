@@ -103,7 +103,7 @@
     title={i18n.t('share.title')}
     widthVariant="lg"
     onCancel={handleCancelRequest}
-    dismissDisabled={pending}>
+    dismissDisabled={pending || discardPromptOpen}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
 

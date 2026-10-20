@@ -163,6 +163,7 @@
   <BaseDialog
     title={i18n.t('history.title')}
     widthVariant="3xl"
+    dismissDisabled={restorePromptOpen}
     onCancel={onClose}>
     <div class="flex min-h-0 flex-col gap-3">
       <p class="text-xs text-slate-400">
