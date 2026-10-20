@@ -108,22 +108,22 @@
     wide: 'w-[min(96vw,96rem)] max-w-[96rem]',
   }
 
-  // Tailwind has no named `max-h` container scale, so the height steps are
-  // literal container-equivalent values. The panel's own `max-h-[90vh]` caps
-  // them, so a tall step still fits a short viewport.
+  // Tailwind has no named `max-h` container scale, so the height steps mirror
+  // the width steps in rem through the dynamic spacing scale. The panel's own
+  // `max-h-[90vh]` caps them, so a tall step still fits a short viewport.
   const heightVariantClasses: Record<DialogHeightVariant, string> = {
     auto: '',
-    xs: 'h-[20rem]',
-    sm: 'h-[24rem]',
-    md: 'h-[28rem]',
-    lg: 'h-[32rem]',
-    xl: 'h-[36rem]',
-    '2xl': 'h-[42rem]',
-    '3xl': 'h-[48rem]',
-    '4xl': 'h-[56rem]',
-    '5xl': 'h-[64rem]',
-    '6xl': 'h-[72rem]',
-    '7xl': 'h-[80rem]',
+    xs: 'h-80',
+    sm: 'h-96',
+    md: 'h-112',
+    lg: 'h-128',
+    xl: 'h-144',
+    '2xl': 'h-168',
+    '3xl': 'h-192',
+    '4xl': 'h-224',
+    '5xl': 'h-256',
+    '6xl': 'h-288',
+    '7xl': 'h-320',
   }
 
   // `size` is the shared shorthand: an explicit variant wins, then `size`,
@@ -244,8 +244,9 @@
     type="button"
     data-testid="dialog-overlay"
     aria-label={resolvedCloseLabel}
+    aria-disabled={dismissDisabled || undefined}
     tabindex="-1"
-    class="absolute inset-0 bg-slate-950/80 outline-none"
+    class="absolute inset-0 bg-slate-950/80 outline-none {dismissDisabled ? 'pointer-events-none' : ''}"
     onclick={handleCancelRequest}></button>
   <div class="relative flex min-h-full items-center justify-center px-4 py-6 @max-md:p-0">
     <div
@@ -259,8 +260,11 @@
       <button
         type="button"
         aria-label={resolvedCloseLabel}
+        aria-disabled={dismissDisabled || undefined}
         onclick={handleCancelRequest}
-        class="absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-200 focus:text-slate-200 motion-reduce:transition-none">
+        class={`absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] motion-reduce:transition-none ${dismissDisabled
+          ? 'cursor-not-allowed opacity-40'
+          : 'hover:text-slate-200 focus:text-slate-200'}`}>
         <CloseIcon />
       </button>
       {#if header || title}

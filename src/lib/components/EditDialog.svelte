@@ -55,6 +55,12 @@
     actions,
   }: Props = $props()
 
+  // The footer (with the save button) is a sibling of the scrolling body, so the
+  // button associates with the form by id and native implicit submission
+  // (Enter in a single-line field) keeps working for multi-field drafts.
+  const instanceId = $props.id()
+  const formId = `edit-dialog-form-${instanceId}`
+
   let discardOpen = $state(false)
 
   function handleCancelRequest(): void {
@@ -85,14 +91,14 @@
 {#snippet dialogFooter()}
   <Buttons align="right">
     {@render actions?.()}
-    <Button variant="primary" accent="cyan" type="button" disabled={pending || saveDisabled || !dirty} {pending} onClick={requestSave}
+    <Button variant="primary" accent="cyan" type="submit" form={formId} disabled={pending || saveDisabled || !dirty} {pending}
       >{saveLabel}</Button>
     <Button variant="outline" type="button" disabled={pending || !dirty} onClick={onReset}>{resetLabel}</Button>
   </Buttons>
 {/snippet}
 
 <BaseDialog {title} {header} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending || discardOpen} onCancel={handleCancelRequest} footer={dialogFooter}>
-  <form class="w-full min-w-0" onsubmit={handleSubmit}>
+  <form id={formId} class="w-full min-w-0" onsubmit={handleSubmit}>
     {@render children?.()}
   </form>
 </BaseDialog>
