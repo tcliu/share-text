@@ -1,12 +1,6 @@
-<script module lang="ts">
-  // Default chrome shared with the lazy surface, so the two never drift.
-  export const CODE_EDITOR_CONTAINER_CLASS =
-    'h-full overflow-hidden rounded-lg border border-slate-700 bg-slate-950'
-  export const CODE_EDITOR_CLASS = 'h-full'
-</script>
-
 <script lang="ts">
   import { tick } from 'svelte'
+  import { CODE_EDITOR_CLASS, CODE_EDITOR_CONTAINER_CLASS } from './code-editor-styles'
   import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
   import { bracketMatching, indentOnInput, indentUnit } from '@codemirror/language'
   import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete'
