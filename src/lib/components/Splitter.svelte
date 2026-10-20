@@ -5,8 +5,8 @@
 
   interface Props {
     value: number
-    min: number
-    max: number
+    min?: number
+    max?: number
     onChange: (value: number) => void
     onDragEnd?: () => void
     ariaLabel?: string
@@ -23,8 +23,8 @@
 
   let {
     value,
-    min,
-    max,
+    min = 0,
+    max = Number.POSITIVE_INFINITY,
     onChange,
     onDragEnd,
     ariaLabel,
@@ -36,6 +36,8 @@
   }: Props = $props()
 
   const resolvedAriaLabel = $derived(ariaLabel ?? i18n.t('splitter.resize'))
+  // An unbounded edge has no maximum to announce, so it is omitted.
+  const maxValue = $derived(Number.isFinite(max) ? max : undefined)
 
   // Pixel-to-value basis and drag-start value, captured when a drag begins.
   let startValue = 0
@@ -70,39 +72,51 @@
     toDelta,
     measure(handle) {
       startValue = value
-      const parent = handle.parentElement
+      // The handle is absolutely centered inside a zero-width wrapper, so the
+      // flex container that establishes the px-to-% basis is one level up.
+      const parent = handle.parentElement?.parentElement ?? handle.parentElement
       containerSize = orientation === 'vertical' ? (parent?.clientWidth ?? 0) : (parent?.clientHeight ?? 0)
     },
     onMove(deltaX, deltaY, phase) {
-      onChange(clamp((phase === 'drag' ? startValue : value) + deltaX + deltaY))
+      const next = (phase === 'drag' ? startValue : value) + deltaX + deltaY
+      // Pointer deltas (px, or px-to-% conversions) are fractional; snap the
+      // live drag value to the nearest integer so consumers never see
+      // sub-pixel positions. Key nudges keep their exact step/bounds.
+      onChange(phase === 'drag' ? Math.round(clamp(next)) : clamp(next))
     },
     onJump(edge) {
-      onChange(edge === 'min' ? min : max)
+      // An unbounded edge has no maximum to jump to, so End keeps the value.
+      onChange(edge === 'min' ? min : Number.isFinite(max) ? max : value)
     },
     onEnd: () => onDragEnd?.(),
   })
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div
-  role="separator"
-  aria-orientation={orientation}
-  aria-label={resolvedAriaLabel}
-  aria-valuenow={value}
-  aria-valuemin={min}
-  aria-valuemax={max}
-  tabindex="0"
-  class={`relative shrink-0 touch-none outline-none select-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${orientation === 'vertical' ? '-mx-1.5 w-3' : '-my-1.5 h-3'} ${drag.dragging ? (orientation === 'vertical' ? 'cursor-col-resize' : 'cursor-row-resize') : 'cursor-default'} ${className}`}
-  onpointerdown={drag.handlePointerDown}
-  onpointermove={drag.handlePointerMove}
-  onpointerup={drag.handlePointerUp}
-  onpointercancel={drag.handlePointerCancel}
-  onlostpointercapture={drag.handleLostPointerCapture}
-  onkeydown={drag.handleKeydown}>
-  {#if orientation === 'vertical'}
-    <span class={`absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize ${lineClass}`}></span>
-  {:else}
-    <span class={`absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 cursor-row-resize ${lineClass}`}></span>
-  {/if}
+<!-- The in-flow wrapper is zero-sized so the seam adds no layout width; the
+     handle is absolutely centered on it, keeping the 12px target and its focus
+     ring while the panes stay flush. -->
+<div class={`relative shrink-0 ${orientation === 'vertical' ? 'w-0' : 'h-0'}`}>
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <div
+    role="separator"
+    aria-orientation={orientation}
+    aria-label={resolvedAriaLabel}
+    aria-valuenow={value}
+    aria-valuemin={min}
+    aria-valuemax={maxValue}
+    tabindex="0"
+    class={`absolute touch-none outline-none select-none focus-visible:ring-2 focus-visible:ring-cyan-500 ${orientation === 'vertical' ? 'inset-y-0 left-1/2 w-3 -translate-x-1/2' : 'inset-x-0 top-1/2 h-3 -translate-y-1/2'} ${drag.dragging ? (orientation === 'vertical' ? 'cursor-col-resize' : 'cursor-row-resize') : 'cursor-default'} ${className}`}
+    onpointerdown={drag.handlePointerDown}
+    onpointermove={drag.handlePointerMove}
+    onpointerup={drag.handlePointerUp}
+    onpointercancel={drag.handlePointerCancel}
+    onlostpointercapture={drag.handleLostPointerCapture}
+    onkeydown={drag.handleKeydown}>
+    {#if orientation === 'vertical'}
+      <span class={`absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 cursor-col-resize ${lineClass}`}></span>
+    {:else}
+      <span class={`absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 cursor-row-resize ${lineClass}`}></span>
+    {/if}
+  </div>
 </div>

@@ -2,7 +2,7 @@ export function keyOf(ri: number, ci: number): string {
   return `${ri}:${ci}`
 }
 
-export function cellOfKey(key: string): { ri: number; ci: number } {
+function cellOfKey(key: string): { ri: number; ci: number } {
   const [ri, ci] = key.split(':').map(Number)
   return { ri, ci }
 }
@@ -46,6 +46,26 @@ export function keysInRect(r1: number, c1: number, r2: number, c2: number): Set<
     for (let c = c1; c <= c2; c++) keys.add(keyOf(r, c))
   }
   return keys
+}
+
+// The cell an arrow key steps to from (ri, ci), clamped to the matrix, or null
+// for a non-arrow key or a move that stays put (already at the edge).
+export function moveSelection(
+  ri: number,
+  ci: number,
+  key: string,
+  rowCount: number,
+  columnCount: number,
+): { ri: number; ci: number } | null {
+  let nr = ri
+  let nc = ci
+  if (key === 'ArrowUp') nr = Math.max(0, ri - 1)
+  else if (key === 'ArrowDown') nr = Math.min(rowCount - 1, ri + 1)
+  else if (key === 'ArrowLeft') nc = Math.max(0, ci - 1)
+  else if (key === 'ArrowRight') nc = Math.min(columnCount - 1, ci + 1)
+  else return null
+  if (nr === ri && nc === ci) return null
+  return { ri: nr, ci: nc }
 }
 
 export function columnLetter(ci: number): string {

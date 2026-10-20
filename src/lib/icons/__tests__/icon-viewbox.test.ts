@@ -2,15 +2,17 @@
 // directly in the one square viewBox — its artwork already normalized to fill
 // the viewBox on the dominant axis and written on the 0.01 unit grid, so no
 // per-icon `<g transform>` fit sits between the artwork and the grid — and only
-// the sort pair keeps a non-square, tight crop. See AGENTS.md (Project
-// conventions).
+// the caret family keeps a non-square, tight crop. See ARCHITECTURE.md (Icon
+// glyphs).
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { CHEVRON_STYLE, CHEVRON_VARIANTS } from '../chevron-stroke'
 
 const dir = join(process.cwd(), 'src/lib/icons')
 const files = readdirSync(dir).filter(f => f.endsWith('.svelte'))
-const nonSquare = new Set(['SortAscIcon.svelte', 'SortDescIcon.svelte'])
+const carets = ['CaretUpIcon.svelte', 'CaretDownIcon.svelte', 'CaretLeftIcon.svelte', 'CaretRightIcon.svelte']
+const nonSquare = new Set(carets)
 const BOX = 20
 const FILL = 0.97
 const SLACK = 0.6
@@ -228,32 +230,109 @@ describe('icon viewport', () => {
     }
   })
 
+  // The axis-aligned ink box of a point set.
+  function boxOf(points: number[][]): { x0: number; y0: number; x1: number; y1: number } {
+    const xs = points.map(p => p[0]!)
+    const ys = points.map(p => p[1]!)
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) }
+  }
+
+  // A glyph's ink box: its painted points padded by half its stroke — the
+  // conservative bound used for curved glyphs and rounded strokes.
+  function paddedInkBox(markup: string, half: number) {
+    const { x0, x1, y0, y1 } = boxOf(geometryPoints(markup))
+    return { x0: x0 - half, x1: x1 + half, y0: y0 - half, y1: y1 + half }
+  }
+
+  // The exact ink outline of a stroked polyline: each segment's band corners
+  // plus the cap/join extensions — a disc at a round cap or join, a miter tip at
+  // a mitred corner. The chevron family's bold variant is flat-ended and
+  // mitred, so its box is tighter than the padded bound would suggest.
+  function strokedInkPoints(points: number[][], half: number, cap: string, join: string): number[][] {
+    const ink: number[][] = []
+    const disc = (x: number, y: number) => ink.push([x - half, y - half], [x + half, y + half])
+    for (let i = 0; i < points.length - 1; i += 1) {
+      const [ax, ay] = points[i]!
+      const [bx, by] = points[i + 1]!
+      const length = Math.hypot(bx - ax, by - ay)
+      if (length === 0) continue
+      const nx = (-(by - ay) / length) * half
+      const ny = ((bx - ax) / length) * half
+      ink.push([ax + nx, ay + ny], [ax - nx, ay - ny], [bx + nx, by + ny], [bx - nx, by - ny])
+    }
+    if (cap === 'round') {
+      disc(points[0]![0]!, points[0]![1]!)
+      disc(points[points.length - 1]![0]!, points[points.length - 1]![1]!)
+    }
+    for (let i = 1; i < points.length - 1; i += 1) {
+      const [vx, vy] = points[i]!
+      if (join === 'round') {
+        disc(vx, vy)
+        continue
+      }
+      const [px, py] = points[i - 1]!
+      const [qx, qy] = points[i + 1]!
+      const l1 = Math.hypot(px - vx, py - vy)
+      const l2 = Math.hypot(qx - vx, qy - vy)
+      const bx = (px - vx) / l1 + (qx - vx) / l2
+      const by = (py - vy) / l1 + (qy - vy) / l2
+      const span = Math.hypot(bx, by)
+      if (span === 0) continue
+      // |u1+u2| = 2·cos(θ/2); the miter reaches half/sin(θ/2) from the vertex.
+      const miter = half / Math.sqrt(1 - (span / 2) ** 2)
+      ink.push([vx + (bx / span) * miter, vy + (by / span) * miter])
+      ink.push([vx - (bx / span) * miter, vy - (by / span) * miter])
+    }
+    return ink
+  }
+
+  function expectFillsAndFits(
+    { x0, y0, x1, y1 }: { x0: number; y0: number; x1: number; y1: number },
+    label: string,
+  ) {
+    expect(Math.max(x1 - x0, y1 - y0) / BOX, `${label} fill`).toBeGreaterThan(FILL)
+    expect(x0, `${label} overhang`).toBeGreaterThan(-SLACK)
+    expect(y0, `${label} overhang`).toBeGreaterThan(-SLACK)
+    expect(x1, `${label} overhang`).toBeLessThan(BOX + SLACK)
+    expect(y1, `${label} overhang`).toBeLessThan(BOX + SLACK)
+  }
+
   it('square glyph ink fills the viewBox on its dominant axis and stays inside it', () => {
     for (const f of files) {
       if (nonSquare.has(f)) continue
-      const markup = read(f).match(/<svg\b[\s\S]*<\/svg>/)![0]
+      const src = read(f)
+      const markup = src.match(/<svg\b[\s\S]*<\/svg>/)![0]
+      if (src.includes('CHEVRON_STYLE')) {
+        // One path per variant, listed in `CHEVRON_VARIANTS` order: pair each
+        // with its own stroke style, so the heavier bold stroke is bounded
+        // against its inset, flat-ended artwork rather than the regular path.
+        const paths = [...markup.matchAll(/<path\b[^>]*\bd="([^"]*)"[^>]*\/>/g)].map(m => m[1]!)
+        expect(paths.length, `${f} path count`).toBe(CHEVRON_VARIANTS.length)
+        CHEVRON_VARIANTS.forEach((variant, index) => {
+          const style = CHEVRON_STYLE[variant]
+          const ink = [...paths[index]!.matchAll(/M[^M]*/g)].flatMap(part =>
+            strokedInkPoints(pathPoints(part[0]!), style.stroke / 2, style.linecap, style.linejoin),
+          )
+          expectFillsAndFits(boxOf(ink), `${f} ${variant}`)
+        })
+        continue
+      }
       const strokes = [...markup.matchAll(/stroke-width="([^"]*)"/g)].map(m => Number(m[1]))
-      const half = (strokes.length ? Math.max(...strokes) : 0) / 2
-      const points = geometryPoints(markup)
-      const xs = points.map(p => p[0]!)
-      const ys = points.map(p => p[1]!)
-      const x0 = Math.min(...xs) - half
-      const x1 = Math.max(...xs) + half
-      const y0 = Math.min(...ys) - half
-      const y1 = Math.max(...ys) + half
-      expect(Math.max(x1 - x0, y1 - y0) / BOX, `${f} fill`).toBeGreaterThan(FILL)
-      expect(x0, `${f} overhang`).toBeGreaterThan(-SLACK)
-      expect(y0, `${f} overhang`).toBeGreaterThan(-SLACK)
-      expect(x1, `${f} overhang`).toBeLessThan(BOX + SLACK)
-      expect(y1, `${f} overhang`).toBeLessThan(BOX + SLACK)
+      expectFillsAndFits(paddedInkBox(markup, (strokes.length ? Math.max(...strokes) : 0) / 2), f)
     }
   })
 
-  it('the sort pair keeps its tight non-square crop', () => {
-    for (const f of nonSquare) {
-      const src = read(f)
-      expect(src, f).toMatch(/viewBox="4 \d+ 12 8"/)
-      expect(src, f).toContain('height={(resolveIconPx(size) * 8) / 12}')
+  it('the caret family keeps its tight non-square crop', () => {
+    // Up/down crop 12x8 and render two-thirds tall; left/right are the same
+    // triangle a quarter turn round, so they crop 8x12 and render two-thirds
+    // wide.
+    for (const f of ['CaretUpIcon.svelte', 'CaretDownIcon.svelte']) {
+      expect(read(f), f).toMatch(/viewBox="4 \d+ 12 8"/)
+      expect(read(f), f).toContain('height={(resolveIconPx(size) * 8) / 12}')
+    }
+    for (const f of ['CaretLeftIcon.svelte', 'CaretRightIcon.svelte']) {
+      expect(read(f), f).toMatch(/viewBox="\d+ 4 8 12"/)
+      expect(read(f), f).toContain('width={(resolveIconPx(size) * 8) / 12}')
     }
   })
 })

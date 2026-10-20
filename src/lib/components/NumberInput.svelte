@@ -64,8 +64,9 @@
 
   // The input box rides TextInput's shared base metrics; the stepper glyph and
   // the gutter that clears it are the only metrics NumberInput adds. The glyph
-  // is the size dimension itself, the same slot rule every sized control uses.
-  const NUM_RATIOS = { icon: 1, padRight: 1.25, radius: 0.375 }
+  // rides a trimmed share of the slot rather than the whole of it, so the
+  // steppers read lighter than the value beside them while still scaling.
+  const NUM_RATIOS = { icon: 0.75, padRight: 1.25, radius: 0.375 }
 
   const numMetrics = $derived(dimensionMetrics(size, NUM_RATIOS))
   const numStyle = $derived(sizeVarStyle('num', numMetrics))
@@ -151,6 +152,21 @@
     return Number(clampedSnap.toFixed(decimals))
   }
 
+  // A typed entry clamps as soon as another digit could not bring it back into
+  // range: an entry past the max is stuck once it is non-negative (digits only
+  // widen it), and one below the min once it is negative or once the next
+  // multiple of ten already overshoots the max. A positive entry under the min
+  // may still be the prefix of a valid number (`50` under `min: 10`), so it
+  // waits for blur or a step, which keep their own clamps.
+  function clampTyped(text: string): string {
+    const parsed = Number.parseFloat(text)
+    if (Number.isNaN(parsed)) return text
+    if (max !== undefined && parsed > max && parsed >= 0) return String(max)
+    const stuckBelow = parsed < 0 || (max !== undefined && parsed * 10 > max)
+    if (min !== undefined && parsed < min && stuckBelow) return String(min)
+    return text
+  }
+
   function handleInput(event: Event) {
     const input = event.target as HTMLInputElement
     let newValue = input.value.replace(/[^0-9.-]/g, '')
@@ -168,6 +184,7 @@
       newValue = newValue.replace(/-/g, '')
     }
 
+    newValue = clampTyped(newValue)
     input.value = newValue
     value = newValue
   }

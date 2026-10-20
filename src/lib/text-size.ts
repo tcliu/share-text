@@ -6,6 +6,7 @@ export const TEXT_SIZE = {
   sm: 'text-sm',
   md: 'text-md',
   lg: 'text-lg',
+  xl: 'text-xl',
 } as const
 
 export type TextSize = keyof typeof TEXT_SIZE

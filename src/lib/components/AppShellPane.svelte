@@ -45,7 +45,7 @@
   data-suppressed={suppressed ? '' : null}
   aria-hidden={suppressed ? 'true' : undefined}
   class={floating
-    ? `app-shell-pane absolute inset-y-0 z-40 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
+    ? `app-shell-pane absolute inset-y-0 z-20 flex min-h-0 w-[var(--pane-w)] max-w-full min-w-0 bg-slate-950 ${side === 'right' ? 'right-0' : 'left-0'}`
     : 'app-shell-pane flex min-h-0 w-[var(--pane-w)] max-w-[calc(100%-3rem)] min-w-0 shrink-0 flex-row'}
   style={`--pane-w: ${drawer.effectiveSize}px;${suppressed ? 'visibility:hidden;' : ''}`}>
   {#if !floating && side === 'right'}
@@ -63,8 +63,8 @@
   <aside
     bind:this={drawer.asideEl}
     class={floating
-      ? `flex min-h-0 w-full min-w-0 flex-col gap-2 border-slate-800 bg-slate-950 ${side === 'right' ? 'border-l' : 'border-r'} ${paneClass}`
-      : `flex min-h-0 min-w-0 flex-col gap-2 border-slate-800 ${side === 'right' ? 'border-l' : 'border-r'} ${paneClass}`}
+      ? `@container flex min-h-0 w-full min-w-0 flex-col gap-2 overflow-hidden border-slate-800 bg-slate-950 ${side === 'right' ? 'border-l' : 'border-r'} ${paneClass}`
+      : `@container flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden border-slate-800 ${side === 'right' ? 'border-l' : 'border-r'} ${paneClass}`}
     style="flex-basis: var(--pane-w)"
     aria-label={paneLabel}
     tabindex="-1">

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Button from '$lib/components/Button.svelte'
   import Checkbox from '$lib/components/Checkbox.svelte'
+  import type { SizeInput } from '$lib/size-scale'
   import ColumnsIcon from '$lib/icons/ColumnsIcon.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import { createFocusoutClose } from '$lib/actions/use-focusout-close'
@@ -15,15 +16,16 @@
 
   interface Props {
     /** Accessible name and tooltip for the icon trigger; passed translated. */
-    label: string
+    triggerLabel: string
     /** Accessible name and tooltip for the reset button; passed translated. */
-    resetLabel: string
+    resetAriaLabel: string
     columns: ChooserColumn[]
     onToggle: (key: string, checked: boolean) => void
     onReset: () => void
+    size?: SizeInput
   }
 
-  let { label, resetLabel, columns, onToggle, onReset }: Props = $props()
+  let { triggerLabel, resetAriaLabel, columns, onToggle, onReset, size = 'md' }: Props = $props()
 
   let open = $state(false)
   let containerRef = $state<HTMLSpanElement | null>(null)
@@ -63,16 +65,16 @@
 
 <span class="colchooser relative inline-flex gap-1" bind:this={containerRef} onfocusout={handleFocusOut}>
   {#snippet triggerIcon()}
-    <ColumnsIcon size="sm" />
+    <ColumnsIcon />
   {/snippet}
   {#snippet resetIcon()}
-    <RefreshIcon size="sm" />
+    <RefreshIcon />
   {/snippet}
   <Button
     variant="ghost"
-    size="sm"
-    ariaLabel={label}
-    dataTip={label}
+    size={size}
+    ariaLabel={triggerLabel}
+    tooltip={triggerLabel}
     ariaExpanded={open}
     onClick={() => (open = !open)}
     onKeyDown={handleKeydown}
@@ -80,9 +82,9 @@
     icon={triggerIcon} />
   <Button
     variant="ghost"
-    size="sm"
-    ariaLabel={resetLabel}
-    dataTip={resetLabel}
+    size={size}
+    ariaLabel={resetAriaLabel}
+    tooltip={resetAriaLabel}
     onClick={() => onReset()}
     icon={resetIcon} />
   {#if open}
@@ -93,14 +95,14 @@
       use:positionPanel={() => ({ getTrigger: () => triggerRef, getOpen: () => open, align: 'right' })}
       class="panel fixed top-0 left-0 z-40 max-h-[50dvh] min-w-36 overflow-auto rounded-lg border border-slate-700 bg-slate-900/95 p-1.5 shadow-2xl shadow-slate-950/60 backdrop-blur"
       role="group"
-      aria-label={label}
+      aria-label={triggerLabel}
       onpointerdown={event => event.preventDefault()}>
       {#each columns as column (column.key)}
         <div class="chooser-row rounded px-1.5 py-0.5 whitespace-nowrap hover:bg-slate-800">
           <Checkbox
             checked={column.checked}
             label={column.header}
-            size="sm"
+            size={size}
             onChange={checked => onToggle(column.key, checked)} />
         </div>
       {/each}

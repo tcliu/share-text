@@ -22,39 +22,44 @@
   import AppShellPane from './AppShellPane.svelte'
   import { AppShellDrawer } from './use-app-shell-drawer.svelte'
 
-  interface Props {
-    className?: string
-    mode?: AppShellDrawerMode
+  // One drawer side's config. The component keeps its own open/size state so it
+  // works standalone; a caller that owns those values passes them here and
+  // observes every change through the `on*` callbacks. Each field falls back to
+  // the shared default, so the right side inherits the same geometry as the
+  // left.
+  export interface AppShellPaneConfig {
     open?: boolean
-    paneSize?: number
+    size?: number
+    defaultSize?: number
     collapseMode?: AppShellCollapseMode
     railWidth?: number
     min?: number
     max?: number
-    defaultSize?: number
     storageKey?: string
     resizeLabel?: string
-    closeLabel?: string
-    leftPaneLabel?: string
-    rightPaneLabel?: string
-    rightOpen?: boolean
-    rightPaneSize?: number
-    rightCollapseMode?: AppShellCollapseMode
-    rightStorageKey?: string
-    rightResizeLabel?: string
-    headerClassName?: string
-    footerClassName?: string
-    paneClassName?: string
-    rightPaneClassName?: string
-    mainClassName?: string
-    splitterClassName?: string
+    paneLabel?: string
     onOpenChange?: (open: boolean) => void
-    onPaneChange?: (size: number) => void
+    onSizeChange?: (size: number) => void
     onDragEnd?: () => void
+  }
+
+  export interface AppShellClassNames {
+    header?: string
+    footer?: string
+    pane?: string
+    rightPane?: string
+    main?: string
+    splitter?: string
+  }
+
+  interface Props {
+    className?: string
+    mode?: AppShellDrawerMode
+    closeLabel?: string
+    classNames?: AppShellClassNames
+    left?: AppShellPaneConfig
+    right?: AppShellPaneConfig
     onLayoutModeChange?: (floating: boolean) => void
-    onRightOpenChange?: (open: boolean) => void
-    onRightPaneChange?: (size: number) => void
-    onRightDragEnd?: () => void
     header?: Snippet<[AppShellHeaderApi]>
     footer?: Snippet
     leftPane?: Snippet
@@ -63,38 +68,13 @@
   }
 
   let {
-    className = 'flex h-dvh flex-col overflow-hidden',
+    className = 'flex h-full min-h-0 flex-col bg-slate-950 text-slate-100',
     mode = 'auto',
-    open = $bindable(true),
-    paneSize = $bindable(APP_SHELL_DEFAULT_WIDTH),
-    collapseMode = 'hide',
-    railWidth = APP_SHELL_RAIL_WIDTH,
-    min = APP_SHELL_MIN_WIDTH,
-    max = APP_SHELL_MAX_WIDTH,
-    defaultSize = APP_SHELL_DEFAULT_WIDTH,
-    storageKey = undefined,
-    resizeLabel = undefined,
     closeLabel = undefined,
-    leftPaneLabel = undefined,
-    rightPaneLabel = undefined,
-    rightOpen = $bindable(false),
-    rightPaneSize = $bindable(APP_SHELL_DEFAULT_WIDTH),
-    rightCollapseMode = 'hide',
-    rightStorageKey = undefined,
-    rightResizeLabel = undefined,
-    headerClassName = '',
-    footerClassName = '',
-    paneClassName = '',
-    rightPaneClassName = '',
-    mainClassName = '',
-    splitterClassName = '',
-    onOpenChange = undefined,
-    onPaneChange = undefined,
-    onDragEnd = undefined,
+    classNames = {},
+    left = {},
+    right = {},
     onLayoutModeChange = undefined,
-    onRightOpenChange = undefined,
-    onRightPaneChange = undefined,
-    onRightDragEnd = undefined,
     header = undefined,
     footer = undefined,
     leftPane = undefined,
@@ -104,11 +84,59 @@
 
   const i18n = getI18nContext()
 
-  const resolvedResizeLabel = $derived(resizeLabel ?? i18n.t('appShell.resize'))
-  const resolvedRightResizeLabel = $derived(rightResizeLabel ?? i18n.t('appShell.resizeRight'))
+  // Open and size are caller-controlled but must also work standalone: a local
+  // toggle or drag writes an override the derived value prefers, and an effect
+  // drops that override the moment the caller's own value changes, so an
+  // external update always wins. Clearing only on an actual value change (not
+  // on every config re-render) keeps an unrelated field edit from clobbering
+  // the local override.
+  let leftOpenOverride = $state<boolean | null>(null)
+  let leftSizeOverride = $state<number | null>(null)
+  let rightOpenOverride = $state<boolean | null>(null)
+  let rightSizeOverride = $state<number | null>(null)
+  let seenLeftOpen: boolean | undefined = undefined
+  let seenLeftSize: number | undefined = undefined
+  let seenRightOpen: boolean | undefined = undefined
+  let seenRightSize: number | undefined = undefined
+
+  const leftOpen = $derived(leftOpenOverride ?? left.open ?? true)
+  const leftSize = $derived(leftSizeOverride ?? left.size ?? APP_SHELL_DEFAULT_WIDTH)
+  const rightOpen = $derived(rightOpenOverride ?? right.open ?? false)
+  const rightSize = $derived(rightSizeOverride ?? right.size ?? APP_SHELL_DEFAULT_WIDTH)
+
+  $effect(() => {
+    if (left.open !== seenLeftOpen) {
+      seenLeftOpen = left.open
+      leftOpenOverride = null
+    }
+    if (left.size !== seenLeftSize) {
+      seenLeftSize = left.size
+      leftSizeOverride = null
+    }
+    if (right.open !== seenRightOpen) {
+      seenRightOpen = right.open
+      rightOpenOverride = null
+    }
+    if (right.size !== seenRightSize) {
+      seenRightSize = right.size
+      rightSizeOverride = null
+    }
+  })
+
+  const resolvedResizeLabel = $derived(left.resizeLabel ?? i18n.t('appShell.resize'))
+  const resolvedRightResizeLabel = $derived(right.resizeLabel ?? i18n.t('appShell.resizeRight'))
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('appShell.closePane'))
-  const resolvedLeftPaneLabel = $derived(leftPaneLabel ?? i18n.t('appShell.leftPane'))
-  const resolvedRightPaneLabel = $derived(rightPaneLabel ?? i18n.t('appShell.rightPane'))
+  const resolvedPaneLabel = $derived(left.paneLabel ?? i18n.t('appShell.leftPane'))
+  const resolvedRightPaneLabel = $derived(right.paneLabel ?? i18n.t('appShell.rightPane'))
+  const leftMin = $derived(left.min ?? APP_SHELL_MIN_WIDTH)
+  const leftMax = $derived(left.max ?? APP_SHELL_MAX_WIDTH)
+  const rightMax = $derived(right.max ?? APP_SHELL_MAX_WIDTH)
+  const headerClass = $derived(classNames.header ?? '')
+  const footerClass = $derived(classNames.footer ?? '')
+  const paneClass = $derived(classNames.pane ?? '')
+  const rightPaneClass = $derived(classNames.rightPane ?? '')
+  const mainClass = $derived(classNames.main ?? '')
+  const splitterClass = $derived(classNames.splitter ?? '')
 
   // One responsive ruler: desktop vs narrow is measured from the shell's own
   // container (via ResizeObserver below), never from the viewport, so an
@@ -145,19 +173,19 @@
   } as const)
 
   const leftDrawer: AppShellDrawer = new AppShellDrawer({
-    getOpen: () => open,
-    setOpen: value => (open = value),
-    getSize: () => paneSize,
-    setSize: value => (paneSize = value),
-    notifyOpenChange: value => onOpenChange?.(value),
-    notifySizeChange: value => onPaneChange?.(value),
-    notifyDragEnd: () => onDragEnd?.(),
-    collapseMode: () => collapseMode,
-    railWidth: () => railWidth,
-    min: () => min,
-    max: () => max,
-    defaultSize: () => defaultSize,
-    storageKey: () => storageKey,
+    getOpen: () => leftOpen,
+    setOpen: value => (leftOpenOverride = value),
+    getSize: () => leftSize,
+    setSize: value => (leftSizeOverride = value),
+    notifyOpenChange: value => left.onOpenChange?.(value),
+    notifySizeChange: value => left.onSizeChange?.(value),
+    notifyDragEnd: () => left.onDragEnd?.(),
+    collapseMode: () => left.collapseMode ?? 'hide',
+    railWidth: () => left.railWidth ?? APP_SHELL_RAIL_WIDTH,
+    min: () => left.min ?? APP_SHELL_MIN_WIDTH,
+    max: () => left.max ?? APP_SHELL_MAX_WIDTH,
+    defaultSize: () => left.defaultSize ?? APP_SHELL_DEFAULT_WIDTH,
+    storageKey: () => left.storageKey,
     floating: () => floating,
     // Fall back to the other open drawer, then the main column, so closing one
     // pane never drops focus onto an inert element.
@@ -165,18 +193,18 @@
   })
   const rightDrawer: AppShellDrawer = new AppShellDrawer({
     getOpen: () => rightOpen,
-    setOpen: value => (rightOpen = value),
-    getSize: () => rightPaneSize,
-    setSize: value => (rightPaneSize = value),
-    notifyOpenChange: value => onRightOpenChange?.(value),
-    notifySizeChange: value => onRightPaneChange?.(value),
-    notifyDragEnd: () => onRightDragEnd?.(),
-    collapseMode: () => rightCollapseMode,
-    railWidth: () => railWidth,
-    min: () => min,
-    max: () => max,
-    defaultSize: () => defaultSize,
-    storageKey: () => rightStorageKey,
+    setOpen: value => (rightOpenOverride = value),
+    getSize: () => rightSize,
+    setSize: value => (rightSizeOverride = value),
+    notifyOpenChange: value => right.onOpenChange?.(value),
+    notifySizeChange: value => right.onSizeChange?.(value),
+    notifyDragEnd: () => right.onDragEnd?.(),
+    collapseMode: () => right.collapseMode ?? 'hide',
+    railWidth: () => right.railWidth ?? APP_SHELL_RAIL_WIDTH,
+    min: () => right.min ?? APP_SHELL_MIN_WIDTH,
+    max: () => right.max ?? APP_SHELL_MAX_WIDTH,
+    defaultSize: () => right.defaultSize ?? APP_SHELL_DEFAULT_WIDTH,
+    storageKey: () => right.storageKey,
     floating: () => floating,
     focusFallback: (): HTMLElement | null => (leftDrawer.floatingOpen ? leftDrawer.asideEl : mainEl),
   })
@@ -199,9 +227,9 @@
   // render their own toggles. Routing through the drawers keeps focus return
   // and change notifications identical to the former built-in buttons.
   const headerApi = $derived<AppShellHeaderApi>({
-    open,
+    open: leftOpen,
     rightOpen,
-    toggleLeft: () => leftDrawer.setOpen(!open),
+    toggleLeft: () => leftDrawer.setOpen(!leftOpen),
     toggleRight: () => rightDrawer.setOpen(!rightOpen),
   })
 
@@ -303,28 +331,30 @@
     {paneClass}
     {floating}
     {suppressed}
-    {max}
-    {splitterClassName}
+    max={side === 'right' ? rightMax : leftMax}
+    splitterClassName={splitterClass}
     {slideParams} />
 {/snippet}
 
 <svelte:document onkeydown={handleDrawerEscape} />
 
 <div class={className} data-shell-measured={mode === 'auto' ? String(measured) : null}>
-  <header
-    class={`flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4 ${headerClassName}`}>
-    {@render header?.(headerApi)}
-  </header>
-  <div bind:this={rootEl} class="relative flex min-h-0 flex-1 flex-row" style="min-width: {min}px">
+  {#if header}
+    <header
+      class={`flex flex-none items-center justify-between gap-4 border-b border-slate-800 px-3 py-3 sm:px-4 ${headerClass}`}>
+      {@render header(headerApi)}
+    </header>
+  {/if}
+  <div bind:this={rootEl} class="relative flex min-h-0 flex-1 flex-row" style="min-width: {leftMin}px">
     {#if leftDrawer.visible}
-      {@render drawerPane(leftDrawer, leftPane, 'left', resolvedResizeLabel, resolvedLeftPaneLabel, paneClassName)}
+      {@render drawerPane(leftDrawer, leftPane, 'left', resolvedResizeLabel, resolvedPaneLabel, paneClass)}
     {/if}
 
     <main
       bind:this={mainEl}
       tabindex="-1"
       inert={overlayOpen}
-      class={`min-h-0 min-w-0 flex-1 overflow-y-auto outline-none ${mainClassName}`}>
+      class={`min-h-0 min-w-0 flex-1 overflow-y-auto outline-none ${mainClass}`}>
       {@render children?.()}
     </main>
 
@@ -335,7 +365,7 @@
         'right',
         resolvedRightResizeLabel,
         resolvedRightPaneLabel,
-        rightPaneClassName,
+        rightPaneClass,
       )}
     {/if}
 
@@ -354,7 +384,7 @@
   </div>
   {#if footer}
     <footer
-      class={`flex flex-none items-center justify-between gap-4 border-t border-slate-800 px-3 py-3 sm:px-4 ${footerClassName}`}>
+      class={`flex flex-none items-center justify-between gap-4 border-t border-slate-800 px-3 py-3 sm:px-4 ${footerClass}`}>
       {@render footer?.()}
     </footer>
   {/if}

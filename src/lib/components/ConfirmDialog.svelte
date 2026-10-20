@@ -1,7 +1,9 @@
 <script lang="ts">
+  import type { ComponentProps } from 'svelte'
   import BaseDialog from './BaseDialog.svelte'
   import Button from './Button.svelte'
   import Buttons from './Buttons.svelte'
+  import type { SizeInput } from '$lib/size-scale'
 
   interface Props {
     title: string
@@ -9,8 +11,14 @@
     confirmLabel: string
     closeLabel?: string
     className?: string
-    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'fit' | 'wide'
-    confirmColor?: 'rose' | 'amber' | 'emerald' | 'cyan'
+    widthVariant?: ComponentProps<typeof BaseDialog>['widthVariant']
+    heightVariant?: ComponentProps<typeof BaseDialog>['heightVariant']
+    /** Panel footprint shorthand (`size` on `BaseDialog`). */
+    size?: ComponentProps<typeof BaseDialog>['size']
+    /** The confirm button's scale, distinct from the panel `size`. */
+    buttonSize?: SizeInput
+    // The confirm button's accent, derived from `Button` so the union can't drift.
+    accent?: ComponentProps<typeof Button>['accent']
     pending?: boolean
     confirmOnDismiss?: boolean
     onConfirm: () => void
@@ -23,8 +31,11 @@
     confirmLabel,
     closeLabel,
     className = '',
-    maxWidth = 'md',
-    confirmColor = 'rose',
+    widthVariant,
+    heightVariant,
+    size,
+    buttonSize = 'md',
+    accent = 'rose',
     pending = false,
     confirmOnDismiss = false,
     onConfirm,
@@ -34,13 +45,14 @@
   const resolvedCancel = $derived(confirmOnDismiss ? onConfirm : (onCancel ?? onConfirm))
 </script>
 
-<BaseDialog {title} {className} {maxWidth} {closeLabel} onCancel={resolvedCancel}>
-  <div class="flex flex-col gap-4">
-    <p class="text-sm leading-6 text-slate-400">{message}</p>
-    <Buttons align="right">
-      <Button variant="primary" accent={confirmColor} {pending} onClick={onConfirm}>
-        {confirmLabel}
-      </Button>
-    </Buttons>
-  </div>
+{#snippet confirmFooter()}
+  <Buttons align="right">
+    <Button variant="primary" {accent} {pending} size={buttonSize} onClick={onConfirm}>
+      {confirmLabel}
+    </Button>
+  </Buttons>
+{/snippet}
+
+<BaseDialog {title} {className} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending} onCancel={resolvedCancel} footer={confirmFooter}>
+  <p class="text-sm leading-6 text-slate-400">{message}</p>
 </BaseDialog>

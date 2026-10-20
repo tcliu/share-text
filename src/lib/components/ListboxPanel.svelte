@@ -34,8 +34,8 @@
     align?: DropdownAlign
     autoPlace?: boolean
     emptyLabel?: string
-    emptyClass?: string
-    emptyStyle?: string
+    emptyRowClass?: string
+    emptyRowStyle?: string
     activeClass: string
     idleClass: string
     optionKey?: (option: T, index: number) => string | number
@@ -62,8 +62,8 @@
     align,
     autoPlace,
     emptyLabel,
-    emptyClass,
-    emptyStyle,
+    emptyRowClass,
+    emptyRowStyle,
     activeClass,
     idleClass,
     optionKey,
@@ -100,7 +100,7 @@
   use:positionPanel={() => ({ getTrigger, getOpen, align, autoPlace })}
   class={panelClass}>
   {#if emptyLabel && options.length === 0}
-    <div role="presentation" class={emptyClass} style={emptyStyle}>{emptyLabel}</div>
+    <div role="presentation" class={emptyRowClass} style={emptyRowStyle}>{emptyLabel}</div>
   {/if}
   {#each options as entry, index (optionKey ? optionKey(entry, index) : index)}
     {@const parts = matchParts?.(entry) ?? null}

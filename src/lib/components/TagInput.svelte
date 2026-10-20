@@ -1,49 +1,69 @@
 <script lang="ts">
   import { flushSync, tick, type Snippet } from 'svelte'
+  import Button from '$lib/components/Button.svelte'
   import Chip from '$lib/components/Chip.svelte'
   import ListboxPanel from '$lib/components/ListboxPanel.svelte'
+  import TextInput from '$lib/components/TextInput.svelte'
+  import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { DEFAULT_CHIP_PANEL_CLASS } from '$lib/dropdown-chrome'
   import { useListbox } from '$lib/actions/use-listbox.svelte'
+  import { matchLabelParts } from '$lib/actions/option-index'
   import { getI18nContext } from '$lib/i18n.svelte'
+  import { FONT_RATIO, type SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
+  import type { ClearableProps } from './clearable-props'
 
-  interface Props {
+  interface Props extends ClearableProps {
     value?: string[]
-    availableTags?: string[]
+    // Baseline the clear affordance compares against (element-wise, in
+    // order): the cross hides while `value` matches it (empty when unset),
+    // and the fallback clear writes it back. A provided `onClear` still owns
+    // the clear.
+    defaultValue?: string[]
+    options?: string[]
     onChange?: (next: string[]) => void
     // Called with the current draft on every keystroke, so a caller can supply
-    // externally filtered (e.g. async) `availableTags`.
+    // externally filtered (e.g. async) `options`.
     onQueryChange?: (query: string) => void
     placeholder?: string
     disabled?: boolean
-    inputId?: string
-    chipClass?: string
-    chipClassFor?: (tag: string) => string
-    // Colour classes per tag when neither `chipClass` nor `chipClassFor` is
-    // given; replaces the built-in palette.
+    id?: string
+    size?: SizeInput
+    chipClass?: string | ((tag: string) => string)
+    // Colour classes per tag when `chipClass` is not given; replaces the
+    // built-in palette.
     palette?: readonly string[]
     chip?: Snippet<[tag: string, remove: () => void]>
     option?: Snippet<[tag: string]>
+    // The cross belongs with the tags, so `clearPlacement` `auto` overlays
+    // the box's own right edge; an explicit `outside` sits after the box as
+    // a sibling instead.
   }
 
   let {
     value = [],
-    availableTags = [],
+    defaultValue,
+    options = [],
     onChange,
     onQueryChange,
     placeholder = '',
     disabled = false,
-    inputId,
+    id,
+    size = 'md',
     chipClass,
-    chipClassFor,
     palette,
     chip,
     option,
+    clearable = false,
+    clearLabel,
+    clearPlacement = 'auto',
+    onClear,
   }: Props = $props()
   const i18n = getI18nContext()
 
   // Built-in per-tag chip colours: a deterministic palette so tags read
-  // distinctly with zero config. `chipClass`/`chipClassFor` override it, and
-  // `palette` replaces it wholesale.
+  // distinctly with zero config. `chipClass` overrides it (a function per tag,
+  // a string for all), and `palette` replaces it wholesale.
   const DEFAULT_TAG_COLORS = [
     'border-orange-700 bg-orange-950/50 text-orange-200',
     'border-cyan-700 bg-cyan-950/50 text-cyan-200',
@@ -64,14 +84,31 @@
   }
 
   function resolveChipClass(tag: string): string {
-    if (chipClassFor) return chipClassFor(tag)
+    if (typeof chipClass === 'function') return chipClass(tag)
     if (chipClass) return chipClass
     const colors = palette && palette.length > 0 ? palette : DEFAULT_TAG_COLORS
     return colors[hashTag(tag) % colors.length]
   }
 
-  let id = $props.id()
-  const listboxId = `${id}-tag-suggestions`
+  // Every metric is a fixed ratio of the size dimension, so each keeps a
+  // constant metric:dimension ratio across the whole range. The container pads
+  // like a text field (padX matches --input-pad-x); the chips size themselves
+  // from the same dimension (their metrics live in `Chip`), and the input rides
+  // tighter type so mixed content stays compact.
+  const TAG_INPUT_RATIOS = {
+    font: FONT_RATIO,
+    line: 1.25,
+    padX: 0.625,
+    padY: 0.375,
+    gap: 0.375,
+    inputPadY: 0.125,
+  }
+
+  const metrics = $derived(dimensionMetrics(size, TAG_INPUT_RATIOS))
+  const style = $derived(sizeVarStyle('tag', metrics))
+
+  let uid = $props.id()
+  const listboxId = `${uid}-tag-suggestions`
 
   let draft = $state('')
   let open = $state(false)
@@ -90,10 +127,21 @@
   const query = $derived(draft.trim().toLowerCase())
   const suggestions = $derived.by(() => {
     const selected = new Set(value.map(tag => tag.toLowerCase()))
-    return availableTags.filter(
+    return options.filter(
       tag => !selected.has(tag.toLowerCase()) && (!query || tag.toLowerCase().includes(query)),
     )
   })
+
+  // Emphasize the typed part of each label only while the query is ambiguous:
+  // with two or more matches the user needs to see which part matched, while a
+  // lone match is already the only row and needs no extra emphasis.
+  const highlightMatches = $derived(query !== '' && suggestions.length > 1)
+
+  // Split a label around its matched span (shared helper), or return null when
+  // highlighting is off for an unambiguous single match.
+  function labelParts(tag: string) {
+    return highlightMatches ? matchLabelParts(tag, query) : null
+  }
 
   // `listbox` is created below; these effects run after setup, so the forward
   // reference is safe.
@@ -168,6 +216,52 @@
     tick().then(() => inputRef?.focus())
   }
 
+  // Element-wise, in-order comparison: any addition, removal, reorder, or
+  // edit (including case) is something to clear.
+  function tagsEqual(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every((tag, index) => tag === b[index])
+  }
+
+  // A disabled field offers no clear action, and while `value` matches
+  // `defaultValue` (empty when unset) there is nothing to clear, so the cross
+  // hides.
+  const showClear = $derived(clearable && !tagsEqual(value ?? [], defaultValue ?? []) && !disabled)
+  const resolvedClearLabel = $derived(clearLabel ?? i18n.t('common.clear'))
+  const placement = $derived(clearPlacement === 'auto' ? 'inside' : clearPlacement)
+  // The container that hosts the clear button is chosen from `clearable`, not
+  // from whether tags are present, so toggling the value never recreates the
+  // box (which would drop focus) — only the button itself toggles.
+  const insideField = $derived(clearable && placement === 'inside')
+  const outsideField = $derived(clearable && placement === 'outside')
+  const clearInside = $derived(showClear && insideField)
+
+  // Inside-clear metrics: the icon is the size dimension itself, the inset
+  // matches the box's horizontal padding, and the gutter reserves room for
+  // both, so chips never run under the overlay. The gutter is reserved
+  // whenever the inside clear is configured, not only while tags show the
+  // button, so the content keeps the same width filled and at default.
+  const CLEAR_RATIOS = { inset: TAG_INPUT_RATIOS.padX, gutter: 1.875, box: 1 }
+  const clearMetrics = $derived(dimensionMetrics(size, CLEAR_RATIOS))
+  const clearStyle = $derived(sizeVarStyle('clear', clearMetrics))
+  const boxStyle = $derived(
+    [style, insideField ? clearStyle : '', insideField ? 'padding-right:var(--clear-gutter)' : '']
+      .filter(Boolean)
+      .join(';'),
+  )
+
+  // A provided handler owns the clear; otherwise the list resets to a copy of
+  // the default (never the prop array itself). Focus returns to the field, so
+  // the control stays reachable after the cross disappears with it.
+  function handleClear(): void {
+    if (onClear) {
+      onClear()
+    } else {
+      value = [...(defaultValue ?? [])]
+      emit()
+    }
+    inputRef?.focus()
+  }
+
   function openPanel(): void {
     if (disabled) return
     lastSuggestions = suggestions
@@ -183,7 +277,7 @@
   function handleKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' || event.key === ',') {
       event.preventDefault()
-      if (event.key === 'Enter' && open && navigated && suggestions.length > 0) {
+      if (event.key === 'Enter' && open && suggestions.length > 0 && (navigated || !draft.trim())) {
         addSuggestion(suggestions[listbox.selection.index] ?? suggestions[0])
         return
       }
@@ -250,56 +344,97 @@
   })
 </script>
 
-<div
-  bind:this={containerRef}
-  data-escape-capture={open ? '' : null}
-  onfocusout={listbox.handleFocusOut}
-  class="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 transition focus-within:border-cyan-500">
-  <div class="flex flex-wrap items-center gap-1.5">
-    {#each value as tag, index (tag.toLowerCase())}
-      {#if chip}
-        {@render chip(tag, () => removeAt(index))}
-      {:else}
-        <Chip
-          label={tag}
-          chipClass={`rounded-full border px-2 py-0.5 text-xs ${resolveChipClass(tag)}`}
-          ariaLabel={i18n.t('tagInput.remove', { name: tag })}
-          onRemove={() => removeAt(index)}
-          {disabled}
-          removeButtonClass="rounded-full p-0.5 opacity-60 transition-opacity outline-none hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-40" />
-      {/if}
-    {/each}
-    <input
-      bind:this={inputRef}
-      id={inputId}
-      class="min-w-24 flex-1 bg-transparent py-0.5 text-sm text-slate-100 outline-none placeholder:text-slate-500"
-      bind:value={draft}
-      {placeholder}
-      {disabled}
-      type="text"
-      role="combobox"
-      aria-label={placeholder}
-      aria-expanded={open}
-      aria-controls={listboxId}
-      aria-autocomplete="list"
-      aria-activedescendant={open && suggestions.length > 0
-        ? `${listboxId}-option-${listbox.selection.index}`
-        : undefined}
-      autocomplete="off"
-      onfocus={() => {
-        if (!open) openPanel()
-      }}
-      oninput={handleInput}
-      onkeydown={handleKeydown} />
+{#snippet closeIcon()}
+  <CloseIcon size="sm" />
+{/snippet}
+{#snippet clearControl()}
+  <!-- Ghost keeps the tiny cross unobtrusive; the cross is one fixed step
+      (`sm`) rather than the field's own size. -->
+  <Button
+    variant="ghost"
+    size="sm"
+    icon={closeIcon}
+    ariaLabel={resolvedClearLabel}
+    onClick={handleClear} />
+{/snippet}
+{#snippet fieldBox()}
+  <div
+    bind:this={containerRef}
+    data-escape-capture={open ? '' : null}
+    onfocusout={listbox.handleFocusOut}
+    style={boxStyle}
+    class={`rounded-lg border border-slate-700 bg-slate-950 px-[var(--tag-pad-x)] py-[var(--tag-pad-y)] transition focus-within:border-cyan-500${insideField ? ' relative' : ''}`}>
+    <div class="flex flex-wrap items-center gap-[var(--tag-gap)]">
+      {#each value as tag, index (tag.toLowerCase())}
+        {#if chip}
+          {@render chip(tag, () => removeAt(index))}
+        {:else}
+          <Chip
+            label={tag}
+            chipClass={`rounded-full border ${resolveChipClass(tag)}`}
+            size={size}
+            removeLabel={i18n.t('tagInput.remove', { name: tag })}
+            onRemove={() => removeAt(index)}
+            {disabled}
+            removeButtonClass="rounded-full p-0.5 opacity-60 transition-opacity outline-none hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-40" />
+        {/if}
+      {/each}
+      <TextInput
+        bind:inputRef
+        bind:value={draft}
+        id={id}
+        {size}
+        inputClass="min-w-24 flex-1 bg-transparent py-[var(--tag-input-pad-y)] text-[length:var(--tag-font)] leading-[var(--tag-line)] text-slate-100 outline-none placeholder:text-slate-500"
+        {placeholder}
+        {disabled}
+        role="combobox"
+        ariaLabel={placeholder}
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && suggestions.length > 0
+          ? `${listboxId}-option-${listbox.selection.index}`
+          : undefined}
+        autocomplete="off"
+        onfocus={() => {
+          if (!open) openPanel()
+        }}
+        oninput={handleInput}
+        onkeydown={handleKeydown} />
+    </div>
+    {#if clearInside}
+      <!-- Overlays the box's own right edge, vertically centered; the flex
+        centers the button exactly (no inline strut offset), and the
+        reserved gutter keeps chips clear of it on every row. -->
+      <span class="absolute top-1/2 right-[var(--clear-inset)] flex -translate-y-1/2 items-center">
+        {@render clearControl()}
+      </span>
+    {/if}
   </div>
-</div>
+{/snippet}
+{#if outsideField}
+  <!-- The chips own the box content, so the clear sits after it as a sibling
+    (like the dropdown surfaces), vertically centered against the box. Only the
+    button toggles with the value, but its slot is reserved even while empty (an
+    inert spacer the size of the cross) so the input keeps the same width empty
+    and filled. -->
+  <div class="flex items-center" style={`gap:${metrics.gap}px`}>
+    <div class="min-w-0 flex-1">{@render fieldBox()}</div>
+    {#if showClear}
+      {@render clearControl()}
+    {:else}
+      <span
+        aria-hidden="true"
+        class="shrink-0"
+        style={`width:${clearMetrics.box}px;height:${clearMetrics.box}px`}></span>
+    {/if}
+  </div>
+{:else}
+  {@render fieldBox()}
+{/if}
 {#snippet panelOption(tag: string)}
   {#if option}
     {@render option(tag)}
-  {:else}
-    <Chip
-      label={tag}
-      chipClass={`rounded-full border px-2 py-0.5 text-xs ${resolveChipClass(tag)}`} />
   {/if}
 {/snippet}
 {#if open && suggestions.length > 0}
@@ -308,7 +443,8 @@
     id={listboxId}
     ariaLabel={i18n.t('tagInput.suggestions')}
     panelClass={DEFAULT_CHIP_PANEL_CLASS}
-    optionRowClass="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-none outline-none max-[27.999rem]:min-h-11"
+    optionRowClass="flex w-full cursor-pointer items-center gap-2 rounded-md px-[var(--tag-pad-x)] py-[var(--tag-pad-y)] text-left text-[length:var(--tag-font)] leading-[var(--tag-line)] transition-none outline-none max-[27.999rem]:min-h-11"
+    optionRowStyle={style}
     options={suggestions}
     highlightFlags={listbox.highlight.flags}
     isActive={(_tag, index) => index === listbox.selection.index}
@@ -323,5 +459,7 @@
     activeClass="bg-slate-800 text-cyan-200"
     idleClass="text-slate-300 hover:bg-slate-800 hover:text-cyan-200 focus:bg-slate-800 focus:text-cyan-200"
     optionKey={tag => tag.toLowerCase()}
-    option={panelOption} />
+    labelOf={tag => tag}
+    matchParts={tag => labelParts(tag)}
+    option={option ? panelOption : undefined} />
 {/if}

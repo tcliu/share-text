@@ -6,8 +6,13 @@
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
 
   interface Props {
-    title: string
-    maxWidth?: ComponentProps<typeof BaseDialog>['maxWidth']
+    /** Ignored when `header` is set. */
+    title?: string
+    /** Custom header content forwarded to BaseDialog; wins over `title`. */
+    header?: Snippet
+    widthVariant?: ComponentProps<typeof BaseDialog>['widthVariant']
+    heightVariant?: ComponentProps<typeof BaseDialog>['heightVariant']
+    size?: ComponentProps<typeof BaseDialog>['size']
     closeLabel: string
     saveLabel: string
     resetLabel: string
@@ -19,18 +24,21 @@
     /** Caller combines validity/domain rules; `pending` is ORed in automatically. */
     saveDisabled?: boolean
     pending?: boolean
-    /** Callers that only edit show Reset in edit mode; default keeps it always. */
-    showReset?: boolean
     onSave: () => void
     onReset: () => void
     /** Final close: invoked directly when clean, or after discard is confirmed. */
     onClose: () => void
     children?: Snippet
+    /** Extra footer buttons rendered before the save button. */
+    actions?: Snippet
   }
 
   let {
     title,
-    maxWidth = 'md',
+    header,
+    widthVariant,
+    heightVariant,
+    size,
     closeLabel,
     saveLabel,
     resetLabel,
@@ -40,11 +48,11 @@
     dirty,
     saveDisabled = false,
     pending = false,
-    showReset = true,
     onSave,
     onReset,
     onClose,
     children,
+    actions,
   }: Props = $props()
 
   let discardOpen = $state(false)
@@ -63,25 +71,29 @@
     onClose()
   }
 
-  function handleSubmit(event: SubmitEvent): void {
-    event.preventDefault()
+  function requestSave(): void {
     if (pending || saveDisabled) return
     onSave()
   }
+
+  function handleSubmit(event: SubmitEvent): void {
+    event.preventDefault()
+    requestSave()
+  }
 </script>
 
-<BaseDialog {title} {maxWidth} {closeLabel} onCancel={handleCancelRequest}>
-  <form class="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4" onsubmit={handleSubmit}>
-    <div class="min-h-0 min-w-0 flex-1 overflow-y-auto">
-      {@render children?.()}
-    </div>
-    <Buttons align="right">
-      <Button variant="primary" accent="cyan" type="submit" disabled={pending || saveDisabled} {pending}
-        >{saveLabel}</Button>
-      {#if showReset}
-        <Button variant="outline" type="button" disabled={pending || !dirty} onClick={onReset}>{resetLabel}</Button>
-      {/if}
-    </Buttons>
+{#snippet dialogFooter()}
+  <Buttons align="right">
+    {@render actions?.()}
+    <Button variant="primary" accent="cyan" type="button" disabled={pending || saveDisabled} {pending} onClick={requestSave}
+      >{saveLabel}</Button>
+    <Button variant="outline" type="button" disabled={pending || !dirty} onClick={onReset}>{resetLabel}</Button>
+  </Buttons>
+{/snippet}
+
+<BaseDialog {title} {header} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending} onCancel={handleCancelRequest} footer={dialogFooter}>
+  <form class="w-full min-w-0" onsubmit={handleSubmit}>
+    {@render children?.()}
   </form>
 </BaseDialog>
 
@@ -90,7 +102,7 @@
     title={discardTitle}
     message={discardMessage}
     confirmLabel={discardLabel}
-    confirmColor="rose"
+    accent="rose"
     {closeLabel}
     onConfirm={handleDiscard}
     onCancel={() => (discardOpen = false)} />

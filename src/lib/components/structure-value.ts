@@ -41,6 +41,22 @@ export function copyValue(value: unknown): string {
   return JSON.stringify(value, null, 2)
 }
 
+/** JSONPath display for a node path (`[]` → `$`, `['a','0']` → `$.a[0]`). */
+export function jsonPath(path: string[]): string {
+  if (path.length === 0) return '$'
+  let out = '$'
+  for (const seg of path) {
+    if (/^(0|[1-9]\d*)$/.test(seg)) {
+      out += `[${seg}]`
+    } else if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(seg)) {
+      out += `.${seg}`
+    } else {
+      out += `["${seg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`
+    }
+  }
+  return out
+}
+
 export function inputText(value: unknown): string {
   if (value === null) return 'null'
   if (typeof value === 'string') return value
@@ -69,6 +85,8 @@ export function setAtPath(root: unknown, path: string[], value: unknown): unknow
   return { ...(root as Record<string, unknown>), [key]: setAtPath((root as Record<string, unknown>)[key], rest, value) }
 }
 
+// The format a plain-text document reads as: XML when it opens with a tag,
+// JSON when it parses, YAML otherwise.
 export function detectFormat(text: string): 'json' | 'yaml' | 'xml' {
   if (text.trim().startsWith('<')) return 'xml'
   try {

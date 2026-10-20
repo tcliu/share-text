@@ -13,9 +13,7 @@
     ariaLabel: string
     phoneSheetTitle: string | undefined
     sheetCloseLabel: string
-    sheetDragOffset: number
-    sheetDragging: boolean
-    sheetTransition: string | undefined
+    drag: { offset: number; active: boolean; transition?: string }
     onClose: () => void
     onDragUpdate: (offset: number, active: boolean) => void
     onPanelKeydown: (event: KeyboardEvent) => void
@@ -32,9 +30,7 @@
     ariaLabel,
     phoneSheetTitle,
     sheetCloseLabel,
-    sheetDragOffset,
-    sheetDragging,
-    sheetTransition,
+    drag,
     onClose,
     onDragUpdate,
     onPanelKeydown,
@@ -58,10 +54,10 @@
     role="dialog"
     aria-labelledby={sheetTitleId}
     onfocusout={onFocusOut}
-    style:transform={sheetDragging || sheetDragOffset !== 0 ? `translateY(${sheetDragOffset}px)` : undefined}
-    style:transition={sheetTransition}
-    style:animation={sheetDragging ? 'none' : undefined}
-    style:will-change={sheetDragging ? 'transform' : undefined}
+    style:transform={drag.active || drag.offset !== 0 ? `translateY(${drag.offset}px)` : undefined}
+    style:transition={drag.transition}
+    style:animation={drag.active ? 'none' : undefined}
+    style:will-change={drag.active ? 'transform' : undefined}
     class="menu-sheet-enter relative flex max-h-[min(75dvh,32rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-x-0 border-b-0 border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur transition-transform duration-200 ease-out motion-reduce:transition-none">
     <div
       class="relative flex flex-none cursor-grab touch-pan-x items-start justify-between gap-3 border-b border-slate-800 px-4 pt-4 pb-3 active:cursor-grabbing"
@@ -81,7 +77,7 @@
         data-drag-ignore
         onclick={onClose}
         class="relative shrink-0 rounded-md p-2.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-100 focus-visible:text-slate-100 motion-reduce:transition-none">
-        <CloseIcon size="sm" className="pointer-events-none" />
+        <CloseIcon className="pointer-events-none" />
       </button>
     </div>
     <div

@@ -1,26 +1,29 @@
 <script lang="ts">
-  type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg'
+  import { resolveSize } from './size-metrics'
+  import type { SizeInput } from '$lib/size-scale'
 
   interface Props {
     className?: string
-    size?: SpinnerSize | number
+    size?: SizeInput
   }
 
-  // Width/height attributes (not classes) so `size` composes with `className`:
-  // a tint-only className no longer drops the default sizing, and explicit
-  // size classes in className still win, since CSS beats attributes.
-  const SIZE_PX: Record<SpinnerSize, number> = { xs: 16, sm: 24, md: 32, lg: 40 }
+  // The spinner is a sized svg primitive on the shared `SIZE_PX` axis: its
+  // `size` names alias that axis like every other component (`xs`12 … `xl`20),
+  // so a spinner and an icon at the same step mean the same dimension. The glyph
+  // is a thin ring, so it reads smaller than a stroke icon at the same box; a
+  // fixed ratio scales the dimension once, the same `metric = ratio × dimension`
+  // rule every sized component follows. Numbers are positions on that axis and
+  // scale by the same ratio, so `size="md"` and `size={16}` render identically.
+  // Attributes (not classes) so `size` composes with `className`: a tint-only
+  // className does not drop the sizing, and an explicit size class in className
+  // still wins (CSS beats attributes).
+  const SPINNER_RATIO = 1.5
 
-  // Spinner scale is its own axis (16/24/32/40px); names are aliases and
-  // numbers pass straight through to the width/height attributes.
-  function resolveSpinnerPx(size: SpinnerSize | number): number {
-    if (typeof size === 'number' && Number.isFinite(size)) {
-      return Math.max(1, size)
-    }
-    return SIZE_PX[typeof size === 'string' ? size : 'xs'] ?? SIZE_PX.xs
+  function resolveSpinnerPx(size: SizeInput): number {
+    return resolveSize(size) * SPINNER_RATIO
   }
 
-  let { className = '', size = 'xs' }: Props = $props()
+  let { className = '', size = 'md' }: Props = $props()
 </script>
 
 <svg

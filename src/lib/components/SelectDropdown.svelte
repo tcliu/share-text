@@ -5,19 +5,47 @@
   import { isModifiedNavKey } from '$lib/actions/listbox-keynav'
   import Button from '$lib/components/Button.svelte'
   import ListboxPanel from '$lib/components/ListboxPanel.svelte'
+  import TextInput from '$lib/components/TextInput.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import type { DropdownPanelProps } from '$lib/dropdown-chrome'
-  import { DEFAULT_PANEL_CLASS, TRIGGER_BASE, OPTION_BASE, EMPTY_BASE, boxClass, optionRowClass, emptyClass, resolveSelectGeometry, selectGeometryStyle, type SelectSize } from './select-dropdown-styles'
+  import type { SizeInput } from '$lib/size-scale'
+  import {
+    DEFAULT_PANEL_CLASS,
+    SELECT_BOX_UTILITIES,
+    SELECT_TRIGGER_UTILITIES,
+    SELECT_RATIOS,
+    SELECT_GUTTER_SHARE,
+    TRIGGER_BASE,
+    OPTION_BASE,
+    EMPTY_BASE,
+  } from './select-dropdown-styles'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
+  import type { ClearableProps } from './clearable-props'
+  import { getI18nContext } from '$lib/i18n.svelte'
 
-  interface Option {
+  const i18n = getI18nContext()
+
+  // Accepted option shape: a bare string is its own label, and a missing
+  // label falls back to the value, so `'two'` and `{ value: 'two' }` both
+  // display as `two`.
+  export type SelectOption = string | { value: string; label?: string }
+
+  interface NormalizedOption {
     value: string
     label: string
   }
 
-  interface Props extends DropdownPanelProps {
-    buttonLabel: string
-    options: Option[]
+  interface Props extends DropdownPanelProps, Omit<ClearableProps, 'clearPlacement'> {
+    // Overrides the derived trigger label (the committed option's label, or
+    // the raw value when it matches nothing). Omit it and the trigger tracks
+    // the value on its own.
+    buttonLabel?: string
+    // Baseline the clear affordance compares against: the cross hides while
+    // `activeValue` matches it (empty when unset), and the fallback clear
+    // writes it back. A provided `onClear` still owns the clear.
+    defaultValue?: string
+    options: SelectOption[]
     activeValue?: string
     ariaLabel?: string
     filterable?: boolean
@@ -25,23 +53,20 @@
     // option. Only applies to the filterable input; off by default so
     // existing callers are unchanged.
     allowCustomValue?: boolean
-    size?: SelectSize
+    size?: SizeInput
     onSelect: (value: string) => void
     buttonClass?: string
     controlClass?: string
     optionClass?: string
     emptyLabel?: string
-    // Appends a cross button that clears the value while one is set. Off by
-    // default so existing callers are unchanged.
-    clearable?: boolean
-    // Accessible name for the clear button.
-    clearLabel?: string
-    // Clear handler; falls back to onSelect('') when omitted.
-    onClear?: () => void
+    // No `clearPlacement`: the trigger is a button, not a text field, so the
+    // clear sits on its own right edge. `onClear` falls back to selecting the
+    // default value.
   }
 
   let {
     buttonLabel,
+    defaultValue,
     options,
     activeValue = '',
     ariaLabel,
@@ -50,7 +75,7 @@
     filterable = false,
     allowCustomValue = false,
     onSelect,
-    size = 'sm',
+    size = 'md',
     buttonClass,
     controlClass,
     optionClass,
@@ -64,41 +89,68 @@
   let id = $props.id()
   const panelId = `${id}-panel`
 
-  // Numeric sizes resolve to the shared named steps, so every `size` value
-  // renders through the same classes a name would produce; interpolated
-  // numbers additionally carry an inline geometry style (class overrides
-  // suppress it — the override owns the metrics).
-  const geometry = $derived(resolveSelectGeometry(size))
-  const triggerBoxClass = $derived(geometry.custom ? TRIGGER_BASE : boxClass(geometry.step))
-  const triggerBoxStyle = $derived(selectGeometryStyle(geometry))
+  // Normalize once per options array so every row below reads one shape.
+  const normalizedOptions = $derived(
+    options.map((option): NormalizedOption =>
+      typeof option === 'string'
+        ? { value: option, label: option }
+        : { value: option.value, label: option.label ?? option.value },
+    ),
+  )
+
+  // Trigger label: an explicit override wins; otherwise the committed option's
+  // label, falling back to the raw value when it matches nothing.
+  const resolvedButtonLabel = $derived(
+    buttonLabel ?? normalizedOptions.find(option => option.value === activeValue)?.label ?? activeValue,
+  )
+
+  // Every metric is a fixed ratio of the size dimension, so each keeps a
+  // constant metric:dimension ratio across the range; the icon slot is the
+  // dimension itself (ratio 1).
+  const metrics = $derived(dimensionMetrics(size, SELECT_RATIOS))
+  // The trigger's right gutter is derived from the horizontal padding rather
+  // than tuned beside it: `--sel-pad-right` is published as a calc over
+  // `--sel-pad-x`, so retuning `padX` (or a caller overriding the var) rescales
+  // the chevron's inset with the padding instead of moving it by a constant
+  // offset. `Pagination` emits its derived `--pg-btn` the same way.
+  const style = $derived(
+    `${sizeVarStyle('sel', metrics)};--sel-pad-right:calc(var(--sel-pad-x) * ${SELECT_GUTTER_SHARE})`,
+  )
+  // The trigger's direction marker and its clear cross ride a trimmed share of
+  // that slot: at the full dimension each reads as loud as the label beside it,
+  // so they take 0.625 of it — the same share `TextInput`'s clear cross rides —
+  // staying lighter affordances that still scale with the control.
+  const affordanceSize = $derived(metrics.icon * 0.625)
+
+  const triggerBoxClass = $derived(`${SELECT_TRIGGER_UTILITIES} ${TRIGGER_BASE}`)
 
   const resolvedButtonClass = $derived(
-    buttonClass ?? `${triggerBoxClass} focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500`,
+    buttonClass ??
+      `${triggerBoxClass} focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-cyan-500`,
   )
 
-  const resolvedButtonStyle = $derived(buttonClass ? undefined : triggerBoxStyle)
+  const resolvedButtonStyle = $derived(buttonClass ? undefined : style)
 
-  const resolvedControlClass = $derived(
-    controlClass ?? `${triggerBoxClass} focus-within:border-transparent focus-within:ring-2 focus-within:ring-cyan-500`,
-  )
+  const resolvedControlClass = $derived(controlClass ?? `${triggerBoxClass} focus-within:border-cyan-500`)
 
-  const resolvedControlStyle = $derived(controlClass ? undefined : triggerBoxStyle)
+  const resolvedControlStyle = $derived(controlClass ? undefined : style)
 
   const resolvedPanelClass = $derived(panelClass ?? DEFAULT_PANEL_CLASS)
 
-  const resolvedOptionRowClass = $derived(
-    optionClass ?? (geometry.custom ? OPTION_BASE : optionRowClass(geometry.step)),
-  )
+  const resolvedOptionRowClass = $derived(optionClass ?? `${SELECT_BOX_UTILITIES} ${OPTION_BASE}`)
 
-  const resolvedOptionRowStyle = $derived(optionClass ? undefined : triggerBoxStyle)
+  const resolvedOptionRowStyle = $derived(optionClass ? undefined : style)
 
-  const resolvedEmptyClass = $derived(geometry.custom ? EMPTY_BASE : emptyClass(geometry.step))
+  const resolvedEmptyRowClass = $derived(`${SELECT_BOX_UTILITIES} ${EMPTY_BASE}`)
 
   // No override exists for the empty row (callers only supply its label), so
   // its class is always ours and the geometry style always applies with it —
   // unlike the option rows, where `optionClass` takes over both.
-  const resolvedEmptyStyle = $derived(triggerBoxStyle)
-  const resolvedClearLabel = $derived(clearLabel ?? 'Clear selection')
+  const resolvedEmptyRowStyle = $derived(style)
+  const resolvedClearLabel = $derived(clearLabel ?? i18n.t('common.clear'))
+  // While `activeValue` matches `defaultValue` (empty when unset) there is
+  // nothing to clear, so the cross hides.
+  const showClear = $derived(clearable && (activeValue ?? '') !== (defaultValue ?? ''))
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
   let inputRef = $state<HTMLInputElement | null>(null)
@@ -130,7 +182,7 @@
 
   // Lowercased once per options array (shared helper) so filtering does not
   // re-lowercase every label/value on every keystroke.
-  const optionIndex = $derived(createOptionIndex(options))
+  const optionIndex = $derived(createOptionIndex(normalizedOptions))
 
   // The lowercased filter needle, empty when filtering is off or the text is
   // just the echoed value. The option list and the match highlight read the
@@ -143,8 +195,8 @@
     // that merely equals the label is filtered as-is so an exact match
     // narrows instead of showing everything.
     const query =
-      filterText.length > buttonLabel.length && filterText.startsWith(buttonLabel)
-        ? filterText.slice(buttonLabel.length)
+      filterText.length > resolvedButtonLabel.length && filterText.startsWith(resolvedButtonLabel)
+        ? filterText.slice(resolvedButtonLabel.length)
         : filterText
     return query.trim().toLowerCase()
   })
@@ -155,15 +207,15 @@
     // A query that matches nothing falls back to the full list so the panel
     // never goes empty while typing.
     if (filterQuery === '') {
-      return options
+      return normalizedOptions
     }
-    const matched: Option[] = []
+    const matched: NormalizedOption[] = []
     for (const entry of optionIndex) {
       if (matchesOption(entry, filterQuery)) {
         matched.push(entry.option)
       }
     }
-    return matched.length > 0 ? matched : options
+    return matched.length > 0 ? matched : normalizedOptions
   })
 
   // Emphasize the typed part of each label only while the query is ambiguous:
@@ -179,7 +231,7 @@
 
   $effect(() => {
     if (!open && !filterDirty) {
-      filterText = buttonLabel
+      filterText = resolvedButtonLabel
     }
   })
 
@@ -188,7 +240,7 @@
   // Reset the highlight to the top of the visible list whenever it changes
   // (filter typing, options prop swap) so the cursor does not stay stranded
   // on a row that has scrolled out of view.
-  let lastFilteredOptions: Option[] | null = null
+  let lastFilteredOptions: NormalizedOption[] | null = null
   $effect(() => {
     if (!open) return
     if (lastFilteredOptions !== filteredOptions) {
@@ -292,6 +344,21 @@
     placeCaretAtEnd()
   }
 
+  // Double-clicking the input selects the whole value, so the next keystroke
+  // replaces the filter instead of editing one word inside the echoed value.
+  // A pending caret fix is dropped first: it would otherwise collapse this
+  // selection back to the end.
+  function handleControlDblClick() {
+    if (!inputRef) {
+      return
+    }
+    if (caretRafId !== null) {
+      cancelAnimationFrame(caretRafId)
+      caretRafId = null
+    }
+    inputRef.setSelectionRange(0, inputRef.value.length)
+  }
+
   // Typing into the closed combobox reopens the panel so the edited query
   // filters live. After Enter confirms a value the input keeps focus, so no
   // focus (or click) event fires to open it again.
@@ -311,18 +378,19 @@
     filterDirty = false
     activeQuery = ''
     if (filterable) {
-      filterText = buttonLabel
+      filterText = resolvedButtonLabel
     }
   }
 
   // Clearing hides the cross with the value, so return focus to the trigger
-  // instead of dropping it to the body.
+  // instead of dropping it to the body. A provided handler owns the clear;
+  // otherwise the default value is selected.
   function handleClear() {
     close()
     if (onClear) {
       onClear()
     } else {
-      onSelect('')
+      onSelect(defaultValue ?? '')
     }
     filterDirty = false
     activeQuery = ''
@@ -350,7 +418,7 @@
   }
 
   async function select(value: string) {
-    const selectedOption = options.find(option => option.value === value)
+    const selectedOption = normalizedOptions.find(option => option.value === value)
     onSelect(value)
     if (filterable && selectedOption) {
       // A confirmed value spends the typed query: store the confirmed label as
@@ -461,7 +529,7 @@
       // opened panel would commit the current label as new.
       const customText = filterText.trim()
       const customLower = customText.toLowerCase()
-      const exactMatch = options.some(
+      const exactMatch = normalizedOptions.some(
         option => option.label.toLowerCase() === customLower || option.value.toLowerCase() === customLower,
       )
       if (allowCustomValue && filterable && filterDirty && customText !== '' && !exactMatch) {
@@ -496,19 +564,23 @@
   })
 </script>
 
-<div class="relative" bind:this={containerRef} data-escape-capture={open ? '' : null} onfocusout={listbox.handleFocusOut}>
+<div
+  class="relative"
+  bind:this={containerRef}
+  data-escape-capture={open ? '' : null}
+  onfocusout={listbox.handleFocusOut}>
   {#snippet triggerChevron()}
-    <ChevronDownIcon size={geometry.iconPx} variant="solid" className="-mr-1.5 shrink-0 text-slate-400" />
+    <ChevronDownIcon size={affordanceSize} className="shrink-0 text-slate-400" />
   {/snippet}
   {#snippet triggerControl()}
     {#if filterable}
       <label class={resolvedControlClass} style={resolvedControlStyle}>
-        <input
-          bind:this={inputRef}
-          type="text"
+        <TextInput
+          bind:inputRef
           bind:value={filterText}
+          {size}
           role="combobox"
-          aria-label={ariaLabel}
+          {ariaLabel}
           aria-autocomplete="list"
           aria-expanded={open}
           aria-controls={open ? panelId : undefined}
@@ -518,9 +590,10 @@
           onfocus={handleControlFocus}
           onblur={handleControlBlur}
           onclick={handleControlClick}
+          ondblclick={handleControlDblClick}
           oninput={handleControlInput}
           onkeydown={handleControlKeydown}
-          class="field-sizing-content min-w-0 bg-transparent text-left outline-none" />
+          inputClass="field-sizing-content min-w-0 bg-transparent text-left outline-none" />
         {@render triggerChevron()}
       </label>
     {:else}
@@ -539,7 +612,9 @@
         onkeydown={handleControlKeydown}
         class={resolvedButtonClass}
         style={resolvedButtonStyle}>
-        <span class="min-w-0 flex-1 truncate">{buttonLabel}</span>
+        <!-- The label row keeps the line height even with an empty label (a
+             cleared value), so clearing the selection never trims the trigger. -->
+        <span class="min-h-[var(--sel-line)] min-w-0 flex-1 truncate">{resolvedButtonLabel}</span>
         {@render triggerChevron()}
       </button>
     {/if}
@@ -547,17 +622,17 @@
   {#snippet closeIcon()}
     <CloseIcon size="sm" />
   {/snippet}
-  {#if clearable && activeValue !== ''}
-    <span class="inline-flex items-center gap-1">
+  {#if showClear}
+    <!-- The clear affordance scales with the control: its gap is a ratio of the
+      size and its icon box rides the trimmed affordance size. -->
+    <span class="inline-flex items-center" style={`gap:${metrics.gap}px`}>
       {@render triggerControl()}
-      <!-- Tab focus tints the icon exactly like hover, with no ring. -->
       <Button
         variant="ghost"
-        size="xs"
+        size={affordanceSize}
         icon={closeIcon}
         ariaLabel={resolvedClearLabel}
-        onClick={handleClear}
-        focusRing={false} />
+        onClick={handleClear} />
     </span>
   {:else}
     {@render triggerControl()}
@@ -566,7 +641,7 @@
     <ListboxPanel
       bind:panelEl={panelRef}
       id={panelId}
-      ariaLabel={ariaLabel}
+      {ariaLabel}
       panelClass={`fixed top-0 left-0 z-40 will-change-transform ${resolvedPanelClass}`}
       optionRowClass={resolvedOptionRowClass}
       optionRowStyle={resolvedOptionRowStyle}
@@ -577,14 +652,14 @@
       onActivate={index => {
         if (listbox.selection.peek() !== index) listbox.selection.set(index)
       }}
-      setOptionEl={setOptionEl}
+      {setOptionEl}
       getTrigger={() => containerRef}
       getOpen={() => open}
-      align={align}
-      autoPlace={autoPlace}
-      emptyLabel={emptyLabel}
-      emptyClass={resolvedEmptyClass}
-      emptyStyle={resolvedEmptyStyle}
+      {align}
+      {autoPlace}
+      {emptyLabel}
+      emptyRowClass={resolvedEmptyRowClass}
+      emptyRowStyle={resolvedEmptyRowStyle}
       activeClass="bg-slate-800 text-cyan-200"
       idleClass="text-slate-300"
       labelOf={option => option.label}

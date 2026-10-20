@@ -170,8 +170,14 @@ export function positionPanel(node: HTMLElement, options: () => PositionPanelOpt
       scrollableAncestor?.removeEventListener('scroll', updatePanelPosition)
       triggerObserver?.disconnect()
       panelObserver?.disconnect()
+      // Terminal removal: the portal may have moved the node out from under
+      // the `{#if}` block that owns it, so Svelte's own removal can miss it
+      // and leave a connected duplicate (same panel id) behind. Removing the
+      // node here is a no-op when Svelte already detached it. Never restore it
+      // to the original parent instead: re-inserting a dropped node resurrects
+      // it as a hidden orphan.
       node.style.visibility = 'hidden'
-      restorePanelParent()
+      node.remove()
     },
   }
 }

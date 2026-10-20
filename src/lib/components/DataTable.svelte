@@ -3,14 +3,16 @@
   import Checkbox from './Checkbox.svelte'
   import ColumnChooser, { type ChooserColumn } from './ColumnChooser.svelte'
   import Pagination from './Pagination.svelte'
+  import type { PaginationLabels } from './pagination-labels'
   import SearchInput from './SearchInput.svelte'
   import Spinner from './Spinner.svelte'
-  import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
-  import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
-  import { createColumnResize } from './use-column-resize.svelte'
+  import type { SizeInput } from '$lib/size-scale'
+  import CaretDownIcon from '$lib/icons/CaretDownIcon.svelte'
+  import CaretUpIcon from '$lib/icons/CaretUpIcon.svelte'
+  import { createTableColumns, TABLE_MIN_COLUMN_WIDTH, TABLE_SELECT_COLUMN_WIDTH } from './use-table-columns.svelte'
   import { createTableScrollSync } from './use-table-scroll-sync.svelte'
-  import { realignColumnWidths, resolveColumnWidths } from '$lib/data-table/column-helpers'
-  import { tooltip } from '$lib/actions/tooltip.svelte'
+  import { resolveColumnWidths } from '$lib/data-table/column-helpers'
+  import Tooltip from './Tooltip.svelte'
 
   export type SortDirection = 'asc' | 'desc'
 
@@ -23,8 +25,7 @@
     // `thead th.num` table style) alongside right-aligned numeric cells.
     // Suppressed when `headerAlign` is set, so an explicit alignment wins.
     num?: boolean
-    // Header tooltip, rendered as `data-tip` so it uses the same custom
-    // tooltip as Button's `dataTip` (the host handles `[data-tip]`).
+    // Header tooltip, rendered with the positioned Tooltip component.
     headerTip?: string
     // Header text alignment; cells keep their own alignment. Rendered as an
     // inline style (runtime values must not rely on generated utilities, and
@@ -48,6 +49,22 @@
     searchable?: boolean
   }
 
+  // Pagination footer configuration: the data plus the callbacks the footer
+  // needs. `total`/`pageSize`/`currentPage`/`onPageChange` together gate the
+  // footer; `onPageSizeChange` adds the page-size selector; `labels` and
+  // `trailing` pass straight through to Pagination.
+  export interface DataTablePagination {
+    total?: number
+    pageSize?: number
+    currentPage?: number
+    onPageChange?: (page: number) => void
+    onPageSizeChange?: (size: number) => void
+    // Page-size choices offered by the footer's dropdown; defaults to [10, 20, 50].
+    pageSizeOptions?: number[]
+    labels?: PaginationLabels
+    trailing?: Snippet
+  }
+
   interface Props<T> {
     rows: T[]
     rowId: (row: T) => string
@@ -58,6 +75,9 @@
     searchAriaLabel?: string
     searchPlaceholder?: string
     showSearch?: boolean
+    // Derived by DataTable from `columns[].searchable` and written back through
+    // the binding: read it (`bind:searchKeys`) rather than pass it — any value
+    // supplied is recomputed and overwritten whenever the columns change.
     searchKeys?: string[]
     onSearchInput?: (event: Event) => void
     onSearchKeydown?: (event: KeyboardEvent) => void
@@ -76,40 +96,40 @@
     someSelected?: boolean
     selectAllAriaLabel?: string
     rowSelectAriaLabel?: (row: T) => string
-    total: number
-    pageSize: number
-    currentPage: number
-    onPageChange: (page: number) => void
-    onPageSizeChange: (size: number) => void
-    // Page-size choices offered by the pagination dropdown, forwarded to
-    // Pagination; omitted leaves Pagination's own default.
-    pageSizeOptions?: number[]
-    containerClass?: string
-    tableClass?: string
+    // Pagination footer configuration. The footer renders only when the
+    // object supplies `total`, `pageSize`, `currentPage`, and `onPageChange`;
+    // `onPageSizeChange` is optional (without it the footer hides the
+    // page-size selector). Omitted entirely for the pagination-free
+    // (docs-table) mode.
+    pagination?: DataTablePagination
+    containerClassName?: string
+    tableClassName?: string
     fillHeight?: boolean
     // Splits the header into a fixed band outside the scrollport (only with
     // fillHeight): the body wrapper scrolls while the header mirrors its
     // horizontal scroll, so the vertical scrollbar spans body rows only.
     bodyScroll?: boolean
     // Renders the pagination footer. Set false for short summary tables that
-    // always fit one page (the dashboard breakdowns).
+    // always fit one page (the dashboard breakdowns). Unset, the footer renders
+    // when `pagination` supplies its data and `onPageChange`; omitting it is the
+    // pagination-free (docs-table) mode. `onPageSizeChange` is optional.
     showPagination?: boolean
     // Compact header/cell padding for summary tables embedded in a panel.
     // Applied inline so it wins over the viewer table rules.
     dense?: boolean
+    // Card chrome (border, rounding, translucent backdrop) on the viewer and
+    // split containers. Set false for borderless embedding (e.g. FieldTable's
+    // docs tables, which sit directly on the page canvas).
+    bordered?: boolean
+    // Presentation variant. `data` (default) is the paged viewer with its
+    // scroll container, sticky header, and row hover. `docs` is the static
+    // documentation table: plain overflow wrapper, non-sticky header, no hover.
+    variant?: 'data' | 'docs'
     sortKey?: string | null
     sortDirection?: SortDirection
     onSort?: (key: string, direction: SortDirection) => void
     sortAriaLabel?: (column: DataTableColumn<T>, direction: SortDirection) => string
     resizeAriaLabel?: (column: DataTableColumn<T>) => string
-    paginationPreviousLabel?: string
-    paginationNextLabel?: string
-    paginationPageSizeLabel?: string
-    paginationCurrentLabel?: string
-    paginationLabel?: string
-    // Arbitrary content for the pagination row's right edge, forwarded to
-    // the Pagination `trailing` placeholder. Omitted when undefined.
-    paginationTrailing?: Snippet
     // Adds draggable (and arrow-key) resize handles to each data column header.
     // Off by default; the selectable checkbox column stays fixed.
     resizable?: boolean
@@ -120,10 +140,7 @@
     // drops managed widths (and their persisted copy) so the table falls
     // back to the percentage layout.
     resetWidthsSignal?: number
-    // Preferred placement for the header tooltip (`data-tip-place` on the
-    // header cell, read by the tooltip engine). Defaults to below; pass
-    // 'above' where a below-placed tip would cover content (e.g. data rows).
-    headerTipPlace?: 'above' | 'below'
+    size?: SizeInput
   }
 
   let {
@@ -152,33 +169,24 @@
     someSelected = false,
     selectAllAriaLabel,
     rowSelectAriaLabel,
-    total,
-    pageSize,
-    currentPage,
-    onPageChange,
-    onPageSizeChange,
-    pageSizeOptions,
-    containerClass = 'max-h-[min(70vh,44rem)] overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout',
-    tableClass = 'min-w-0',
+    pagination,
+    containerClassName,
+    tableClassName = 'min-w-0',
     fillHeight = false,
     bodyScroll = false,
-    showPagination = true,
+    showPagination,
     dense = false,
+    bordered = true,
+    variant = 'data',
     sortKey = $bindable(null as string | null),
     sortDirection = $bindable('asc' as SortDirection),
     onSort,
     sortAriaLabel,
     resizeAriaLabel,
-    paginationPreviousLabel,
-    paginationNextLabel,
-    paginationPageSizeLabel,
-    paginationCurrentLabel,
-    paginationLabel,
-    paginationTrailing,
     resizable = false,
     storageKey,
     resetWidthsSignal = 0,
-    headerTipPlace,
+    size = 'md',
   }: Props<T> = $props()
 
   const resolvedEmptyMessage = $derived(emptyMessage ?? 'No rows')
@@ -188,9 +196,66 @@
   const resolvedChooserResetLabel = $derived(chooserResetLabel ?? 'Reset columns')
   const resolvedSelectAllAriaLabel = $derived(selectAllAriaLabel ?? 'Select all')
 
+  // Pagination is configured when the object supplies its data and the
+  // page-change handler, so omitting any of them renders no footer. An explicit
+  // `showPagination` still wins, and `onPageSizeChange` stays optional: without
+  // it the footer renders but hides the page-size selector.
+  const resolvedPagination = $derived.by(() => {
+    if (
+      pagination?.total != null &&
+      pagination.pageSize != null &&
+      pagination.currentPage != null &&
+      pagination.onPageChange
+    ) {
+      return {
+        total: pagination.total,
+        pageSize: pagination.pageSize,
+        currentPage: pagination.currentPage,
+        onPageChange: pagination.onPageChange,
+        onPageSizeChange: pagination.onPageSizeChange,
+        pageSizeOptions: pagination.pageSizeOptions,
+        labels: pagination.labels,
+        trailing: pagination.trailing,
+      }
+    }
+    return null
+  })
+  const showFooter = $derived((showPagination ?? resolvedPagination != null) && resolvedPagination != null)
+
+  const isDocs = $derived(variant === 'docs')
+  // Card chrome shared by the viewer containers; dropped when bordered is false.
+  const viewerChromeClass = 'rounded-xl border border-slate-800 bg-slate-950/50'
+  const resolvedContainerClass = $derived(
+    containerClassName ??
+      (isDocs
+        ? 'overflow-x-auto'
+        : `max-h-[min(70vh,44rem)] overflow-auto contain-layout ${bordered ? viewerChromeClass : ''}`),
+  )
+  // Docs chrome mirrors the documentation table: collapsed borders, plain
+  // non-sticky header, no row hover. The trailing cell pad is dropped on the
+  // last column, like the old docs table. The data viewer keeps its own chrome.
+  const tableChromeClass = $derived(
+    isDocs
+      ? 'border-collapse text-left [&_th:last-child]:pr-0 [&_td:last-child]:pr-0'
+      : 'border-separate border-spacing-0 [&_tr:last-child_td]:border-b-0',
+  )
+  const headerCellBase = $derived(
+    isDocs
+      ? 'border-b border-slate-700 py-2 pr-3 font-medium'
+      : 'sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur',
+  )
+  const bodyCellBase = $derived(
+    isDocs ? 'border-b border-slate-800 py-2 pr-3 align-top' : 'border-b border-slate-800/50 px-3 py-2',
+  )
+  const bodyRowClass = $derived(isDocs ? '' : 'hover:bg-slate-900/40')
+
   const columnCount = $derived(columns.length + (selectable ? 1 : 0))
 
-  const FILL_CONTAINER_CLASS = 'min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
+  const fillContainerClass = $derived(
+    bordered
+      ? 'min-h-0 overflow-auto rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
+      : 'min-h-0 overflow-auto contain-layout',
+  )
 
   // Split header/body mode: the header lives in a fixed band outside the
   // scrollport and only the body wrapper scrolls (requires fillHeight, which
@@ -198,8 +263,11 @@
   // keep the single-table sticky-header rendering.
   const splitHeader = $derived(bodyScroll && fillHeight)
 
-  const SPLIT_FRAME_CLASS =
-    'flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
+  const splitFrameClass = $derived(
+    bordered
+      ? 'flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50 contain-layout'
+      : 'flex min-h-0 flex-1 flex-col overflow-hidden contain-layout',
+  )
 
   let headerWrapper = $state<HTMLElement | null>(null)
 
@@ -234,19 +302,9 @@
   // Each data column header hosts a splitter. Dragging the splitter between
   // columns i and i+1 re-partitions those two adjacent columns within a fixed
   // combined total; the splitter after the last column moves the table's right
-  // edge. Widths are captured from the rendered table on the first resize, then
-  // held in `columnWidths` (pixels per data column) with the table switched to
-  // fixed layout via a sized `<colgroup>`.
+  // edge. The width engine (managed widths, persistence, and the shared resize
+  // composable) lives in `use-table-columns`; the component keeps the DOM refs.
 
-  const MIN_COLUMN_WIDTH = 60
-  const SELECT_COLUMN_WIDTH = 40
-
-  // Pixel width per data column; empty until the first resize.
-  let columnWidths = $state<number[]>([])
-  // Column keys the widths above belong to. Widths are realigned by key
-  // (not position) whenever the visible set changes, so toggling a column
-  // never shifts its neighbours' widths.
-  let widthKeys = $state<string[]>([])
   let tableContainer = $state<HTMLElement | null>(null)
   let headerEls = $state<(HTMLElement | null)[]>([])
 
@@ -255,102 +313,30 @@
     tableContainer?.scrollTo(options)
   }
 
-  const managedWidths = $derived(resizable && columnWidths.length > 0)
-
-  const totalWidth = $derived.by(() => {
-    let sum = selectable ? SELECT_COLUMN_WIDTH : 0
-    for (let i = 0; i < columns.length; i++) {
-      sum += columnWidths[i] ?? 0
-    }
-    return sum
+  const tableColumns = createTableColumns({
+    getColumns: () => columns,
+    getResizable: () => resizable,
+    getSelectable: () => selectable,
+    getStorageKey: () => storageKey,
+    getResetSignal: () => resetWidthsSignal,
+    getContainer: () => tableContainer,
+    getColumnCellWidth: (i: number) => headerEls[i]?.offsetWidth ?? TABLE_MIN_COLUMN_WIDTH,
+    // bind:this grows headerEls but never shrinks it; drop stale tail refs so a
+    // shrinking column list can't serve a detached header's width.
+    pruneHeaderRefs: count => {
+      if (headerEls.length > count) headerEls = headerEls.slice(0, count)
+    },
   })
 
   // Both split tables share one column template so their columns stay
   // aligned: managed pixel widths once resized, otherwise the declared
   // widths (fixed layout governs both tables in split mode).
-  const splitTableClass = $derived(managedWidths ? 'min-w-full' : `w-full ${tableClass}`)
+  const splitTableClass = $derived(tableColumns.managedWidths ? 'min-w-full' : `w-full ${tableClassName}`)
   const splitTableStyle = $derived(
-    managedWidths ? `table-layout:fixed;min-width:100%;width:${totalWidth}px;` : 'table-layout:fixed;',
+    tableColumns.managedWidths
+      ? `table-layout:fixed;min-width:100%;width:${tableColumns.totalWidth}px;`
+      : 'table-layout:fixed;',
   )
-
-  function columnMinWidth(i: number): number {
-    const mw = columns[i]?.minWidth
-    return typeof mw === 'number' && Number.isFinite(mw) && mw >= 0 ? mw : MIN_COLUMN_WIDTH
-  }
-
-  // Width for a newly shown column: its declared percentage share of the
-  // rendered table, so it comes back at the size the % layout would give it.
-  function addedColumnWidth(key: string): number {
-    const index = columns.findIndex(c => c.key === key)
-    const declared = columns[index]?.width
-    const pct = typeof declared === 'string' && declared.endsWith('%') ? Number.parseFloat(declared) : NaN
-    const basis = tableContainer?.clientWidth ?? columnWidths.reduce((sum, w) => sum + w, 0)
-    const computed = !Number.isNaN(pct) && basis > 0 ? Math.round((basis * pct) / 100) : 128
-    return Math.max(computed, index >= 0 ? columnMinWidth(index) : MIN_COLUMN_WIDTH)
-  }
-
-  function getColumnCellWidth(i: number): number {
-    return headerEls[i]?.offsetWidth ?? MIN_COLUMN_WIDTH
-  }
-
-  const resize = createColumnResize({
-    getColumnCount: () => columns.length,
-    getContainer: () => tableContainer,
-    getColumnWidths: () => columnWidths,
-    setColumnWidths: (widths: number[]) => {
-      columnWidths = widths
-    },
-    getColumnCellWidth,
-    getMinWidth: columnMinWidth,
-    getFillWidthOffset: () => (selectable ? SELECT_COLUMN_WIDTH : 0),
-    getStorageKey: () => storageKey,
-  })
-
-  // Keep columnWidths aligned with the current columns while the table is
-  // in managed mode. Alignment is by column key: widths captured or
-  // restored without keys are adopted only when they line up with the
-  // current columns, and anything stale falls back to the % layout.
-  $effect(() => {
-    const keys = columns.map(c => c.key)
-    const count = keys.length
-    // bind:this grows headerEls but never shrinks it; drop stale tail refs
-    // so a shrinking column list can't serve a detached header's width.
-    if (headerEls.length > count) headerEls = headerEls.slice(0, count)
-    if (count === 0) return
-    if (columnWidths.length === 0) {
-      if (widthKeys.length > 0) widthKeys = []
-      return
-    }
-    if (widthKeys.length === 0) {
-      if (columnWidths.length === count) widthKeys = keys
-      else columnWidths = []
-      return
-    }
-    if (widthKeys.length === count && widthKeys.every((k, i) => k === keys[i])) return
-    columnWidths = realignColumnWidths(keys, widthKeys, columnWidths, addedColumnWidth)
-    widthKeys = keys
-  })
-
-  // Restore persisted column widths on mount so the user's splitter positions
-  // survive a reload. loadPersistedWidths re-reads storage when the column count
-  // changes and returns the saved layout only when its width matches, so this
-  // assignment re-runs on a count change and a matching layout exists.
-  $effect(() => {
-    const persisted = resize.loadPersistedWidths()
-    if (persisted != null) columnWidths = persisted
-  })
-
-  // Width reset from the column chooser: forget manual adjustments in memory
-  // and in storage. The realign effect below then sees empty widths and the
-  // table renders the percentage layout again.
-  let lastWidthReset = 0
-  $effect(() => {
-    if (resetWidthsSignal === lastWidthReset) return
-    lastWidthReset = resetWidthsSignal
-    columnWidths = []
-    widthKeys = []
-    resize.clearPersistedWidths()
-  })
 
   function handleSortClick(column: DataTableColumn<T>, direction: SortDirection) {
     if (!column.sortable) {
@@ -362,7 +348,7 @@
   }
 </script>
 
-<svelte:window onmouseup={resize.handleResizeMouseUp} onmousemove={resize.handleResizeMouseMove} />
+<svelte:window onmouseup={tableColumns.resize.handleResizeMouseUp} onmousemove={tableColumns.resize.handleResizeMouseMove} />
 
 <div class="flex w-full min-w-0 flex-col gap-2 {fillHeight ? 'min-h-0 flex-1' : ''}">
   {#if showSearch || chooserColumns}
@@ -370,6 +356,7 @@
       {#if showSearch}
         <SearchInput
           bind:value={searchValue}
+          {size}
           oninput={onSearchInput}
           onkeydown={onSearchKeydown}
           ariaLabel={resolvedSearchAriaLabel}
@@ -378,9 +365,10 @@
       {/if}
       {#if chooserColumns}
         <ColumnChooser
-          label={resolvedChooserLabel}
-          resetLabel={resolvedChooserResetLabel}
+          triggerLabel={resolvedChooserLabel}
+          resetAriaLabel={resolvedChooserResetLabel}
           columns={chooserColumns}
+          {size}
           onToggle={(key, checked) => onToggleColumn?.(key, checked)}
           onReset={() => onResetColumns?.()} />
       {/if}
@@ -388,19 +376,19 @@
   {/if}
 
   {#snippet tableColgroup()}
-    {#if managedWidths}
+    {#if tableColumns.managedWidths}
       <colgroup>
         {#if selectable}
-          <col style="width:{SELECT_COLUMN_WIDTH}px;" />
+          <col style="width:{TABLE_SELECT_COLUMN_WIDTH}px;" />
         {/if}
         {#each Array.from({ length: columns.length }) as _, i}
-          <col style="width:{columnWidths[i]}px;" />
+          <col style="width:{tableColumns.columnWidths[i]}px;" />
         {/each}
       </colgroup>
     {:else if splitHeader}
       <colgroup>
         {#if selectable}
-          <col style="width:{SELECT_COLUMN_WIDTH}px;" />
+          <col style="width:{TABLE_SELECT_COLUMN_WIDTH}px;" />
         {/if}
         {#each resolvedColumns as column (column.key)}
           <col style={column.widthStyle} />
@@ -414,7 +402,7 @@
       <tr>
         <td colspan={columnCount} class="px-3 py-10">
           <div class="flex justify-center">
-            <Spinner className="h-6 w-6" />
+            <Spinner {size} />
           </div>
         </td>
       </tr>
@@ -424,21 +412,25 @@
       </tr>
     {:else}
       {#each rows as row (rowId(row))}
-        <tr class="hover:bg-slate-900/40">
+        <tr class={bodyRowClass}>
           {#if selectable}
             <td class="border-b border-slate-800/50 px-3 py-2">
               <Checkbox
                 checked={selectedIds?.has(rowId(row)) ?? false}
+                {size}
                 ariaLabel={rowSelectAriaLabel?.(row) ?? 'Select row'}
                 onChange={checked => onToggleSelection?.(rowId(row), checked)} />
             </td>
           {/if}
           {#each resolvedColumns as column (column.key)}
             <td
-              class="border-b border-slate-800/50 px-3 py-2 {managedWidths
+              class="{bodyCellBase} {tableColumns.managedWidths
                 ? ''
                 : column.minWidthClass} {column.cellClass}"
-              style={[managedWidths ? '' : column.minWidthStyle, dense ? 'padding: 4px 8px; font-size: 12px' : '']
+              style={[
+                tableColumns.managedWidths ? '' : column.minWidthStyle,
+                dense ? 'padding: 4px 8px; font-size: 12px' : '',
+              ]
                 .filter(Boolean)
                 .join('; ')}>
               {@render column.cell?.(row)}
@@ -456,6 +448,7 @@
           <Checkbox
             checked={allSelected}
             indeterminate={someSelected && !allSelected}
+            {size}
             ariaLabel={resolvedSelectAllAriaLabel}
             disabled={rows.length === 0}
             onChange={() => onToggleAll?.()} />
@@ -476,50 +469,52 @@
         {@const centerHeader = column.headerAlign === 'center'}
         <th
           bind:this={headerEls[i]}
-          class="sticky top-0 z-10 border-b border-slate-800 bg-slate-900/95 px-3 py-2 backdrop-blur {column.sortable
-            ? 'group'
-            : ''} {column.num ? 'num' : ''} {managedWidths ? '' : column.widthClass} {managedWidths
+          scope="col"
+          class="{headerCellBase} {column.sortable ? 'group' : ''} {column.num ? 'num' : ''} {tableColumns.managedWidths
             ? ''
-            : column.minWidthClass}"
+            : column.widthClass} {tableColumns.managedWidths ? '' : column.minWidthClass}"
           style={[
             headerAlignStyle,
-            managedWidths ? '' : column.widthStyle,
-            managedWidths ? '' : column.minWidthStyle,
+            tableColumns.managedWidths ? '' : column.widthStyle,
+            tableColumns.managedWidths ? '' : column.minWidthStyle,
             dense ? 'padding: 4px 8px; font-size: 12px' : '',
           ]
             .filter(Boolean)
             .join('; ')}
           data-col-index={i}
-          use:tooltip data-tip={column.headerTip ?? undefined}
-          data-tip-place={column.headerTip ? (headerTipPlace ?? undefined) : undefined}
           aria-sort={isActive ? (isAsc ? 'ascending' : 'descending') : undefined}>
+          {#if column.headerTip}
+            <Tooltip>{column.headerTip}</Tooltip>
+          {/if}
           {#if column.sortable}
             <span class="flex w-full items-center gap-2 text-left {centerHeader ? 'relative justify-center px-1' : ''}">
               <span class={centerHeader ? 'min-w-0 overflow-hidden break-words text-ellipsis' : ''}
                 >{column.header}</span>
               <span
-                class="flex flex-col {centerHeader
+                class="flex flex-col gap-0.5 {centerHeader
                   ? 'absolute top-1/2 right-0 -translate-y-1/2'
                   : ''} text-slate-400 transition-opacity {isActive
                   ? 'opacity-100'
                   : '[@media(hover:hover)]:opacity-0'} group-focus-within:opacity-100 group-hover:opacity-100">
                 <button
                   type="button"
-                  class="leading-none transition-colors outline-none {isAsc
+                  class="flex leading-none transition-colors outline-none {isAsc
                     ? 'text-cyan-400'
                     : 'hover:text-cyan-300 focus:text-cyan-300'}"
                   aria-label={sortAriaLabel?.(column, 'asc') ?? `Sort ${column.header} ascending`}
                   onclick={() => handleSortClick(column, 'asc')}>
-                  <SortAscIcon size="xs" />
+                  <!-- The caret is cropped tight to the triangle, so `size` is the
+                       width it renders at (0.8125 × 10) rather than a square box. -->
+                  <CaretUpIcon size={10} />
                 </button>
                 <button
                   type="button"
-                  class="-mt-1 leading-none transition-colors outline-none {isDesc
+                  class="flex leading-none transition-colors outline-none {isDesc
                     ? 'text-cyan-400'
                     : 'hover:text-cyan-300 focus:text-cyan-300'}"
                   aria-label={sortAriaLabel?.(column, 'desc') ?? `Sort ${column.header} descending`}
                   onclick={() => handleSortClick(column, 'desc')}>
-                  <SortDescIcon size="xs" />
+                  <CaretDownIcon size={10} />
                 </button>
               </span>
             </span>
@@ -529,11 +524,13 @@
           {#if resizable}
             <button
               type="button"
-              class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
-              style={i < columns.length - 1 ? 'right:-3px;' : 'right:0;'}
+              class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40 {i <
+              columns.length - 1
+                ? 'translate-x-1/2'
+                : ''}"
               aria-label={resizeAriaLabel?.(column) ?? `Resize ${column.header}`}
-              onmousedown={event => resize.startColumnResize(event, i)}
-              onkeydown={event => resize.handleResizeKeydown(event, i)}></button>
+              onmousedown={event => tableColumns.resize.startColumnResize(event, i)}
+              onkeydown={event => tableColumns.resize.handleResizeKeydown(event, i)}></button>
           {/if}
         </th>
       {/each}
@@ -541,7 +538,7 @@
   {/snippet}
 
   {#if splitHeader}
-    <div class={SPLIT_FRAME_CLASS}>
+    <div class={splitFrameClass}>
       <div class="flex-none overflow-hidden" bind:this={headerWrapper}>
         <table
           class="border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {splitTableClass}"
@@ -566,13 +563,13 @@
   {:else}
     <div
       tabindex="-1"
-      class={`${fillHeight ? FILL_CONTAINER_CLASS : containerClass} outline-none`}
+      class={`${fillHeight ? fillContainerClass : resolvedContainerClass} outline-none`}
       bind:this={tableContainer}>
       <table
-        class="border-separate border-spacing-0 text-sm [&_tr:last-child_td]:border-b-0 {managedWidths
-          ? 'min-w-full'
-          : `w-full ${tableClass}`}"
-        style={managedWidths ? `table-layout:fixed;min-width:100%;width:${totalWidth}px;` : ''}>
+        class="{tableChromeClass} text-sm {tableColumns.managedWidths ? 'min-w-full' : `w-full ${tableClassName}`}"
+        style={tableColumns.managedWidths
+          ? `table-layout:fixed;min-width:100%;width:${tableColumns.totalWidth}px;`
+          : ''}>
         {@render tableColgroup()}
         <thead>
           {@render headerRow()}
@@ -584,21 +581,19 @@
     </div>
   {/if}
 
-  {#if showPagination}
+  {#if showFooter && resolvedPagination}
+    <!-- `&& resolvedPagination` narrows the derived object for the footer below. -->
     <div class="shrink-0">
       <Pagination
-        {total}
-        {pageSize}
-        {currentPage}
-        {onPageChange}
-        {onPageSizeChange}
-        {pageSizeOptions}
-        previousLabel={paginationPreviousLabel}
-        nextLabel={paginationNextLabel}
-        pageSizeLabel={paginationPageSizeLabel}
-        currentPageLabel={paginationCurrentLabel}
-        {paginationLabel}
-        trailing={paginationTrailing} />
+        total={resolvedPagination.total}
+        pageSize={resolvedPagination.pageSize}
+        currentPage={resolvedPagination.currentPage}
+        {size}
+        onPageChange={resolvedPagination.onPageChange}
+        onPageSizeChange={resolvedPagination.onPageSizeChange}
+        pageSizeOptions={resolvedPagination.pageSizeOptions}
+        labels={resolvedPagination.labels}
+        trailing={resolvedPagination.trailing} />
     </div>
   {/if}
 </div>

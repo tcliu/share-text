@@ -1,6 +1,11 @@
 import { isEmptyValue, matrixEqual, compareGridValues } from './grid-utils'
+import { createGridHistory } from './use-grid-history.svelte'
+import { createGridSerialize } from './use-grid-serialize.svelte'
+import type { HistoryListener } from './use-grid-history.svelte'
 
-interface Cell {
+export type { HistoryState, HistoryListener } from './use-grid-history.svelte'
+
+export interface GridCell {
   id: number
   value: string
   // Whether the cell has been authored (typed, pasted, or structurally created).
@@ -8,17 +13,10 @@ interface Cell {
   // excluded from the serialized matrix until the user actually enters a value.
   committed: boolean
 }
-interface Row {
+export interface GridRow {
   id: number
-  cells: Cell[]
+  cells: GridCell[]
 }
-
-export interface HistoryState {
-  canUndo: boolean
-  canRedo: boolean
-}
-
-export type HistoryListener = (state: HistoryState) => void
 
 export interface GridModelOptions {
   getValue: () => string[][]
@@ -30,113 +28,36 @@ export interface GridModelOptions {
   maxColumns?: number
 }
 
-const MAX_HISTORY = 100
-
 export function createGridModel(options: GridModelOptions) {
   let cellId = 0
   let rowId = 0
-  const newCell = (value = '', committed = true): Cell => ({ id: ++cellId, value, committed })
-  const newRow = (cols: number, committed = true): Row => ({
+  const newCell = (value = '', committed = true): GridCell => ({ id: ++cellId, value, committed })
+  const newRow = (cols: number, committed = true): GridRow => ({
     id: ++rowId,
     cells: Array.from({ length: cols }, () => newCell('', committed)),
   })
 
-  let rows = $state<Row[]>([])
+  let rows = $state<GridRow[]>([])
   let lastValue: string[][] = []
   let pending = false
   let commitTimer: ReturnType<typeof setTimeout> | null = null
   const colCap = options.maxColumns
 
-  let undoStack = $state<string[][][]>([])
-  let redoStack = $state<string[][][]>([])
-  const historyListeners = new Set<HistoryListener>()
-
-  function currentMatrix(): string[][] {
-    return committedMatrix()
-  }
-
-  // The serialized matrix bounds itself to the last row/column that has any
-  // authored (committed) cell, so rows/columns appended by pure navigation and
-  // never typed into stay out of the document until a value is entered.
-  function committedMatrix(): string[][] {
-    const cols = lastCommittedCol + 1
-    const rowsCount = lastCommittedRow + 1
-    if (rowsCount <= 0 || cols <= 0) return []
-    return rows.slice(0, rowsCount).map(r => r.cells.slice(0, cols).map(c => c.value))
-  }
-
-  function emitHistory() {
-    const state: HistoryState = { canUndo: undoStack.length > 0, canRedo: redoStack.length > 0 }
-    for (const listener of [...historyListeners]) listener(state)
-  }
-
-  function onHistory(listener: HistoryListener): () => void {
-    historyListeners.add(listener)
-    listener({ canUndo: undoStack.length > 0, canRedo: redoStack.length > 0 })
-    return () => historyListeners.delete(listener)
-  }
-
-  function resetHistory() {
-    undoStack = []
-    redoStack = []
-    emitHistory()
-  }
-
-  const canUndo = $derived(undoStack.length > 0)
-  const canRedo = $derived(redoStack.length > 0)
+  const history = createGridHistory()
 
   const columnCount = $derived(rows.length ? Math.max(...rows.map(r => r.cells.length)) : 0)
   const rowCount = $derived(rows.length)
   const headers = $derived(options.getHeaders())
 
-  const lastCommittedRow = $derived.by(() => {
-    for (let ri = rows.length - 1; ri >= 0; ri--) {
-      if (rows[ri].cells.some(c => c.committed)) return ri
-    }
-    return -1
+  const serialize = createGridSerialize({
+    getRows: () => rows,
+    getColumnCount: () => columnCount,
+    getHeaders: () => headers,
+    maxColumns: colCap,
   })
 
-  const lastCommittedCol = $derived.by(() => {
-    for (let ci = columnCount - 1; ci >= 0; ci--) {
-      if (rows.some(r => r.cells[ci]?.committed)) return ci
-    }
-    return -1
-  })
-
-  const needsTrim = $derived.by(() => {
-    if (rowCount === 0) return false
-    // Uncommitted rows/columns appended by navigation are always trimmable.
-    if (lastCommittedRow + 1 < rowCount) return true
-    if (colCap == null && lastCommittedCol + 1 < columnCount) return true
-    const isEmpty = isEmptyValue
-    const lastRow = findLastRowWithData()
-    if (lastRow < lastCommittedRow) return true
-    if (colCap != null) return false
-    let lastCol = -1
-    for (let ci = columnCount - 1; ci >= 0; ci--) {
-      if (rows.some(r => !isEmpty(r.cells[ci]?.value ?? ''))) {
-        lastCol = ci
-        break
-      }
-    }
-    return lastCol < lastCommittedCol
-  })
-
-  function findLastRowWithData(): number {
-    const isEmpty = isEmptyValue
-    for (let ri = rows.length - 1; ri >= (headers ? 1 : 0); ri--) {
-      const row = rows[ri]
-      if (row && row.cells.some(c => !isEmpty(c.value))) return ri
-    }
-    return headers ? 0 : -1
-  }
-
-  function stripTrailingEmptyRows(matrix: string[][]): string[][] {
-    let trimmed = matrix
-    while (trimmed.length > 0 && trimmed[trimmed.length - 1].every(v => isEmptyValue(v))) {
-      trimmed = trimmed.slice(0, trimmed.length - 1)
-    }
-    return trimmed
+  function currentMatrix(): string[][] {
+    return serialize.committedMatrix()
   }
 
   $effect(() => {
@@ -147,11 +68,11 @@ export function createGridModel(options: GridModelOptions) {
     // CSV text format cannot represent. Treat that lossy round-trip as a
     // self-echo so empty rows appended by the grid are not dropped on the
     // next sync.
-    if (matrixEqual(input, stripTrailingEmptyRows(lastValue))) return
+    if (matrixEqual(input, serialize.stripTrailingEmptyRows(lastValue))) return
     rows = input.map(r => ({ id: ++rowId, cells: r.map(v => newCell(v)) }))
     normalize()
     lastValue = input
-    resetHistory()
+    history.reset()
   })
 
   $effect(() => {
@@ -164,23 +85,13 @@ export function createGridModel(options: GridModelOptions) {
   let suppressHistory = false
 
   function commit() {
-    const matrix = committedMatrix()
+    const matrix = serialize.committedMatrix()
     if (!suppressHistory && !matrixEqual(matrix, lastValue)) {
-      pushUndo(lastValue)
+      history.push(lastValue)
     }
     lastValue = matrix
     pending = false
     options.onChange?.(matrix)
-  }
-
-  function pushUndo(snapshot: string[][]) {
-    const copy = snapshot.map(r => r.slice())
-    const top = undoStack[undoStack.length - 1]
-    if (top && matrixEqual(top, copy)) return
-    undoStack.push(copy)
-    if (undoStack.length > MAX_HISTORY) undoStack.shift()
-    redoStack = []
-    emitHistory()
   }
 
   function applySnapshot(snapshot: string[][]) {
@@ -193,21 +104,19 @@ export function createGridModel(options: GridModelOptions) {
 
   function undo(): boolean {
     flushCommit()
-    const snapshot = undoStack.pop()
+    const snapshot = history.undo(currentMatrix())
     if (!snapshot) return false
-    redoStack.push(currentMatrix())
     applySnapshot(snapshot)
-    emitHistory()
+    history.emit()
     return true
   }
 
   function redo(): boolean {
     flushCommit()
-    const snapshot = redoStack.pop()
+    const snapshot = history.redo(currentMatrix())
     if (!snapshot) return false
-    undoStack.push(currentMatrix())
     applySnapshot(snapshot)
-    emitHistory()
+    history.emit()
     return true
   }
 
@@ -259,13 +168,6 @@ export function createGridModel(options: GridModelOptions) {
     at = Math.min(Math.max(0, at), rows.length)
     rows.splice(at, 0, newRow(columnCount || 1))
     normalize()
-    commitImmediate()
-  }
-
-  function removeRowAt(index: number) {
-    if (index < 0 || index >= rows.length) return
-    if (headers && index === 0) return
-    rows.splice(index, 1)
     commitImmediate()
   }
 
@@ -361,7 +263,7 @@ export function createGridModel(options: GridModelOptions) {
   }
 
   function trimTrailingEmptyRows() {
-    const last = findLastRowWithData()
+    const last = serialize.findLastRowWithData()
     const keepCount = last + 1
     if (keepCount < rows.length) {
       rows = rows.slice(0, keepCount)
@@ -466,11 +368,10 @@ export function createGridModel(options: GridModelOptions) {
       return headers
     },
     get needsTrim() {
-      return needsTrim
+      return serialize.needsTrim
     },
     setValue,
     insertRowAt: insertRow,
-    removeRowAt,
     deleteRows,
     insertColumnAt,
     deleteColumns,
@@ -490,15 +391,15 @@ export function createGridModel(options: GridModelOptions) {
     commitImmediate,
     undo,
     redo,
-    onHistory,
+    onHistory: (listener: HistoryListener) => history.onChange(listener),
     get canUndo() {
-      return canUndo
+      return history.canUndo
     },
     get canRedo() {
-      return canRedo
+      return history.canRedo
     },
     matrix(): string[][] {
-      return committedMatrix()
+      return serialize.committedMatrix()
     },
   }
 }

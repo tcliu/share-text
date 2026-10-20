@@ -1,26 +1,32 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import Button from './Button.svelte'
+  import type { SizeInput } from '$lib/size-scale'
   import { createGridModel } from './use-grid-model.svelte'
-  import { createGridSelection, createInitialSelectionState, RANGE_COLOR } from './use-grid-selection.svelte'
+  import { createGridSelection, createInitialSelectionState } from './use-grid-selection.svelte'
+  import {
+    RANGE_COLOR,
+    gridCellClass,
+    gridRowClass,
+    rangeHighlightStyle,
+    rowSelectorClass,
+    columnSelectorClass,
+    labelRowBorderStyle,
+    selectAllBorderStyle,
+    rowNumberBorderStyle,
+  } from './grid-styles'
   import { createGridClipboard } from './use-grid-clipboard'
   import { createAutoScroll } from './use-grid-autoscroll.svelte'
   import { columnLetter } from './grid-utils'
-  import { createColumnResize } from './use-column-resize.svelte'
+  import { createGridColumns } from './use-grid-columns.svelte'
   import { createTableScrollSync } from './use-table-scroll-sync.svelte'
   import { createGridCellRefs } from './grid-cell-refs'
-  import TableIcon from '$lib/icons/TableIcon.svelte'
-  import RowInsertAboveIcon from '$lib/icons/RowInsertAboveIcon.svelte'
-  import RowInsertBelowIcon from '$lib/icons/RowInsertBelowIcon.svelte'
-  import ColumnInsertBeforeIcon from '$lib/icons/ColumnInsertBeforeIcon.svelte'
-  import ColumnInsertAfterIcon from '$lib/icons/ColumnInsertAfterIcon.svelte'
-  import DeleteRowsIcon from '$lib/icons/DeleteRowsIcon.svelte'
-  import DeleteColumnsIcon from '$lib/icons/DeleteColumnsIcon.svelte'
-  import TrimIcon from '$lib/icons/TrimIcon.svelte'
-  import UndoIcon from '$lib/icons/UndoIcon.svelte'
-  import RedoIcon from '$lib/icons/RedoIcon.svelte'
-  import SortAscIcon from '$lib/icons/SortAscIcon.svelte'
-  import SortDescIcon from '$lib/icons/SortDescIcon.svelte'
+  import { createGridEditor } from './use-grid-editor.svelte'
+  import { createGridSort } from './use-grid-sort.svelte'
+  import { createGridUndoRedo } from './use-grid-undo-redo.svelte'
+  import GridToolbar from './GridToolbar.svelte'
+  import CaretDownIcon from '$lib/icons/CaretDownIcon.svelte'
+  import CaretUpIcon from '$lib/icons/CaretUpIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -29,7 +35,6 @@
     onChange?: (rows: string[][]) => void
     editable?: boolean
     showHeaders?: boolean
-    testId?: string
     // Locks the grid to a fixed number of columns (e.g. key/value pairs): column
     // insert/delete is disabled and navigation/paste cannot grow past it.
     maxColumns?: number
@@ -47,6 +52,7 @@
     // When set, resized column widths are persisted to localStorage under this
     // key and restored on mount (overriding initialColumnWidths).
     storageKey?: string
+    size?: SizeInput
   }
 
   let {
@@ -54,12 +60,12 @@
     onChange,
     editable = true,
     showHeaders = $bindable(true),
-    testId = 'data-grid',
     maxColumns,
     columnLabels,
     hideHeaderToggle = false,
     initialColumnWidths,
     storageKey,
+    size = 'md',
   }: Props = $props()
 
   const model = createGridModel({
@@ -71,11 +77,6 @@
     maxColumns: untrack(() => maxColumns),
   })
 
-  const ROW_NUMBER_WIDTH = 36
-  const MIN_COLUMN_WIDTH = 60
-  // Width given to a freshly inserted column in managed mode, matching the
-  // auto-width `min-w-32` floor.
-  const DEFAULT_COLUMN_WIDTH = 128
   // The tallest an editing multiline cell may grow; beyond this the editor
   // scrolls vertically.
   const EDITOR_MAX_LINES = 5
@@ -95,99 +96,9 @@
   // EDITOR_MAX_LINES, so the overlay scrolls instead of growing further.
   const EDITOR_OVERLAY_SCROLL_STYLE = 'overflow-y:auto;'
 
-  // Column widths in pixels. Empty array means auto-width (min-w-32 fallback).
-  let columnWidths = $state<number[]>([])
-  let autoColumnWidths = $state<number[]>([])
-
   let gridContainer: HTMLElement | null = null
   let headerWrapper: HTMLElement | null = null
   let rootEl: HTMLElement | null = null
-
-  // Resolve initialColumnWidths to per-column pixels. Every column (including
-  // the last) gets an explicit width; the last column absorbs the exact
-  // remainder of the available width so the table never overflows the
-  // container on initial render.
-  // The table carries a 1px border-l (the grid's outer left edge), so the
-  // columns sum to one pixel less than the container to keep the border box
-  // inside the scroll area.
-  const TABLE_LEFT_BORDER = 1
-  function resolveInitialWidths(): number[] {
-    const available = Math.max(0, (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER)
-    const widths: number[] = []
-    let sum = 0
-    for (let i = 0; i < model.columnCount; i++) {
-      const spec = initialColumnWidths?.[i]
-      let w: number
-      if (spec?.endsWith('%')) {
-        w = Math.round((parseFloat(spec) / 100) * available)
-      } else if (spec) {
-        w = parseFloat(spec) || 128
-      } else {
-        w = 128
-      }
-      if (i < model.columnCount - 1) {
-        const clamped = Math.max(MIN_COLUMN_WIDTH, w)
-        widths.push(clamped)
-        sum += clamped
-      } else {
-        widths.push(Math.max(MIN_COLUMN_WIDTH, available - sum))
-      }
-    }
-    return widths
-  }
-
-  function equalWidths(a: number[], b: number[]): boolean {
-    return a.length === b.length && a.every((value, index) => value === b[index])
-  }
-
-  function resolveAutoWidths(): number[] {
-    const count = model.columnCount
-    if (count === 0) return []
-    const available = Math.max(
-      MIN_COLUMN_WIDTH * count,
-      (gridContainer?.clientWidth ?? rootEl?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
-    )
-    const base = Math.max(MIN_COLUMN_WIDTH, Math.floor(available / count))
-    const widths = Array.from({ length: count }, () => base)
-    widths[count - 1] = Math.max(MIN_COLUMN_WIDTH, available - base * (count - 1))
-    return widths
-  }
-
-  $effect(() => {
-    if (!gridContainer) return
-    const persisted = resize.loadPersistedWidths()
-    if (persisted != null) {
-      columnWidths = persisted
-    } else if (columnWidths.length === 0 && initialColumnWidths?.length) {
-      const resolved = resolveInitialWidths()
-      if (resolved.length > 0) columnWidths = resolved
-    }
-  })
-
-  $effect(() => {
-    if (columnWidths.length > 0) {
-      autoColumnWidths = []
-      return
-    }
-    const resolved = resolveAutoWidths()
-    if (!equalWidths(autoColumnWidths, resolved)) {
-      autoColumnWidths = resolved
-    }
-  })
-
-  let editSnapshot: { ri: number; ci: number; value: string; committed: boolean } = {
-    ri: -1,
-    ci: -1,
-    value: '',
-    committed: true,
-  }
-
-  // The cell whose editor currently has focus. Multiline cells grow to double
-  // height only while being edited; on commit/blur they return to single-line.
-  let editingCell = $state<{ ri: number; ci: number } | null>(null)
-  function isCellEditing(ri: number, ci: number): boolean {
-    return editingCell?.ri === ri && editingCell?.ci === ci
-  }
 
   // Owned-node registry: cells, editors, and selectors register their own nodes
   // through actions, so focus never queries the DOM (see grid-cell-refs.ts).
@@ -229,7 +140,7 @@
       cellRefs.colSelector(ci)?.focus()
     },
     isCellInputFocused(ri: number, ci: number) {
-      return editingCell?.ri === ri && editingCell?.ci === ci
+      return editor.isCellEditing(ri, ci)
     },
   }
 
@@ -237,44 +148,10 @@
   const selState = $state(createInitialSelectionState())
   const sel = createGridSelection({ model, focus, clipboard, state: selState, isEditable: () => editable })
 
-  let historyState = $state({ canUndo: false, canRedo: false })
-  $effect(() => {
-    return model.onHistory(state => {
-      historyState = state
-    })
-  })
+  const editor = createGridEditor({ model, focus, sel, isEditable: () => editable })
+  const undoRedo = createGridUndoRedo({ model, focus, sel, isEditable: () => editable })
+  const sort = createGridSort(model)
 
-  function restoreFocusAfterHistoryChange() {
-    const cell = sel.selectedCell
-    tick().then(() => {
-      // Undo/redo can shrink the matrix below the selected cell (e.g. undoing a
-      // paste into a navigation-appended row removes that row). Clamp to a cell
-      // that still exists so focus stays inside the grid instead of falling to
-      // <body>, where the history and navigation shortcuts no longer fire.
-      if (!cell || model.rowCount === 0 || model.columnCount === 0) return
-      const ri = Math.min(cell.ri, model.rowCount - 1)
-      const ci = Math.min(cell.ci, model.columnCount - 1)
-      if (!model.rows[ri]?.cells[ci]) return
-      if (ri !== cell.ri || ci !== cell.ci) sel.setActiveCell(ri, ci)
-      focus.cellBox(ri, ci)
-    })
-  }
-
-  function handleHistoryKeydown(event: KeyboardEvent) {
-    if (!editable) return
-    if (!(event.ctrlKey || event.metaKey)) return
-    const key = event.key.toLowerCase()
-    if (key === 'z') {
-      event.preventDefault()
-      if (event.shiftKey) model.redo()
-      else model.undo()
-      restoreFocusAfterHistoryChange()
-    } else if (key === 'y') {
-      event.preventDefault()
-      model.redo()
-      restoreFocusAfterHistoryChange()
-    }
-  }
   const autoScroll = createAutoScroll({
     getContainer: () => gridContainer,
     isDragging: sel.isDragging,
@@ -285,75 +162,20 @@
 
   $effect(() => () => autoScroll.stop())
 
-  // --- Column resize ---
+  // --- Column widths and resize ---
   //
-  // Each data column is bounded by two splitters. Dragging the splitter between
-  // columns ci and ci+1 re-partitions those two adjacent columns, keeping the
-  // outer splitters (and therefore all other columns) fixed. The splitter after
-  // the last column moves the table's right edge instead.
-
-  const resize = createColumnResize({
+  // The width engine (initial/auto widths, container rescale, and the resize
+  // handles) lives in `use-grid-columns`; the grid keeps only presentation. Each
+  // data column is bounded by two splitters: dragging the splitter between
+  // columns ci and ci+1 re-partitions those two adjacent columns, and the
+  // splitter after the last column moves the table's right edge.
+  const columns = createGridColumns({
     getColumnCount: () => model.columnCount,
     getContainer: () => gridContainer,
-    getColumnWidths: () => columnWidths,
-    setColumnWidths: (widths: number[]) => {
-      columnWidths = widths
-    },
+    getViewport: () => rootEl,
     getColumnCellWidth: (ci: number) => cellRefs.colSelector(ci)?.offsetWidth ?? 128,
-    getMinWidth: () => MIN_COLUMN_WIDTH,
-    getFillWidthOffset: () => TABLE_LEFT_BORDER + ROW_NUMBER_WIDTH,
+    getInitialColumnWidths: () => initialColumnWidths,
     getStorageKey: () => storageKey,
-  })
-
-  // Rescale every column proportionally so the table fills the container when it
-  // can, mirroring the two-table reference's container resize: the target
-  // usable width is `max(minimum × count, container − rownum − border)`, so a
-  // container too narrow to fit even the minimum-width columns keeps the table
-  // overflowing (horizontal scroll preserved) instead of squeezing it. The last
-  // column then absorbs the exact remainder so the table fills edge-to-edge.
-  // Auto-width grids (no explicit widths) are left alone.
-  function rescaleToContainer() {
-    const available = Math.max(
-      MIN_COLUMN_WIDTH * model.columnCount,
-      (gridContainer?.clientWidth ?? 0) - ROW_NUMBER_WIDTH - TABLE_LEFT_BORDER,
-    )
-    let total = 0
-    for (let i = 0; i < model.columnCount; i++) total += columnWidths[i]
-    if (total <= 0) return
-    const last = model.columnCount - 1
-    const next: number[] = []
-    for (let i = 0; i < model.columnCount; i++) {
-      if (i === last) {
-        next.push(columnWidths[i])
-      } else {
-        next.push(Math.max(MIN_COLUMN_WIDTH, Math.round((columnWidths[i] / total) * available)))
-      }
-    }
-    let used = 0
-    for (let i = 0; i < last; i++) used += next[i]
-    next[last] = Math.max(MIN_COLUMN_WIDTH, available - used)
-    columnWidths = next
-  }
-
-  // Re-fit columns only when the outer viewport resizes (e.g. the pane
-  // splitter), never when the body wrapper's own scrollbar appears — that would
-  // immediately collapse an intentionally overflowing table into a fitted one.
-  $effect(() => {
-    const viewport = rootEl
-    if (!viewport) return
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => {
-      if (columnWidths.length > 0) {
-        rescaleToContainer()
-        return
-      }
-      const resolved = resolveAutoWidths()
-      if (!equalWidths(autoColumnWidths, resolved)) {
-        autoColumnWidths = resolved
-      }
-    })
-    observer.observe(viewport)
-    return () => observer.disconnect()
   })
 
   createTableScrollSync({
@@ -362,62 +184,11 @@
     padHeaderForScrollbar: true,
   })
 
-  // --- Column width style helpers ---
-
-  // True when any column has an explicit pixel width, switching the table to
-  // fixed layout so each sized column keeps its exact width.
-  const managedWidths = $derived(columnWidths.length > 0)
-  const renderedColumnWidths = $derived(managedWidths ? columnWidths : autoColumnWidths)
-
-  // Total table width: row-number column plus all data columns.
-  const totalWidth = $derived.by(() => {
-    let sum = ROW_NUMBER_WIDTH
-    for (let i = 0; i < model.columnCount; i++) {
-      sum += renderedColumnWidths[i] ?? 0
-    }
-    return sum
-  })
-
-  // Keep columnWidths aligned with the current column count whenever the grid
-  // structure changes in managed mode (e.g. columns inserted/removed). A newly
-  // inserted column gets a fixed default width — never a live measurement, since
-  // mid-effect its cells render at 0px (the fixed-layout table width hasn't been
-  // updated yet) and would pin the column invisible. After a removal the
-  // surviving columns are rescaled to refill the container, so a deleted column
-  // never leaves a gap at the table's right edge.
-  $effect(() => {
-    const count = model.columnCount
-    if (columnWidths.length === count) return
-    if (count === 0) return
-    if (columnWidths.length === 0 && initialColumnWidths?.length) {
-      columnWidths = resolveInitialWidths()
-      return
-    }
-    if (columnWidths.length === 0) return
-    const removed = columnWidths.length > count
-    const next: number[] = []
-    for (let i = 0; i < count; i++) {
-      next.push(columnWidths[i] ?? DEFAULT_COLUMN_WIDTH)
-    }
-    columnWidths = next
-    if (removed) rescaleToContainer()
-  })
-
-  function columnWidthStyle(ci: number): string {
-    const w = renderedColumnWidths[ci]
-    if (w == null) return ''
-    return `width:${w}px;min-width:${w}px;`
-  }
-
-  function mutationDisabled(disabled = false): boolean {
-    return !editable || disabled
-  }
-
   // `expanded` marks a cell whose editor is a multiline overlay: the cell is
   // positioned and raised so the absolute editor paints on top of the rows
   // below instead of growing the row.
   function cellStyles(ci: number, highlightStyle: string, expanded: boolean): string {
-    const ws = columnWidthStyle(ci)
+    const ws = columns.columnWidthStyle(ci)
     if (!ws && !highlightStyle && !expanded) return ''
     const parts: string[] = []
     if (ws) parts.push(ws)
@@ -429,119 +200,11 @@
   function handleWindowMouseUp() {
     sel.endDrag()
     autoScroll.stop()
-    resize.handleResizeMouseUp()
-  }
-
-  function handleInputFocus(ri: number, ci: number) {
-    const cell = model.rows[ri]?.cells[ci]
-    editSnapshot = { ri, ci, value: cell?.value ?? '', committed: cell?.committed ?? true }
-    sel.setActiveCell(ri, ci)
-    editingCell = { ri, ci }
-  }
-
-  function handleInputKeydown(event: KeyboardEvent, ri: number, ci: number) {
-    if (event.key === 'Tab') {
-      let next: { ri: number; ci: number } | null = null
-      if (event.shiftKey) {
-        if (ci > 0) {
-          next = { ri, ci: ci - 1 }
-        } else if (ri > 0) {
-          next = { ri: ri - 1, ci: model.columnCount - 1 }
-        }
-      } else if (ci < model.columnCount - 1) {
-        next = { ri, ci: ci + 1 }
-      } else if (ri < model.rowCount - 1) {
-        next = { ri: ri + 1, ci: 0 }
-      }
-      // No in-grid target at the boundary: leave the key alone so Tab carries
-      // focus out of the grid in natural document order instead of trapping it
-      // on the edge cell.
-      if (next === null) return
-      event.preventDefault()
-      focus.cellInput(next.ri, next.ci)
-      return
-    } else if (event.key === 'Enter' && event.shiftKey) {
-      // Insert a newline (default textarea behavior); the oninput handler
-      // persists it and the cell grows to double height.
-    } else if (event.key === 'Enter') {
-      event.preventDefault()
-      const nextRi = Math.min(model.rowCount - 1, ri + 1)
-      sel.setActiveCell(nextRi, ci)
-      ;(event.target as HTMLTextAreaElement).blur()
-      tick().then(() => focus.cellBox(nextRi, ci))
-    } else if (event.key === 'Escape') {
-      event.preventDefault()
-      const cell = model.rows[ri]?.cells[ci]
-      if (cell && editSnapshot.ri === ri && editSnapshot.ci === ci) {
-        cell.value = editSnapshot.value
-        cell.committed = editSnapshot.committed
-      }
-      ;(event.target as HTMLTextAreaElement).blur()
-      model.pruneTrailingPendingRows(ri - 1)
-      model.pruneTrailingPendingColumns(ci - 1)
-      const target = model.rows[ri] ? ri : ri - 1
-      if (model.rows[target]) {
-        tick().then(() => focus.cellBox(target, ci))
-      }
-    }
-  }
-
-  function handleBoxPaste(event: ClipboardEvent, ri: number, ci: number) {
-    if (!editable) return
-    if (event.target !== event.currentTarget) return
-    const text = event.clipboardData?.getData('text') ?? ''
-    if (!text) return
-    event.preventDefault()
-    model.applyPastedText(ri, ci, text)
-    sel.setActiveCell(ri, ci)
-    focus.cellInput(ri, ci)
-  }
-
-  function handleBodyBlur() {
-    editingCell = null
-    model.flushCommit()
+    columns.resize.handleResizeMouseUp()
   }
 
   function handleTrim() {
     sel.trimSelected()
-  }
-
-  // --- Sorting ---
-  //
-  // The column label row (topmost header row) sorts the data rows by the
-  // clicked column. Clicking the same column again toggles asc/desc; clicking
-  // a different column restarts at ascending. When a cell in the sort column is
-  // edited afterwards, the order is invalidated and the active sort indicator
-  // is hidden so the user can resort.
-
-  let sortColumn = $state<number | null>(null)
-  let sortDirection = $state<'asc' | 'desc'>('asc')
-  // Snapshot of the sort column's values captured when the sort was applied.
-  // Any change in that column clears the active sort indicator.
-  let sortSnapshot = $state<string[] | null>(null)
-
-  function columnValues(ci: number): string[] {
-    return model.rows.map(r => r.cells[ci]?.value ?? '')
-  }
-
-  $effect(() => {
-    const ci = sortColumn
-    const snapshot = sortSnapshot
-    if (ci == null || snapshot == null) return
-    const current = columnValues(ci)
-    const same = current.length === snapshot.length && current.every((v, i) => v === snapshot[i])
-    if (!same) {
-      sortColumn = null
-      sortDirection = 'asc'
-      sortSnapshot = null
-    }
-  })
-
-  function handleSortClick(ci: number, direction: 'asc' | 'desc' = 'asc') {
-    sortColumn = ci
-    sortDirection = direction
-    model.sortRows(ci, direction)
-    sortSnapshot = columnValues(ci)
   }
 </script>
 
@@ -549,7 +212,7 @@
   onmouseup={handleWindowMouseUp}
   onmousemove={event => {
     autoScroll.onWindowMouseMove(event)
-    resize.handleResizeMouseMove(event)
+    columns.resize.handleResizeMouseMove(event)
   }} />
 
 <!-- False positive: the root is a shortcut host, not an interactive element.
@@ -557,143 +220,39 @@
      wraps; the container itself has no role and needs none. -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  data-testid={testId}
-  onkeydown={handleHistoryKeydown}
+  data-testid="data-grid"
+  onkeydown={undoRedo.handleHistoryKeydown}
   class="flex h-full flex-col gap-2 bg-slate-950 p-2 text-slate-200">
-  <div class="flex flex-none flex-wrap items-center justify-between gap-3">
-    <div class="flex flex-wrap items-center gap-1">
-      {#if !hideHeaderToggle}
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('grid.toggleHeader')}
-          tooltip={i18n.t('grid.toggleHeader')}
-          ariaPressed={showHeaders}
-          onClick={() => (showHeaders = !showHeaders)}
-          disabled={!editable}>
-          {#snippet icon()}
-            <TableIcon />
-          {/snippet}
-        </Button>
-      {/if}
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.insertRowAbove')}
-        tooltip={i18n.t('grid.insertRowAbove')}
-        onClick={() => sel.insertRowAt(sel.actionRow, false)}
-        disabled={mutationDisabled(sel.rowInsertDisabled)}>
-        {#snippet icon()}
-          <RowInsertAboveIcon />
-        {/snippet}
-      </Button>
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.insertRowBelow')}
-        tooltip={i18n.t('grid.insertRowBelow')}
-        onClick={() => (sel.noSelection ? sel.addRow() : sel.insertRowAt(sel.actionRow, true))}
-        disabled={!editable}>
-        {#snippet icon()}
-          <RowInsertBelowIcon />
-        {/snippet}
-      </Button>
-      {#if maxColumns == null}
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('grid.insertColumnBefore')}
-          tooltip={i18n.t('grid.insertColumnBefore')}
-          onClick={() => sel.insertColumnAt(sel.actionCol, true)}
-          disabled={mutationDisabled(sel.colInsertDisabled)}>
-          {#snippet icon()}
-            <ColumnInsertBeforeIcon />
-          {/snippet}
-        </Button>
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('grid.insertColumnAfter')}
-          tooltip={i18n.t('grid.insertColumnAfter')}
-          onClick={() => (sel.noSelection ? sel.addColumn() : sel.insertColumnAt(sel.actionCol + 1, true))}
-          disabled={!editable}>
-          {#snippet icon()}
-            <ColumnInsertAfterIcon />
-          {/snippet}
-        </Button>
-      {/if}
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.deleteRows')}
-        tooltip={i18n.t('grid.deleteRows')}
-        onClick={() => sel.deleteSelectedRows()}
-        disabled={mutationDisabled(selState.selectedRows.size === 0)}>
-        {#snippet icon()}
-          <DeleteRowsIcon />
-        {/snippet}
-      </Button>
-      {#if maxColumns == null}
-        <Button
-          size="sm"
-          ariaLabel={i18n.t('grid.deleteColumns')}
-          tooltip={i18n.t('grid.deleteColumns')}
-          onClick={() => sel.deleteSelectedColumns()}
-          disabled={mutationDisabled(selState.selectedCols.size === 0)}>
-          {#snippet icon()}
-            <DeleteColumnsIcon />
-          {/snippet}
-        </Button>
-      {/if}
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.trimTrailing')}
-        tooltip={i18n.t('grid.trimTrailing')}
-        onClick={handleTrim}
-        disabled={mutationDisabled(!model.needsTrim)}>
-        {#snippet icon()}
-          <TrimIcon />
-        {/snippet}
-      </Button>
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.undo')}
-        tooltip={i18n.t('grid.undo')}
-        onClick={() => {
-          model.undo()
-          restoreFocusAfterHistoryChange()
-        }}
-        disabled={mutationDisabled(!historyState.canUndo)}>
-        {#snippet icon()}
-          <UndoIcon />
-        {/snippet}
-      </Button>
-      <Button
-        size="sm"
-        ariaLabel={i18n.t('grid.redo')}
-        tooltip={i18n.t('grid.redo')}
-        onClick={() => {
-          model.redo()
-          restoreFocusAfterHistoryChange()
-        }}
-        disabled={mutationDisabled(!historyState.canRedo)}>
-        {#snippet icon()}
-          <RedoIcon />
-        {/snippet}
-      </Button>
-    </div>
-    <span class="text-xs text-slate-400"
-      >{i18n.t('grid.rowColCount', { rows: model.rowCount, columns: model.columnCount })}</span>
-  </div>
+  <GridToolbar
+    {size}
+    {model}
+    {sel}
+    {showHeaders}
+    onToggleHeaders={() => (showHeaders = !showHeaders)}
+    {editable}
+    {hideHeaderToggle}
+    {maxColumns}
+    historyState={undoRedo.historyState}
+    onTrim={handleTrim}
+    onUndo={undoRedo.undo}
+    onRedo={undoRedo.redo} />
 
   <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md" bind:this={rootEl}>
     <div class="flex-none overflow-hidden" bind:this={headerWrapper}>
       <table
         role="grid"
         aria-label={i18n.t('grid.spreadsheet')}
-        aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
+        aria-rowcount={model.rowCount + 1}
         aria-colcount={model.columnCount}
         class="border-separate border-spacing-0 border-t border-l border-slate-800 text-sm"
-        style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
-        {#if renderedColumnWidths.length > 0}
+        style={columns.renderedColumnWidths.length > 0
+          ? `table-layout:fixed;width:${columns.totalWidth}px;`
+          : 'width:100%;'}>
+        {#if columns.renderedColumnWidths.length > 0}
           <colgroup>
             <col style="width:2.25rem;" />
             {#each Array.from({ length: model.columnCount }) as _, ci}
-              <col style="width:{renderedColumnWidths[ci]}px;" />
+              <col style="width:{columns.renderedColumnWidths[ci]}px;" />
             {/each}
           </colgroup>
         {/if}
@@ -704,22 +263,27 @@
                 role="columnheader"
                 aria-label={i18n.t('grid.selectAll')}
                 class="sticky top-0 left-0 z-30 w-9 border-r border-b border-r-slate-500 border-b-slate-600 bg-slate-900 p-0 text-center font-normal"
-                style="min-width:2.25rem;max-width:2.25rem;{sel.selectAllBorderStyle()}"
+                style="min-width:2.25rem;max-width:2.25rem;{selectAllBorderStyle(sel.isCellSelected(0, 0))}"
                 data-select-all
                 tabindex="-1"
                 onmousedown={sel.handleSelectAllMousedown}
                 onkeydown={sel.handleSelectAllKeydown}></th>
               {#each Array.from({ length: model.columnCount }) as _, ci}
-                {@const isSortActive = sortColumn === ci}
-                {@const isSortAsc = isSortActive && sortDirection === 'asc'}
-                {@const isSortDesc = isSortActive && sortDirection === 'desc'}
+                {@const isSortActive = sort.sortColumn === ci}
+                {@const isSortAsc = isSortActive && sort.sortDirection === 'asc'}
+                {@const isSortDesc = isSortActive && sort.sortDirection === 'desc'}
                 <th
                   use:cellRefs.colSelectorRef={{ ci }}
                   role="columnheader"
                   aria-colindex={ci + 1}
                   aria-sort={isSortActive ? (isSortAsc ? 'ascending' : 'descending') : undefined}
-                  class="select-none {sel.columnSelectorClass(ci, ci === model.columnCount - 1)} group"
-                  style="position:relative;{columnWidthStyle(ci)}{sel.labelRowBorderStyle(ci)}"
+                  class="select-none {columnSelectorClass(
+                    sel.isColumnSelected(ci),
+                    ci === model.columnCount - 1,
+                  )} group"
+                  style="position:relative;{columns.columnWidthStyle(ci)}{labelRowBorderStyle(
+                    sel.isCellSelected(0, ci),
+                  )}"
                   data-col-selector={ci}
                   tabindex="-1"
                   onmousedown={event => sel.handleColumnSelectorMousedown(event, ci)}
@@ -728,41 +292,45 @@
                   <span class="flex w-full items-center justify-center gap-1.5 text-center">
                     <span>{columnLabels?.[ci] ?? columnLetter(ci)}</span>
                     <span
-                      class="flex flex-col text-slate-400 transition-opacity {isSortActive
+                      class="flex flex-col gap-0.5 text-slate-400 transition-opacity {isSortActive
                         ? 'opacity-100'
                         : '[@media(hover:hover)]:opacity-0'} group-hover:opacity-100 focus-within:opacity-100">
                       <button
                         type="button"
-                        class="leading-none transition-colors outline-none {isSortAsc
+                        class="flex leading-none transition-colors outline-none {isSortAsc
                           ? 'text-cyan-400'
                           : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={i18n.t('grid.sortAsc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
-                        onclick={() => editable && handleSortClick(ci, 'asc')}
+                        onclick={() => editable && sort.handleSortClick(ci, 'asc')}
                         disabled={!editable}>
-                        <SortAscIcon size="xs" />
+                        <!-- The caret is cropped tight to the triangle, so `size`
+                             is the width it renders at (0.8125 × 10). -->
+                        <CaretUpIcon size={10} />
                       </button>
                       <button
                         type="button"
-                        class="-mt-1 leading-none transition-colors outline-none {isSortDesc
+                        class="flex leading-none transition-colors outline-none {isSortDesc
                           ? 'text-cyan-400'
                           : 'hover:text-cyan-300 focus:text-cyan-300'}"
                         aria-label={i18n.t('grid.sortDesc', { name: columnLabels?.[ci] ?? columnLetter(ci) })}
                         onmousedown={event => event.stopPropagation()}
-                        onclick={() => editable && handleSortClick(ci, 'desc')}
+                        onclick={() => editable && sort.handleSortClick(ci, 'desc')}
                         disabled={!editable}>
-                        <SortDescIcon size="xs" />
+                        <CaretDownIcon size={10} />
                       </button>
                     </span>
                   </span>
                   {#if editable}
                     <button
                       type="button"
-                      class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40"
-                      style={ci < model.columnCount - 1 ? 'right:-3px;' : 'right:0;'}
+                      class="absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize border-0 bg-transparent p-0 outline-none hover:bg-cyan-500/40 focus-visible:bg-cyan-500/40 {ci <
+                      model.columnCount - 1
+                        ? 'translate-x-1/2'
+                        : ''}"
                       aria-label={i18n.t('grid.resizeColumn', { index: ci + 1 })}
-                      onmousedown={event => resize.startColumnResize(event, ci)}
-                      onkeydown={event => resize.handleResizeKeydown(event, ci)}></button>
+                      onmousedown={event => columns.resize.startColumnResize(event, ci)}
+                      onkeydown={event => columns.resize.handleResizeKeydown(event, ci)}></button>
                   {/if}
                 </th>
               {/each}
@@ -772,41 +340,48 @@
                 <th
                   role="columnheader"
                   class="sticky top-6 left-0 z-30 w-9 border-r border-b border-r-slate-500 border-b-slate-600 bg-slate-900 p-0 text-center font-normal"
-                  style="min-width:2.25rem;max-width:2.25rem;{sel.rowNumberBorderStyle(0)}"></th>
+                  style="min-width:2.25rem;max-width:2.25rem;{rowNumberBorderStyle(sel.isCellSelected(0, 0))}"></th>
                 {#each model.rows[0].cells as cell, ci (cell.id)}
                   <th
                     use:cellRefs.cellBoxRef={{ ri: 0, ci }}
                     role="columnheader"
                     aria-colindex={ci + 1}
                     aria-selected={sel.isCellSelected(0, ci)}
-                    class={sel.cellClass(
+                    class={gridCellClass(
                       'min-w-32 border-r border-b border-r-slate-800 border-b-slate-600 p-0 font-semibold outline-none',
-                      0,
-                      ci,
+                      sel.isCellSelected(0, ci),
                     )}
-                    style={cellStyles(ci, sel.rangeHighlightStyle(0, ci), false)}
+                    style={cellStyles(
+                      ci,
+                      rangeHighlightStyle(
+                        sel.isCellSelected(0, ci),
+                        sel.isCellSelected(0, ci + 1),
+                        sel.isCellSelected(1, ci),
+                      ),
+                      false,
+                    )}
                     tabindex="-1"
                     onmousedown={event => sel.handleCellMousedown(event, 0, ci)}
                     ondblclick={event => sel.handleCellDoubleClick(event, 0, ci)}
                     onmouseenter={() => sel.handleCellMouseOver(0, ci)}
                     onkeydown={event => sel.handleBoxKeydown(event, 0, ci)}
-                    onpaste={event => handleBoxPaste(event, 0, ci)}>
+                    onpaste={event => editor.handleBoxPaste(event, 0, ci)}>
                     <textarea
                       use:cellRefs.cellInputRef={{ ri: 0, ci }}
                       data-row={0}
                       data-col={ci}
-                      rows={isCellEditing(0, ci) && cell.value.includes('\n') ? 2 : 1}
+                      rows={editor.isCellEditing(0, ci) && cell.value.includes('\n') ? 2 : 1}
                       wrap="off"
                       class="w-full resize-none overflow-hidden border-0 bg-transparent px-2 py-1 text-slate-200 outline-none focus:bg-slate-800"
                       value={cell.value}
                       readonly={!editable}
                       oninput={event => editable && model.setValue(0, ci, event.currentTarget.value)}
                       onfocus={() => {
-                        handleInputFocus(0, ci)
+                        editor.handleInputFocus(0, ci)
                         focus.cellInputAtEnd(0, ci)
                       }}
-                      onblur={() => handleBodyBlur()}
-                      onkeydown={event => editable && handleInputKeydown(event, 0, ci)}></textarea>
+                      onblur={() => editor.handleBodyBlur()}
+                      onkeydown={event => editable && editor.handleInputKeydown(event, 0, ci)}></textarea>
                   </th>
                 {/each}
               </tr>
@@ -819,15 +394,17 @@
       <table
         role="grid"
         aria-label={i18n.t('grid.spreadsheet')}
-        aria-rowcount={(showHeaders ? 2 : 1) + (showHeaders ? model.rowCount - 1 : model.rowCount)}
+        aria-rowcount={model.rowCount + 1}
         aria-colcount={model.columnCount}
         class="border-separate border-spacing-0 border-l border-slate-800 text-sm"
-        style={renderedColumnWidths.length > 0 ? `table-layout:fixed;width:${totalWidth}px;` : 'width:100%;'}>
-        {#if renderedColumnWidths.length > 0}
+        style={columns.renderedColumnWidths.length > 0
+          ? `table-layout:fixed;width:${columns.totalWidth}px;`
+          : 'width:100%;'}>
+        {#if columns.renderedColumnWidths.length > 0}
           <colgroup>
             <col style="width:2.25rem;" />
             {#each Array.from({ length: model.columnCount }) as _, ci}
-              <col style="width:{renderedColumnWidths[ci]}px;" />
+              <col style="width:{columns.renderedColumnWidths[ci]}px;" />
             {/each}
           </colgroup>
         {/if}
@@ -835,14 +412,14 @@
           <tbody>
             {#each showHeaders ? model.rows.slice(1) : model.rows as row, ri (row.id)}
               {@const actualRi = showHeaders ? ri + 1 : ri}
-              <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={sel.trClass(actualRi)}>
+              <tr aria-rowindex={showHeaders ? ri + 3 : ri + 2} class={gridRowClass(actualRi)}>
                 <td
                   use:cellRefs.rowSelectorRef={{ ri: actualRi }}
                   role="rowheader"
                   aria-rowindex={showHeaders ? ri + 3 : ri + 2}
                   aria-selected={sel.selectedRows.has(actualRi)}
-                  class="select-none {sel.rowSelectorClass(actualRi)}"
-                  style={sel.rowNumberBorderStyle(actualRi)}
+                  class="select-none {rowSelectorClass(actualRi, sel.isRowSelected(actualRi))}"
+                  style={rowNumberBorderStyle(sel.isCellSelected(actualRi, 0))}
                   data-row-selector={actualRi}
                   tabindex="-1"
                   onmousedown={event => sel.handleRowSelectorMousedown(event, actualRi)}
@@ -852,21 +429,32 @@
                 </td>
                 {#each row.cells as cell, ci (cell.id)}
                   {@const lineCount = cell.value.split('\n').length}
-                  {@const expanded = isCellEditing(actualRi, ci) && lineCount > 1}
+                  {@const expanded = editor.isCellEditing(actualRi, ci) && lineCount > 1}
                   {@const editorLines = Math.min(lineCount, EDITOR_MAX_LINES)}
                   <td
                     use:cellRefs.cellBoxRef={{ ri: actualRi, ci }}
                     role="gridcell"
                     aria-colindex={ci + 1}
                     aria-selected={sel.isCellSelected(actualRi, ci)}
-                    class={sel.cellClass('min-w-32 border-r border-b border-slate-800 p-0 outline-none', actualRi, ci)}
-                    style={cellStyles(ci, sel.rangeHighlightStyle(actualRi, ci), expanded)}
+                    class={gridCellClass(
+                      'min-w-32 border-r border-b border-slate-800 p-0 outline-none',
+                      sel.isCellSelected(actualRi, ci),
+                    )}
+                    style={cellStyles(
+                      ci,
+                      rangeHighlightStyle(
+                        sel.isCellSelected(actualRi, ci),
+                        sel.isCellSelected(actualRi, ci + 1),
+                        sel.isCellSelected(actualRi + 1, ci),
+                      ),
+                      expanded,
+                    )}
                     tabindex="-1"
                     onmousedown={event => sel.handleCellMousedown(event, actualRi, ci)}
                     ondblclick={event => sel.handleCellDoubleClick(event, actualRi, ci)}
                     onmouseenter={() => sel.handleCellMouseOver(actualRi, ci)}
                     onkeydown={event => sel.handleBoxKeydown(event, actualRi, ci)}
-                    onpaste={event => handleBoxPaste(event, actualRi, ci)}>
+                    onpaste={event => editor.handleBoxPaste(event, actualRi, ci)}>
                     <textarea
                       use:cellRefs.cellInputRef={{ ri: actualRi, ci }}
                       data-row={actualRi}
@@ -880,9 +468,9 @@
                       value={cell.value}
                       readonly={!editable}
                       oninput={event => editable && model.setValue(actualRi, ci, event.currentTarget.value)}
-                      onfocus={() => handleInputFocus(actualRi, ci)}
-                      onblur={() => handleBodyBlur()}
-                      onkeydown={event => editable && handleInputKeydown(event, actualRi, ci)}></textarea>
+                      onfocus={() => editor.handleInputFocus(actualRi, ci)}
+                      onblur={() => editor.handleBodyBlur()}
+                      onkeydown={event => editable && editor.handleInputKeydown(event, actualRi, ci)}></textarea>
                   </td>
                 {/each}
               </tr>
@@ -893,8 +481,8 @@
 
       {#if model.rowCount === 0}
         <div class="flex h-full flex-col items-center justify-center gap-3 text-sm text-slate-400">
-          <span>No content to preview</span>
-          <Button size="sm" variant="secondary" onClick={() => sel.addRow()} disabled={!editable}>Add row</Button>
+          <span>{i18n.t('grid.noContent')}</span>
+          <Button variant="secondary" {size} onClick={() => sel.addRow()} disabled={!editable}>{i18n.t('grid.addRow')}</Button>
         </div>
       {/if}
     </div>

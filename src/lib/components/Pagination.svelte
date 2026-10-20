@@ -5,23 +5,24 @@
   import ChevronLeftIcon from '$lib/icons/ChevronLeftIcon.svelte'
   import ChevronRightIcon from '$lib/icons/ChevronRightIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
-  import { resolveSelectStep, type SelectSize } from './select-dropdown-styles'
+  import type { SizeInput } from '$lib/size-scale'
+  import type { PaginationLabels } from './pagination-labels'
+  import { SELECT_RATIOS } from './select-dropdown-styles'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
   const i18n = getI18nContext()
 
   interface Props {
     total: number
     pageSize: number
     currentPage: number
-    size?: SelectSize
+    size?: SizeInput
     className?: string
-    pageSizeOptions?: number[]
     onPageChange: (page: number) => void
-    onPageSizeChange: (size: number) => void
-    previousLabel?: string
-    nextLabel?: string
-    pageSizeLabel?: string
-    currentPageLabel?: string
-    paginationLabel?: string
+    onPageSizeChange?: (size: number) => void
+    // Page-size choices offered by the dropdown; defaults to [10, 20, 50].
+    pageSizeOptions?: number[]
+    // Per-field label overrides; each unset field falls back to its i18n key.
+    labels?: PaginationLabels
     // Arbitrary trailing content pinned to the pagination row's right edge
     // (e.g. a row total). Omitted when undefined.
     trailing?: Snippet
@@ -31,70 +32,57 @@
     total,
     pageSize,
     currentPage,
-    size = 'sm',
+    size = 'md',
     className = '',
-    pageSizeOptions = [10, 20, 50],
     onPageChange,
     onPageSizeChange,
-    previousLabel,
-    nextLabel,
-    pageSizeLabel,
-    currentPageLabel,
-    paginationLabel,
+    pageSizeOptions = [10, 20, 50],
+    labels,
     trailing,
   }: Props = $props()
 
   // Derived (not plain consts) so locale switches re-resolve the labels.
-  const resolvedPreviousLabel = $derived(previousLabel ?? i18n.t('pagination.previous'))
-  const resolvedNextLabel = $derived(nextLabel ?? i18n.t('pagination.next'))
-  const resolvedPageSizeLabel = $derived(pageSizeLabel ?? i18n.t('pagination.pageSize'))
-  const resolvedCurrentPageLabel = $derived(currentPageLabel ?? i18n.t('pagination.current'))
-  const resolvedPaginationLabel = $derived(paginationLabel ?? i18n.t('pagination.label'))
+  const resolvedPreviousLabel = $derived(labels?.previous ?? i18n.t('pagination.previous'))
+  const resolvedNextLabel = $derived(labels?.next ?? i18n.t('pagination.next'))
+  const resolvedPageSizeLabel = $derived(labels?.pageSize ?? i18n.t('pagination.pageSize'))
+  const resolvedCurrentPageLabel = $derived(labels?.current ?? i18n.t('pagination.current'))
+  const resolvedPaginationLabel = $derived(labels?.nav ?? i18n.t('pagination.label'))
 
   const PAGE_JUMP_DELTA = 2
 
-  const SIZE_CLASS = {
-    xs: {
-      iconButton: 'h-8 w-8',
-      pageButton: 'h-8 min-w-8 px-2',
-      pageInput: 'h-8 min-w-8',
-      pageInputPad: '0.5rem',
-      text: 'text-xs',
-      iconSize: 'sm',
-    },
-    sm: {
-      iconButton: 'h-9 w-9',
-      pageButton: 'h-9 min-w-9 px-2.5',
-      pageInput: 'h-9 min-w-9',
-      pageInputPad: '0.625rem',
-      text: 'text-sm',
-      iconSize: 'sm',
-    },
-    md: {
-      iconButton: 'h-10 w-10',
-      pageButton: 'h-10 min-w-10 px-3',
-      pageInput: 'h-10 min-w-10',
-      pageInputPad: '0.75rem',
-      text: 'text-md',
-      iconSize: 'md',
-    },
-    lg: {
-      iconButton: 'h-11 w-11',
-      pageButton: 'h-11 min-w-11 px-3.5',
-      pageInput: 'h-11 min-w-11',
-      pageInputPad: '0.875rem',
-      text: 'text-lg',
-      iconSize: 'md',
-    },
-  } as const
+  // Continuous chrome: every metric is a fixed ratio of the size dimension
+  // (calibrated at the md default), so numeric sizes scale smoothly instead
+  // of snapping to tiers. The raw size flows to the inner page-size dropdown,
+  // which interpolates it through the same dimension. The line and vertical
+  // padding are the page-size dropdown trigger's own, so every page block
+  // lands on its height (see `pgStyle` below); the direction glyphs ride a
+  // trimmed share of the icon slot (0.75×, as `NumberInput`'s steppers do) so
+  // they read lighter than the page numbers.
+  const PG_RATIOS = { line: SELECT_RATIOS.line, padY: SELECT_RATIOS.padY, padX: 0.75, font: 0.875, icon: 0.75 }
+
+  const pgMetrics = $derived(dimensionMetrics(size, PG_RATIOS))
+  // A page block shares the page-size dropdown trigger's box — the select line
+  // plus its vertical padding, plus the 1px border top and bottom — so the page
+  // buttons, the jump input, and the dropdown all sit at one height. Deriving
+  // it from those ratios keeps the two from drifting when either box is tuned.
+  const pgStyle = $derived(
+    `${sizeVarStyle('pg', pgMetrics)};--pg-btn:calc(var(--pg-line) + 2 * var(--pg-pad-y) + 2px)`,
+  )
+  const pgIconPx = $derived(pgMetrics.icon)
 
   const totalPages = $derived(Math.max(1, Math.ceil(total / pageSize)))
   const canGoPrev = $derived(currentPage > 1)
   const canGoNext = $derived(currentPage < totalPages)
 
-  // Stepped chrome for the buttons and text; the raw size flows to the inner
-  // page-size dropdown, which interpolates it. Names render exactly as before.
-  const step = $derived(resolveSelectStep(size))
+  const iconButtonClass =
+    'relative inline-flex h-[var(--pg-btn)] w-[var(--pg-btn)] items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40'
+
+  // Sizing-only fragment shared by the page buttons and the ellipsis
+  // placeholders (which carry no border, surface, or hover chrome).
+  const pageButtonBox = 'h-[var(--pg-btn)] min-w-[var(--pg-btn)] px-[var(--pg-pad-x)]'
+
+  const pageButtonClass =
+    `relative inline-flex ${pageButtonBox} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`
 
   const pageNumbers = $derived.by(() => {
     if (totalPages <= 7) {
@@ -107,14 +95,6 @@
 
   const showStartEllipsis = $derived(pageNumbers[0] > 1)
   const showEndEllipsis = $derived(pageNumbers[pageNumbers.length - 1] < totalPages)
-
-  const iconButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[step].iconButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
-  )
-
-  const pageButtonClass = $derived(
-    `relative inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center rounded-md border border-slate-700 bg-slate-950 font-semibold text-slate-100 outline-none transition hover:border-cyan-500 hover:text-cyan-300 focus:border-cyan-500 focus:text-cyan-300 disabled:cursor-not-allowed disabled:opacity-40`,
-  )
 
   let pageJumpInputValue = $state('')
   let pageJumpInput = $state<{ focus: () => void } | null>(null)
@@ -152,7 +132,7 @@
   // runtime widths must not be utilities.
   const pageInputDigits = $derived(Math.max(1, String(totalPages).length, pageJumpInputValue.length))
   const pageInputStyle = $derived.by(() => {
-    const pad = SIZE_CLASS[step].pageInputPad
+    const pad = `${pgMetrics.padX}px`
     return `padding-left:${pad};padding-right:${pad};width:calc(${pageInputDigits}ch + 2 * ${pad} + 4px)`
   })
 
@@ -200,7 +180,7 @@
   function handlePageSizeChange(value: string) {
     const parsed = Number.parseInt(value, 10)
     if (Number.isInteger(parsed) && parsed > 0 && parsed !== pageSize) {
-      onPageSizeChange(parsed)
+      onPageSizeChange?.(parsed)
     }
   }
 
@@ -213,19 +193,20 @@
 
 <nav
   aria-label={resolvedPaginationLabel}
-  class="flex flex-wrap items-center gap-1.5 {SIZE_CLASS[step].text} text-slate-400 {className}">
+  style={pgStyle}
+  class="flex flex-wrap items-center gap-1.5 text-[length:var(--pg-font)] text-slate-400 {className}">
   <button
     type="button"
     aria-label={resolvedPreviousLabel}
     disabled={!canGoPrev}
     onclick={() => changePageBy(-1)}
     class={iconButtonClass}>
-    <ChevronLeftIcon size={SIZE_CLASS[step].iconSize} />
+    <ChevronLeftIcon size={pgIconPx} />
   </button>
 
   {#if showStartEllipsis}
     <button type="button" onclick={() => goToPage(1)} class={pageButtonClass}>1</button>
-    <span class={`inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center font-semibold text-slate-500`}
+    <span class={`inline-flex ${pageButtonBox} items-center justify-center font-semibold text-slate-500`}
       >…</span>
   {/if}
 
@@ -234,6 +215,7 @@
       <NumberInput
         bind:this={pageJumpInput}
         bind:value={pageJumpInputValue}
+        {size}
         min={1}
         max={totalPages}
         inputStyle={pageInputStyle}
@@ -241,14 +223,14 @@
         onkeydown={handlePageInputKeydown}
         ariaLabel={resolvedCurrentPageLabel}
         showControls={false}
-        className={`${SIZE_CLASS[step].pageInput} rounded-md border border-cyan-500 bg-slate-950 text-center ${SIZE_CLASS[step].text} font-semibold text-cyan-300 outline-none focus-visible:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-500/40`} />
+        className={`h-[var(--pg-btn)] min-w-[var(--pg-btn)] rounded-md border border-cyan-500 bg-slate-950 text-center text-[length:var(--pg-font)] font-semibold text-cyan-300 outline-none focus-visible:border-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-500/40`} />
     {:else}
       <button type="button" onclick={() => goToPage(pageNum)} class={pageButtonClass}>{pageNum}</button>
     {/if}
   {/each}
 
   {#if showEndEllipsis}
-    <span class={`inline-flex ${SIZE_CLASS[step].pageButton} items-center justify-center font-semibold text-slate-500`}
+    <span class={`inline-flex ${pageButtonBox} items-center justify-center font-semibold text-slate-500`}
       >…</span>
     <button type="button" onclick={() => goToPage(totalPages)} class={pageButtonClass}>{totalPages}</button>
   {/if}
@@ -259,22 +241,24 @@
     disabled={!canGoNext}
     onclick={() => changePageBy(1)}
     class={iconButtonClass}>
-    <ChevronRightIcon size={SIZE_CLASS[step].iconSize} />
+    <ChevronRightIcon size={pgIconPx} />
   </button>
 
-  <div class="flex items-center gap-1.5">
-    <span>{resolvedPageSizeLabel}</span>
-    <div class="relative">
-      <SelectDropdown
-        buttonLabel={String(pageSize)}
-        activeValue={String(pageSize)}
-        ariaLabel={resolvedPageSizeLabel}
-        {size}
-        options={pageSizeOptions.map(size => ({ value: String(size), label: String(size) }))}
-        onSelect={handlePageSizeChange}
-        emptyLabel={i18n.t('dropdown.noOptions')} />
+  {#if onPageSizeChange}
+    <div class="flex items-center gap-1.5">
+      <span>{resolvedPageSizeLabel}</span>
+      <div class="relative">
+        <SelectDropdown
+          buttonLabel={String(pageSize)}
+          activeValue={String(pageSize)}
+          ariaLabel={resolvedPageSizeLabel}
+          {size}
+          options={pageSizeOptions.map(option => ({ value: String(option), label: String(option) }))}
+          onSelect={handlePageSizeChange}
+          emptyLabel={i18n.t('dropdown.noOptions')} />
+      </div>
     </div>
-  </div>
+  {/if}
   {#if trailing}
     <span class="ml-auto">{@render trailing()}</span>
   {/if}

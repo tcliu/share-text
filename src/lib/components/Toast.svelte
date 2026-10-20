@@ -1,6 +1,5 @@
 <script module lang="ts">
   export type ToastPosition = 'top-right' | 'top-center' | 'bottom-right' | 'bottom-center'
-  export type ToastSize = 'sm' | 'md'
   export type ToastType = 'success' | 'info' | 'warning' | 'error'
 </script>
 
@@ -8,7 +7,8 @@
   import Button from '$lib/components/Button.svelte'
   import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import { positionPanel } from '$lib/position-panel.svelte'
-  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
+  import { FONT_RATIO, type SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
 
   interface Props {
     message: string
@@ -16,19 +16,17 @@
     position?: ToastPosition
     size?: SizeInput
     type?: ToastType
-    // Paired: the action button renders only when both are set.
-    actionLabel?: string
-    onAction?: () => void
+    // The action button renders only when an action is set.
+    action?: { label: string; onClick: () => void }
     onClose: () => void
   }
 
   let {
     message,
     closeLabel,
-    actionLabel,
-    onAction,
+    action,
     position = 'bottom-right',
-    size = 'sm',
+    size = 'md',
     type = 'info',
     onClose,
   }: Props = $props()
@@ -43,17 +41,13 @@
     'bottom-center': 'bottom-4 inset-x-4 sm:inset-x-auto sm:bottom-4 sm:left-1/2 sm:w-96 sm:-translate-x-1/2',
   }
 
-  const sizeClasses: Record<ToastSize, string> = {
-    sm: 'text-sm leading-5',
-    md: 'text-base leading-6',
-  }
+  // Continuous text metrics: every metric is a fixed ratio of the size
+  // dimension, so text scales smoothly with the same font ratio every other
+  // sized component uses.
+  const TOAST_RATIOS = { font: FONT_RATIO, line: 1.5 }
 
-  // Stepped text (names render exactly as before); out-of-scale numbers
-  // settle on the nearest tier.
-  const step = $derived.by(() => {
-    const resolved = resolveSizeStep(size)
-    return resolved === 'xs' || resolved === 'sm' ? 'sm' : 'md'
-  })
+  const toastMetrics = $derived(dimensionMetrics(size, TOAST_RATIOS))
+  const toastStyle = $derived(sizeVarStyle('toast', toastMetrics))
 
   const typeClasses: Record<ToastType, string> = {
     success:
@@ -85,21 +79,22 @@
   use:positionPanel={() => ({ getTrigger: () => null, getOpen: () => true, presentation: 'sheet' })}
   role="status"
   aria-live="polite"
+  style={toastStyle}
   class={`fixed z-40 flex items-start gap-3 rounded-md px-4 py-3 shadow-lg shadow-slate-950/25 backdrop-blur-sm ${typeClasses[type]} ${positionClasses[position]}`}>
-  <p class={`min-w-0 flex-1 font-medium ${sizeClasses[step]}`}>{message}</p>
-  {#if actionLabel && onAction}
-    <Button variant="ghost" size="sm" onClick={onAction} className="shrink-0 px-2.5 py-1.5 font-semibold">
-      {actionLabel}
+  <p class="min-w-0 flex-1 font-medium text-[length:var(--toast-font)] leading-[var(--toast-line)]">{message}</p>
+  {#if action}
+    <Button variant="ghost" {size} onClick={action.onClick} className="shrink-0 px-2.5 py-1.5 font-semibold">
+      {action.label}
     </Button>
   {/if}
   <Button
     variant="ghost"
-    size="sm"
+    {size}
     ariaLabel={closeLabel}
     onClick={onClose}
     className="shrink-0 opacity-75 hover:opacity-100">
     {#snippet icon()}
-      <CloseIcon size="sm" />
+      <CloseIcon size={size} />
     {/snippet}
   </Button>
 </div>

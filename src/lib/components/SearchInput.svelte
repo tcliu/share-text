@@ -1,107 +1,95 @@
 <script lang="ts">
-  import { cva } from 'class-variance-authority'
-
   import SearchIcon from '$lib/icons/SearchIcon.svelte'
+  import TextInput from './TextInput.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
-  import { resolveSizeStep, type SizeInput } from '$lib/size-scale'
+  import type { SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
+  import type { ClearableProps } from './clearable-props'
 
   const i18n = getI18nContext()
 
-  export type SearchInputSize = 'sm' | 'md' | 'lg'
-
-  interface Props {
+  interface Props extends ClearableProps {
     value: string
+    // Baseline the clear affordance compares against; forwarded to TextInput,
+    // whose fallback clear writes it back.
+    defaultValue?: string
     ariaLabel: string
     placeholder?: string
     size?: SizeInput
     wrapperClass?: string
     inputClass?: string
     inputRef?: HTMLInputElement | null
+    // SearchInput owns no trailing adornment, so `clearPlacement` `auto` stays
+    // inside.
     oninput?: (event: Event) => void
     onkeydown?: (event: KeyboardEvent) => void
     onfocus?: (event: FocusEvent) => void
     onblur?: (event: FocusEvent) => void
   }
 
-  // Literal class variants (never interpolated) so the Tailwind scanner emits
-  // every size. sm stays compact for admin/table search; md gives card/list
-  // roomier icon padding; lg is browse-only and larger than md. cva holds the
-  // shared chrome once; each size carries only what differs.
-  const inputVariants = cva(
-    'w-full border border-slate-700 text-slate-100 transition outline-none placeholder:text-slate-500 focus-visible:border-cyan-500 motion-reduce:transition-none',
-    {
-      variants: {
-        size: {
-          sm: 'rounded-md bg-slate-900 px-2 py-1.5 pl-7 text-sm',
-          md: 'rounded-xl bg-slate-900/90 px-4 py-2.5 pl-10 text-sm',
-          lg: 'rounded-xl bg-slate-900/90 px-4 py-3 pl-12 text-base',
-        },
-      },
-    },
-  )
-
-  const SIZE_ICON_CLASSES: Record<SearchInputSize, string> = {
-    sm: 'pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-500',
-    md: 'pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500',
-    lg: 'pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500',
-  }
-
-  const SIZE_ICON_SIZE: Record<SearchInputSize, 'sm' | 'md'> = { sm: 'sm', md: 'md', lg: 'md' }
-
   let {
     value = $bindable(),
+    defaultValue,
     ariaLabel,
     placeholder,
-    size = 'sm',
+    size = 'md',
     wrapperClass = '',
     inputClass,
     inputRef = $bindable(null),
+    clearable = false,
+    clearLabel,
+    clearPlacement = 'auto',
+    onClear,
     oninput,
     onkeydown,
     onfocus,
     onblur,
   }: Props = $props()
 
-  // Derived (not a plain const) so locale switches re-resolve the placeholder.
+  // The input box rides TextInput's shared base metrics; the search icon and
+  // its gutter are the only metrics this wrapper adds. The icon's leading inset
+  // and slot are fixed ratios of the size dimension; the text gutter is derived
+  // from them plus a fixed gap, so tuning the glyph carries the text with it
+  // instead of letting the label slide under the icon.
+  const SEARCH_ICON_LEFT = 0.6
+  const SEARCH_ICON = 0.9
+  const SEARCH_ICON_GAP = 0.3
+  const SEARCH_RATIOS = {
+    iconLeft: SEARCH_ICON_LEFT,
+    icon: SEARCH_ICON,
+    padLeft: SEARCH_ICON_LEFT + SEARCH_ICON + SEARCH_ICON_GAP,
+  }
+
+  const metrics = $derived(dimensionMetrics(size, SEARCH_RATIOS))
+  const style = $derived(sizeVarStyle('search', metrics))
+
   const resolvedPlaceholder = $derived(placeholder ?? i18n.t('search.placeholder'))
-  // Stepped chrome for the input box (names render exactly as before; `xs`
-  // has no chrome tier and falls back to `sm`); the icon takes the raw
-  // number so it scales continuously.
-  const chromeStep = $derived.by(() => {
-    const step = resolveSizeStep(size)
-    return step === 'xs' ? 'sm' : step
-  })
-  const resolvedInputClass = $derived(inputClass ?? inputVariants({ size: chromeStep }))
-  const resolvedIconClass = $derived(SIZE_ICON_CLASSES[chromeStep])
-  const resolvedIconSize = $derived(
-    typeof size === 'number' && Number.isFinite(size) ? Math.max(1, size) : SIZE_ICON_SIZE[chromeStep],
-  )
 </script>
 
 <div class={wrapperClass}>
-  <div class="relative">
-    <SearchIcon size={resolvedIconSize} className={resolvedIconClass} />
-    <input
-      bind:this={inputRef}
-      type="search"
-      bind:value
-      aria-label={ariaLabel}
-      placeholder={resolvedPlaceholder}
-      {oninput}
-      {onkeydown}
-      {onfocus}
-      {onblur}
-      class={resolvedInputClass} />
-  </div>
+  <TextInput
+    bind:value
+    bind:inputRef
+    type="search"
+    {ariaLabel}
+    placeholder={resolvedPlaceholder}
+    {size}
+    {inputClass}
+    className="pl-[var(--search-pad-left)]"
+    wrapperStyle={style}
+    {defaultValue}
+    {clearable}
+    {clearLabel}
+    {clearPlacement}
+    {onClear}
+    {oninput}
+    {onkeydown}
+    {onfocus}
+    {onblur}>
+    {#snippet leading()}
+      <SearchIcon
+        size={metrics.icon}
+        className="pointer-events-none absolute top-1/2 left-[var(--search-icon-left)] -translate-y-1/2 text-slate-500" />
+    {/snippet}
+  </TextInput>
 </div>
-
-<style>
-  /* 16px on touch pointers so iOS Safari does not auto-zoom on focus. Plain
-     scoped CSS on purpose: a stacked Tailwind variant inside a class
-     expression never reaches the scanner, so it would silently not exist. */
-  @media (pointer: coarse) {
-    input {
-      font-size: 1rem;
-    }
-  }
-</style>

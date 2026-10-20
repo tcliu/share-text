@@ -4,56 +4,113 @@
   import { createOptionIndex, matchesOption, matchLabelParts } from '$lib/actions/option-index'
   import { isModifiedNavKey } from '$lib/actions/listbox-keynav'
   import { positionPanel } from '$lib/position-panel.svelte'
+  import Button from '$lib/components/Button.svelte'
   import ChevronDownIcon from '$lib/icons/ChevronDownIcon.svelte'
+  import CloseIcon from '$lib/icons/CloseIcon.svelte'
   import type { DropdownPanelProps } from '$lib/dropdown-chrome'
-  import { CHIP_PANEL_BASE, DEFAULT_CHIP_PANEL_CLASS } from '$lib/dropdown-chrome'
+  import { CHIP_PANEL_BASE } from '$lib/dropdown-chrome'
+  import type { SelectOption } from './SelectDropdown.svelte'
+  import type { ClearableProps } from './clearable-props'
+  import { getI18nContext } from '$lib/i18n.svelte'
+  import type { SizeInput } from '$lib/size-scale'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
 
-  interface Option {
-    value: string
-    label: string
+  const i18n = getI18nContext()
+
+  // Every chip metric is a fixed ratio of the size dimension, calibrated so the
+  // default `md` step reproduces the chip's original metrics: a 12px label, 8/2
+  // padding, a 4px label→chevron gap, a 4px chip→clear-slot gap, and a 12px
+  // clear slot. The chevron instead rides SelectDropdown's 0.625 affordance
+  // share (a 10px slot at `md`), so the two dropdown markers read at the same
+  // size. Both glyphs render at the shared icon ratio, staying lighter than the
+  // label. The 1px border is size-independent.
+  const CHIP_RATIOS = {
+    font: 0.75,
+    line: 1,
+    padX: 0.5,
+    padY: 0.125,
+    gap: 0.25,
+    slotGap: 0.25,
+    icon: 0.625,
+    clear: 0.75,
   }
 
-  interface Props extends DropdownPanelProps {
+  // Panel metrics scale with the same dimension so the floating list tracks the
+  // chip, mirroring `SelectDropdown`'s panel: the option rows, the empty row,
+  // and the search field take the size-scaled font, line, and padding, and a
+  // row min-width floors the panel (246px content → the original 256px panel at
+  // md once its 4px padding and 1px border are added).
+  const CHIP_PANEL_RATIOS = {
+    font: 0.75,
+    line: 1,
+    padX: 0.75,
+    padY: 0.5,
+    minW: 15.375,
+    emptyPadY: 1.5,
+    searchPadX: 0.5,
+    searchPadY: 0.25,
+  }
+
+  // The menu panel fits its content and floors at the trigger width (set by the
+  // positioner), like `SelectDropdown`'s panel, instead of a fixed width.
+  const CHIP_MENU_PANEL_CLASS = `${CHIP_PANEL_BASE} w-max max-w-xs`
+
+  interface Props extends DropdownPanelProps, Omit<ClearableProps, 'clearPlacement'> {
     label: string
-    options: Option[]
+    options: SelectOption[]
     activeValue?: string
+    // Baseline the clear affordance compares against: the cross hides while
+    // `activeValue` matches it (empty when unset), and the fallback clear
+    // writes it back. A provided `onClear` still owns the clear.
+    defaultValue?: string
     ariaLabel: string
     disabled?: boolean
     variant?: 'sky' | 'violet' | 'amber' | 'fuchsia' | 'emerald'
+    size?: SizeInput
     buttonClass?: string
     filterable?: boolean
     filterPlaceholder?: string
     emptyText?: string
     onSelect: (value: string) => void
+    // No `clearPlacement`: the trigger is a chip, not a text field, so the
+    // clear sits on its own right edge. `onClear` falls back to selecting the
+    // default value.
   }
 
   let {
     label,
     options,
     activeValue = '',
+    defaultValue,
     ariaLabel,
     align = 'left',
     autoPlace = true,
     disabled = false,
     variant = 'violet',
-    panelClass = DEFAULT_CHIP_PANEL_CLASS,
+    size = 'md',
+    panelClass = `${CHIP_MENU_PANEL_CLASS} overflow-y-auto p-1`,
     buttonClass,
     filterable = false,
     filterPlaceholder = 'Search…',
     emptyText = 'No results.',
     onSelect,
+    clearable = false,
+    clearLabel,
+    onClear,
   }: Props = $props()
 
   let id = $props.id()
   const panelId = `${id}-panel`
 
-  const VARIANT_ACTIVE: Record<string, string> = {
-    sky: 'bg-sky-500/15 text-sky-200',
-    violet: 'bg-violet-500/15 text-violet-200',
-    amber: 'bg-amber-500/15 text-amber-200',
-    fuchsia: 'bg-fuchsia-500/15 text-fuchsia-200',
-    emerald: 'bg-emerald-500/15 text-emerald-200',
-  }
+  // Normalize once per options array so every row below reads one shape: a
+  // bare string is its own label and a missing label falls back to the value.
+  const normalizedOptions = $derived(
+    options.map(option =>
+      typeof option === 'string'
+        ? { value: option, label: option }
+        : { value: option.value, label: option.label ?? option.value },
+    ),
+  )
 
   const VARIANT_CHIP: Record<string, string> = {
     sky: 'border-sky-500/30 bg-sky-500/10 text-sky-200 hover:border-sky-400 hover:text-sky-100 focus-visible:border-sky-400 focus-visible:text-sky-100',
@@ -67,16 +124,30 @@
       'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:border-emerald-400 hover:text-emerald-100 focus-visible:border-emerald-400 focus-visible:text-emerald-100',
   }
 
+  // Every metric is a fixed ratio of the size dimension, emitted as `--chip-*`
+  // on the root so the trigger and the clear slot both read them; the chevron
+  // and the clear cross take their numeric sizes from the same metrics.
+  const metrics = $derived(dimensionMetrics(size, CHIP_RATIOS))
+  const chipStyle = $derived(sizeVarStyle('chip', metrics))
+  const panelMetrics = $derived(dimensionMetrics(size, CHIP_PANEL_RATIOS))
+  const panelStyle = $derived(sizeVarStyle('chip-panel', panelMetrics))
+
   const resolvedButtonClass = $derived(
     buttonClass ??
-      `inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium outline-none transition disabled:cursor-not-allowed disabled:opacity-50 relative before:absolute before:-inset-1.5 before:content-[''] ${VARIANT_CHIP[variant] ?? VARIANT_CHIP.violet}`,
+      `inline-flex max-w-full items-center gap-[var(--chip-gap)] rounded-full border px-[var(--chip-pad-x)] py-[var(--chip-pad-y)] text-[length:var(--chip-font)] leading-[var(--chip-line)] font-medium outline-none transition disabled:cursor-not-allowed disabled:opacity-50 relative before:absolute before:-inset-1.5 before:content-[''] ${VARIANT_CHIP[variant] ?? VARIANT_CHIP.violet}`,
   )
+
+  const resolvedClearLabel = $derived(clearLabel ?? i18n.t('common.clear'))
+  // A disabled chip offers no clear action, and while `activeValue` matches
+  // `defaultValue` (empty when unset) there is nothing to clear, so the cross
+  // hides.
+  const showClear = $derived(clearable && (activeValue ?? '') !== (defaultValue ?? '') && !disabled)
 
   // Filterable layout is a fixed header + scrolling list contract
   // (`shrink-0` search + `flex-1 overflow-y-auto` options). A custom
   // `panelClass` is intentionally ignored here so an ad-hoc
   // `overflow-y-auto`/`p-1` doesn't create a double-scroll container.
-  const resolvedPanelClass = $derived(filterable ? `${CHIP_PANEL_BASE} overflow-hidden flex flex-col` : panelClass)
+  const resolvedPanelClass = $derived(filterable ? `${CHIP_MENU_PANEL_CLASS} overflow-hidden flex flex-col` : panelClass)
 
   let open = $state(false)
   let containerRef = $state<HTMLDivElement | null>(null)
@@ -87,9 +158,16 @@
   let optionEls = $state<(HTMLElement | null)[]>([])
   let filterText = $state('')
 
+  // The chip holds the width of its own rendered label across a clear, so an
+  // emptied label never collapses the pill. The width is measured from the
+  // label, never derived from the options, so a long option never widens a chip
+  // that shows a different value. `min-h` floors the label's height the same way.
+  let labelEl = $state<HTMLElement | null>(null)
+  let heldLabelWidth = $state<number | null>(null)
+
   // Lowercased once per options array (shared helper) so filtering does not
   // re-lowercase every label/value on every keystroke.
-  const optionIndex = $derived(createOptionIndex(options))
+  const optionIndex = $derived(createOptionIndex(normalizedOptions))
 
   // The lowercased filter needle, empty when filtering is off or the search is
   // blank. The option list and the match highlight read the same value so they
@@ -97,8 +175,8 @@
   const filterQuery = $derived(filterable ? filterText.trim().toLowerCase() : '')
 
   const filteredOptions = $derived.by(() => {
-    if (filterQuery === '') return options
-    const matched: Option[] = []
+    if (filterQuery === '') return normalizedOptions
+    const matched: { value: string; label: string }[] = []
     for (const entry of optionIndex) {
       if (matchesOption(entry, filterQuery)) {
         matched.push(entry.option)
@@ -121,7 +199,7 @@
   // In filterable mode, keep the highlight anchored on the active value
   // whenever the visible list changes so a typed search that still includes
   // the active value leaves the cursor on it.
-  let lastFiltered: Option[] | null = null
+  let lastFiltered: { value: string; label: string }[] | null = null
   $effect(() => {
     if (!open || !filterable) return
     if (lastFiltered !== filteredOptions) {
@@ -149,6 +227,20 @@
     }
   })
 
+  // Remember the label's rendered width while one is present; the markup then
+  // floors the now-empty label at that width after a clear, so the pill keeps
+  // its size without borrowing anything from the option list. Reading `metrics`
+  // re-measures when the size (and so the label's rendered width) changes.
+  $effect(() => {
+    void metrics
+    if (label === '' || !labelEl) return
+    heldLabelWidth = labelEl.getBoundingClientRect().width
+  })
+
+  const chipLabelStyle = $derived(
+    label === '' && heldLabelWidth != null ? `min-width:${heldLabelWidth}px` : undefined,
+  )
+
   function close() {
     open = false
   }
@@ -170,6 +262,19 @@
   function select(value: string) {
     onSelect(value)
     close()
+    buttonRef?.focus()
+  }
+
+  // Clearing hides the cross with the value, so return focus to the trigger
+  // instead of dropping it to the body. A provided handler owns the clear;
+  // otherwise the default value is selected.
+  function handleClear() {
+    close()
+    if (onClear) {
+      onClear()
+    } else {
+      onSelect(defaultValue ?? '')
+    }
     buttonRef?.focus()
   }
 
@@ -296,7 +401,8 @@
       onmousemove={() => {
         if (listbox.selection.peek() !== index) listbox.selection.set(index)
       }}
-      class={`flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-none outline-none ${listbox.highlight.flags[index] ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}>
+      class={`flex w-full min-w-[var(--chip-panel-min-w)] cursor-pointer items-center justify-between rounded-lg px-[var(--chip-panel-pad-x)] py-[var(--chip-panel-pad-y)] text-left text-[length:var(--chip-panel-font)] leading-[var(--chip-panel-line)] transition-none outline-none ${listbox.highlight.flags[index] ? 'bg-slate-800 text-slate-100' : 'text-slate-300'}`}
+      style={panelStyle}>
       <span class="min-w-0 truncate">
         {#if parts}
           {parts.before}<span class="font-semibold text-cyan-300">{parts.match}</span>{parts.after}
@@ -306,33 +412,56 @@
       </span>
     </button>
   {:else}
-    <div role="presentation" class="px-3 py-6 text-center text-xs text-slate-400">{emptyText}</div>
+    <div role="presentation" class="min-w-[var(--chip-panel-min-w)] px-[var(--chip-panel-pad-x)] py-[var(--chip-panel-empty-pad-y)] text-center text-[length:var(--chip-panel-font)] text-slate-400" style={panelStyle}>{emptyText}</div>
   {/each}
 {/snippet}
 
 <div
   class="relative inline-flex"
+  style={chipStyle}
   bind:this={containerRef}
   data-escape-capture={open ? '' : null}
   onfocusout={listbox.handleFocusOut}>
-  <button
-    type="button"
-    bind:this={buttonRef}
-    role={filterable ? undefined : 'combobox'}
-    aria-label={ariaLabel}
-    aria-haspopup={filterable ? undefined : 'listbox'}
-    aria-expanded={filterable ? undefined : open}
-    aria-controls={!filterable && open ? panelId : undefined}
-    aria-activedescendant={!filterable && open && filteredOptions[listbox.selection.index]
-      ? `${panelId}-option-${listbox.selection.index}`
-      : undefined}
-    {disabled}
-    onclick={toggle}
-    onkeydown={handleButtonKeydown}
-    class={resolvedButtonClass}>
-    <span class="truncate">{label}</span>
-    <ChevronDownIcon size="xs" variant="solid" className="shrink-0 opacity-70" />
-  </button>
+  {#snippet triggerButton()}
+    <button
+      type="button"
+      bind:this={buttonRef}
+      role={filterable ? undefined : 'combobox'}
+      aria-label={ariaLabel}
+      aria-haspopup={filterable ? undefined : 'listbox'}
+      aria-expanded={filterable ? undefined : open}
+      aria-controls={!filterable && open ? panelId : undefined}
+      aria-activedescendant={!filterable && open && filteredOptions[listbox.selection.index]
+        ? `${panelId}-option-${listbox.selection.index}`
+        : undefined}
+      {disabled}
+      onclick={toggle}
+      onkeydown={handleButtonKeydown}
+      class={resolvedButtonClass}>
+      <span bind:this={labelEl} class="min-h-[var(--chip-line)] truncate" style={chipLabelStyle}>{label}</span>
+      <ChevronDownIcon size={metrics.icon} className="shrink-0 text-slate-400" />
+    </button>
+  {/snippet}
+  {#snippet closeIcon()}
+    <CloseIcon size={metrics.clear} />
+  {/snippet}
+  {#if clearable}
+    <span class="inline-flex items-center gap-[var(--chip-slot-gap)]">
+      {@render triggerButton()}
+      <!-- The clear slot is reserved whenever `clearable`: the cross toggles
+        with the value, but its box stays, so clearing never shifts the chip. -->
+      <span data-clear-slot class="inline-flex items-center" class:invisible={!showClear}>
+        <Button
+          variant="ghost"
+          size={metrics.clear}
+          icon={closeIcon}
+          ariaLabel={showClear ? resolvedClearLabel : undefined}
+          onClick={handleClear} />
+      </span>
+    </span>
+  {:else}
+    {@render triggerButton()}
+  {/if}
 
   {#if open}
     {#if filterable}
@@ -355,13 +484,10 @@
               ? `${panelId}-option-${listbox.selection.index}`
               : undefined}
             onkeydown={handleFilterKeydown}
-            class="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-sky-500" />
+            style={panelStyle}
+            class="w-full rounded-md border border-slate-700 bg-slate-950 px-[var(--chip-panel-search-pad-x)] py-[var(--chip-panel-search-pad-y)] text-[length:var(--chip-panel-font)] leading-[var(--chip-panel-line)] text-slate-100 outline-none placeholder:text-slate-500 focus-visible:border-sky-500" />
         </div>
-        <div
-          id={panelId}
-          role="listbox"
-          aria-label={ariaLabel}
-          class="min-h-0 flex-1 overflow-y-auto p-1">
+        <div id={panelId} role="listbox" aria-label={ariaLabel} class="min-h-0 flex-1 overflow-y-auto p-1">
           {@render optionList()}
         </div>
       </div>

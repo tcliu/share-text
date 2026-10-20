@@ -1,27 +1,38 @@
 <script lang="ts">
   import { resolveIconPx, type IconSizeInput } from './icon-size'
+  import { CHEVRON_STYLE, type ChevronVariant } from './chevron-stroke'
 
   interface Props {
     className?: string
     size?: IconSizeInput
+    variant?: ChevronVariant
   }
 
   // Width/height attributes (not classes) so `size` composes with `className`:
   // explicit size classes in className still win, since CSS beats attributes.
+  // The four chevrons are one glyph rotated and share the set's lighter
+  // `regular` stroke; `variant` picks the treatment — regular by default, bold a
+  // chunky flat-ended, sharp-apex mark whose inset artwork still fits the box.
 
-  let { className = '', size = 'md' }: Props = $props()
+  let { className = '', size = 'md', variant = 'regular' }: Props = $props()
+
+  const style = $derived(CHEVRON_STYLE[variant])
 </script>
 
 <svg
   viewBox="0 0 20 20"
   fill="none"
   stroke="currentColor"
-  stroke-width="4.52"
-  stroke-linecap="round"
-  stroke-linejoin="round"
+  stroke-width={style.stroke}
+  stroke-linecap={style.linecap}
+  stroke-linejoin={style.linejoin}
   aria-hidden="true"
   width={resolveIconPx(size)}
   height={resolveIconPx(size)}
   class={className}>
-  <path d="M 2.26 6.13L 10 13.87L 17.74 6.13" />
+  {#if variant === 'regular'}
+    <path d="M 1.22 5.61L 10 14.39L 18.78 5.61" />
+  {:else}
+    <path d="M 1.59 8.41L 10 16.82L 18.41 8.41" />
+  {/if}
 </svg>

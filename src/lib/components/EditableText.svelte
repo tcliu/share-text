@@ -1,19 +1,25 @@
 <script lang="ts">
   import { onDestroy, tick } from 'svelte'
   import Button from './Button.svelte'
-  import CopyButton from './CopyButton.svelte'
+  import CopyIcon from '$lib/icons/CopyIcon.svelte'
   import EditIcon from '$lib/icons/EditIcon.svelte'
-  import { TEXT_SIZE, type TextSize } from '$lib/text-size'
-  import { resolveFontPx } from '$lib/size-scale'
+  import type { SizeInput } from '$lib/size-scale'
+  import { copyToClipboard } from './copy-to-clipboard'
+  import { INPUT_METRIC_CLASS, INPUT_RATIOS } from './input-chrome'
+  import { dimensionMetrics, sizeVarStyle } from './size-metrics'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
+
+  // Text-field metrics follow TextInput's shared base chrome (`input-chrome.ts`
+  // INPUT_RATIOS): every metric is a fixed ratio of the size dimension, so names
+  // (axis aliases) and numbers scale continuously together.
 
   interface Props {
     text: string
     // Return false to reject the committed value (e.g. duplicate name);
     // the component then restores the previous text and keeps editing.
     onChange: (text: string) => void | boolean
-    size?: TextSize | number
+    size?: SizeInput
     className?: string
     onActivate?: () => void
     // maximum width (in px) the editable input may expand to; actual max
@@ -137,15 +143,18 @@
       // Temporarily collapse width to let scrollWidth reflect content width.
       input.style.width = '0px'
       const contentWidth = input.scrollWidth
-      // Account for horizontal padding (px-2 -> 0.5rem each side ~= 8px at 16px root)
-      const paddingExtra = 16
+      // Account for the size-scaled horizontal padding (both sides).
+      const paddingExtra = metrics.padX * 2
       const base = inputWidth ?? 0
       const max = computedMaxWidth ?? maxWidth
       const next = Math.min(max, Math.max(base, contentWidth + paddingExtra))
       input.style.width = `${next}px`
       inputWidth = next
     } catch (e) {
-      // ignore measurement errors
+      // Measurement failure leaves the input at its zero probe width; restore a
+      // sane width and surface the failure rather than swallowing it.
+      if (input) input.style.width = inputWidth ? `${inputWidth}px` : ''
+      console.error('EditableText: width measurement failed', e)
     }
   })
 
@@ -153,18 +162,15 @@
     if (clickTimer) clearTimeout(clickTimer)
   })
 
-  // Text sizing: names render through the literal text class (exactly as
-  // before); numbers interpolate the font on the shared axis.
-  const customFontPx = $derived(
-    typeof size === 'number' && Number.isFinite(size) ? resolveFontPx(size) : undefined,
-  )
-  // Non-finite numbers fall back to the default step's class (never a
-  // literal "undefined" in the class list).
-  const textClass = $derived(customFontPx === undefined ? TEXT_SIZE[typeof size === 'string' ? size : 'md'] : '')
-  const textStyle = $derived(customFontPx === undefined ? undefined : `font-size:${customFontPx}px`)
+  // Text sizing follows TextInput: the shared input chrome (`input-chrome.ts`)
+  // drives font, line, radius, and padding from the size dimension, emitted as
+  // `--input-*` vars consumed by `INPUT_METRIC_CLASS` below.
+  const metrics = $derived(dimensionMetrics(size, INPUT_RATIOS))
+  const sizeStyle = $derived(sizeVarStyle('input', metrics))
+  const metricClass = INPUT_METRIC_CLASS
   const inputStyle = $derived.by(() => {
     const width = inputWidth ? `width: ${inputWidth}px; min-width: 0` : 'min-width: 0'
-    return textStyle ? `${width}; ${textStyle}` : width
+    return `${width}; ${sizeStyle}`
   })
 </script>
 
@@ -185,15 +191,15 @@
       data-escape-capture
       aria-label={i18n.t('edit.editText')}
       style={inputStyle}
-      class={`${textClass} max-w-full rounded-md bg-slate-950 px-2 py-1 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
+      class={`${metricClass} max-w-full bg-slate-950 text-slate-100 outline outline-1 outline-slate-700 transition focus:outline-cyan-500 motion-reduce:transition-none`} />
   </div>
 {:else}
   {#snippet displayContent()}
     <button
       bind:this={displayBtn}
       type="button"
-      class={`${textClass} min-w-0 truncate bg-transparent p-0 py-1 pl-2 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
-      style={textStyle}
+      class={`${metricClass} min-w-0 truncate bg-transparent text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 motion-reduce:transition-none ${className}`}
+      style={sizeStyle}
       title={i18n.t('edit.doubleClickToEdit')}
       onclick={e => {
         e.stopPropagation()
@@ -209,7 +215,6 @@
       bind:this={editBtn}
       class="transition group-hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none [@media(hover:hover)]:opacity-0">
       <Button
-        size="sm"
         variant="ghost"
         ariaLabel={i18n.t('edit.edit')}
         tooltip={i18n.t('edit.edit')}
@@ -231,12 +236,47 @@
   <!-- Don't grow to fill the available space in display mode so sibling elements
        (e.g. tag chips) sit immediately after the filename instead of being
        pushed to the right. Keep min-w-0 so truncation still works.
-       The icon wrappers (edit + copy) get a small downward nudge so they sit on
-       the text's visual center, which rides below the line box's center. -->
-  <div class="group flex min-w-0 items-center gap-2 [&>span]:translate-y-0.5">
+       `items-center` centers the icon wrappers (edit + copy) on the text field's
+       own vertical middle, so no nudge is needed to align them with the text. -->
+  <div class="group flex min-w-0 items-center gap-2">
     {@render displayContent()}
     {#if copyable && text.trim() !== ''}
-      <CopyButton {text} copyAriaLabel={`Copy ${text}`} />
+      <span class="shrink-0 transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:hover)]:opacity-0">
+        <Button
+          variant="ghost"
+          ariaLabel={`Copy ${text}`}
+          tooltip={i18n.t('common.copy')}
+          onClick={event => {
+            event.preventDefault()
+            event.stopPropagation()
+            void copyToClipboard(text, {
+              copied: i18n.t('editor.toast.copied'),
+              failed: i18n.t('editor.toast.copyFailed'),
+            })
+          }}
+          onKeyDown={event => {
+            if (event.key === 'Enter' || event.key === ' ') event.stopPropagation()
+          }}
+          className="bg-transparent text-slate-400 hover:text-cyan-300">
+          {#snippet icon()}
+            <CopyIcon />
+          {/snippet}
+        </Button>
+      </span>
     {/if}
   </div>
 {/if}
+
+<style>
+  /* 16px on touch pointers so iOS Safari does not auto-zoom on focus, matching
+     the guard on TextInput's field; it covers the display label too, so the
+     label keeps the field's rendered size. Plain scoped CSS on purpose: a
+     stacked Tailwind variant inside a class expression never reaches the
+     scanner, so it would silently not exist. */
+  @media (pointer: coarse) {
+    button,
+    input {
+      font-size: 1rem;
+    }
+  }
+</style>

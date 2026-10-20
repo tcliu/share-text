@@ -1,29 +1,22 @@
 <script lang="ts">
   import { getI18nContext } from '$lib/i18n.svelte'
-  import type CodeEditor from './CodeEditor.svelte'
+  import CodeEditor, {
+    CODE_EDITOR_CLASS,
+    CODE_EDITOR_CONTAINER_CLASS,
+    type Props as CodeEditorProps,
+  } from './CodeEditor.svelte'
   const i18n = getI18nContext()
 
-  interface Props {
-    content: string
-    editable?: boolean
-    docType?: string
-    containerClass?: string
-    editorClass?: string
-    editorAriaLabel?: string
-    autoFocus?: boolean
-    recreateKey?: string
-    maxContentLength?: number
-    onReady?: () => void
-    onAutoFocused?: () => void
-    onContentChange?: (content: string) => void
-  }
+  // The lazy surface is derived from the eager editor's props so the two can
+  // never drift; the eager-only theme/selection controls are dropped.
+  type Props = Omit<CodeEditorProps, 'theme' | 'selectionEnabled' | 'onSelectionChange'>
 
   let {
     content = $bindable(),
     editable = true,
     docType = 'text',
-    containerClass = '',
-    editorClass = '',
+    containerClass = CODE_EDITOR_CONTAINER_CLASS,
+    editorClass = CODE_EDITOR_CLASS,
     editorAriaLabel,
     autoFocus = false,
     recreateKey = '',
@@ -111,7 +104,7 @@
   <div class={containerClass}>
     <div
       role="status"
-      class={`${editorClass} flex min-h-[12rem] items-center justify-center rounded-lg border border-slate-700 bg-slate-950 text-sm text-slate-400`}>
+      class={`${editorClass} flex min-h-[12rem] items-center justify-center text-sm text-slate-400`}>
       {loadError || i18n.t('editor.loading')}
     </div>
   </div>

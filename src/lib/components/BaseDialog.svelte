@@ -1,5 +1,25 @@
 <script module>
   let openDialogCount = 0
+  // Monotonic id sequence: title ids must never be reused across mounts, or a
+  // lingering title element from a previous dialog can hijack the new dialog's
+  // accessible name (the first matching id wins).
+  let dialogIdSeq = 0
+
+  // Panel footprint steps, exported so the showcase dropdowns can't drift from
+  // the values the component accepts.
+  export const DIALOG_SIZE_VARIANTS = [
+    'xs',
+    'sm',
+    'md',
+    'lg',
+    'xl',
+    '2xl',
+    '3xl',
+    '4xl',
+    '5xl',
+    '6xl',
+    '7xl',
+  ] as const
 </script>
 
 <script lang="ts">
@@ -10,58 +30,66 @@
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
+  // Panel footprint steps. `xs`–`7xl` are the shared container scale (the same
+  // names Tailwind's `max-w-*` uses); `fit`/`wide` are width-only extras.
+  export type DialogSizeVariant = (typeof DIALOG_SIZE_VARIANTS)[number]
+
+  export type DialogWidthVariant = DialogSizeVariant | 'fit' | 'wide'
+  // `auto` hugs the content; a size step pins the panel height.
+  export type DialogHeightVariant = 'auto' | DialogSizeVariant
+
   interface Props {
+    /** Ignored when `header` is set. */
     title?: string
-    // Accessible name when no `title` is rendered (a `header` snippet or a
-    // title-less dialog). Provide exactly one of `title`/`ariaLabel` so the
-    // `role="dialog"` element is always named.
-    ariaLabel?: string
-    titleClass?: string
+    /** Custom header content; wins over `title` and still labels the dialog. */
+    header?: import('svelte').Snippet
+    /** Fixed footer content below the body scroll container. */
+    footer?: import('svelte').Snippet
     className?: string
-    maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'fit' | 'wide'
-    height?: 'auto' | 'fixed' | 'tall'
-    pending?: boolean
-    allowPendingCancel?: boolean
-    dismissKeydownCapture?: boolean
-    fullscreen?: boolean
+    widthVariant?: DialogWidthVariant
+    heightVariant?: DialogHeightVariant
+    // Shorthand that sets both variants to one step; an explicit
+    // `widthVariant`/`heightVariant` wins over it.
+    size?: DialogSizeVariant
     // Overrides the i18n close-dialog label (callers that pass their own
     // strings keep working); defaults to the shared locale label.
     closeLabel?: string
+    // Accessible name used only when neither `title` nor `header` labels the
+    // dialog; defaults to a generic locale label so no dialog is unnamed.
+    ariaLabel?: string
+    // Blocks Escape, overlay, and close-icon dismissal (e.g. while an async
+    // confirm is pending) without disabling the footer buttons.
+    dismissDisabled?: boolean
     onCancel: () => void
-    header?: import('svelte').Snippet
     children?: import('svelte').Snippet
   }
 
   let {
     title,
-    ariaLabel,
-    titleClass = '',
-    className = '',
-    maxWidth = 'md',
-    height = 'auto',
-    pending = false,
-    allowPendingCancel = false,
-    dismissKeydownCapture = true,
-    fullscreen = false,
-    closeLabel,
-    onCancel,
     header,
+    footer,
+    className = '',
+    widthVariant,
+    heightVariant,
+    size,
+    closeLabel,
+    ariaLabel,
+    dismissDisabled = false,
+    onCancel,
     children,
   }: Props = $props()
 
   // Derived (not a plain const) so locale switches re-resolve the label.
   const resolvedCloseLabel = $derived(closeLabel ?? i18n.t('common.closeDialog'))
 
-  // While a pending operation runs the dialog stops dismissing unless the
-  // caller opts into cancel-during-pending.
-  const cancelDisabled = $derived(pending && !allowPendingCancel)
-
   let dialogIndex = 0
   let dialogRef = $state<HTMLElement | null>(null)
   let titleId = $state('')
   let previouslyFocused: Element | null = null
 
-  const maxWidthClasses = {
+  const widthVariantClasses: Record<DialogWidthVariant, string> = {
+    xs: 'max-w-xs',
+    sm: 'max-w-sm',
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
@@ -73,27 +101,44 @@
     '7xl': 'max-w-7xl',
     fit: 'w-fit max-w-[90vw]',
     wide: 'w-[min(96vw,96rem)] max-w-[96rem]',
-  } as const
+  }
 
-  const heightClasses = {
+  // Tailwind has no named `max-h` container scale, so the height steps are
+  // literal container-equivalent values. The panel's own `max-h-[90vh]` caps
+  // them, so a tall step still fits a short viewport.
+  const heightVariantClasses: Record<DialogHeightVariant, string> = {
     auto: '',
-    fixed: 'h-[min(78vh,640px)] min-h-[480px] sm:min-h-[520px]',
-    tall: 'h-[min(88vh,860px)]',
-  } as const
+    xs: 'h-[20rem]',
+    sm: 'h-[24rem]',
+    md: 'h-[28rem]',
+    lg: 'h-[32rem]',
+    xl: 'h-[36rem]',
+    '2xl': 'h-[42rem]',
+    '3xl': 'h-[48rem]',
+    '4xl': 'h-[56rem]',
+    '5xl': 'h-[64rem]',
+    '6xl': 'h-[72rem]',
+    '7xl': 'h-[80rem]',
+  }
+
+  // `size` is the shared shorthand: an explicit variant wins, then `size`,
+  // then the historical defaults (width md, content-hugging height).
+  const resolvedWidthVariant = $derived(widthVariant ?? size ?? 'md')
+  const resolvedHeightVariant = $derived(heightVariant ?? size ?? 'auto')
 
   const sizeClass = $derived.by(() => {
     const widthClass =
-      maxWidth === 'fit' || maxWidth === 'wide'
-        ? maxWidthClasses[maxWidth]
-        : `w-full ${maxWidthClasses[maxWidth] ?? maxWidthClasses.md}`
-    const hClass = heightClasses[height ?? 'auto']
+      resolvedWidthVariant === 'fit' || resolvedWidthVariant === 'wide'
+        ? widthVariantClasses[resolvedWidthVariant]
+        : `w-full ${widthVariantClasses[resolvedWidthVariant] ?? widthVariantClasses.md}`
+    const hClass = heightVariantClasses[resolvedHeightVariant]
     return [widthClass, hClass].filter(Boolean).join(' ')
   })
 
   onMount(() => {
     openDialogCount += 1
     dialogIndex = openDialogCount
-    titleId = `dialog-title-${dialogIndex}`
+    titleId = `dialog-title-${++dialogIdSeq}`
     previouslyFocused = document.activeElement
     void tick().then(() => {
       const firstInput = dialogRef?.querySelector<HTMLElement>(
@@ -115,9 +160,8 @@
   }
 
   function handleCancelRequest() {
-    if (!cancelDisabled) {
-      onCancel()
-    }
+    if (dismissDisabled) return
+    onCancel()
   }
 
   function trapFocus(event: KeyboardEvent) {
@@ -161,11 +205,6 @@
     }
 
     if (event.key === 'Escape') {
-      // `dismissKeydownCapture` gates dismissal only; the focus trap below
-      // still runs so a modal that opts out of Escape stays tab-contained.
-      if (!dismissKeydownCapture || cancelDisabled) {
-        return
-      }
       const target = event.target
       if (target instanceof Element && target.closest('[data-escape-capture]')) {
         return
@@ -173,7 +212,7 @@
       handledEvent.dialogHandled = true
       event.stopImmediatePropagation()
       event.preventDefault()
-      onCancel()
+      if (!dismissDisabled) onCancel()
     } else if (event.key === 'Tab') {
       trapFocus(event)
     }
@@ -196,41 +235,41 @@
     data-testid="dialog-overlay"
     aria-label={resolvedCloseLabel}
     tabindex="-1"
-    disabled={cancelDisabled}
-    class="absolute inset-0 outline-none {fullscreen ? 'bg-slate-950' : 'bg-slate-950/80'} disabled:cursor-default"
+    class="absolute inset-0 bg-slate-950/80 outline-none"
     onclick={handleCancelRequest}></button>
-  <div
-    class={fullscreen
-      ? 'relative h-full'
-      : 'relative flex min-h-full items-center justify-center px-4 py-6 @max-md:p-0'}>
+  <div class="relative flex min-h-full items-center justify-center px-4 py-6 @max-md:p-0">
     <div
       bind:this={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-labelledby={!header && title ? titleId : undefined}
-      aria-label={!header && title ? undefined : ariaLabel}
+      aria-labelledby={header || title ? titleId : undefined}
+      aria-label={header || title ? undefined : (ariaLabel ?? i18n.t('common.dialog'))}
       tabindex="-1"
-      class={fullscreen
-        ? `relative flex h-full w-full flex-col overflow-y-auto bg-slate-900 p-5.5 outline-none ${className}`
-        : `relative flex max-h-[90vh] flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur outline-none @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass} ${className}`}>
+      class={`relative flex max-h-[90vh] flex-col overflow-y-auto rounded-xl border border-slate-800 bg-slate-900/95 shadow-2xl shadow-slate-950/60 backdrop-blur outline-none @max-md:h-dvh @max-md:max-h-full @max-md:w-full @max-md:max-w-none @max-md:rounded-none @max-md:border-x-0 ${sizeClass} ${className}`}>
       <button
         type="button"
         aria-label={resolvedCloseLabel}
         onclick={handleCancelRequest}
-        disabled={cancelDisabled}
-        class="absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-200 focus:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none">
-        <CloseIcon size="sm" />
+        class="absolute top-4 right-4 flex items-center justify-center p-1.5 text-slate-500 transition outline-none before:absolute before:-inset-1.5 before:content-[''] hover:text-slate-200 focus:text-slate-200 motion-reduce:transition-none">
+        <CloseIcon />
       </button>
-      {#if header}
-        <div class="px-5.5 pt-5.5">{@render header()}</div>
-      {:else if title}
-        <h2 id={titleId} class="pt-5.5 pr-12 pl-5.5 text-2xl font-semibold tracking-tight text-slate-100 {titleClass}">
-          {title}
-        </h2>
+      {#if header || title}
+        <div id={titleId} class="pt-5.5 pr-12 pl-5.5 text-2xl font-semibold tracking-tight text-slate-100">
+          {#if header}
+            {@render header()}
+          {:else}
+            <h2>{title}</h2>
+          {/if}
+        </div>
       {/if}
-      <div tabindex="-1" class="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pb-5.5 outline-none">
+      <div tabindex="-1" class="flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pt-4 pb-5.5 outline-none">
         {@render children?.()}
       </div>
+      {#if footer}
+        <div class="flex-none px-5.5 pb-5.5">
+          {@render footer()}
+        </div>
+      {/if}
     </div>
   </div>
 </div>
