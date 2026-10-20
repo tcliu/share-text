@@ -106,10 +106,16 @@ try {
 } catch (error) {
   if (error?.code === 'ENOENT') {
     logEvent({
-      action: 'schema_apply_skip',
-      details: { profile, source: 'sql/schema.sql', reason: 'missing sql/schema.sql', level: 'WARN' },
+      action: 'schema_apply_error',
+      details: {
+        profile,
+        source: 'sql/schema.sql',
+        reason: 'missing sql/schema.sql',
+        elapsed_ms: Date.now() - startedAt,
+        level: 'ERROR',
+      },
     })
-    process.exit(0)
+    process.exit(1)
   }
   logEvent({
     action: 'schema_apply_error',
@@ -176,9 +182,16 @@ if (profile === 'dev') {
   const databaseURL = getDatabaseURL()
   if (!databaseURL) {
     logEvent({
-      action: 'schema_apply_skip',
-      details: { profile, source: 'sql/schema.sql', reason: 'missing DATABASE_URL', level: 'WARN' },
+      action: 'schema_apply_error',
+      details: {
+        profile,
+        source: 'sql/schema.sql',
+        reason: 'missing DATABASE_URL',
+        elapsed_ms: Date.now() - startedAt,
+        level: 'ERROR',
+      },
     })
+    process.exitCode = 1
   } else {
   const { host: db_host, database: db_name } = describeDatabaseTarget(databaseURL)
   const schemaName = getSchemaName()
