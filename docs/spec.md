@@ -563,8 +563,10 @@ panel with `use:positionPanel={() => ({ getTrigger, getOpen, align?, autoPlace? 
 and keep the `fixed left-0 top-0 z-40 will-change-transform` positioning classes
 on the panel (`z-40`: overlays stay below the `z-50` dev worktree-tag block). The action portals the panel to `document.body`, auto-places it
 above/below the trigger (with an 8px viewport margin), and repositions on
-resize and scroll; it restores the panel to its original DOM parent on
-unmount. The owning component keeps its own open/close, keyboard, and
+resize and scroll; on teardown it removes the node outright rather than
+re-inserting it under the `{#if}` block that owns it, because the portal can
+outlive that block and a restored node would survive as a connected duplicate
+with the same panel id. The owning component keeps its own open/close, keyboard, and
 outside-click handling.
 
 Both overlays with a trigger-and-item-menu shape share the `Menu`
@@ -601,6 +603,22 @@ the highlighted option only while the panel is open and does nothing when
 closed (the button mode lets the native Enter/Space toggle open instead).
 Mouse hover and arrow keys share the single `highlightIndex`, exposed to
 assistive tech via `aria-activedescendant`.
+
+### Tag Input
+
+`TagInput` (`src/lib/components/TagInput.svelte`) is the shared multi-value
+string input: committed values render as removable chips, the text field filters
+the remaining `options` in a portalled suggestion panel, and `Enter`/comma
+commits the typed value. It is a string-model component — `TagsDialog` maps the
+document's `{ name, color }` array to `string[]` at the boundary and passes
+`chip`/`option` snippets for colored rendering; `ShareeCombobox` is the
+`User`-model counterpart for sharee pickers. Like every sized control it takes
+`size` (`SizeInput`) and derives its font, line, padding, gap, and chip metrics
+from the shared size axis via `size-metrics.ts`. `defaultValue` baselines the
+optional clear affordance (`clearable`/`clearPlacement`/`onClear`, shared with
+`TextInput` through `clearable-props.ts`), and `onQueryChange` lets a caller
+supply externally filtered options for async sources. The match span of each
+suggestion is highlighted against the current query.
 
 ### Plain-Text Hints (`tooltip`)
 
@@ -649,9 +667,9 @@ dialogs, login panel, admin hooks).
   English; the client applies the saved locale during layout initialization.
 - `i18n.t()` is called in templates and `$derived`; never in a `$props()`
   default (prop defaults evaluate once and would not react to a locale change).
-  Shared components with default labels (`CopyButton`, `Copyable`, `Chip`,
+  Shared components with default labels (`Copyable`, `Chip`, `TagInput`,
   `Splitter`, `LazyCodeEditor`, `FormatDialog`,
-  `Combobox`, `SelectDropdown`, `DataTable`) keep the prop optional and resolve
+  `SelectDropdown`, `DataTable`) keep the prop optional and resolve
   the fallback via `$derived(prop ?? i18n.t('key'))` or an inline `??` at the
   call site. Toast text in event handlers and async code uses the current locale
   at call time via the captured store; plain `.ts` API helpers (`admin.ts`,
@@ -794,11 +812,15 @@ point; `/api/auth/logout` clears both the user and admin session cookies.
   dividers) that selects the drag axis, resize cursor, negative-margin/thickness
   classes, and arrow keys. When the current type has no preview component, the
   toggles and preview params are ignored for layout (the editor fills the pane).
-- CSV previews use a spreadsheet grid: `DataGrid.svelte` renders
-  `use-grid-model.svelte.ts` (per-cell committed flags, self-echo
-  reconciliation, bounded undo/redo history) with `use-grid-selection`,
-  `use-grid-clipboard`, and `use-grid-autoscroll` composables; `CsvPreview`
-  wires parsing/serialization via `csv-utils.ts` (papaparse).
+- CSV previews use a spreadsheet grid: `DataGrid.svelte` is a thin
+  orchestration layer over focused composables — `use-grid-model.svelte.ts`
+  (the row matrix and per-cell committed flags), `use-grid-history` (the bounded
+  undo/redo stacks), `use-grid-serialize` (the committed-matrix bounds),
+  `use-grid-editor`, `use-grid-selection`, `use-grid-keyboard`,
+  `use-grid-selectors`, `use-grid-columns` (the width engine),
+  `use-grid-sort`, `use-grid-undo-redo`, `use-grid-clipboard`, and
+  `use-grid-autoscroll` — with `GridToolbar.svelte` owning the toolbar;
+  `CsvPreview` wires parsing/serialization via `csv-utils.ts` (papaparse).
 
 ### Grid Model
 
@@ -839,7 +861,7 @@ cleared) so the user can resort. The grid's outer edges come from the table's
 `border-b`); any column-width math must subtract `TABLE_LEFT_BORDER` (1px) to
 keep the table's border box inside the scroll container. The selection outline
 recolors those owning borders (`rangeHighlightStyle` in
-`use-grid-selection.svelte.ts`): a grid line is cyan when exactly one of the two
+`grid-styles.ts`): a grid line is cyan when exactly one of the two
 cells it separates is selected, so the outline sits exactly on the shared
 borders instead of being drawn inside the cells. The outline's top edge above
 the first data row runs along the column-label row's `border-b` and the left
@@ -893,7 +915,7 @@ floating overlay so the rest of the grid keeps its layout: the `textarea` is
 positioned absolutely (`top:0;left:-1px;right:-1px;width:auto`, no explicit
 height) — the `left/right:-1px` make it span the cell's border box — and it
 carries the cell's left/right/bottom border in the selection-outline color
-(`RANGE_COLOR`, exported from `use-grid-selection.svelte`), so the expanded
+(`RANGE_COLOR`, exported from `grid-styles.ts`), so the expanded
 lines stay wrapped in the same blue border as the cell while it is being edited
 (the editing cell is always selected). The left border is needed because the
 base row's left grid line is the neighboring cell's border, which is only one
@@ -960,8 +982,8 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
   rendered `offsetWidth` and captures existing `columnWidths`, handed to the
   model until the grid structure changes.
 - **Splitters.** Every column-selector header cell (first `thead` row) hosts an
-  absolutely-positioned `w-1.5` handle (mid-column handles offset `right:-3px`
-  to straddle the boundary, the trailing one at `right:0`). The resize engine is
+  absolutely-positioned `w-1.5` handle pinned at `right-0`; every handle but the
+  trailing one adds `translate-x-1/2` so it straddles the boundary. The resize engine is
   the shared `createColumnResize` composable (same one DataTable uses), which
   owns the drag state and width math and takes the column count, scroll
   container, header-cell measurement, per-column minimum, and fixed reserved
@@ -1042,9 +1064,9 @@ header kebab menu. Clicking it opens `HistoryDialog`:
   when the editor already has unsaved changes the restore is confirmed first.
 - The editor page tracks the version count and refreshes it after each save so
   the History button appears as soon as a document has multiple versions.
-- On mobile the dialog is full screen (`fullscreen` prop on `BaseDialog`,
-  driven by the `isMobile` context passed from the editor pane) instead of a
-  centered modal. The action panel stays visible and the content pane plus the
+- On mobile the dialog is full screen (the panel's breakpoint classes switch to
+  `h-dvh`/full-width below the dialog breakpoint, so no prop or viewport context
+  is involved) instead of a centered modal. The action panel stays visible and the content pane plus the
   loading spinner use a fixed `h-[60vh]` (the version list stays capped at
   `max-h-[70vh]`), so the dialog never resizes when switching between versions
   of different content lengths — long content scrolls inside the pane via
