@@ -51,6 +51,5 @@
     showHeaders={false}
     hideHeaderToggle
     initialColumnWidths={['35%', '65%']}
-    size="sm"
     storageKey="properties-preview" />
 {/if}

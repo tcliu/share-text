@@ -621,7 +621,7 @@
     {/if}
   {/snippet}
   {#snippet closeIcon()}
-    <CloseIcon size="sm" />
+    <CloseIcon />
   {/snippet}
   {#if showClear}
     <!-- The clear affordance scales with the control: its gap is a ratio of the

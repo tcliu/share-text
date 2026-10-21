@@ -345,14 +345,13 @@
 </script>
 
 {#snippet closeIcon()}
-  <CloseIcon size="sm" />
+  <CloseIcon />
 {/snippet}
 {#snippet clearControl()}
   <!-- Ghost keeps the tiny cross unobtrusive; the cross is one fixed step
-      (`sm`) rather than the field's own size. -->
+      rather than the field's own size. -->
   <Button
     variant="ghost"
-    size="sm"
     icon={closeIcon}
     ariaLabel={resolvedClearLabel}
     onClick={handleClear} />
