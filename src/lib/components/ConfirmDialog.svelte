@@ -45,14 +45,19 @@
   const resolvedCancel = $derived(confirmOnDismiss ? onConfirm : (onCancel ?? onConfirm))
 </script>
 
-{#snippet confirmFooter()}
-  <Buttons align="right">
-    <Button variant="primary" {accent} {pending} size={buttonSize} onClick={onConfirm}>
-      {confirmLabel}
-    </Button>
-  </Buttons>
-{/snippet}
-
-<BaseDialog {title} {className} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending} onCancel={resolvedCancel} footer={confirmFooter}>
-  <p class="text-sm leading-6 text-slate-400">{message}</p>
+<BaseDialog {title} {className} {widthVariant} {heightVariant} {size} {closeLabel} dismissDisabled={pending} onCancel={resolvedCancel}>
+  <!-- The action row is part of the content: the message scrolls in its own
+       area, so the row stays pinned below it. -->
+  <div class="flex min-h-0 flex-1 flex-col">
+    <div class="min-h-0 flex-1 overflow-y-auto">
+      <p class="text-sm leading-6 text-slate-400">{message}</p>
+    </div>
+    <div class="flex-none">
+      <Buttons align="right">
+        <Button variant="primary" {accent} {pending} size={buttonSize} onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
+      </Buttons>
+    </div>
+  </div>
 </BaseDialog>

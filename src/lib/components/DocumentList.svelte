@@ -3,7 +3,7 @@
   import { measureHeaderMinWidth } from '$lib/document-list-helpers'
   import Button from './Button.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
-  import ChevronsLeftIcon from '$lib/icons/ChevronsLeftIcon.svelte'
+  import DoubleChevronLeftIcon from '$lib/icons/DoubleChevronLeftIcon.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import LockIcon from '$lib/icons/LockIcon.svelte'
   import SearchInput from './SearchInput.svelte'
@@ -109,7 +109,7 @@
         preventFocusSteal
         onClick={onToggleCollapse}>
         {#snippet icon()}
-          <ChevronsLeftIcon />
+          <DoubleChevronLeftIcon variant="heavy" />
         {/snippet}
       </Button>
     {/if}

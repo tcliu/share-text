@@ -48,8 +48,6 @@
     title?: string
     /** Custom header content; wins over `title` and still labels the dialog. */
     header?: import('svelte').Snippet
-    /** Fixed footer content below the body scroll container. */
-    footer?: import('svelte').Snippet
     className?: string
     widthVariant?: DialogWidthVariant
     heightVariant?: DialogHeightVariant
@@ -72,7 +70,6 @@
   let {
     title,
     header,
-    footer,
     className = '',
     widthVariant,
     heightVariant,
@@ -279,11 +276,6 @@
       <div tabindex="-1" class="flex min-h-0 flex-1 flex-col overflow-y-auto px-5.5 pt-4 pb-5.5 outline-none">
         {@render children?.()}
       </div>
-      {#if footer}
-        <div class="flex-none px-5.5 pb-5.5">
-          {@render footer()}
-        </div>
-      {/if}
     </div>
   </div>
 </div>

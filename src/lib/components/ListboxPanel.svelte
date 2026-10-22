@@ -41,6 +41,9 @@
     optionKey?: (option: T, index: number) => string | number
     labelOf?: (option: T) => string
     matchParts?: (option: T) => MatchedLabelParts | null
+    // Optional element rendered before the default label (e.g. a colour dot);
+    // an `option` snippet still replaces the whole row content.
+    leading?: Snippet<[T]>
     option?: Snippet<[T]>
   }
 
@@ -69,6 +72,7 @@
     optionKey,
     labelOf,
     matchParts,
+    leading,
     option,
   }: Props = $props()
 
@@ -120,6 +124,9 @@
       {#if option}
         {@render option(entry)}
       {:else}
+        {#if leading}
+          {@render leading(entry)}
+        {/if}
         <span class="min-w-0 truncate">
           {#if parts}
             {parts.before}<span class="font-semibold text-cyan-300">{parts.match}</span>{parts.after}

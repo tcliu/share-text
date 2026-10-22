@@ -5,13 +5,12 @@
   import EditableText from './EditableText.svelte'
   import Button from './Button.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
-  import PencilIcon from '$lib/icons/PencilIcon.svelte'
+  import EditIcon from '$lib/icons/EditIcon.svelte'
   import EyeIcon from '$lib/icons/EyeIcon.svelte'
   import CopyIcon from '$lib/icons/CopyIcon.svelte'
   import LinkIcon from '$lib/icons/LinkIcon.svelte'
   import TagsIcon from '$lib/icons/TagsIcon.svelte'
   import SaveIcon from '$lib/icons/SaveIcon.svelte'
-  import CloneIcon from '$lib/icons/CloneIcon.svelte'
   import HistoryIcon from '$lib/icons/HistoryIcon.svelte'
   import UploadIcon from '$lib/icons/UploadIcon.svelte'
   import ExportIcon from '$lib/icons/ExportIcon.svelte'
@@ -233,7 +232,7 @@
         if (opening) refocusEditor = true
       }}>
       {#snippet icon()}
-        <PencilIcon />
+        <EditIcon variant="solid" />
       {/snippet}
     </Button>
     <Button
@@ -400,7 +399,7 @@
   {/snippet}
 
   {#snippet cloneIcon()}
-    <CloneIcon />
+    <CopyIcon variant="compact" />
   {/snippet}
 
   {#snippet historyIcon()}

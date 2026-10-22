@@ -200,6 +200,7 @@
     aria-expanded={ariaExpanded}
     aria-haspopup={ariaHaspopup}
     aria-controls={ariaControls}
+    aria-busy={pending || undefined}
     onclick={onClick}
     onkeydown={onKeyDown}
     onpointerdown={preventFocusSteal ? handlePreventFocusSteal : undefined}

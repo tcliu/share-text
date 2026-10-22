@@ -88,8 +88,8 @@
     onClick={() => onReset()}
     icon={resetIcon} />
   {#if open}
-    <!-- Prevent the focus shift on row pointerdown (as TopbarMenu options do)
-         so focusout-close cannot win the race with the label click. -->
+    <!-- Prevent the focus shift on row pointerdown (as the shared Menu options
+         do) so focusout-close cannot win the race with the label click. -->
     <div
       bind:this={panelRef}
       use:positionPanel={() => ({ getTrigger: () => triggerRef, getOpen: () => open, align: 'right' })}

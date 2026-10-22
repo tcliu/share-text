@@ -1,10 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
-  import Chip from './Chip.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
+  import FormDialog from './FormDialog.svelte'
   import FormField from './FormField.svelte'
   import TagInput from './TagInput.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
@@ -16,10 +12,7 @@
     sameColorFamily,
     tagChipClass,
     tagChipStyle,
-    tagDotClass,
     tagDotStyle,
-    tagRemoveBtnClass,
-    tagRemoveBtnStyle,
     type Tag,
   } from '$lib/tag-colors'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -43,7 +36,6 @@
   }
 
   let draftTags = $state<Tag[]>([])
-  let discardPromptOpen = $state(false)
   let tagInputRef = $state<ReturnType<typeof TagInput> | null>(null)
 
   $effect(() => {
@@ -61,8 +53,14 @@
   const tagNames = $derived(draftTags.map(tag => tag.name))
   const availableTagNames = $derived(availableTags.map(tag => tag.name))
 
+  // The colour a tag carries: its own in the draft, else the colour it
+  // already has in the library (the colour it would get if added), else the
+  // default the server would assign.
   function colorFor(name: string): string {
-    return draftTags.find(tag => tag.name === name)?.color ?? '#00F0FF'
+    const draft = draftTags.find(tag => tag.name === name)
+    if (draft) return draft.color
+    const available = availableTags.find(tag => tag.name.toLowerCase() === name.toLowerCase())
+    return available?.color ?? getDefaultTagColor(name)
   }
 
   function handleTagsChange(next: string[]): void {
@@ -103,27 +101,23 @@
     onSave(normalized)
     onClose()
   }
-
-  function handleCancelRequest() {
-    if (discardPromptOpen) return
-    if (dirty) {
-      discardPromptOpen = true
-      return
-    }
-    onClose()
-  }
-
-  function handleDiscard() {
-    discardPromptOpen = false
-    onClose()
-  }
 </script>
 
 {#if open}
-  <BaseDialog
+  <FormDialog
     title={i18n.t('tags.title')}
     widthVariant="lg"
-    onCancel={handleCancelRequest}>
+    closeLabel={i18n.t('common.closeDialog')}
+    saveLabel={i18n.t('common.ok')}
+    resetLabel={i18n.t('common.reset')}
+    discardTitle={i18n.t('tags.discardTitle')}
+    discardMessage={i18n.t('tags.discardMessage')}
+    discardLabel={i18n.t('tags.discard')}
+    {dirty}
+    confirmOnDismiss
+    onSave={handleSave}
+    onReset={handleReset}
+    onClose={onClose}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
         <TagInput
@@ -132,40 +126,11 @@
           options={availableTagNames}
           onChange={handleTagsChange}
           placeholder={i18n.t('tags.placeholder')}
-          id="document-tags-input">
-          {#snippet chip(name, remove)}
-            <Chip
-              label={name}
-              chipClass={tagChipClass()}
-              style={tagChipStyle(colorFor(name))}
-              removable
-              removeButtonClass={tagRemoveBtnClass()}
-              removeButtonStyle={tagRemoveBtnStyle(colorFor(name))}
-              removeLabel={i18n.t('chip.remove', { name })}
-              onRemove={remove} />
-          {/snippet}
-          {#snippet option(name)}
-            <span class={tagDotClass()} style={tagDotStyle(colorFor(name))}></span>
-            <span>{name}</span>
-          {/snippet}
-        </TagInput>
+          id="document-tags-input"
+          chipClass={tagChipClass()}
+          chipStyle={name => tagChipStyle(colorFor(name))}
+          optionDotStyle={name => tagDotStyle(colorFor(name))} />
       </FormField>
-
-      <Buttons align="right">
-        {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleSave} disabled={!dirty}>{i18n.t('common.ok')}</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
-        {/snippet}
-      </Buttons>
     </div>
-  </BaseDialog>
-{/if}
-
-{#if discardPromptOpen}
-  <ConfirmDialog
-    title={i18n.t('tags.discardTitle')}
-    message={i18n.t('tags.discardMessage')}
-    confirmLabel={i18n.t('tags.discard')}
-    onConfirm={handleDiscard}
-    confirmOnDismiss />
+  </FormDialog>
 {/if}

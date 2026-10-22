@@ -33,6 +33,13 @@
     // Colour classes per tag when `chipClass` is not given; replaces the
     // built-in palette.
     palette?: readonly string[]
+    // Inline style per tag for the chip (the caller owns the colour
+    // treatment); the chip's own metrics stay with the shared component.
+    chipStyle?: (tag: string) => string | undefined
+    // Inline style for the dot that precedes the option label in the
+    // suggestion panel; the dot itself is the shared component's, so only
+    // its colour is the caller's.
+    optionDotStyle?: (tag: string) => string | undefined
     chip?: Snippet<[tag: string, remove: () => void]>
     option?: Snippet<[tag: string]>
     // The cross belongs with the tags, so `clearPlacement` `auto` overlays
@@ -52,6 +59,8 @@
     size = 'md',
     chipClass,
     palette,
+    chipStyle,
+    optionDotStyle,
     chip,
     option,
     clearable = false,
@@ -63,7 +72,9 @@
 
   // Built-in per-tag chip colours: a deterministic palette so tags read
   // distinctly with zero config. `chipClass` overrides it (a function per tag,
-  // a string for all), and `palette` replaces it wholesale.
+  // a string for all), and `palette` replaces it wholesale. The palette keeps
+  // the pill frame; a caller-supplied `chipClass` owns the whole class string
+  // (shape included), so a caller with its own chip shape passes it unchanged.
   const DEFAULT_TAG_COLORS = [
     'border-orange-700 bg-orange-950/50 text-orange-200',
     'border-cyan-700 bg-cyan-950/50 text-cyan-200',
@@ -72,6 +83,8 @@
     'border-rose-700 bg-rose-950/50 text-rose-200',
     'border-sky-700 bg-sky-950/50 text-sky-200',
   ]
+
+  const CHIP_FRAME = 'rounded-full border'
 
   // FNV-1a: a well-distributed hash so nearby tags do not collide on a colour.
   function hashTag(tag: string): number {
@@ -87,7 +100,7 @@
     if (typeof chipClass === 'function') return chipClass(tag)
     if (chipClass) return chipClass
     const colors = palette && palette.length > 0 ? palette : DEFAULT_TAG_COLORS
-    return colors[hashTag(tag) % colors.length]
+    return `${CHIP_FRAME} ${colors[hashTag(tag) % colors.length]}`
   }
 
   // Every metric is a fixed ratio of the size dimension, so each keeps a
@@ -370,7 +383,8 @@
         {:else}
           <Chip
             label={tag}
-            chipClass={`rounded-full border ${resolveChipClass(tag)}`}
+            chipClass={resolveChipClass(tag)}
+            style={chipStyle?.(tag) ?? ''}
             size={size}
             removable
             removeLabel={i18n.t('tagInput.remove', { name: tag })}
@@ -438,6 +452,12 @@
     {@render option(tag)}
   {/if}
 {/snippet}
+{#snippet panelLeading(tag: string)}
+  {@const dotStyle = optionDotStyle?.(tag)}
+  {#if dotStyle}
+    <span class="h-2 w-2 shrink-0 rounded-full" style={dotStyle}></span>
+  {/if}
+{/snippet}
 {#if open && suggestions.length > 0}
   <ListboxPanel
     bind:panelEl={panelRef}
@@ -462,5 +482,6 @@
     optionKey={tag => tag.toLowerCase()}
     labelOf={tag => tag}
     matchParts={tag => labelParts(tag)}
+    leading={optionDotStyle ? panelLeading : undefined}
     option={option ? panelOption : undefined} />
 {/if}

@@ -23,11 +23,15 @@ function renderDialog(overrides: Record<string, unknown> = {}) {
 }
 
 describe('TagsDialog', () => {
-  it('renders the persisted tags', () => {
-    const { getByText } = renderDialog()
+  it('renders the persisted tags in their assigned colour', () => {
+    const { getByRole, getByText } = renderDialog()
     const alpha = getByText('alpha')
     expect(alpha).toBeTruthy()
+    // The shared TagInput owns the chip markup; the colour comes from the
+    // per-tag style the dialog passes.
     expect(alpha.style.color).toBe('rgb(0, 240, 255)')
+    expect(alpha.className).toContain('rounded-md')
+    expect(getByRole('button', { name: 'Remove alpha' })).toBeTruthy()
     expect(getByText('beta')).toBeTruthy()
   })
 
@@ -51,12 +55,15 @@ describe('TagsDialog', () => {
 
     await fireEvent.input(input, { target: { value: 'gamma' } })
     await fireEvent.keyDown(input, { key: 'Enter' })
-    const closeButton = document.querySelectorAll('button[aria-label="Close dialog"]')[0] as HTMLButtonElement
+    // Dismissing the base dialog with a dirty draft opens the discard confirm.
+    const dialogs = document.querySelectorAll('[role="dialog"]')
+    const closeButton = dialogs[0].querySelector('button[aria-label="Close dialog"]') as HTMLButtonElement
     await fireEvent.click(closeButton)
     expect(getByText('Discard unsaved changes?')).toBeTruthy()
 
-    const dialogs = document.querySelectorAll('[role="dialog"]')
-    const confirmClose = dialogs[dialogs.length - 1].querySelector(
+    // The confirm's own dismissal performs the discard.
+    const stacked = document.querySelectorAll('[role="dialog"]')
+    const confirmClose = stacked[stacked.length - 1].querySelector(
       'button[aria-label="Close dialog"]',
     ) as HTMLButtonElement
     await fireEvent.click(confirmClose)

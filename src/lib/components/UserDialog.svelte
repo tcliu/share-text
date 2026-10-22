@@ -1,9 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
+  import FormDialog from './FormDialog.svelte'
   import FormField from './FormField.svelte'
   import PasswordInput from './PasswordInput.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
@@ -27,7 +24,6 @@
   let email = $state('')
   let password = $state('')
   let active = $state(true)
-  let discardPromptOpen = $state(false)
   let usernameInput = $state<HTMLInputElement | null>(null)
 
   onMount(() => {
@@ -65,20 +61,6 @@
     active = user?.status !== 'inactive'
   }
 
-  function handleCancelRequest() {
-    if (discardPromptOpen) return
-    if (dirty) {
-      discardPromptOpen = true
-      return
-    }
-    onClose()
-  }
-
-  function handleDiscard() {
-    discardPromptOpen = false
-    onClose()
-  }
-
   function handleSave() {
     if (okDisabled) {
       return
@@ -92,11 +74,22 @@
   }
 </script>
 
-<BaseDialog
+<FormDialog
   title={mode === 'add' ? i18n.t('admin.dialog.addUser') : i18n.t('admin.dialog.editUser')}
   widthVariant="md"
-  onCancel={handleCancelRequest}
-  dismissDisabled={pending || discardPromptOpen}>
+  closeLabel={i18n.t('common.closeDialog')}
+  saveLabel={mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
+  resetLabel={mode === 'edit' ? i18n.t('common.reset') : undefined}
+  discardTitle={i18n.t('admin.dialog.discardTitle')}
+  discardMessage={i18n.t('admin.dialog.discardUser')}
+  discardLabel={i18n.t('admin.discard')}
+  {dirty}
+  confirmOnDismiss
+  saveDisabled={!valid}
+  {pending}
+  onSave={handleSave}
+  onReset={handleReset}
+  onClose={onClose}>
   <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
     <FormField label={i18n.t('admin.users.username')} htmlFor="user-username">
       <input
@@ -133,24 +126,5 @@
         onSelect={value => (active = value === 'active')}
         emptyLabel={i18n.t('dropdown.noOptions')} />
     </FormField>
-    <Buttons align="right">
-      {#snippet children()}
-        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
-          {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
-        </Button>
-        {#if mode === 'edit'}
-          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{i18n.t('common.reset')}</Button>
-        {/if}
-      {/snippet}
-    </Buttons>
   </div>
-</BaseDialog>
-
-{#if discardPromptOpen}
-  <ConfirmDialog
-    title={i18n.t('admin.dialog.discardTitle')}
-    message={i18n.t('admin.dialog.discardUser')}
-    confirmLabel={i18n.t('admin.discard')}
-    onConfirm={handleDiscard}
-    confirmOnDismiss />
-{/if}
+</FormDialog>

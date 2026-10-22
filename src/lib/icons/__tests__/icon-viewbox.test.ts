@@ -8,7 +8,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { CHEVRON_STYLE, CHEVRON_VARIANTS } from '../chevron-stroke'
+import { VARIANT_LADDERS } from '../icon-variants'
 
 const dir = join(process.cwd(), 'src/lib/icons')
 const files = readdirSync(dir).filter(f => f.endsWith('.svelte'))
@@ -211,6 +211,47 @@ function geometryPoints(markup: string): number[][] {
 }
 
 describe('icon viewport', () => {
+
+  // The renderings a glyph branches into, split out of its markup so each one is
+  // checked against its own stroke treatment. A branch's `name` is the variant it
+  // selects; the trailing `{:else}` branch is unnamed and pairs with whatever the
+  // ladder still expects.
+  function variantBranches(markup: string): { name: string; body: string }[] {
+    const quoted = `['"]([^'"]+)['"]`
+    const condition = `variant\\s*(?:===|==)\\s*${quoted}`
+    const stop = `(?=\\{:else if[^}]*\\}|\\{:else\\}|\\{\\/if\\})`
+    const re = new RegExp(
+      `\\{#if\\s+${condition}\\}([\\s\\S]*?)${stop}` +
+        `|\\{:else if\\s+${condition}\\}([\\s\\S]*?)${stop}` +
+        `|\\{:else\\}([\\s\\S]*?)(?=\\{\\/if\\})`,
+      'g',
+    )
+    const out: { name: string; body: string }[] = []
+    for (const m of markup.matchAll(re)) {
+      out.push({ name: m[1] ?? m[3] ?? 'default', body: m[2] ?? m[4] ?? m[5] ?? '' })
+    }
+    return out
+  }
+
+  // Every painted point of one rendering: a stroked path contributes its stroke
+  // outline, a filled one its own geometry, and the other primitives their own
+  // band around the shape.
+  function variantInkPoints(
+    body: string,
+    style: { stroke: number; linecap: 'butt' | 'round'; linejoin: 'miter' | 'round' },
+  ): number[][] {
+    const half = style.stroke / 2
+    if (half === 0) return geometryPoints(body)
+    const ink: number[][] = []
+    for (const [, d] of body.matchAll(/<path\b[^>]*\sd="([^"]*)"/g)) {
+      for (const part of d.matchAll(/M[^M]*/g)) {
+        ink.push(...strokedInkPoints(pathPoints(part[0]!), half, style.linecap, style.linejoin))
+      }
+    }
+    const rest = body.replace(/<path\b[^>]*\/>/g, '')
+    for (const [x, y] of geometryPoints(rest)) ink.push([x - half, y - half], [x + half, y + half])
+    return ink
+  }
   it('every square glyph is authored in the one square viewBox with no fit transform', () => {
     for (const f of files) {
       if (nonSquare.has(f)) continue
@@ -303,23 +344,35 @@ describe('icon viewport', () => {
       if (nonSquare.has(f)) continue
       const src = read(f)
       const markup = src.match(/<svg\b[\s\S]*<\/svg>/)![0]
-      if (src.includes('CHEVRON_STYLE')) {
-        // One path per variant, listed in `CHEVRON_VARIANTS` order: pair each
-        // with its own stroke style, so the heavier bold stroke is bounded
-        // against its inset, flat-ended artwork rather than the regular path.
-        const paths = [...markup.matchAll(/<path\b[^>]*\bd="([^"]*)"[^>]*\/>/g)].map(m => m[1]!)
-        expect(paths.length, `${f} path count`).toBe(CHEVRON_VARIANTS.length)
-        CHEVRON_VARIANTS.forEach((variant, index) => {
-          const style = CHEVRON_STYLE[variant]
-          const ink = [...paths[index]!.matchAll(/M[^M]*/g)].flatMap(part =>
-            strokedInkPoints(pathPoints(part[0]!), style.stroke / 2, style.linecap, style.linejoin),
-          )
+      const ladder = VARIANT_LADDERS[f]
+      if (ladder) {
+        // One rendering per variant, paired with its own stroke style: the
+        // heavier bold stroke is bounded against its inset, flat-ended artwork
+        // rather than the regular path, and a filled rendering against its own
+        // geometry.
+        const branches = variantBranches(markup)
+        expect(branches.length, `${f} variant count`).toBe(ladder.variants.length)
+        ladder.variants.forEach((variant, index) => {
+          const branch = branches[index]!
+          if (branch.name !== 'default') expect(branch.name, `${f} variant order`).toBe(variant)
+          const ink = variantInkPoints(branch.body, ladder.styles[index]!)
           expectFillsAndFits(boxOf(ink), `${f} ${variant}`)
         })
         continue
       }
       const strokes = [...markup.matchAll(/stroke-width="([^"]*)"/g)].map(m => Number(m[1]))
       expectFillsAndFits(paddedInkBox(markup, (strokes.length ? Math.max(...strokes) : 0) / 2), f)
+    }
+  })
+
+  it('every glyph that renders variants registers its ladder', () => {
+    // A variant glyph the registry does not know would be bounded as the union
+    // of all its renderings instead of each rendering against its own stroke
+    // style, so the registration is asserted rather than assumed.
+    for (const f of files) {
+      if (nonSquare.has(f)) continue
+      const rendersVariants = /\{#(?:if|else if)\b[^}]*\bvariant\s*(?:===|!==|==|!=)/.test(read(f))
+      expect(Boolean(VARIANT_LADDERS[f]), `${f} must register its variant ladder`).toBe(rendersVariants)
     }
   })
 

@@ -2,11 +2,8 @@
   import { tick } from 'svelte'
   import type { User } from '$lib/documents'
   import { searchUsers, fetchRecentSharees } from '$lib/user-auth'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
   import Checkbox from './Checkbox.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
+  import FormDialog from './FormDialog.svelte'
   import FormField from './FormField.svelte'
   import ShareeCombobox from './ShareeCombobox.svelte'
   import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
@@ -30,7 +27,6 @@
   let draftIsPublic = $state(false)
   let draftSharees = $state<string[]>([])
   let shareeRef = $state<ReturnType<typeof ShareeCombobox> | null>(null)
-  let discardPromptOpen = $state(false)
   let recentUsersPromise: Promise<User[]> | null = null
 
   $effect(() => {
@@ -80,30 +76,24 @@
   function handleApply() {
     onApply({ isPublic: draftIsPublic, sharedWith: draftSharees })
   }
-
-  function handleCancelRequest() {
-    if (discardPromptOpen) {
-      return
-    }
-    if (dirty) {
-      discardPromptOpen = true
-      return
-    }
-    onClose()
-  }
-
-  function handleDiscard() {
-    discardPromptOpen = false
-    onClose()
-  }
 </script>
 
 {#if open}
-  <BaseDialog
+  <FormDialog
     title={i18n.t('share.title')}
     widthVariant="lg"
-    onCancel={handleCancelRequest}
-    dismissDisabled={pending || discardPromptOpen}>
+    closeLabel={i18n.t('common.closeDialog')}
+    saveLabel={i18n.t('common.ok')}
+    resetLabel={i18n.t('common.reset')}
+    discardTitle={i18n.t('share.discardTitle')}
+    discardMessage={i18n.t('share.discardMessage')}
+    discardLabel={i18n.t('share.discard')}
+    {dirty}
+    confirmOnDismiss
+    {pending}
+    onSave={handleApply}
+    onReset={handleReset}
+    onClose={onClose}>
     <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
 
@@ -119,23 +109,6 @@
           searchOnEmpty={!isAdmin}
           debounceMs={isAdmin ? 250 : 0} />
       </FormField>
-
-      <Buttons align="right">
-        {#snippet children()}
-          <Button variant="primary" accent="cyan" onClick={handleApply} disabled={!dirty} {pending}
-            >{i18n.t('common.ok')}</Button>
-          <Button variant="outline" onClick={handleReset} disabled={!dirty}>{i18n.t('common.reset')}</Button>
-        {/snippet}
-      </Buttons>
     </div>
-  </BaseDialog>
-{/if}
-
-{#if discardPromptOpen}
-  <ConfirmDialog
-    title={i18n.t('share.discardTitle')}
-    message={i18n.t('share.discardMessage')}
-    confirmLabel={i18n.t('share.discard')}
-    onConfirm={handleDiscard}
-    confirmOnDismiss />
+  </FormDialog>
 {/if}

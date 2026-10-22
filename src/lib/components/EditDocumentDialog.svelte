@@ -1,9 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
+  import FormDialog from './FormDialog.svelte'
   import FormField from './FormField.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import SelectDropdown from './SelectDropdown.svelte'
@@ -57,7 +54,6 @@
   let documentType = $state('text')
   let content = $state('')
   let isPublic = $state(true)
-  let discardPromptOpen = $state(false)
   let nameInput = $state<HTMLInputElement | null>(null)
   let draftSharees = $state<string[]>([])
   let lastConsumedShareeNames: string[] | null = null
@@ -141,20 +137,6 @@
     content = loadedContent
     isPublic = document?.isPublic ?? true
     draftSharees = sharedWith.map(user => user.username)
-  }
-
-  function handleCancelRequest() {
-    if (discardPromptOpen) return
-    if (dirty) {
-      discardPromptOpen = true
-      return
-    }
-    onClose()
-  }
-
-  function handleDiscard() {
-    discardPromptOpen = false
-    onClose()
   }
 
   function handleSave() {
@@ -273,41 +255,29 @@
   </div>
 {/snippet}
 
-<BaseDialog
+<FormDialog
   title={mode === 'add' ? i18n.t('admin.dialog.addDocument') : i18n.t('admin.dialog.editDocument')}
   widthVariant="3xl"
-  onCancel={handleCancelRequest}
-  dismissDisabled={pending}>
-  <div class="flex min-h-0 flex-1 flex-col gap-4">
-    <div class="min-h-0 flex-1 overflow-y-auto">
-      <div class="flex flex-wrap items-start gap-4">
-        <section aria-label={i18n.t('admin.dialog.details')} class="flex min-w-[20rem] flex-1 flex-col gap-4">
-          {@render detailsPane()}
-        </section>
-        <section aria-label={i18n.t('admin.dialog.content')} class="flex min-w-[20rem] flex-1 flex-col gap-2">
-          <h2 class="text-sm font-semibold text-slate-300">{i18n.t('admin.dialog.content')}</h2>
-          {@render contentPane()}
-        </section>
-      </div>
-    </div>
-    <Buttons align="right">
-      {#snippet children()}
-        <Button variant="primary" accent="cyan" onClick={handleSave} disabled={okDisabled} {pending}>
-          {mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
-        </Button>
-        {#if mode === 'edit'}
-          <Button variant="outline" onClick={handleReset} disabled={!dirty || pending}>{i18n.t('common.reset')}</Button>
-        {/if}
-      {/snippet}
-    </Buttons>
+  closeLabel={i18n.t('common.closeDialog')}
+  saveLabel={mode === 'add' ? i18n.t('admin.dialog.create') : i18n.t('common.ok')}
+  resetLabel={mode === 'edit' ? i18n.t('common.reset') : undefined}
+  discardTitle={i18n.t('admin.dialog.discardTitle')}
+  discardMessage={i18n.t('admin.dialog.discardDocument')}
+  discardLabel={i18n.t('admin.discard')}
+  {dirty}
+  confirmOnDismiss
+  saveDisabled={!valid || contentLoading || contentFailed}
+  {pending}
+  onSave={handleSave}
+  onReset={handleReset}
+  onClose={onClose}>
+  <div class="flex flex-wrap items-start gap-4">
+    <section aria-label={i18n.t('admin.dialog.details')} class="flex min-w-[20rem] flex-1 flex-col gap-4">
+      {@render detailsPane()}
+    </section>
+    <section aria-label={i18n.t('admin.dialog.content')} class="flex min-w-[20rem] flex-1 flex-col gap-2">
+      <h2 class="text-sm font-semibold text-slate-300">{i18n.t('admin.dialog.content')}</h2>
+      {@render contentPane()}
+    </section>
   </div>
-</BaseDialog>
-
-{#if discardPromptOpen}
-  <ConfirmDialog
-    title={i18n.t('admin.dialog.discardTitle')}
-    message={i18n.t('admin.dialog.discardDocument')}
-    confirmLabel={i18n.t('admin.discard')}
-    onConfirm={handleDiscard}
-    confirmOnDismiss />
-{/if}
+</FormDialog>

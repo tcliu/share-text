@@ -56,10 +56,9 @@
   // default `md` reproduces the pill's current metrics: a 12px label, 8/2
   // padding, a 4px label→remove gap, and the 7.3px remove cross. Chip owns the
   // size-scaled spacing; `chipClass` supplies color and shape (radius) only.
-  // The cross reads at 0.75 of the size dimension, which is 0.75 of the
-  // previous cross: the slot is 0.75 of the dimension and the cross is 0.75 of
-  // the slot. The slot carries that ratio, because a glyph fills its box and
-  // the shared icon ratio trims the artwork inside it.
+  // The remove cross's icon size is 0.5625 of the size dimension (9px at `md`),
+  // and `resolveIconPx` renders the cross at 0.8125 of that (7.3px), because a
+  // glyph fills its box and the shared icon ratio trims the artwork inside it.
   const CHIP_RATIOS = {
     font: 0.75,
     line: 1,

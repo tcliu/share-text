@@ -49,7 +49,7 @@
   import Self from './StructureNode.svelte'
   import Button from './Button.svelte'
   import Copyable from './Copyable.svelte'
-  import EditDialog from './EditDialog.svelte'
+  import FormDialog from './FormDialog.svelte'
   import LazyCodeEditor from './LazyCodeEditor.svelte'
   import Tooltip from './Tooltip.svelte'
   import CaretRightIcon from '$lib/icons/CaretRightIcon.svelte'
@@ -492,7 +492,7 @@
   {/snippet}
 
   {#if objectEditor.open}
-    <EditDialog
+    <FormDialog
       header={objectTitle}
       widthVariant="3xl"
       closeLabel={i18n.t('common.close')}
@@ -501,6 +501,7 @@
       discardTitle={i18n.t('common.discardTitle')}
       discardMessage={i18n.t('common.discardMessage')}
       discardLabel={i18n.t('common.discard')}
+      confirmOnDismiss
       dirty={objectEditor.dirty}
       saveDisabled={!objectEditor.valid}
       onSave={objectEditor.save}
@@ -520,6 +521,6 @@
           </p>
         {/if}
       </div>
-    </EditDialog>
+    </FormDialog>
   {/if}
 </div>

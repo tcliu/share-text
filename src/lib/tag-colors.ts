@@ -36,7 +36,7 @@ export function tagChipStyle(color: string): string {
 }
 
 const REMOVE_BTN_BASE =
-  '-m-1 flex items-center justify-center rounded-full p-1.5 outline-none opacity-60 transition hover:opacity-100 focus-visible:opacity-100'
+  '-m-1 flex items-center justify-center rounded-full p-1.5 outline-none opacity-60 transition hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-cyan-500'
 
 export function tagRemoveBtnClass(): string {
   return REMOVE_BTN_BASE
@@ -44,10 +44,6 @@ export function tagRemoveBtnClass(): string {
 
 export function tagRemoveBtnStyle(color: string): string {
   return `color: ${resolveColor(color)}`
-}
-
-export function tagDotClass(): string {
-  return 'h-2 w-2 rounded-full'
 }
 
 export function tagDotStyle(color: string): string {
