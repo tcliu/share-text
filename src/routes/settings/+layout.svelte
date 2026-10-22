@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte'
   import { onMount } from 'svelte'
   import { page } from '$app/state'
-  import { beforeNavigate, goto } from '$app/navigation'
+  import { goto } from '$app/navigation'
   import Button from '$lib/components/Button.svelte'
   import Buttons from '$lib/components/Buttons.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
@@ -24,6 +24,7 @@
   import { useOwnedDocuments } from '$lib/use-owned-documents.svelte'
   import { useUserSettings } from '$lib/use-user-settings.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
+  import { useNavigationDiscard } from '$lib/use-navigation-discard.svelte'
 
   const PROFILE_PATH = '/settings/profile'
   const GENERAL_PATH = '/settings/general'
@@ -35,9 +36,6 @@
   }
 
   let { children }: { children?: Snippet } = $props()
-
-  let discardPromptOpen = $state(false)
-  let pendingNavigateUrl = $state<string | null>(null)
 
   const userAuthState = useUserAuth()
   const settingsState = useUserSettings(() => void handleExpiredSession())
@@ -66,14 +64,14 @@
     }
   })
 
-  function handleDiscardAndNavigate() {
-    const url = pendingNavigateUrl
-    pendingNavigateUrl = null
-    discardPromptOpen = false
-    if (!url) return
-    settingsState.resetDraft()
-    void goto(url)
-  }
+  // Leaving /settings with unsaved preference changes prompts to discard them.
+  const discardGuard = useNavigationDiscard({
+    isDirty: () => settingsState.hasUnsavedChanges,
+    onDiscard: () => settingsState.resetDraft(),
+    // Tab switches within /settings share this layout's state, so the draft
+    // survives and must not prompt to discard changes.
+    keepsDraft: pathname => pathname === '/settings' || pathname.startsWith('/settings/'),
+  })
 
   async function handleSignedOut() {
     suppressSignedOutRedirect = true
@@ -93,20 +91,6 @@
     }
     // The signedOut effect above routes to /login (landing + dialog).
   }
-
-  beforeNavigate(navigation => {
-    if (!settingsState.hasUnsavedChanges) return
-    const url = navigation.to?.url
-    if (!url) return
-    // Tab switches within /settings share this layout's state, so the draft
-    // survives and must not prompt to discard changes.
-    if (url.pathname === '/settings' || url.pathname.startsWith('/settings/')) {
-      return
-    }
-    navigation.cancel()
-    pendingNavigateUrl = url.pathname + url.search
-    discardPromptOpen = true
-  })
 
   onMount(() => {
     void userAuthState.checkSession()
@@ -248,12 +232,12 @@
   </main>
 </div>
 
-{#if discardPromptOpen}
+{#if discardGuard.discardPromptOpen}
   <ConfirmDialog
     title={i18n.t('settings.discardTitle')}
     message={i18n.t('settings.discardMessage')}
     confirmLabel={i18n.t('common.ok')}
     accent="amber"
-    onConfirm={handleDiscardAndNavigate}
+    onConfirm={discardGuard.confirmDiscard}
     confirmOnDismiss />
 {/if}

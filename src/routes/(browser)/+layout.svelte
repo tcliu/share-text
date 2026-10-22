@@ -9,7 +9,7 @@
   import DocumentList from '$lib/components/DocumentList.svelte'
   import AppShell from '$lib/components/AppShell.svelte'
   import Button from '$lib/components/Button.svelte'
-  import PersonIcon from '$lib/icons/PersonIcon.svelte'
+  import ProfileIcon from '$lib/icons/ProfileIcon.svelte'
   import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
   import MenuIcon from '$lib/icons/MenuIcon.svelte'
   import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
@@ -354,7 +354,7 @@
         tooltip={i18n.t('list.login')}
         onClick={() => (loginOpen = true)}>
         {#snippet icon()}
-          <PersonIcon />
+          <ProfileIcon />
         {/snippet}
       </Button>
     {/if}

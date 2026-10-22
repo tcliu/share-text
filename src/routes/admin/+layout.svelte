@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte'
   import { page } from '$app/state'
-  import { beforeNavigate, goto } from '$app/navigation'
+  import { goto } from '$app/navigation'
   import Button from '$lib/components/Button.svelte'
   import RefreshIcon from '$lib/icons/RefreshIcon.svelte'
   import DocumentIcon from '$lib/icons/DocumentIcon.svelte'
@@ -22,6 +22,7 @@
   import { useAdminProperties } from '$lib/use-admin-properties.svelte'
   import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import { useAdminUsers } from '$lib/use-admin-users.svelte'
+  import { useNavigationDiscard } from '$lib/use-navigation-discard.svelte'
   import PlusIcon from '$lib/icons/PlusIcon.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import ThemeMenu from '$lib/components/ThemeMenu.svelte'
@@ -40,9 +41,6 @@
   }
 
   let { children }: { children?: Snippet } = $props()
-
-  let discardPromptOpen = $state(false)
-  let pendingNavigateUrl = $state<string | null>(null)
 
   const preferencesState = useAdminPreferences(() => authState.handleSignedOut())
   const settingsState = useAdminProperties(() => authState.handleSignedOut())
@@ -78,27 +76,17 @@
     }
   })
 
-  beforeNavigate(navigation => {
-    if (!preferencesState.hasUnsavedChanges && !settingsState.hasUnsavedChanges) return
-    const url = navigation.to?.url
-    if (!url) return
+  // Leaving /admin with unsaved settings changes prompts to discard them.
+  const discardGuard = useNavigationDiscard({
+    isDirty: () => preferencesState.hasUnsavedChanges || settingsState.hasUnsavedChanges,
+    onDiscard: () => {
+      preferencesState.resetDraft()
+      settingsState.resetDraft()
+    },
     // Tab switches within /admin share this layout's state, so the settings
     // draft survives and must not prompt to discard changes.
-    if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) return
-    navigation.cancel()
-    pendingNavigateUrl = url.pathname + url.search
-    discardPromptOpen = true
+    keepsDraft: pathname => pathname === '/admin' || pathname.startsWith('/admin/'),
   })
-
-  function handleDiscardAndNavigate() {
-    const url = pendingNavigateUrl
-    pendingNavigateUrl = null
-    discardPromptOpen = false
-    if (!url) return
-    preferencesState.resetDraft()
-    settingsState.resetDraft()
-    void goto(url)
-  }
 
   onMount(() => {
     void authState.checkSession()
@@ -318,12 +306,12 @@
   </main>
 </div>
 
-{#if discardPromptOpen}
+{#if discardGuard.discardPromptOpen}
   <ConfirmDialog
     title={i18n.t('admin.discardSettingsTitle')}
     message={i18n.t('admin.discardSettingsMessage')}
     confirmLabel={i18n.t('admin.discard')}
     accent="amber"
-    onConfirm={handleDiscardAndNavigate}
+    onConfirm={discardGuard.confirmDiscard}
     confirmOnDismiss />
 {/if}
