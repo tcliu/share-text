@@ -1,6 +1,6 @@
 import { Pool, type PoolClient } from '@neondatabase/serverless'
 import type { Db, DbQuery, DbResult, DbStatement } from './types'
-import { quoteIdentifier } from '../../sql-rewrite.mjs'
+import { quoteIdentifier } from '../sql-rewrite.mjs'
 
 let pool: Pool | null = null
 

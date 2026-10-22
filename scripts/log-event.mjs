@@ -2,12 +2,12 @@
 // format (`<ISO timestamp> <LEVEL> ip=<ip> action=<action> <key>=<JSON>`), so
 // script output stays greppable next to server logs. Scripts run without a
 // request context, so ip is always `unknown`. The format lives in
-// `src/lib/log-format.mjs` and is imported by both runtimes so a change lands
+// `src/lib/server/log-format.mjs` and is imported by both runtimes so a change lands
 // once.
 //
 // Never pass connection strings, secrets, passwords, or document contents —
 // only identifiers and counts.
-import { formatLogLine } from '../src/lib/log-format.mjs'
+import { formatLogLine } from '../src/lib/server/log-format.mjs'
 
 export function logEvent({ action, details = {} }) {
   console.log(formatLogLine({ action, ip: 'unknown', details }))

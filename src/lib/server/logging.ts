@@ -2,12 +2,12 @@
 // `<ISO timestamp> <LEVEL> ip=<ip> action=<action> <key>=<JSON value> ...`. The
 // CLI-side sibling is `scripts/log-event.mjs`, which emits the same shape with
 // `ip=unknown` (scripts run without a request context); the format itself lives
-// in `src/lib/log-format.mjs` so a change lands once.
+// in `src/lib/server/log-format.mjs` so a change lands once.
 //
 // Never pass connection strings, secrets, passwords, or session contents — only
 // identifiers, counts, and error messages.
 import type { RequestEvent } from '@sveltejs/kit'
-import { formatLogLine as baseFormatLogLine } from '../log-format.mjs'
+import { formatLogLine as baseFormatLogLine } from './log-format.mjs'
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR'
 

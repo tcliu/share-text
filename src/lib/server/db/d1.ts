@@ -1,5 +1,5 @@
 import type { Db, DbQuery, DbResult, DbStatement } from './types'
-import { isRowsReturningSql, toSqliteSql } from '../../sql-rewrite.mjs'
+import { isRowsReturningSql, toSqliteSql } from '../sql-rewrite.mjs'
 import { logEvent } from '../logging'
 
 // Cloudflare D1 provider (optional production backend; selected when the D1

@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { toSqliteSql } from '../src/lib/sql-rewrite.mjs'
+import { toSqliteSql } from '../src/lib/server/sql-rewrite.mjs'
 import { ROOT as ROOT_DIR } from './lib/root.mjs'
 
 export function translateSchemaForD1(schema, qualifier = '') {

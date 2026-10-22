@@ -3,7 +3,7 @@
 import { Pool } from '@neondatabase/serverless'
 import { readFileSync } from 'node:fs'
 import { parseEnvFile } from './env-file.mjs'
-import { quoteIdentifier, toSqliteSql } from '../src/lib/sql-rewrite.mjs'
+import { quoteIdentifier, toSqliteSql } from '../src/lib/server/sql-rewrite.mjs'
 import { hasNeonSchema, neonSchemaPath } from './db-schema-path.mjs'
 
 export { parseEnvFile, quoteIdentifier, toSqliteSql }

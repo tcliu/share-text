@@ -5,7 +5,7 @@ import { createD1Db, isD1Database, type D1DatabaseLike } from './d1'
 import { resolveProfile } from '../profile'
 import { errorMessage, logEvent } from '../logging'
 import { toDbError } from './errors'
-import { D1_BINDING_NAME } from '../../d1-binding.mjs'
+import { D1_BINDING_NAME } from '../d1-binding.mjs'
 
 // Database selector. One file per provider (`sqlite.ts`, `neon.ts`, `d1.ts`);
 // this module owns backend resolution, caching, prod migrations, and the

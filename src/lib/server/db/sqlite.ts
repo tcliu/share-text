@@ -4,7 +4,7 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { Database } from 'better-sqlite3'
 import type { Db, DbQuery, DbResult, DbStatement } from './types'
-import { isRowsReturningSql, toSqliteSql } from '../../sql-rewrite.mjs'
+import { isRowsReturningSql, toSqliteSql } from '../sql-rewrite.mjs'
 
 export { toSqliteSql }
 

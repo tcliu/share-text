@@ -31,7 +31,7 @@ import {
   loadTargetOperatorEnv,
   seedCloudflareCredentials,
 } from '../../lib/target-env.mjs'
-import { D1_BINDING_NAME } from '../../../src/lib/d1-binding.mjs'
+import { D1_BINDING_NAME } from '../../../src/lib/server/d1-binding.mjs'
 
 // Cloudflare Pages target. Reads `.env.prod` overlaid by `.env.cloudflare`
 // (never `.env.vercel`), so the two targets keep independent URLs; the Neon
