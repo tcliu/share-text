@@ -172,7 +172,7 @@ synchronizes through a small fetch-based JSON API.
   - `db/d1.ts` is the Cloudflare D1 adapter, selected when prod has no
     `DATABASE_URL` and the `DB` binding resolves (read off the Cloudflare
     request env; the binding name is shared with the deploy flow via
-    `src/lib/d1-binding.mjs`). It reuses the shared token rewrite, so `$n` and
+    `src/lib/server/d1-binding.mjs`). It reuses the shared token rewrite, so `$n` and
     `current_timestamp` resolve exactly as on SQLite, and it executes a
     `Db.batch` as one atomic D1 batch. D1 has no interactive transactions, so
     `Db.transaction` runs statements in order and logs
@@ -296,9 +296,11 @@ synchronizes through a small fetch-based JSON API.
   tab's toolbar, and the active tab's content; the layout stays mounted across
   tab navigation so the settings draft and documents/users data survive tab
   switches, and each list lazy-loads via a layout `$effect` on its path. The
-  `beforeNavigate` discard guard lets navigations within `/admin` through
-  without prompting, since the shared state survives tab switches, and the
-  admin layout renders no top header row until the session is `authenticated`.
+  shared `useNavigationDiscard` guard (`src/lib/use-navigation-discard.svelte.ts`)
+  cancels a leaving navigation while the settings draft is dirty and lets
+  navigations within `/admin` through without prompting, since the shared state
+  survives tab switches, and the admin layout renders no top header row until the
+  session is `authenticated`.
   The browser-level account login/register form lives in the header's embedded
   auth dialog (`UserAuthPanel`); it accepts both user and admin credentials
   through the unified auth endpoint, redirecting an existing admin session to
@@ -335,17 +337,19 @@ synchronizes through a small fetch-based JSON API.
   the document body whose language mode follows the selected type) out as two
   responsive panes: side by side when the dialog is wide enough, with the
   Content pane flowing below Details when the dialog is too narrow for both
-  (a `flex-wrap` with a per-pane `min-w` floor). `BaseDialog` holds the title
-  fixed while the body wrapper (`flex-1 min-h-0 overflow-y-auto`) scrolls, and
-  the dialog keeps its OK/Create and Reset button row outside the scroll
-  container, so the title and action buttons stay visible while only the panes
-  scroll vertically on overflow. The dialog panel itself carries
+  (a `flex-wrap` with a per-pane `min-w` floor). The shared `FormDialog` holds the
+  title fixed, scrolls the body, and keeps the OK/Create and Reset button row in
+  its pinned footer outside the scroll container, so the title and action buttons
+  stay visible while only the panes scroll vertically on overflow. The dialog
+  panel itself carries
   `overflow-y-auto` only as a safety net: content is expected to control its
   own space usage, and the panel-level scrollbar engages only when a dialog
   breaks that pattern, so overflow stays reachable rather than clipped. OK/Apply and Reset follow the
   shared editable-form pattern with `content` included in the dirty check, and
   OK stays disabled until the content fetch settles so the body can never be
-  saved as empty mid-load. In edit mode the Details pane also shows an editable
+  saved as empty mid-load. In add mode the dialog has nothing to reset to, so
+  it omits the Reset button (the shared `FormDialog` renders it only when a
+  `resetLabel` is given). In edit mode the Details pane also shows an editable
   **Shared with** input via the shared `ShareeCombobox` component (colored
   removable username chips with an add-by-username/email search — the same
   control the Share dialog uses, with a `search` provider per source: the
@@ -469,7 +473,7 @@ synchronizes through a small fetch-based JSON API.
   Profile shows the signed-in account identity, General has its own
   Apply/Reload/Reset footer, and Documents uses a toolbar instead.
   Leaving `/settings` with unsaved preference changes prompts to discard (the same
-  `beforeNavigate` protocol as the admin console). The header offers the
+  shared `useNavigationDiscard` guard as the admin console). The header offers the
   language menu, a go-to-Documents button, and sign out.
 - `useUserSettings` loads once on sign-in via `GET /api/user/preferences` and
   exposes `load`/`apply`/`reload`/`resetDraft` plus `setPreferredLanguage`.
@@ -617,15 +621,27 @@ assistive tech via `aria-activedescendant`.
 string input: committed values render as removable chips, the text field filters
 the remaining `options` in a portalled suggestion panel, and `Enter`/comma
 commits the typed value. It is a string-model component — `TagsDialog` maps the
-document's `{ name, color }` array to `string[]` at the boundary and passes
-`chip`/`option` snippets for colored rendering; `ShareeCombobox` is the
-`User`-model counterpart for sharee pickers. Like every sized control it takes
+document's `{ name, color }` array to `string[]` at the boundary and renders the
+shared chips as they come, supplying the per-tag color through the
+`chipClass`/`chipStyle`/`optionDotStyle` props (the chip's classes, the chip's
+inline color, and the suggestion dot's color) instead of overriding the chip
+and option markup; `ShareeCombobox` is the `User`-model counterpart for sharee
+pickers, and supplies `chip`/`option` snippets for its own chip and sharee-row
+rendering. Like every sized control it takes
 `size` (`SizeInput`) and derives its font, line, padding, gap, and chip metrics
 from the shared size axis via `size-metrics.ts`. `defaultValue` baselines the
 optional clear affordance (`clearable`/`clearPlacement`/`onClear`, shared with
 `TextInput` through `clearable-props.ts`), and `onQueryChange` lets a caller
 supply externally filtered options for async sources. The match span of each
 suggestion is highlighted against the current query.
+
+The tag editor's shell is the shared `FormDialog`: `TagsDialog` supplies the
+tag field, the draft-vs-source `dirty` compare, and the save/reset/close
+handlers, and inherits the OK/Reset footer plus the stacked
+"Discard unsaved changes?" confirm (whose own dismissal performs the discard,
+because the dialog passes `confirmOnDismiss`).
+The confirm, the OK button, and the Reset button keep the app's `tags.*`
+and `common.*` labels.
 
 ### Plain-Text Hints (`tooltip`)
 
@@ -1033,7 +1049,10 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
   or XML) rendering a `StructureTree`/`StructureNode`; when `editable` is true,
   edits are patched immutably via `structure-value.ts` and serialized back to
   content, and when it is false the same tree renders in copyable/read-only
-  mode with edit/rename affordances removed.
+  mode with edit/rename affordances removed. Editing an object node opens a
+  `FormDialog` that commits the parsed object on OK, resets to the snapshot
+  taken when it opened, and discards a dirty draft when the discard confirm is
+  dismissed.
 
 ### Version History
 
@@ -1114,7 +1133,7 @@ Writes are last-write-wins with no conflict detection or merge.
   the process table and shell history), for use as `ADMIN_PASSWORD_HASH`.
 - `scripts/db-config.mjs` centralizes env-file parsing, profile resolution, and
   Postgres identifier quoting; the SQLite SQL rewrite and quoting it shares with
-  the server runtime live in `src/lib/sql-rewrite.mjs`.
+  the server runtime live in `src/lib/server/sql-rewrite.mjs`.
 - `scripts/sync-vercel-env.mjs` merges `.env` and `.env.vercel`, upserts the set
   to Vercel production env vars, and removes stale ones.
 - `scripts/deploy.mjs` is the deploy entry (Vercel by default, or Cloudflare

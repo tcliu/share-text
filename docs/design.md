@@ -227,13 +227,15 @@ document name and type selector, then the tag chips, then the action buttons —
   chips next to the document name in the editor header.
 - A **Tags** button in the editor toolbar opens the **Tags dialog**, where the
   user can add new tags (typing or selecting from existing tags across all
-  documents), remove tags, or reorder them.
-- Each tag gets a deterministic default color from a 16-color palette assigned
-  by a hash of the tag name. The dialog shows the current color assignment and,
-  when adding a tag whose name's default color shares a color family with an
-  existing tag on the same document, picks the next visually distinct color
-  instead. Tags are saved immediately on closing the dialog (they do not
-  participate in the dirty/save flow).
+  documents) and remove tags; saving writes them in alphabetical order.
+- A new tag takes the palette color for its position in the list, or the color
+  an existing tag with the same name already uses. When that color shares a
+  family with the tag just before it, the next visually distinct color is
+  picked instead. The dialog shows the current color assignment on its tag
+  chips and on the color dot beside each suggestion, and the assigned color
+  also shows on the tag chips next to the document name in the editor header.
+  Tags are persisted when the dialog is confirmed with OK; closing it with
+  unsaved changes prompts to discard them.
 
 ## Clone
 
