@@ -4,8 +4,8 @@
 // partial escape sequence buffered until the next chunk completes it, then
 // emits one event per key, control key, mouse event, or printable character.
 // The parser is pure — it only classifies bytes — so mode gating (list vs
-// menu vs command prompt) stays in the caller and the byte handling is
-// unit-testable (test/tui-input.test.mjs).
+// menu vs command prompt) stays in the caller and the byte handling stays
+// unit-testable.
 import { parseSgrMouse } from '../_tui.mjs'
 
 // 3- and 4-char CSI sequences mapped to key names.

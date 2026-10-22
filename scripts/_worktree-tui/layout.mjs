@@ -1,7 +1,7 @@
 // Pure layout, geometry, and menu model for scripts/worktree-manager.mjs.
 //
 // Everything here is a function of its arguments: no terminal I/O, no shared
-// mutable state, so it is unit-testable (test/worktree-tui-layout.test.ts) and
+// mutable state, so it is unit-testable (scripts/_worktree-tui/layout.test.ts) and
 // the full-screen TUI keeps only the stateful wiring. Terminal size and the
 // live `state` reach these functions through the adapters in
 // worktree-manager.mjs.
