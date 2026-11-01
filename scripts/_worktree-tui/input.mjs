@@ -1,4 +1,4 @@
-// Incremental terminal input parser for scripts/worktree-manager.mjs.
+// Incremental terminal input parser for the worktree-manager TUI.
 //
 // Raw stdin chunks arrive in arbitrary pieces, so this keeps the trailing
 // partial escape sequence buffered until the next chunk completes it, then

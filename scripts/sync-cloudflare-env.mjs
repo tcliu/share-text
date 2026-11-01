@@ -26,7 +26,7 @@
 // `--dry-run` reports the plan without writing. Empty local values are skipped
 // (the remote value survives); local-only keys are never synced.
 import { spawn } from 'node:child_process'
-import { existsSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseEnvFile } from './env-file.mjs'
@@ -56,7 +56,12 @@ import {
   patchPagesEnvVars,
 } from './lib/cloudflare-pages-env.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
-import { loadTargetFileEnv, seedCloudflareCredentials, targetSourceFiles } from './lib/target-env.mjs'
+import {
+  loadTargetFileEnv,
+  missingTargetSources,
+  seedCloudflareCredentials,
+  targetSourceFiles,
+} from './lib/target-env.mjs'
 
 // Shared prod values (.env.prod) overlaid by Cloudflare-only values
 // (.env.cloudflare); the overlay wins on conflict. Files-only merge: shell
@@ -98,7 +103,7 @@ async function putSecret(project, key, value) {
 async function main() {
   const startedAt = Date.now()
   const { dryRun, prune, secrets: secretsMode } = parseFlags(process.argv.slice(2))
-  const missing = SOURCE_FILES.filter(file => !existsSync(join(ROOT_DIR, file)))
+  const missing = missingTargetSources('cloudflare', ROOT_DIR)
   if (missing.length > 0) {
     failExit(
       `Missing ${missing.join(', ')}: shared prod values live in .env.prod, Cloudflare-only values in .env.cloudflare.`,

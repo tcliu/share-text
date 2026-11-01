@@ -753,7 +753,14 @@ export function removeWorktree(root, worktree, options = {}) {
       timeout: timeoutMs,
     })
     return true
-  } catch {
+  } catch (error) {
+    // Only a hung `git worktree remove` justifies deleting the tree by hand.
+    // Any other failure (a lock, a permission problem, an unreadable index)
+    // leaves the checkout in place: force-removing it would discard uncommitted
+    // work and orphan the worktree registration.
+    if (!isTimeoutError(error)) {
+      return false
+    }
     try {
       rmSync(worktree.path, { recursive: true, force: true })
       return true
@@ -761,6 +768,11 @@ export function removeWorktree(root, worktree, options = {}) {
       return false
     }
   }
+}
+
+// `execFileSync` reports a `timeout` expiry by killing the child with SIGTERM.
+function isTimeoutError(error) {
+  return Boolean(error) && (error.signal === 'SIGTERM' || error.code === 'ETIMEDOUT')
 }
 
 export function deleteBranch(root, branch) {
@@ -778,7 +790,7 @@ export function deleteBranch(root, branch) {
 }
 
 // Create a worktree and run the standard post-create setup shared by
-// scripts/create-worktree.mjs and the worktree-manager TUI: register the
+// the create-worktree script and the worktree-manager TUI: register the
 // branch, copy gitignored dev files, write DEV_TAG, and carry the main
 // checkout's uncommitted work. Throws with `phase: 'register' | 'setup'` so
 // callers can report the failing step; a setup failure leaves the partial
@@ -812,14 +824,16 @@ export function removeWorktreeAndBranch(root, worktreePath, branch) {
 
 // Mirrors the `git check-ref-format --branch` rules that matter before the
 // branch exists: charset first, then the separator/dot/`.lock` rules that git
-// would otherwise reject only after `git worktree add` has already run.
+// would otherwise reject only after `git worktree add` has already run. A
+// leading `-` is rejected too: `git worktree add -b <name>` would parse it as a
+// flag, so the name has to be safe before it reaches the command line.
 export function isValidBranchName(name) {
   if (typeof name !== 'string' || !name) return false
   if (!/^[a-zA-Z0-9._/-]+$/.test(name)) return false
   if (name.includes('..') || name.includes('//') || name.includes('@{')) return false
-  if (name.startsWith('/') || name.endsWith('/')) return false
+  if (name.startsWith('-') || name.startsWith('/') || name.endsWith('/')) return false
   if (name.startsWith('.') || name.endsWith('.') || name.endsWith('.lock')) return false
-  return name.split('/').every(part => part && !part.startsWith('.') && !part.endsWith('.lock'))
+  return name.split('/').every(part => part && !part.startsWith('.') && !part.startsWith('-') && !part.endsWith('.lock'))
 }
 
 export function setDevTag(worktreeRoot, tag) {

@@ -1,4 +1,4 @@
-// Pure layout, geometry, and menu model for scripts/worktree-manager.mjs.
+// Pure layout, geometry, and menu model for the worktree-manager TUI.
 //
 // Everything here is a function of its arguments: no terminal I/O, no shared
 // mutable state, so it is unit-testable (scripts/_worktree-tui/layout.test.ts) and

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// parity: app-owned — project deploy selection
 // deploy.config.mjs — shared loader for this project's deploy capability
 // selection. Base targets (vercel, cloudflare) are offered when their required
 // config resolves at runtime; a plugin that is not selected is inert even
@@ -35,3 +36,7 @@ const config = loadConfig()
 
 export const plugins = config.plugins
 export const requiredEnv = config.requiredEnv
+// Credential key names this app must push to the secret store rather than a
+// plaintext [vars] entry. App-specific names live in `deploy.config.json` so
+// this module stays identical across apps.
+export const secretKeys = config.secretKeys
