@@ -8,6 +8,11 @@ SvelteKit app in a `(browser)` route group. The server persists documents to
 either SQLite or PostgreSQL depending on the resolved `PROFILE`; the client
 synchronizes through a small fetch-based JSON API.
 
+The shared UI surface — components, icons, actions, the i18n store and the
+stylesheet — comes from the `@codepg/ui-lib` package, a versioned dependency
+whose canonical source is the sibling `ui-lib` project. This app composes those
+components and supplies the app-specific data, labels and canvas styles.
+
 ## Routing
 
 - `/` — empty-state page prompting the user to select or create a document.
@@ -408,7 +413,7 @@ synchronizes through a small fetch-based JSON API.
   `parseTags`/`serializeTags` path as normal saves, and record an initial
   content-version snapshot per document. User imports hash passwords with the
   shared `hashPassword` before the transaction.
-- The Documents table (`DataTable.svelte`) sorts via the shared two-arrow
+- The Documents table (`@codepg/ui-lib/components/DataTable.svelte`) sorts via the shared two-arrow
   header pattern: `handleSortClick(column, direction)` passes the explicit
   direction through `onSort`. Column sizing prefers the `width`/`minWidth`
   props (`widthClass`/`minWidthClass` override them when given): a number is
@@ -437,15 +442,18 @@ synchronizes through a small fetch-based JSON API.
   absorbing a left drag in the previous column — the previous splitter moves
   right, the last column shrinks, and the table's minimum width stays the
   container width. The resize engine itself lives in the shared
-  `createColumnResize` composable (`use-column-resize.svelte.ts`), which owns
+  `createColumnResize` composable (`@codepg/ui-lib/components/use-column-resize.svelte`), which owns
   the drag state and width math and takes the column count, scroll container,
   header-cell measurement, per-column minimum, and fixed reserved width as
   callbacks. The
   drag is requestAnimationFrame-throttled and handled on `svelte:window`; an
   effect keeps `columnWidths` aligned when the `columns` prop changes. When a
   `storageKey` prop is set, resized widths are persisted to `localStorage`
-  (JSON array via `$lib/column-width-storage.ts`) and restored on mount,
-  overriding the derived/auto layout. Before
+  (JSON array through the package's column-width store) and restored on mount,
+  overriding the derived/auto layout. Every app call site also passes
+  `storagePrefix={COLUMN_WIDTH_PREFIX}` (`src/lib/column-widths.ts`), so widths
+  stay under `share-text:column-widths:` and the store's own prefix is only the
+  read/migration fallback. Before
   the first resize the table keeps its normal `w-full`/`min-w` auto layout, so a
   non-resizable table is byte-for-byte unchanged.
 - Admin mutations are logged (`admin_login`, `admin_login_failed`,
@@ -569,7 +577,7 @@ synchronizes through a small fetch-based JSON API.
 ### Positioned Overlays
 
 Overlay option panels (dropdowns, tag suggestions) position via the shared
-`positionPanel` action (`src/lib/position-panel.svelte.ts`). Attach it to the
+`positionPanel` action (`@codepg/ui-lib/position-panel.svelte`). Attach it to the
 panel with `use:positionPanel={() => ({ getTrigger, getOpen, align?, autoPlace? })}`
 and keep the `fixed left-0 top-0 z-40 will-change-transform` positioning classes
 on the panel (`z-40`: overlays stay below the `z-50` dev worktree-tag block). The action portals the panel to `document.body`, auto-places it
@@ -581,7 +589,7 @@ with the same panel id. The owning component keeps its own open/close, keyboard,
 outside-click handling.
 
 Both overlays with a trigger-and-item-menu shape share the `Menu`
-(`src/lib/components/Menu.svelte`) primitive, which owns the trigger button —
+(`@codepg/ui-lib/components/Menu.svelte`) primitive, which owns the trigger button —
 the shared icon-only `Button`, carrying `aria-haspopup="menu"`/`aria-controls`,
 so the trigger's box, glyph ratio, focus ring, and hit area match every other
 icon button (`triggerClass` adds extra classes only, never padding); the
@@ -602,7 +610,7 @@ one marked by a dot, calling `setLocale` on select. `LanguageMenu` renders in
 the document-list header (so also in the mobile drawer, which reuses the
 `documentList` snippet) and in the collapsed left rail.
 
-`SelectDropdown` (`src/lib/components/SelectDropdown.svelte`) renders either a
+`SelectDropdown` (`@codepg/ui-lib/components/SelectDropdown.svelte`) renders either a
 filterable `<input role="combobox">` or a plain `<button>` trigger for the same
 `listbox`. The filterable control opens on focus and on click when closed, and
 keeps focus on the input after a selection — option `pointerdown` is prevented
@@ -617,7 +625,7 @@ assistive tech via `aria-activedescendant`.
 
 ### Tag Input
 
-`TagInput` (`src/lib/components/TagInput.svelte`) is the shared multi-value
+`TagInput` (`@codepg/ui-lib/components/TagInput.svelte`) is the shared multi-value
 string input: committed values render as removable chips, the text field filters
 the remaining `options` in a portalled suggestion panel, and `Enter`/comma
 commits the typed value. It is a string-model component — `TagsDialog` maps the
@@ -666,24 +674,30 @@ while staying below the `z-50` dev tag.
 ### UI Localization (i18n)
 
 Both the browser app and the admin console are localized through
-`$lib/i18n.svelte`; the admin console has its own `admin.*` key namespace and
-uses the shared i18n store throughout (tabs, toolbars, DataTable headers,
-dialogs, login panel, admin hooks).
+`$lib/i18n.svelte`, which layers the app's dictionary over the shared store
+from `@codepg/ui-lib`; the admin console has its own `admin.*` key namespace and
+uses that store throughout (tabs, toolbars, DataTable headers, dialogs, login
+panel, admin hooks).
 
 - `LOCALES` is the closed set `en`, `zh-CN` (Simplified Chinese), `zh-TW`
-  (Traditional Chinese), each with a native label for the picker. The locale
-  dictionaries are nested trees (`src/lib/locales/{en,zh-CN,zh-TW}.ts`,
-  `as const`) grouped by feature with dotted-path keys; `en` defines the key set
-  (`MessageKey` is its recursive dotted-path union) and every other locale is
-  typed `LocaleMessages<typeof en>`, so every key must be translated or the
-  build fails. `createI18nStore(dictionaries, defaultLocale, storageKey)` builds
-  a rune-backed store (`{ get locale(), setLocale(next), t(key, params?) }`)
-  with `{name}` interpolation and English fallback; `createAppI18n()` binds the
-  app dictionary map. The root `+layout.svelte` creates one store per load via
+  (Traditional Chinese), each with a native label for the picker. The app keeps
+  only its own keys in nested trees (`src/lib/locales/{en,zh-CN,zh-TW}.ts`,
+  `as const`) grouped by feature with dotted-path keys; a label a shared
+  component already defines stays in the package dictionary and is never copied
+  here. `en` defines the app key set and every other app locale is typed
+  `LocaleMessages<typeof en>`, so every app key must be translated or the build
+  fails. `createAppI18n()` deep-merges the app dictionary over the package's per
+  locale (the app key wins) and binds the result to the package's
+  `createI18nStore(dictionaries, defaultLocale, storageKey)`, a rune-backed store
+  (`{ get locale(), setLocale(next), t(key, params?) }`) with `{name}`
+  interpolation and English fallback. `MessageKey` is the dotted-path union of
+  the merged dictionary. The root `+layout.svelte` creates one store per load via
   `setI18nContext(createAppI18n())` —
-  SSR-safe, since each request gets a fresh English-defaulted instance —
+  SSR-safe, since each request gets a fresh store —
   and components/composables read it via `getI18nContext()`, so
-  template/`$derived` calls re-render on locale change.
+  template/`$derived` calls re-render on locale change. With no provider above
+  (an isolated component test) `getI18nContext()` falls back to the app store
+  registered through the package's `setDefaultI18nStore`.
 - The locale is a pure client-side preference: `setLocale` persists it to
   `localStorage` (`share-text:locale`) and sets `document.documentElement.lang`;
   store creation eagerly applies the saved browser locale. SSR always renders
@@ -718,7 +732,8 @@ dialogs, login panel, admin hooks).
 Ten themes (`dark` default plus `light`, `ember`, `sepia`, `nebula`, `sky`,
 `forest`, `midnight`, `mint`, `lavender`) re-theme the app centrally:
 components keep literal default-palette utilities, which Tailwind v4 compiles
-to `var(--color-<name>-<grade>)` references, and `src/styles.css` overrides
+to `var(--color-<name>-<grade>)` references, and the shared stylesheet
+(`@codepg/ui-lib/styles.css`, imported first by `src/styles.css`) overrides
 those variables under `[data-theme='<name>']` (light themes mirror the slate
 scale and darken text-grade accents; dark variants shift surface/text hues;
 `sepia`/`ember` remap cyan to amber, `nebula`/`lavender` to violet,
@@ -729,7 +744,7 @@ holds the closed `UiTheme` union, persists the selection to `localStorage`
 layout hydrates it on mount and `app.html` pre-paints it before first paint.
 `src/lib/page/theme.ts` maps options to icons, `ThemeMenu` is the header
 selector, and `theme-parity.test.ts` keeps the union, stored-value validation,
-pre-paint allowlist, CSS blocks, and menu options in lockstep.
+pre-paint allowlist, shared CSS blocks, and menu options in lockstep.
 
 ### Responsive Layout
 
@@ -817,7 +832,8 @@ point; `/api/auth/logout` clears both the user and admin session cookies.
   content syncs (`filter: false`) bypass the filter so loading a document that
   exceeds the limit never truncates it or marks it dirty.
 - `DocumentEditorPane.svelte` orchestrates the toolbar, CodeMirror editor, and
-  preview pane. The `CodeEditor.svelte` wrapper manages the CodeMirror instance
+  preview pane. The shared `CodeEditor` (`@codepg/ui-lib/components/CodeEditor.svelte`)
+  wrapper manages the CodeMirror instance
   lifecycle (create, reconfigure on type change, destroy on unmount) and wires
   per-type language extensions from the type registry.
 - Preview: `PreviewPane.svelte` lazy-loads the type's preview component;
@@ -835,19 +851,20 @@ point; `/api/auth/logout` clears both the user and admin session cookies.
   dividers) that selects the drag axis, resize cursor, negative-margin/thickness
   classes, and arrow keys. When the current type has no preview component, the
   toggles and preview params are ignored for layout (the editor fills the pane).
-- CSV previews use a spreadsheet grid: `DataGrid.svelte` is a thin
-  orchestration layer over focused composables — `use-grid-model.svelte.ts`
+- CSV previews use a spreadsheet grid: the shared `DataGrid`
+  (`@codepg/ui-lib/components/DataGrid.svelte`) is a thin
+  orchestration layer over focused composables — `use-grid-model.svelte`
   (the row matrix and per-cell committed flags), `use-grid-history` (the bounded
   undo/redo stacks), `use-grid-serialize` (the committed-matrix bounds),
   `use-grid-editor`, `use-grid-selection`, `use-grid-keyboard`,
   `use-grid-selectors`, `use-grid-columns` (the width engine),
   `use-grid-sort`, `use-grid-undo-redo`, `use-grid-clipboard`, and
-  `use-grid-autoscroll` — with `GridToolbar.svelte` owning the toolbar;
+  `use-grid-autoscroll` — with the shared `GridToolbar` owning the toolbar;
   `CsvPreview` wires parsing/serialization via `csv-utils.ts` (papaparse).
 
 ### Grid Model
 
-The grid model (`use-grid-model.svelte.ts`) tracks a per-cell `committed`
+The grid model (`@codepg/ui-lib/components/use-grid-model.svelte`) tracks a per-cell `committed`
 flag. Arrow navigation past the last row/column appends *pending* rows/columns
 whose cells stay uncommitted until a value is typed (`setValue`/paste/major
 structural operations mark cells committed), so pure navigation never
@@ -862,7 +879,7 @@ external change with different data rows still rebuilds the grid.
 
 ### DataGrid
 
-`DataGrid.svelte` renders the grid for the CSV and Properties previews. It
+The shared `DataGrid` (`@codepg/ui-lib/components/DataGrid.svelte`) renders the grid for the CSV and Properties previews. It
 accepts `maxColumns` to lock the grid to a fixed column count (disabling
 column insert/delete/append, nav growth, and trimming, and clamping pastes to
 it), `columnLabels` to show custom header labels instead of column letters,
@@ -913,14 +930,14 @@ padding in sync with scrollbar appearance.
 Cell editing is spreadsheet-style: a single click only selects the cell;
 double-clicking enters edit mode with the cursor after the last character, and
 double-clicking again while editing selects all text (`handleCellDoubleClick`
-in `use-grid-selection.svelte.ts`). While a cell is being edited, mouse
+in `@codepg/ui-lib/components/use-grid-selection.svelte`). While a cell is being edited, mouse
 interaction inside it behaves like a normal text input (caret placement /
 in-cell text selection); grid range-dragging only works from a non-editing
 cell.
 
 Focus targets — cell boxes, cell editors, and the row/column selectors — are
 resolved through the owned-node registry in
-`src/lib/components/grid-cell-refs.ts` rather than DOM queries: each node
+`@codepg/ui-lib/components/grid-cell-refs` rather than DOM queries: each node
 registers itself through a `use:` action keyed by its current row/column index
 and re-keys when an insert or delete shifts that index, so focus and edit
 transitions reach the live node without `querySelector` traversal.
@@ -1034,9 +1051,12 @@ Properties preview, which passes `initialColumnWidths={['35%', '65%']}`.
     `mousemove` applies only the latest pointer X once per animation frame
     (requestAnimationFrame-throttled) so pointer bursts don't thrash layout.
 - **Persistence.** A `storageKey` prop (set by the CSV and Properties previews)
-  persists `columnWidths` to `localStorage` as a JSON array via
-  `$lib/column-width-storage.ts` on every resize and restores it on mount,
-  overriding `initialColumnWidths`/auto layout when the column count matches.
+  persists `columnWidths` to `localStorage` as a JSON array through the package's
+  column-width store on every resize and restores it on mount, overriding
+  `initialColumnWidths`/auto layout when the column count matches. Every call
+  site pairs it with `storagePrefix={COLUMN_WIDTH_PREFIX}`
+  (`src/lib/column-widths.ts`), so widths stay under `share-text:column-widths:`
+  and the package prefix is only the read/migration fallback.
 - **Structural changes.** An effect keeps `columnWidths` aligned with the
   current column count in managed mode (columns are inserted/removed via the
   toolbar). A newly inserted column gets a fixed default width (128px, matching

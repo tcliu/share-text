@@ -6,6 +6,8 @@ own, share, and make documents private. Built with SvelteKit and deployed to
 Vercel with a Neon PostgreSQL store.
 
 - SvelteKit 2 + Svelte 5 (runes), Tailwind CSS v4, CodeMirror 6
+- Shared UI surface consumed from the `@codepg/ui-lib` package (components,
+  icons, actions, i18n store and stylesheet)
 - Two-pane layout: document list on the left, editor on the right
 - Two profiles: `dev` (local SQLite, no config) and `prod` (Neon on Vercel)
 
@@ -19,6 +21,10 @@ Vercel with a Neon PostgreSQL store.
 ```bash
 npm install
 ```
+
+`@codepg/ui-lib` is published to the public npm registry from the sibling
+`ui-lib` project, so a clean install needs no registry configuration; bump the
+dependency here after the shared surface is republished.
 
 ## Configuration
 
