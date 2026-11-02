@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
-import Splitter from '../Splitter.svelte'
+import Splitter from '@codepg/ui-lib/components/Splitter.svelte'
 
 function setup(props: Record<string, unknown> = {}) {
   const onChange = vi.fn()
@@ -74,12 +74,18 @@ describe('Splitter', () => {
   })
 
   it('converts drag deltas to percentages in % mode', async () => {
-    const { onChange, onDragEnd } = setup({ value: 50, min: 10, max: 90, unit: '%' })
+    const container = { clientWidth: 500 } as HTMLElement
+    const { onChange, onDragEnd } = setup({
+      value: 50,
+      min: 10,
+      max: 90,
+      unit: '%',
+      getContainer: () => container,
+    })
     const handle = getHandle()
     handle.setPointerCapture = vi.fn()
     handle.hasPointerCapture = vi.fn(() => true)
     handle.releasePointerCapture = vi.fn()
-    Object.defineProperty(handle, 'parentElement', { value: { clientWidth: 500 } })
 
     await fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 })
     await fireEvent.pointerMove(handle, { clientX: 125, pointerId: 1 })

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
-  import FormField from './FormField.svelte'
-  import NumberInput from './NumberInput.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
+  import Buttons from '@codepg/ui-lib/components/Buttons.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
+  import NumberInput from '@codepg/ui-lib/components/NumberInput.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
@@ -58,7 +58,7 @@
 
 {#if show}
   <BaseDialog {title} {className} {widthVariant} {onCancel}>
-    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
+    <div class="flex flex-col gap-4" use:caretAtEndOnKeyboardFocus>
       {#if hasIndent}
         <FormField label={i18n.t('format.indentation')} htmlFor="format-indent-input">
           <NumberInput

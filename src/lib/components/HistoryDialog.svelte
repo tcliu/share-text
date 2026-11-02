@@ -1,9 +1,9 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
-  import BaseDialog from './BaseDialog.svelte'
-  import Button from './Button.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
-  import Spinner from './Spinner.svelte'
+  import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
+  import Spinner from '@codepg/ui-lib/components/Spinner.svelte'
   import {
     fetchDocumentVersion,
     fetchDocumentVersions,
@@ -12,8 +12,8 @@
   } from '$lib/documents'
   import { formatTimestamp } from '$lib/date-format'
   import { buildSideBySideRows } from '$lib/version-diff'
-  import CompareIcon from '$lib/icons/CompareIcon.svelte'
-  import RestoreIcon from '$lib/icons/RestoreIcon.svelte'
+  import CompareIcon from '@codepg/ui-lib/icons/CompareIcon.svelte'
+  import RestoreIcon from '@codepg/ui-lib/icons/RestoreIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 

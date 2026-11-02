@@ -3,30 +3,11 @@ export const en = {
     name: 'ShareText',
   },
   common: {
-    ok: 'OK',
-    reset: 'Reset',
     save: 'Save',
-    copy: 'Copy',
     delete: 'Delete',
     edit: 'Edit',
-    closeDialog: 'Close dialog',
-    dialog: 'Dialog',
-    close: 'Close',
-    apply: 'Apply',
-    reload: 'Reload',
     retry: 'Retry',
     public: 'Public',
-    clear: 'Clear',
-    discardTitle: 'Discard unsaved changes?',
-    discardMessage: 'You have unsaved changes that will be lost.',
-    discard: 'Discard',
-    invalidJson: 'Invalid JSON.',
-  },
-  tabs: {
-    label: 'Tabs',
-  },
-  search: {
-    placeholder: 'Search...',
   },
   language: {
     label: 'Language',
@@ -100,8 +81,6 @@ export const en = {
       fileTooLong: 'File exceeds the {limit}-character limit',
       fileUploaded: 'File uploaded',
       fileReadFailed: 'Failed to read file',
-      copied: 'Copied to clipboard',
-      copyFailed: 'Failed to copy',
       linkCopied: 'Link copied to clipboard',
       cannotConvert: 'Cannot convert: {error}',
       cannotFormat: 'Cannot format: {error}',
@@ -111,9 +90,6 @@ export const en = {
     uploadConfirmTitle: 'Discard unsaved changes?',
     uploadConfirmMessage:
       'You have unsaved changes. Uploading a file will discard them and replace the editor content.',
-    loadFailed: 'Failed to load editor',
-    loading: 'Loading editor...',
-    content: 'Content',
   },
   doc: {
     toast: {
@@ -236,67 +212,9 @@ export const en = {
       versionFailed: 'Failed to load version',
     },
   },
-  copy: {
-    toClipboard: 'Copy to clipboard',
-  },
-  edit: {
-    doubleClickToEdit: 'Double-click to edit',
-    editText: 'Edit text',
-    edit: 'Edit',
-  },
-  password: {
-    show: 'Show password',
-    hide: 'Hide password',
-  },
-  chip: {
-    remove: 'Remove {name}',
-  },
-  tagInput: {
-    suggestions: 'Tag suggestions',
-    remove: 'Remove {name}',
-  },
-  range: {
-    from: 'From',
-    to: 'To',
-  },
-  date: {
-    select: 'Select date',
-    selectTime: 'Select date and time',
-    calendar: 'Choose a date',
-    prevMonth: 'Previous month',
-    nextMonth: 'Next month',
-    clear: 'Clear date',
-  },
-  time: {
-    hour: 'Hour',
-    minute: 'Minute',
-    second: 'Second',
-  },
-  chart: {
-    label: 'Chart',
-  },
-  dropdown: {
-    noOptions: 'No options',
-  },
+  // The shared default ("Resize") is too terse for the shell's pane splitter.
   splitter: {
     resize: 'Resize split panes',
-  },
-  resizable: {
-    resizeWidth: 'Resize width',
-    resizeHeight: 'Resize height',
-    resizeBoth: 'Resize width and height',
-    resizeValue: '{width} by {height} pixels',
-  },
-  appShell: {
-    closePane: 'Close pane',
-    leftPane: 'Left pane',
-    rightPane: 'Right pane',
-    resize: 'Resize pane',
-    resizeRight: 'Resize right pane',
-  },
-  number: {
-    increment: 'Increment',
-    decrement: 'Decrement',
   },
   preview: {
     loadFailed: 'Failed to load preview',
@@ -306,41 +224,14 @@ export const en = {
     noContent: 'No content to preview',
   },
   structure: {
-    copyValue: 'Copy {name}',
-    collapse: 'Collapse {name}',
-    expand: 'Expand {name}',
-    editKey: 'Edit {name}',
-    renameHint: 'Double-click to rename',
     invalidContent: 'Invalid content',
     serializeFailed: 'Failed to serialize changes',
     unableToParse: 'Unable to parse: {error}',
-    format: 'Format',
-    noContent: 'No content to preview',
   },
   properties: {
     invalid: 'Invalid properties',
     key: 'Key',
     value: 'Value',
-  },
-  grid: {
-    toggleHeader: 'Toggle header',
-    insertRowAbove: 'Insert row above',
-    insertRowBelow: 'Insert row below',
-    insertColumnBefore: 'Insert column before',
-    insertColumnAfter: 'Insert column after',
-    deleteRows: 'Delete rows',
-    deleteColumns: 'Delete columns',
-    trimTrailing: 'Remove empty trailing rows/columns',
-    undo: 'Undo',
-    redo: 'Redo',
-    spreadsheet: 'Spreadsheet',
-    selectAll: 'Select all',
-    sortAsc: 'Sort {name} ascending',
-    sortDesc: 'Sort {name} descending',
-    resizeColumn: 'Resize column {index}',
-    rowColCount: '{rows} rows · {columns} columns',
-    noContent: 'No content to preview',
-    addRow: 'Add row',
   },
   admin: {
     title: 'Admin',
@@ -572,12 +463,5 @@ export const en = {
       'Maximum number of content versions kept per document. Older versions beyond this count are pruned on save.',
     max_documents_per_ip: 'Max documents per IP',
     max_documents_per_ipDescription: 'Maximum number of documents a single client IP can create.',
-  },
-  pagination: {
-    previous: 'Previous page',
-    next: 'Next page',
-    pageSize: 'Page size',
-    current: 'Current page',
-    label: 'Pagination',
   },
 } as const

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Menu, { type MenuItemState } from './Menu.svelte'
+  import Menu, { type MenuItemState } from '@codepg/ui-lib/components/Menu.svelte'
   import { THEME_ICONS, THEME_MENU_OPTIONS } from '$lib/page/theme'
   import { useTheme, type UiTheme } from '$lib/use-theme.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
-  import PaletteIcon from '$lib/icons/PaletteIcon.svelte'
+  import PaletteIcon from '@codepg/ui-lib/icons/PaletteIcon.svelte'
 
   const i18n = getI18nContext()
   const themeState = useTheme()

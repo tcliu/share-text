@@ -5,7 +5,7 @@ import { tick } from 'svelte'
 import { EditorState } from '@codemirror/state'
 import { EditorView } from '@codemirror/view'
 import CodeEditorHost from './CodeEditorHost.svelte'
-import { maxContentLengthFilter } from '../code-editor-max-content'
+import { maxContentLengthFilter } from '@codepg/ui-lib/components/code-editor-max-content'
 
 const MAX_CONTENT_LENGTH = 100000
 const SHORT_CONTENT = 'y'.repeat(311)

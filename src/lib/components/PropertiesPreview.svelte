@@ -1,9 +1,10 @@
 <script lang="ts">
-  import DataGrid from './DataGrid.svelte'
+  import DataGrid from '@codepg/ui-lib/components/DataGrid.svelte'
   import type { PreviewProps } from '$lib/document-types'
   import { parseProperties, serializeProperties } from '$lib/document-type-utils'
   import { getI18nContext } from '$lib/i18n.svelte'
   import { useContentReconcile } from './use-content-reconcile.svelte'
+  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
   const i18n = getI18nContext()
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()
@@ -51,5 +52,5 @@
     showHeaders={false}
     hideHeaderToggle
     initialColumnWidths={['35%', '65%']}
-    storageKey="properties-preview" />
+    storageKey="properties-preview" storagePrefix={COLUMN_WIDTH_PREFIX} />
 {/if}

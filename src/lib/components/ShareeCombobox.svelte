@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import Chip from './Chip.svelte'
-  import TagInput from './TagInput.svelte'
+  import Chip from '@codepg/ui-lib/components/Chip.svelte'
+  import TagInput from '@codepg/ui-lib/components/TagInput.svelte'
   import { getDefaultTagColor, tagChipClass, tagChipStyle, tagRemoveBtnClass, tagRemoveBtnStyle } from '$lib/tag-colors'
   import type { User } from '$lib/documents'
 

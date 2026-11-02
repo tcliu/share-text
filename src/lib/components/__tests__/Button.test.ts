@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, fireEvent } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
-import Button from '../Button.svelte'
+import Button from '@codepg/ui-lib/components/Button.svelte'
 
 describe('Button menu trigger semantics', () => {
   it('forwards aria-haspopup, aria-controls, and aria-expanded', () => {

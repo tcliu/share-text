@@ -1,14 +1,18 @@
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 // Theme IDs are enumerated in stringly-typed sync points that the compiler
 // cannot fully cross-check: the pre-paint allowlist in app.html, the stored-
-// value validation in use-theme, the per-theme palette overrides in
-// styles.css, and the header menu's option list. This test fails when any of
-// them drifts away from the UiTheme union.
+// value validation in use-theme, the per-theme palette overrides in the shared
+// stylesheet the app imports, and the header menu's option list. This test
+// fails when any of them drifts away from the UiTheme union.
 const themeSource = readFileSync('src/lib/use-theme.svelte.ts', 'utf-8')
 const appHtml = readFileSync('src/app.html', 'utf-8')
-const styles = readFileSync('src/styles.css', 'utf-8')
+// The theme palettes live in the shared surface's stylesheet, which the app's
+// own stylesheet imports, so the sync check reads that file at its resolved
+// path instead of a vendored copy.
+const styles = readFileSync(createRequire(import.meta.url).resolve('@codepg/ui-lib/styles.css'), 'utf-8')
 const optionsSource = readFileSync('src/lib/page/theme.ts', 'utf-8')
 
 function uiThemeUnion(): string[] {
@@ -65,13 +69,13 @@ describe('theme id parity across sync points', () => {
     expect(validated.length).toBe(themes.length)
   })
 
-  it('declares palette overrides for every non-default theme in styles.css', () => {
+  it('declares palette overrides for every non-default theme in the shared stylesheet', () => {
     const blocks = new Set([...styles.matchAll(/\[data-theme='([a-z]+)'\]/g)].map(entry => entry[1]))
     for (const theme of themes) {
       if (theme === 'dark') {
         expect(blocks.has(theme), 'dark is the un-overridden palette').toBe(false)
       } else {
-        expect(blocks.has(theme), `${theme} has no [data-theme] block in styles.css`).toBe(true)
+        expect(blocks.has(theme), `${theme} has no [data-theme] block in the shared stylesheet`).toBe(true)
       }
     }
     expect(blocks.size).toBe(themes.length - 1)

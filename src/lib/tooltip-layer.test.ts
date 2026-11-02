@@ -15,6 +15,8 @@ const layout = readFileSync('src/routes/+layout.svelte', 'utf8')
 // Resolve the framework stylesheet through module resolution, not the cwd: a
 // worktree under `.worktrees/` has no local `node_modules/tailwindcss`.
 const tailwindIndex = createRequire(import.meta.url).resolve('tailwindcss/index.css')
+// The shared stylesheet carries the token; the project's stylesheet imports it.
+const sharedStyles = createRequire(import.meta.url).resolve('@codepg/ui-lib/styles.css')
 
 async function designSystem() {
   return __unstable__loadDesignSystem(styles, {
@@ -22,7 +24,12 @@ async function designSystem() {
     loadStylesheet: async (id, base) => ({
       path: id,
       base,
-      content: id === 'tailwindcss' ? readFileSync(tailwindIndex, 'utf8') : '',
+      content:
+        id === 'tailwindcss'
+          ? readFileSync(tailwindIndex, 'utf8')
+          : id === '@codepg/ui-lib/styles.css'
+            ? readFileSync(sharedStyles, 'utf8')
+            : '',
     }),
   })
 }

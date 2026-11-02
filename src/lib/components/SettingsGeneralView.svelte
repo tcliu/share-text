@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SelectDropdown from './SelectDropdown.svelte'
+  import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
   import { LOCALES, getI18nContext, type Locale } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
   import type { useUserSettings } from '$lib/use-user-settings.svelte'

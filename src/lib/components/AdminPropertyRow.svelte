@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Button from './Button.svelte'
-  import NumberInput from './NumberInput.svelte'
-  import SelectDropdown from './SelectDropdown.svelte'
-  import ResetIcon from '$lib/icons/ResetIcon.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import NumberInput from '@codepg/ui-lib/components/NumberInput.svelte'
+  import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
+  import ResetIcon from '@codepg/ui-lib/icons/ResetIcon.svelte'
   import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
   import type { AdminProperty } from '$lib/admin'
 

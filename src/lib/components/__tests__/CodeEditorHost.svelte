@@ -1,5 +1,5 @@
 <script lang="ts">
-  import CodeEditor from '../CodeEditor.svelte'
+  import CodeEditor from '@codepg/ui-lib/components/CodeEditor.svelte'
 
   let {
     content = $bindable(),

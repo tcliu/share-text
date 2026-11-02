@@ -1,16 +1,17 @@
 <script lang="ts">
-  import ConfirmDialog from './ConfirmDialog.svelte'
-  import Copyable from './Copyable.svelte'
-  import DataTable, { type DataTableColumn } from './DataTable.svelte'
-  import EditableText from './EditableText.svelte'
+  import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
+  import Copyable from '@codepg/ui-lib/components/Copyable.svelte'
+  import DataTable, { type DataTableColumn } from '@codepg/ui-lib/components/DataTable.svelte'
+  import EditableText from '@codepg/ui-lib/components/EditableText.svelte'
   import EditDocumentDialog from './EditDocumentDialog.svelte'
   import ImportDialog from './ImportDialog.svelte'
   import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
   import type { AdminDocumentSummary } from '$lib/admin'
-  import Chip from './Chip.svelte'
+  import Chip from '@codepg/ui-lib/components/Chip.svelte'
   import PlainCell from './PlainCell.svelte'
   import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
   import { formatTimestamp } from '$lib/date-format'
+  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
   import { formatContentSize, formatTagNames } from '$lib/document-list-format'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -148,7 +149,7 @@
   resizeAriaLabel={column => i18n.t('admin.dataTable.resize', { name: column.header })}
   fillHeight
   resizable
-  storageKey="admin-documents" />
+  storageKey="admin-documents" storagePrefix={COLUMN_WIDTH_PREFIX} />
 
 {#snippet idCell(document: AdminDocumentSummary)}
   {#if supportsHover.value}

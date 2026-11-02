@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import FormDialog from './FormDialog.svelte'
-  import FormField from './FormField.svelte'
-  import LazyCodeEditor from './LazyCodeEditor.svelte'
-  import SelectDropdown from './SelectDropdown.svelte'
-  import Checkbox from './Checkbox.svelte'
+  import FormDialog from '@codepg/ui-lib/components/FormDialog.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
+  import LazyCodeEditor from '@codepg/ui-lib/components/LazyCodeEditor.svelte'
+  import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
+  import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
   import ShareeCombobox from './ShareeCombobox.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { DOCUMENT_TYPE_VALUES, getDocumentType } from '$lib/document-types'
   import type { AdminDocumentSummary, AdminSharee } from '$lib/admin'
   import { searchUsers } from '$lib/user-auth'
@@ -165,7 +165,7 @@
 </script>
 
 {#snippet detailsPane()}
-  <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
+  <div class="flex flex-col gap-4" use:caretAtEndOnKeyboardFocus>
     {#if mode === 'edit'}
       <FormField label={i18n.t('admin.documents.key')} htmlFor="document-key">
         <input

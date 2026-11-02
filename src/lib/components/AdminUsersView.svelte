@@ -1,16 +1,17 @@
 <script lang="ts">
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import ConfirmDialog from './ConfirmDialog.svelte'
-  import DataTable, { type DataTableColumn } from './DataTable.svelte'
-  import EditableText from './EditableText.svelte'
+  import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
+  import Buttons from '@codepg/ui-lib/components/Buttons.svelte'
+  import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
+  import DataTable, { type DataTableColumn } from '@codepg/ui-lib/components/DataTable.svelte'
+  import EditableText from '@codepg/ui-lib/components/EditableText.svelte'
   import UserDialog from './UserDialog.svelte'
   import ImportDialog from './ImportDialog.svelte'
-  import Button from './Button.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
   import type { useAdminUsers } from '$lib/use-admin-users.svelte'
   import type { AdminUser } from '$lib/admin'
   import { formatTimestamp } from '$lib/date-format'
   import PlainCell from './PlainCell.svelte'
+  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
   import { useSupportsHover } from '$lib/use-supports-hover.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -112,7 +113,7 @@
   resizeAriaLabel={column => i18n.t('admin.dataTable.resize', { name: column.header })}
   fillHeight
   resizable
-  storageKey="admin-users" />
+  storageKey="admin-users" storagePrefix={COLUMN_WIDTH_PREFIX} />
 
 {#snippet idCell(user: AdminUser)}
   <span class="font-mono text-slate-400">{user.id}</span>

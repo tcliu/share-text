@@ -1,12 +1,12 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { invalidateAll } from '$app/navigation'
-  import Button from './Button.svelte'
-  import Checkbox from './Checkbox.svelte'
-  import FormField from './FormField.svelte'
-  import PasswordInput from './PasswordInput.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
+  import PasswordInput from '@codepg/ui-lib/components/PasswordInput.svelte'
   import { login, register } from '$lib/user-auth'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
   export type AuthPanelMode = 'signin' | 'register'
@@ -131,7 +131,7 @@
       {#if mode === 'signin'}
         <form
           class="flex flex-col gap-4"
-          use:useCaretAtEndOnKeyboardFocus
+          use:caretAtEndOnKeyboardFocus
           onsubmit={e => {
             e.preventDefault()
             void handleSignIn()
@@ -159,7 +159,7 @@
       {:else}
         <form
           class="flex flex-col gap-4"
-          use:useCaretAtEndOnKeyboardFocus
+          use:caretAtEndOnKeyboardFocus
           onsubmit={e => {
             e.preventDefault()
             void handleRegister()

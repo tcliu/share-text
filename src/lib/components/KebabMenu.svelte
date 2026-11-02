@@ -11,8 +11,8 @@
 </script>
 
 <script lang="ts">
-  import Menu, { type MenuItemState } from './Menu.svelte'
-  import KebabIcon from '$lib/icons/KebabIcon.svelte'
+  import Menu, { type MenuItemState } from '@codepg/ui-lib/components/Menu.svelte'
+  import KebabIcon from '@codepg/ui-lib/icons/KebabIcon.svelte'
 
   interface Props {
     items: KebabMenuItem[]

@@ -1,13 +1,13 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
-  import BaseDialog from './BaseDialog.svelte'
-  import Buttons from './Buttons.svelte'
-  import Button from './Button.svelte'
-  import Copyable from './Copyable.svelte'
-  import LazyCodeEditor from './LazyCodeEditor.svelte'
-  import Tabs from './Tabs.svelte'
-  import HelpIcon from '$lib/icons/HelpIcon.svelte'
-  import UploadIcon from '$lib/icons/UploadIcon.svelte'
+  import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
+  import Buttons from '@codepg/ui-lib/components/Buttons.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import Copyable from '@codepg/ui-lib/components/Copyable.svelte'
+  import LazyCodeEditor from '@codepg/ui-lib/components/LazyCodeEditor.svelte'
+  import Tabs from '@codepg/ui-lib/components/Tabs.svelte'
+  import HelpIcon from '@codepg/ui-lib/icons/HelpIcon.svelte'
+  import UploadIcon from '@codepg/ui-lib/icons/UploadIcon.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 

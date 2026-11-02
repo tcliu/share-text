@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
-  import FormDialog from './FormDialog.svelte'
-  import FormField from './FormField.svelte'
-  import PasswordInput from './PasswordInput.svelte'
-  import SelectDropdown from './SelectDropdown.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import FormDialog from '@codepg/ui-lib/components/FormDialog.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
+  import PasswordInput from '@codepg/ui-lib/components/PasswordInput.svelte'
+  import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import type { AdminUser } from '$lib/admin'
   import type { UserDialogInput } from '$lib/use-admin-users.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
@@ -90,7 +90,7 @@
   onSave={handleSave}
   onReset={handleReset}
   onClose={onClose}>
-  <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
+  <div class="flex flex-col gap-4" use:caretAtEndOnKeyboardFocus>
     <FormField label={i18n.t('admin.users.username')} htmlFor="user-username">
       <input
         id="user-username"

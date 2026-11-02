@@ -7,13 +7,13 @@
   import type { LayoutData } from './$types'
   import { setShareTextContext } from '$lib/share-text-context'
   import DocumentList from '$lib/components/DocumentList.svelte'
-  import AppShell from '$lib/components/AppShell.svelte'
-  import Button from '$lib/components/Button.svelte'
-  import ProfileIcon from '$lib/icons/ProfileIcon.svelte'
-  import SettingsIcon from '$lib/icons/SettingsIcon.svelte'
-  import MenuIcon from '$lib/icons/MenuIcon.svelte'
-  import ConfirmDialog from '$lib/components/ConfirmDialog.svelte'
-  import BaseDialog from '$lib/components/BaseDialog.svelte'
+  import AppShell from '@codepg/ui-lib/components/AppShell.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import ProfileIcon from '@codepg/ui-lib/icons/ProfileIcon.svelte'
+  import SettingsIcon from '@codepg/ui-lib/icons/SettingsIcon.svelte'
+  import MenuIcon from '@codepg/ui-lib/icons/MenuIcon.svelte'
+  import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
+  import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
   import UserAuthPanel, { type AuthPanelMode } from '$lib/components/UserAuthPanel.svelte'
   import LanguageMenu from '$lib/components/LanguageMenu.svelte'
   import ThemeMenu from '$lib/components/ThemeMenu.svelte'
@@ -22,8 +22,8 @@
   import { useDocuments } from '$lib/use-documents.svelte'
   import { useEditorGuard } from '$lib/use-editor-guard.svelte'
   import { useUserAuth } from '$lib/use-user-auth.svelte'
-  import SignOutIcon from '$lib/icons/SignOutIcon.svelte'
-  import { APP_SHELL_DEFAULT_WIDTH, APP_SHELL_MAX_WIDTH, APP_SHELL_MIN_WIDTH } from '$lib/app-shell'
+  import SignOutIcon from '@codepg/ui-lib/icons/SignOutIcon.svelte'
+  import { APP_SHELL_DEFAULT_WIDTH, APP_SHELL_MAX_WIDTH, APP_SHELL_MIN_WIDTH } from '@codepg/ui-lib/app-shell'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 
@@ -310,7 +310,7 @@
     onMinWidthChange={handleMinWidthChange} />
 {/snippet}
 
-{#snippet browserHeader(api: import('$lib/app-shell').AppShellHeaderApi)}
+{#snippet browserHeader(api: import('@codepg/ui-lib/app-shell').AppShellHeaderApi)}
   <div class="flex items-center gap-2">
     <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
     <Button

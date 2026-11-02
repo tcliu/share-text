@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { TypeActionsProps } from '$lib/document-types'
-  import Button from './Button.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
   import FormatDialog from './FormatDialog.svelte'
-  import FormatIcon from '$lib/icons/FormatIcon.svelte'
+  import FormatIcon from '@codepg/ui-lib/icons/FormatIcon.svelte'
   import { useFormat } from './use-format.svelte'
 
   let { type, content, onContentChange }: TypeActionsProps = $props()

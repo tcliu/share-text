@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Tabs from '../Tabs.svelte'
+  import Tabs from '@codepg/ui-lib/components/Tabs.svelte'
 
   interface Props {
     pathname?: string

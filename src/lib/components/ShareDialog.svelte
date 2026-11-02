@@ -2,11 +2,11 @@
   import { tick } from 'svelte'
   import type { User } from '$lib/documents'
   import { searchUsers, fetchRecentSharees } from '$lib/user-auth'
-  import Checkbox from './Checkbox.svelte'
-  import FormDialog from './FormDialog.svelte'
-  import FormField from './FormField.svelte'
+  import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
+  import FormDialog from '@codepg/ui-lib/components/FormDialog.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
   import ShareeCombobox from './ShareeCombobox.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { arraysEqualUnordered } from '$lib/array-utils'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
@@ -94,7 +94,7 @@
     onSave={handleApply}
     onReset={handleReset}
     onClose={onClose}>
-    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
+    <div class="flex flex-col gap-4" use:caretAtEndOnKeyboardFocus>
       <Checkbox bind:checked={draftIsPublic} name="isPublic" label={i18n.t('share.anyoneWithLink')} />
 
       <FormField label={i18n.t('share.sharedWith')} htmlFor="share-user-input">

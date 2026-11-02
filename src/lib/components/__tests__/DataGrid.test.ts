@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
-import DataGrid from '../DataGrid.svelte'
+import DataGrid from '@codepg/ui-lib/components/DataGrid.svelte'
+import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
 
 function gridCell(root: HTMLElement, ri: number, ci: number): HTMLElement {
   const cell = root.querySelector(`[data-row="${ri}"][data-col="${ci}"]`) as HTMLElement | null
@@ -2137,6 +2138,7 @@ describe('DataGrid (column resize)', () => {
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
         storageKey: 'csv-preview',
+        storagePrefix: COLUMN_WIDTH_PREFIX,
       })
       const root = await screen.findByTestId('data-grid')
       await vi.waitFor(() => expect(colSelector(root, 1).style.width).toBe('243px'))
@@ -2144,8 +2146,10 @@ describe('DataGrid (column resize)', () => {
       await fireEvent.keyDown(root.querySelector('[aria-label="Resize column 2"]') as HTMLElement, {
         key: 'ArrowRight',
       })
-      await vi.waitFor(() => expect(localStorage.getItem('share-text:column-widths:csv-preview')).not.toBeNull())
-      const stored = JSON.parse(localStorage.getItem('share-text:column-widths:csv-preview')!)
+      await vi.waitFor(() =>
+        expect(localStorage.getItem(`${COLUMN_WIDTH_PREFIX}csv-preview`)).not.toBeNull(),
+      )
+      const stored = JSON.parse(localStorage.getItem(`${COLUMN_WIDTH_PREFIX}csv-preview`)!)
       expect(stored).toEqual([120, 253])
     } finally {
       delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
@@ -2155,7 +2159,7 @@ describe('DataGrid (column resize)', () => {
 
   it('restores persisted column widths on mount, overriding initialColumnWidths', async () => {
     localStorage.clear()
-    localStorage.setItem('share-text:column-widths:csv-preview', JSON.stringify([200, 300]))
+    localStorage.setItem(`${COLUMN_WIDTH_PREFIX}csv-preview`, JSON.stringify([200, 300]))
     Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
     try {
       render(DataGrid, {
@@ -2166,10 +2170,38 @@ describe('DataGrid (column resize)', () => {
         initialColumnWidths: ['120', '120'],
         showHeaders: false,
         storageKey: 'csv-preview',
+        storagePrefix: COLUMN_WIDTH_PREFIX,
       })
       const root = await screen.findByTestId('data-grid')
       await vi.waitFor(() => expect(colSelector(root, 0).style.width).toBe('200px'))
       expect(colSelector(root, 1).style.width).toBe('300px')
+    } finally {
+      delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
+      localStorage.clear()
+    }
+  })
+
+  it('restores widths saved under the package prefix and migrates them to the app prefix', async () => {
+    localStorage.clear()
+    localStorage.setItem('ui-lib:column-widths:csv-preview', JSON.stringify([200, 300]))
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => 400 })
+    try {
+      render(DataGrid, {
+        value: [
+          ['a', 'b'],
+          ['1', '2'],
+        ],
+        initialColumnWidths: ['120', '120'],
+        showHeaders: false,
+        storageKey: 'csv-preview',
+        storagePrefix: COLUMN_WIDTH_PREFIX,
+      })
+      const root = await screen.findByTestId('data-grid')
+      await vi.waitFor(() => expect(colSelector(root, 0).style.width).toBe('200px'))
+      expect(colSelector(root, 1).style.width).toBe('300px')
+      // The legacy entry moves to the app prefix, so the next mount reads it there.
+      expect(localStorage.getItem(`${COLUMN_WIDTH_PREFIX}csv-preview`)).not.toBeNull()
+      expect(localStorage.getItem('ui-lib:column-widths:csv-preview')).toBeNull()
     } finally {
       delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth
       localStorage.clear()

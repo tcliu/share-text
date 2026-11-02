@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import ImportDialog from '../ImportDialog.svelte'
 
-vi.mock('../LazyCodeEditor.svelte', async () => {
+vi.mock('@codepg/ui-lib/components/LazyCodeEditor.svelte', async () => {
   const { default: Stub } = await import('./LazyCodeEditorStub.svelte')
   return { default: Stub }
 })

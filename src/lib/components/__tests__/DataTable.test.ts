@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { fireEvent, render } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
-import DataTable, { type DataTableColumn } from '../DataTable.svelte'
+import DataTable, { type DataTableColumn } from '@codepg/ui-lib/components/DataTable.svelte'
+import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
 
 interface Row {
   key: string
@@ -166,7 +167,7 @@ describe('DataTable resizable columns', () => {
   it('persists resized column widths to localStorage under the storageKey', async () => {
     localStorage.clear()
     const { container } = render(DataTable<Row>, {
-      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' },
+      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents', storagePrefix: COLUMN_WIDTH_PREFIX },
     })
     const ths = Array.from(container.querySelectorAll('th[data-col-index]'))
     Object.defineProperty(ths[0], 'offsetWidth', { configurable: true, value: 200 })
@@ -176,17 +177,19 @@ describe('DataTable resizable columns', () => {
     await fireEvent.keyDown(handle, { key: 'ArrowRight' })
     await fireEvent.mouseUp(window)
 
-    await vi.waitFor(() => expect(localStorage.getItem('share-text:column-widths:admin-documents')).not.toBeNull())
-    const stored = JSON.parse(localStorage.getItem('share-text:column-widths:admin-documents')!)
+    await vi.waitFor(() =>
+      expect(localStorage.getItem(`${COLUMN_WIDTH_PREFIX}admin-documents`)).not.toBeNull(),
+    )
+    const stored = JSON.parse(localStorage.getItem(`${COLUMN_WIDTH_PREFIX}admin-documents`)!)
     expect(stored).toEqual([210, 240])
     localStorage.clear()
   })
 
   it('restores persisted column widths on mount', async () => {
     localStorage.clear()
-    localStorage.setItem('share-text:column-widths:admin-documents', JSON.stringify([220, 160]))
+    localStorage.setItem(`${COLUMN_WIDTH_PREFIX}admin-documents`, JSON.stringify([220, 160]))
     const { container } = render(DataTable<Row>, {
-      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents' },
+      props: { ...baseProps(), resizable: true, storageKey: 'admin-documents', storagePrefix: COLUMN_WIDTH_PREFIX },
     })
     await vi.waitFor(() => {
       const cols = container.querySelectorAll('colgroup col')

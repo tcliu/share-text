@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import Copyable from '../Copyable.svelte'
+import Copyable from '@codepg/ui-lib/components/Copyable.svelte'
 import { findRevealWrapper, GATED_HIDDEN_CLASS } from '../../../test/reveal-helpers'
 
 describe('Copyable', () => {

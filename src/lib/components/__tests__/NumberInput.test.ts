@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/svelte'
 import { describe, expect, it } from 'vitest'
-import NumberInput from '../NumberInput.svelte'
+import NumberInput from '@codepg/ui-lib/components/NumberInput.svelte'
 
 function renderStepped() {
   render(NumberInput, { value: '5', min: 0, max: 10, ariaLabel: 'Quantity' })

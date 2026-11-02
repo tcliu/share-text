@@ -67,6 +67,20 @@ describe('i18n', () => {
     expect(i18n.t('missing.key' as never)).toBe('missing.key')
   })
 
+  it('resolves a shared key the app does not define', () => {
+    // `common.cancel` lives only in the package dictionary; the app prunes it.
+    expect(i18n.t('common.cancel')).toBe('Cancel')
+    i18n.setLocale('zh-CN')
+    expect(i18n.t('common.cancel')).toBe('取消')
+  })
+
+  it('lets an app key override the shared label', () => {
+    // `splitter.resize` is the one shared key the app deliberately overrides.
+    expect(i18n.t('splitter.resize')).toBe('Resize split panes')
+    i18n.setLocale('zh-CN')
+    expect(i18n.t('splitter.resize')).toBe('调整窗格大小')
+  })
+
   it('persists the locale and updates the html lang', () => {
     i18n.setLocale('zh-TW')
     expect(localStorage.getItem('share-text:locale')).toBe('zh-TW')

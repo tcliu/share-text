@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { createDocument, e2eUser, registerUser } from './helpers'
 
 // Guards the CSV grid's owned-node focus registry
-// (`src/lib/components/grid-cell-refs.ts`): cell editors register their own
+// (`@codepg/ui-lib/components/grid-cell-refs`): cell editors register their own
 // nodes, and Tab/Enter transitions reach the live node through the registry.
 // Throwaway account cleaned up by global-teardown.
 const user = e2eUser('csvgrid')

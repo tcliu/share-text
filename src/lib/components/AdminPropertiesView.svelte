@@ -1,13 +1,13 @@
 <script lang="ts">
-  import Tabs from './Tabs.svelte'
-  import Button from './Button.svelte'
-  import Buttons from './Buttons.svelte'
-  import SearchInput from './SearchInput.svelte'
-  import Chip from './Chip.svelte'
+  import Tabs from '@codepg/ui-lib/components/Tabs.svelte'
+  import Button from '@codepg/ui-lib/components/Button.svelte'
+  import Buttons from '@codepg/ui-lib/components/Buttons.svelte'
+  import SearchInput from '@codepg/ui-lib/components/SearchInput.svelte'
+  import Chip from '@codepg/ui-lib/components/Chip.svelte'
   import AdminPropertyRow from './AdminPropertyRow.svelte'
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
-  import CloseIcon from '$lib/icons/CloseIcon.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import CloseIcon from '@codepg/ui-lib/icons/CloseIcon.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
   import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
@@ -82,7 +82,7 @@
         </div>
       {/if}
     </div>
-    <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:useCaretAtEndOnKeyboardFocus>
+    <div class="overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/50" use:caretAtEndOnKeyboardFocus>
       {#each filteredSettings as setting, i (setting.key)}
         <AdminPropertyRow
           property={setting}

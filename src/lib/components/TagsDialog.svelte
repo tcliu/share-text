@@ -1,9 +1,9 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import FormDialog from './FormDialog.svelte'
-  import FormField from './FormField.svelte'
-  import TagInput from './TagInput.svelte'
-  import { useCaretAtEndOnKeyboardFocus } from './use-caret-at-end-on-keyboard-focus.svelte'
+  import FormDialog from '@codepg/ui-lib/components/FormDialog.svelte'
+  import FormField from '@codepg/ui-lib/components/FormField.svelte'
+  import TagInput from '@codepg/ui-lib/components/TagInput.svelte'
+  import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import {
     getDefaultTagColor,
     isTagColor,
@@ -118,7 +118,7 @@
     onSave={handleSave}
     onReset={handleReset}
     onClose={onClose}>
-    <div class="flex flex-col gap-4" use:useCaretAtEndOnKeyboardFocus>
+    <div class="flex flex-col gap-4" use:caretAtEndOnKeyboardFocus>
       <FormField label={i18n.t('tags.label')} htmlFor="document-tags-input">
         <TagInput
           bind:this={tagInputRef}

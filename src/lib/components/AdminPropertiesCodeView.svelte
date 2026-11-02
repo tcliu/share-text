@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LazyCodeEditor from './LazyCodeEditor.svelte'
+  import LazyCodeEditor from '@codepg/ui-lib/components/LazyCodeEditor.svelte'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
   import type { useAdminProperties } from '$lib/use-admin-properties.svelte'

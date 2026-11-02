@@ -2,8 +2,8 @@
   import { toast } from 'svelte-sonner'
   import { parseStructured, parseXmlStructure, serializeXmlStructure } from '$lib/document-type-utils'
   import type { PreviewProps } from '$lib/document-types'
-  import StructureTree from './StructureTree.svelte'
-  import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from './structure-value'
+  import StructureTree from '@codepg/ui-lib/components/StructureTree.svelte'
+  import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from '@codepg/ui-lib/components/structure-value'
   import { getI18nContext } from '$lib/i18n.svelte'
   const i18n = getI18nContext()
 
