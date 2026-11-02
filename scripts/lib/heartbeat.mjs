@@ -94,7 +94,7 @@ export async function confirmScanJobOverwrite({ existing, diff }) {
 export async function syncCronJobHeartbeat(target = 'vercel', { confirmOverwrite = confirmScanJobOverwrite, root = DEFAULT_ROOT, baseUrl } = {}) {
   if (!isHeartbeatSupported(root)) {
     logEvent({ action: 'heartbeat_unsupported_skip', details: { operation: 'sync' } })
-    return
+    return { applied: false, reason: 'no scan route in this app' }
   }
   const { cronSecret, baseUrl: envBaseUrl, apiKey } = heartbeatSecrets(target)
   // An explicit baseUrl wins: the Cloudflare deploy derives the production
@@ -125,6 +125,7 @@ export async function syncCronJobHeartbeat(target = 'vercel', { confirmOverwrite
   } catch (error) {
     throw new Error(`Failed to sync the cron-job.org scan job: ${error?.message || error}`)
   }
+  return { applied: true }
 }
 
 // Disable for the none provider. A missing job is a clean
@@ -132,7 +133,7 @@ export async function syncCronJobHeartbeat(target = 'vercel', { confirmOverwrite
 export async function disableCronJobHeartbeat(target = 'vercel', { root = DEFAULT_ROOT, baseUrl } = {}) {
   if (!isHeartbeatSupported(root)) {
     logEvent({ action: 'heartbeat_unsupported_skip', details: { operation: 'disable' } })
-    return
+    return { applied: false, reason: 'no scan route in this app' }
   }
   const { baseUrl: envBaseUrl, apiKey } = heartbeatSecrets(target)
   const resolvedBaseUrl = String(baseUrl || envBaseUrl || '').trim()
@@ -141,11 +142,11 @@ export async function disableCronJobHeartbeat(target = 'vercel', { root = DEFAUL
       action: 'heartbeat_disable_skip',
       details: { reason: 'missing CRONJOB_API_KEY', level: 'WARN' },
     })
-    return
+    return { applied: false, reason: 'missing CRONJOB_API_KEY' }
   }
   if (!resolvedBaseUrl) {
     logEvent({ action: 'heartbeat_disable_skip', details: { reason: 'missing base URL', level: 'WARN' } })
-    return
+    return { applied: false, reason: 'missing base URL' }
   }
   try {
     const { jobId, changed } = await setScanJobEnabled({
@@ -160,8 +161,12 @@ export async function disableCronJobHeartbeat(target = 'vercel', { root = DEFAUL
       logEvent({ action: 'heartbeat_disabled', details: { jobId, changed } })
     }
   } catch (error) {
+    // Fail closed: a disable that silently succeeded in the log would leave the
+    // scan job running while the operator is told the heartbeat is off.
     logEvent({ action: 'heartbeat_disable_error', details: { error: error?.message || error } })
+    throw new Error(`Failed to disable the cron-job.org scan job: ${error?.message || error}`)
   }
+  return { applied: true }
 }
 
 const defaultSteps = {
@@ -174,10 +179,10 @@ const defaultSteps = {
 // `baseUrl` override today) passes through to the steps untouched.
 export async function applyHeartbeat(provider, steps = defaultSteps, target = 'vercel', options = {}) {
   if (provider === 'cron-job') {
-    await steps.syncCronJobHeartbeat(target, options)
-  } else if (provider === 'none') {
-    await steps.disableCronJobHeartbeat(target, options)
-  } else {
-    throw new Error(`Unknown heartbeat: ${provider} (expected cron-job|none).`)
+    return await steps.syncCronJobHeartbeat(target, options)
   }
+  if (provider === 'none') {
+    return await steps.disableCronJobHeartbeat(target, options)
+  }
+  throw new Error(`Unknown heartbeat: ${provider} (expected cron-job|none).`)
 }

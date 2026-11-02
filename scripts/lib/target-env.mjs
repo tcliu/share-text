@@ -11,6 +11,7 @@
 // by the deploy preflight and both env-sync scripts. The remaining read-only
 // tooling loaders (`db-config.mjs`, `vercel.mjs`) keep their own Vercel-scoped
 // merges.
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseEnvFile } from '../env-file.mjs'
 import { ROOT as DEFAULT_ROOT } from './root.mjs'
@@ -74,6 +75,14 @@ export function targetSourceFiles(target = 'vercel') {
 
 export function targetSourceLabel(target = 'vercel') {
   return targetSourceFiles(target).join(' + ')
+}
+
+// The source files a target's sync pushes that are absent under `root`. A
+// sync fails closed on a non-empty result: `parseEnvFile` yields {} for a
+// missing file, so an empty key set would make every remote key look
+// orphaned — and a prune would then delete the whole remote environment.
+export function missingTargetSources(target = 'vercel', root = DEFAULT_ROOT) {
+  return targetSourceFiles(target).filter(file => !existsSync(join(root, file)))
 }
 
 // Seeds the Cloudflare operator credentials into `process.env` from the

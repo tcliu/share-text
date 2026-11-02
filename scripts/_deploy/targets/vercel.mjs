@@ -107,10 +107,10 @@ export async function runVercelFlow({ profile, syncEnv, applySchema, heartbeat, 
     // keep 'unknown'
   }
   const baseUrl = configuredBaseUrl()
-  logEvent({
-    action: 'deploy_start',
-    details: { profile, target: 'vercel', sync_env: syncEnv, apply_schema: applySchema, app_version: appVersion },
-  })
+  // The orchestrator logs `deploy_start` for every target; this entry carries
+  // only the version the Vercel flow resolved, so the same event is not emitted
+  // twice under one name with different shapes.
+  logEvent({ action: 'deploy_version', details: { target: 'vercel', app_version: appVersion } })
 
   const ctx = {
     target: vercelTarget,

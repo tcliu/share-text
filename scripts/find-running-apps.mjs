@@ -53,12 +53,15 @@ export async function findRunningApps({
       continue
     }
     if (payload == null || typeof payload !== 'object') continue
-    if (typeof payload.id !== 'string') continue
-    if (project != null && payload.id !== project) continue
-    if (branch != null && payload.branch !== branch) continue
+    // A project may answer with the card nested under `self` (an envelope);
+    // resolve it when present and fall back to the whole body otherwise.
+    const card = payload.self != null && typeof payload.self === 'object' ? payload.self : payload
+    if (typeof card.id !== 'string') continue
+    if (project != null && card.id !== project) continue
+    if (branch != null && card.branch !== branch) continue
     apps.push({
-      project: payload.id,
-      branch: payload.branch ?? null,
+      project: card.id,
+      branch: card.branch ?? null,
       port,
     })
   }

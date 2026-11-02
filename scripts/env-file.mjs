@@ -20,10 +20,15 @@ export function parseEnvFile(filePath) {
   for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
-    const separatorIndex = trimmed.indexOf('=')
+    // A shell-style `export FOO=bar` is valid dotenv syntax; the prefix is
+    // syntax, not part of the key, so a key would otherwise be stored as
+    // "export FOO" and synced under a name no server reads.
+    const assignment = trimmed.startsWith('export ') ? trimmed.slice('export '.length).trim() : trimmed
+    const separatorIndex = assignment.indexOf('=')
     if (separatorIndex === -1) continue
-    const key = trimmed.slice(0, separatorIndex).trim()
-    let value = trimmed.slice(separatorIndex + 1).trim()
+    const key = assignment.slice(0, separatorIndex).trim()
+    if (!key) continue
+    let value = assignment.slice(separatorIndex + 1).trim()
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1)
     }

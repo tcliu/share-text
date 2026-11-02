@@ -7,7 +7,11 @@
 // Never pass connection strings, secrets, passwords, or session contents — only
 // identifiers, counts, and error messages.
 import type { RequestEvent } from '@sveltejs/kit'
-import { formatLogLine as baseFormatLogLine } from './log-format.mjs'
+import { errorMessage, formatLogLine as baseFormatLogLine } from './log-format.mjs'
+
+// The script-side log line and the server's describe a failure the same way, so
+// the message extractor lives with the format in `log-format.mjs`.
+export { errorMessage }
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR'
 
@@ -61,11 +65,3 @@ export function getRequestIp(event: { request: Request; getClientAddress: () => 
   }
 }
 
-/** Message from an unknown thrown value, for the `error` detail. */
-export function errorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  const message = (error as { message?: unknown } | null)?.message
-  return typeof message === 'string' && message ? message : String(error)
-}

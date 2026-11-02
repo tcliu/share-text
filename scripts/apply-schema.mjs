@@ -168,7 +168,7 @@ if (profile === 'dev') {
       if (missing.length > 0) {
         logEvent({
           action: 'schema_apply_incomplete',
-          details: { profile, sqlite_path: path, missing, level: 'ERROR' },
+          details: { profile, sqlite_path: path, missing, elapsed_ms: Date.now() - startedAt, level: 'ERROR' },
         })
         process.exitCode = 1
       }
@@ -252,7 +252,7 @@ if (profile === 'dev') {
       if (missing.length > 0) {
         logEvent({
           action: 'schema_apply_incomplete',
-          details: { profile, db_host, db_name, schema, missing, level: 'ERROR' },
+          details: { profile, db_host, db_name, schema, missing, elapsed_ms: Date.now() - startedAt, level: 'ERROR' },
         })
         process.exitCode = 1
       }

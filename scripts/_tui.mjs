@@ -6,11 +6,11 @@
 // parsing, and raw-mode terminal lifecycle shared by full-screen TUIs, so
 // other scripts can build them without reimplementing terminal plumbing.
 //
-// Depends on: ./_terminal.mjs (palette, line prompts).
+// Depends on: ./lib/palette.mjs (palette).
 
 import { stdin, stdout } from 'node:process'
 
-import { c } from './_terminal.mjs'
+import { c } from './lib/palette.mjs'
 
 // Re-export the palette so tui consumers don't import _terminal directly.
 export { c }

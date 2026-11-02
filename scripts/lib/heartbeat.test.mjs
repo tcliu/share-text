@@ -125,7 +125,10 @@ describe('heartbeat skip without endpoint', () => {
   it('sync skips without touching secrets or network', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     try {
-      await expect(syncCronJobHeartbeat('vercel', { root: fixtureRoot() })).resolves.toBeUndefined()
+      await expect(syncCronJobHeartbeat('vercel', { root: fixtureRoot() })).resolves.toEqual({
+        applied: false,
+        reason: 'no scan route in this app',
+      })
       expect(log).toHaveBeenCalledWith(expect.stringContaining('action=heartbeat_unsupported_skip'))
     } finally {
       log.mockRestore()
@@ -135,7 +138,10 @@ describe('heartbeat skip without endpoint', () => {
   it('disable skips without touching secrets or network', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {})
     try {
-      await expect(disableCronJobHeartbeat('vercel', { root: fixtureRoot() })).resolves.toBeUndefined()
+      await expect(disableCronJobHeartbeat('vercel', { root: fixtureRoot() })).resolves.toEqual({
+        applied: false,
+        reason: 'no scan route in this app',
+      })
       expect(log).toHaveBeenCalledWith(expect.stringContaining('action=heartbeat_unsupported_skip'))
     } finally {
       log.mockRestore()

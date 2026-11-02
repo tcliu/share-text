@@ -1308,7 +1308,14 @@ function scanDeprecated() {
 // terminal frozen on the dialog frame). Failures surface as status text.
 // Fire-and-forget: callers ignore the return, and every await sits inside the
 // try so a rejection can never escape as an unhandled rejection.
+// Re-entry guard: the dialog closes before the multi-second terminate await, so
+// a second delete could otherwise start while the first is still terminating
+// processes in the same paths.
+let deleteInFlight = false
+
 async function resolveConfirm(confirmed) {
+  // Ignore rather than queue a second confirm: it would race the same paths.
+  if (deleteInFlight) return
   const cfm = state.confirm
   state.mode = 'list'
   state.confirm = null
@@ -1316,6 +1323,7 @@ async function resolveConfirm(confirmed) {
     redraw()
     return
   }
+  deleteInFlight = true
   try {
     if (cfm.terminate) {
       state.status = `${c.yellow}Terminating processes…${c.reset}`
@@ -1339,6 +1347,8 @@ async function resolveConfirm(confirmed) {
     executeBatchDelete(cfm.rows)
   } catch (e) {
     state.status = `${c.red}Delete failed: ${e?.message ?? e}${c.reset}`
+  } finally {
+    deleteInFlight = false
   }
   redraw()
 }
@@ -1354,7 +1364,10 @@ async function submitCommand() {
     redraw()
     return
   }
-  if (!state.cmdHistory.includes(cmd)) state.cmdHistory.push(cmd)
+  // A credential-bearing command stays out of the recall history: ↑ would
+  // otherwise re-display the secret in clear. Ordinary commands keep
+  // re-running verbatim.
+  if (maskCommandLine(cmd) === cmd && !state.cmdHistory.includes(cmd)) state.cmdHistory.push(cmd)
   if (state.cmdHistory.length > 50) state.cmdHistory.shift()
   runInWorktree(cmd, state.pane ? state.pane.row : state.rows[state.cursor])
 }
@@ -1371,9 +1384,19 @@ function launchShell(row) {
       new Promise(resolve => {
         const child = spawn(shell, { cwd: row.path, stdio: 'inherit' })
         child.on('close', resolve)
+        // A missing shell or a worktree removed since the last refresh emits
+        // 'error'; without a listener that event is unhandled and kills the
+        // process with the terminal still suspended.
+        child.on('error', error => {
+          state.status = `${c.red}${error?.message || error}${c.reset}`
+          resolve(-1)
+        })
       }),
     row,
     label: shell,
+  }).catch(error => {
+    state.status = `${c.red}${error?.message || error}${c.reset}`
+    redraw()
   })
 }
 
@@ -1384,14 +1407,24 @@ async function suspendForCommand({ run, row, label }) {
   process.stdout.write('\x1b[?1049l\x1b[?25h\x1b[?1002l\x1b[?1006l')
   stdin.setRawMode(false)
   stdin.pause()
-  const code = await run()
-  state.suspended = false
-  stdin.setRawMode(true)
-  stdin.resume()
-  process.stdout.write('\x1b[?1049h\x1b[?25l\x1b[?1002h\x1b[?1006h')
-  state.fullClear = true
+  let code
+  try {
+    code = await run()
+  } finally {
+    // Restore the screen even when the command could not be started, so a
+    // failure never strands the operator in a suspended terminal.
+    state.suspended = false
+    stdin.setRawMode(true)
+    stdin.resume()
+    process.stdout.write('\x1b[?1049h\x1b[?25l\x1b[?1002h\x1b[?1006h')
+    state.fullClear = true
+  }
   state.status = `${c.green}exit ${code ?? 'sig'}${c.reset} · ${c.gray}${label}${c.reset} in ${c.gray}${row.name}${c.reset}`
-  refreshList()
+  try {
+    refreshList()
+  } catch (error) {
+    state.status = `${c.red}${error?.message || error}${c.reset} · press r to retry`
+  }
   redraw()
 }
 
@@ -1753,7 +1786,11 @@ function handleTextInput(value) {
       if (state.checked.size === 0) selectAll()
       else clearSelection()
     } else if (value === 'r') {
-      refreshList()
+      try {
+        refreshList()
+      } catch (error) {
+        state.status = `${c.red}${error?.message || error}${c.reset} · press r to retry`
+      }
       redraw()
     } else if (value === 'n') {
       openCreate()

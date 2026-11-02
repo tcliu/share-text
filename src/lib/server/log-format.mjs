@@ -25,3 +25,22 @@ export function formatLogLine({ action, ip, details = {} }) {
     serializedDetails ? ` ${serializedDetails}` : ''
   }`
 }
+
+/**
+ * Message from an unknown thrown value, for an event's `error` detail. Shared by
+ * both runtimes so a script and the server describe the same failure the same way.
+ * @param {unknown} error
+ * @returns {string}
+ */
+export function errorMessage(error) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = /** @type {{ message?: unknown }} */ (error).message
+    if (typeof message === 'string' && message) {
+      return message
+    }
+  }
+  return String(error)
+}

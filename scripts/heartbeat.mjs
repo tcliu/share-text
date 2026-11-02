@@ -8,6 +8,7 @@
 // Missing and non-interactive: abort.
 import { applyHeartbeat, HEARTBEAT_CHOICES, HEARTBEAT_PROVIDERS } from './lib/heartbeat.mjs'
 import { resolveCloudflareAppUrl } from './lib/cloudflare.mjs'
+import { ROOT as ROOT_DIR } from './lib/root.mjs'
 import { loadTargetEnv, seedCloudflareCredentials } from './lib/target-env.mjs'
 import { c, parseCliArgsOrExit } from './_terminal.mjs'
 import { interactiveShell } from './_interactive-shell.mjs'
@@ -96,6 +97,7 @@ async function main() {
     }
     provider = await pickProvider()
   }
+  let result
   try {
     // The Cloudflare live URL is the Pages production domain derived from
     // the project: resolve it instead of reading APP_BASE_URL (absent on
@@ -103,15 +105,21 @@ async function main() {
     // the operator token from .env.local first — shell values always win.
     let baseUrl
     if (target === 'cloudflare') {
-      const merged = loadTargetEnv('cloudflare', process.cwd())
+      const merged = loadTargetEnv('cloudflare', ROOT_DIR)
       seedCloudflareCredentials({ token: merged, accountId: merged })
       baseUrl = resolveCloudflareAppUrl()
     }
-    await applyHeartbeat(provider, undefined, target, { baseUrl })
+    result = await applyHeartbeat(provider, undefined, target, { baseUrl })
   } catch (error) {
     failExit(error?.message || error)
   }
-  console.log(`OK heartbeat -> ${provider} (${target})`)
+  // Report what actually happened: a step that skipped (no scan route, missing
+  // credentials) must not print the same success line as an applied heartbeat.
+  if (result && result.applied === false) {
+    console.log(`SKIPPED heartbeat -> ${provider} (${target}): ${result.reason ?? 'nothing to apply'}`)
+  } else {
+    console.log(`OK heartbeat -> ${provider} (${target})`)
+  }
 }
 
 main().catch(error => {

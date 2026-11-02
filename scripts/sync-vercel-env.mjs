@@ -11,7 +11,8 @@
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { parseEnvFile } from './env-file.mjs'
-import { targetSourceFiles } from './lib/target-env.mjs'
+import { ROOT as ROOT_DIR } from './lib/root.mjs'
+import { missingTargetSources, targetSourceFiles } from './lib/target-env.mjs'
 import { errorMessage, logEvent } from './log-event.mjs'
 import { runVercelCliAsync } from './_vercel-cli.mjs'
 
@@ -30,27 +31,37 @@ const SOURCE_FILES = targetSourceFiles('vercel')
 const STARTED_AT = Date.now()
 
 function loadDesiredEnv() {
-  return SOURCE_FILES.reduce((merged, file) => ({ ...merged, ...parseEnvFile(join(process.cwd(), file)) }), {})
+  return SOURCE_FILES.reduce((merged, file) => ({ ...merged, ...parseEnvFile(join(ROOT_DIR, file)) }), {})
 }
 
 async function listVercelEnvKeys() {
-  const output = await runVercelCliAsync(['env', 'ls', TARGET, '--format', 'json'], { cwd: process.cwd() })
+  const output = await runVercelCliAsync(['env', 'ls', TARGET, '--format', 'json'], { cwd: ROOT_DIR })
   const parsed = JSON.parse(output)
   return new Set((parsed.envs || []).map(entry => entry.key))
 }
 
 async function upsertVercelEnv(key, value) {
   // The value goes on stdin: `--value` would expose it in the process argv.
-  await runVercelCliAsync(['env', 'add', key, TARGET, '--force', '--yes'], { cwd: process.cwd(), input: value })
+  await runVercelCliAsync(['env', 'add', key, TARGET, '--force', '--yes'], { cwd: ROOT_DIR, input: value })
 }
 
 async function removeVercelEnv(key) {
-  await runVercelCliAsync(['env', 'rm', key, TARGET, '--yes'], { cwd: process.cwd() })
+  await runVercelCliAsync(['env', 'rm', key, TARGET, '--yes'], { cwd: ROOT_DIR })
 }
 
 async function main() {
+  // Fail closed: `parseEnvFile` yields {} for a missing file, so a checkout
+  // without .env.vercel would make every remote key look orphaned and
+  // `--prune` would delete the whole production environment.
+  const missing = missingTargetSources('vercel', ROOT_DIR)
+  if (missing.length > 0) {
+    throw new Error(`Missing ${missing.join(', ')} at ${ROOT_DIR}: nothing to sync.`)
+  }
   const desiredEnv = loadDesiredEnv()
   const desiredKeys = new Set(Object.keys(desiredEnv))
+  if (PRUNE && desiredKeys.size === 0) {
+    throw new Error(`Refusing to prune: ${SOURCE_FILES.join(', ')} defines no keys.`)
+  }
   logEvent({
     action: 'env_sync_start',
     details: { target: TARGET, source: SOURCE_FILES.join(', '), keys: desiredKeys.size },
@@ -66,6 +77,7 @@ async function main() {
       continue
     }
     await upsertVercelEnv(key, value)
+    logEvent({ action: 'env_var_synced', details: { key } })
     console.log(`synced ${key}`)
     syncedCount += 1
   }
@@ -76,6 +88,7 @@ async function main() {
   if (PRUNE) {
     for (const key of orphans) {
       await removeVercelEnv(key)
+      logEvent({ action: 'env_var_removed', details: { key } })
       console.log(`removed ${key}`)
       removedCount += 1
     }

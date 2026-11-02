@@ -7,14 +7,10 @@
 //
 // Never pass connection strings, secrets, passwords, or document contents —
 // only identifiers and counts.
-import { formatLogLine } from '../src/lib/server/log-format.mjs'
+import { errorMessage, formatLogLine } from '../src/lib/server/log-format.mjs'
+
+export { errorMessage }
 
 export function logEvent({ action, details = {} }) {
   console.log(formatLogLine({ action, ip: 'unknown', details }))
-}
-
-export function errorMessage(error) {
-  if (error instanceof Error && error.message) return error.message
-  if (error && typeof error.message === 'string' && error.message) return error.message
-  return String(error)
 }
