@@ -122,6 +122,11 @@ export async function syncCronJobHeartbeat(target = 'vercel', { confirmOverwrite
           ? 'kept (overwrite declined)'
           : 'already up to date'
     logEvent({ action: 'heartbeat_synced', details: { jobId, outcome, target } })
+    // A declined overwrite applied nothing: report the skip so the CLI does
+    // not print the same success line as an applied heartbeat.
+    if (reason === 'declined') {
+      return { applied: false, reason: 'overwrite declined' }
+    }
   } catch (error) {
     throw new Error(`Failed to sync the cron-job.org scan job: ${error?.message || error}`)
   }
