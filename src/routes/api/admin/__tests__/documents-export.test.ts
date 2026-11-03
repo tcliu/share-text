@@ -5,8 +5,8 @@ const documentsMocks = vi.hoisted(() => ({
   exportDocumentsForAdmin: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-admin', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-admin')>('$lib/server/document-admin')
+vi.mock('#lib/server/document-admin.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-admin.js')>('#lib/server/document-admin.js')
   return {
     ...actual,
     exportDocumentsForAdmin: documentsMocks.exportDocumentsForAdmin,

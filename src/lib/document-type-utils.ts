@@ -16,7 +16,7 @@ export type { StructuredParseResult, ValidationResult } from './xml-utils'
 
 // The XML, properties, and markup surfaces moved to focused sibling modules;
 // re-exported here so existing importers keep reaching them through
-// `$lib/document-type-utils`.
+// `#lib/document-type-utils.js`.
 export {
   parseXmlDom,
   parseXml,

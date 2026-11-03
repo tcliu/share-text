@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { PROD_MIGRATIONS } from '$lib/server/db'
+import { PROD_MIGRATIONS } from '#lib/server/db/index.js'
 
 const schema = readFileSync(new URL('../../../../sql/schema.sql', import.meta.url), 'utf8')
 const migrations = PROD_MIGRATIONS.join('\n')

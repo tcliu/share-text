@@ -1,4 +1,6 @@
 import path from 'node:path'
+import adapterCloudflare from '@sveltejs/adapter-cloudflare'
+import adapterVercel from '@sveltejs/adapter-vercel'
 import { sveltekit } from '@sveltejs/kit/vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import tailwindcss from '@tailwindcss/vite'
@@ -41,7 +43,19 @@ export default defineConfig(async ({ command, mode }) => {
     loadDevEnv(mode)
   }
   const isTest = process.env.VITEST === 'true'
-  let plugins = isTest ? [svelte({ compilerOptions: { dev: true } }), tailwindcss()] : [sveltekit(), tailwindcss()]
+  // Second deploy target: `CF_PAGES=1` selects the Cloudflare Pages adapter,
+  // otherwise the Vercel adapter stays the default. Deploys run through
+  // `scripts/deploy.mjs --target cloudflare` on the existing Neon backend.
+  // Read after `loadDevEnv` so a dotenv-provided flag is honored too.
+  const useCloudflare = process.env.CF_PAGES === '1'
+  let plugins = isTest
+    ? [svelte({ compilerOptions: { dev: true } }), tailwindcss()]
+    : [
+        sveltekit({
+          adapter: useCloudflare ? adapterCloudflare() : adapterVercel({ runtime: 'nodejs24.x' }),
+        }),
+        tailwindcss(),
+      ]
   return {
     plugins,
     server: {
@@ -60,11 +74,9 @@ export default defineConfig(async ({ command, mode }) => {
     resolve: isTest
       ? {
           alias: {
-            $lib: path.resolve('./src/lib'),
-            '$app/stores': path.resolve('./src/test/mocks/app-stores.ts'),
-            '$app/state': path.resolve('./src/test/mocks/app-state.ts'),
+            '$app/state': path.resolve('./src/test/mocks/app-state.svelte.ts'),
             '$app/navigation': path.resolve('./src/test/mocks/app-navigation.ts'),
-            '$app/environment': path.resolve('./src/test/mocks/app-environment.ts'),
+            '$app/env': path.resolve('./src/test/mocks/app-env.ts'),
           },
           conditions: ['browser', 'default'],
         }

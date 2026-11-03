@@ -6,8 +6,8 @@ const settingsMocks = vi.hoisted(() => ({
   deletePropertyValue: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-properties', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-properties')>('$lib/server/admin-properties')
+vi.mock('#lib/server/admin-properties.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-properties.js')>('#lib/server/admin-properties.js')
   return {
     ...actual,
     listProperties: settingsMocks.listProperties,

@@ -8,7 +8,7 @@ import MintIcon from '@codepg/ui-lib/icons/MintIcon.svelte'
 import LightBulbIcon from '@codepg/ui-lib/icons/LightBulbIcon.svelte'
 import LavenderIcon from '@codepg/ui-lib/icons/LavenderIcon.svelte'
 import CloudIcon from '@codepg/ui-lib/icons/CloudIcon.svelte'
-import type { UiTheme } from '$lib/use-theme.svelte'
+import type { UiTheme } from '#lib/use-theme.svelte.js'
 
 export const THEME_MENU_OPTIONS: { value: UiTheme }[] = [
   { value: 'dark' },

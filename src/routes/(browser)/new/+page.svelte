@@ -1,10 +1,10 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
   import type { PageProps } from './$types'
-  import { createDocument, type Document } from '$lib/documents'
+  import { createDocument, type Document } from '#lib/documents.js'
   import { goto } from '$app/navigation'
-  import { getDocumentType } from '$lib/document-types'
-  import { getShareTextContext } from '$lib/share-text-context'
+  import { getDocumentType } from '#lib/document-types.js'
+  import { getShareTextContext } from '#lib/share-text-context.js'
   import {
     clearDraft,
     loadDraft,
@@ -12,9 +12,9 @@
     loadDraftName,
     saveDraft,
     NEW_DOCUMENT_DRAFT_ID,
-  } from '$lib/document-drafts'
-  import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  } from '#lib/document-drafts.js'
+  import DocumentEditorPane from '#lib/components/DocumentEditorPane.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   let { data }: PageProps = $props()

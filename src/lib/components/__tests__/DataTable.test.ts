@@ -2,7 +2,7 @@
 import { fireEvent, render } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import DataTable, { type DataTableColumn } from '@codepg/ui-lib/components/DataTable.svelte'
-import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
+import { COLUMN_WIDTH_PREFIX } from '#lib/column-widths.js'
 
 interface Row {
   key: string

@@ -3,7 +3,7 @@ import { render, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snippet } from 'svelte'
 import Layout from '../+layout.svelte'
-import { setPage } from '../../../test/mocks/app-stores'
+import { setPage } from '../../../test/mocks/app-state.svelte.js'
 
 const SPLIT_PANE_STORAGE_KEY = 'share-text:split-pane-width'
 

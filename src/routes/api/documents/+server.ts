@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
@@ -6,14 +5,14 @@ import {
   DocumentLimitError,
   isValidDocumentType,
   normalizeName,
-} from '$lib/server/document-model'
-import { DOCUMENT_SEARCH_KEYS } from '$lib/server/document-query'
-import { fetchDocumentSummaries, insertDocument } from '$lib/server/document-store'
-import { logEvent } from '$lib/server/logging'
-import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
-import { isBodyRecord } from '$lib/server/request-utils'
-import { getMaxContentLength } from '$lib/server/admin-properties'
-import { resolveViewer } from '$lib/server/viewer'
+} from '#lib/server/document-model.js'
+import { DOCUMENT_SEARCH_KEYS } from '#lib/server/document-query.js'
+import { fetchDocumentSummaries, insertDocument } from '#lib/server/document-store.js'
+import { logEvent } from '#lib/server/logging.js'
+import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '#lib/server/parse-query.js'
+import { isBodyRecord } from '#lib/server/request-utils.js'
+import { getMaxContentLength } from '#lib/server/admin-properties.js'
+import { resolveViewer } from '#lib/server/viewer.js'
 
 export const GET: RequestHandler = async ({ url, getClientAddress, cookies }) => {
   const limitParam = url.searchParams.get('limit')
@@ -24,12 +23,12 @@ export const GET: RequestHandler = async ({ url, getClientAddress, cookies }) =>
   const offset = parseNonNegativeInt(offsetParam)
 
   if ((limitParam !== null && limit === null) || offset === null) {
-    return json({ error: 'Invalid pagination parameters' }, { status: 400 })
+    return Response.json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
   const invalidSearchKeys = searchKeys.filter(key => !DOCUMENT_SEARCH_KEYS.includes(key))
   if (invalidSearchKeys.length > 0) {
-    return json({ error: 'Invalid search-keys' }, { status: 400 })
+    return Response.json({ error: 'Invalid search-keys' }, { status: 400 })
   }
 
   const viewer = await resolveViewer({ cookies, getClientAddress })
@@ -41,17 +40,17 @@ export const GET: RequestHandler = async ({ url, getClientAddress, cookies }) =>
     offset,
   })
 
-  return json({ documents, hasMore })
+  return Response.json({ documents, hasMore })
 }
 
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
-    return json({ error: 'Invalid request body' }, { status: 400 })
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   if (Object.keys(body).some(key => key !== 'name' && key !== 'content' && key !== 'documentType')) {
-    return json({ error: 'Unsupported fields in request body' }, { status: 400 })
+    return Response.json({ error: 'Unsupported fields in request body' }, { status: 400 })
   }
 
   const rawName = typeof body.name === 'string' && body.name.trim() !== '' ? body.name : null
@@ -66,11 +65,11 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     }
     assertContentWithinLimit(rawContent, await getMaxContentLength())
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
+    return Response.json({ error: error instanceof Error ? error.message : 'Invalid document' }, { status: 400 })
   }
 
   if (rawType !== undefined && !isValidDocumentType(rawType)) {
-    return json({ error: 'Invalid document type' }, { status: 400 })
+    return Response.json({ error: 'Invalid document type' }, { status: 400 })
   }
 
   const startedAt = Date.now()
@@ -92,7 +91,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
         elapsed_ms: Date.now() - startedAt,
       },
     })
-    return json({ document }, { status: 201 })
+    return Response.json({ document }, { status: 201 })
   } catch (error) {
     if (error instanceof DocumentLimitError) {
       logEvent({
@@ -100,7 +99,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
         action: 'document_limit',
         details: { name: name ?? null, level: 'WARN' },
       })
-      return json({ error: error.message }, { status: 403 })
+      return Response.json({ error: error.message }, { status: 403 })
     }
     logEvent({
       ip: viewer.ip,

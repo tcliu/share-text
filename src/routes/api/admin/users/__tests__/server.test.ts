@@ -8,8 +8,8 @@ const usersMocks = vi.hoisted(() => ({
   deleteUser: vi.fn(),
 }))
 
-vi.mock('$lib/server/users', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/users')>('$lib/server/users')
+vi.mock('#lib/server/users.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/users.js')>('#lib/server/users.js')
   return {
     ...actual,
     listUsers: usersMocks.listUsers,

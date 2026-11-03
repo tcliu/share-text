@@ -24,7 +24,7 @@ const ORIGINAL_ENV = { ...process.env }
 
 async function importFresh() {
   vi.resetModules()
-  return import('$lib/server/db/neon')
+  return import('#lib/server/db/neon.js')
 }
 
 beforeEach(() => {

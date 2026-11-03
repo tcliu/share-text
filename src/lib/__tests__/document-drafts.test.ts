@@ -6,7 +6,7 @@ import {
   loadDraftName,
   saveDraft,
   NEW_DOCUMENT_DRAFT_ID,
-} from '$lib/document-drafts'
+} from '#lib/document-drafts.js'
 
 describe('document-drafts localStorage helpers', () => {
   beforeEach(() => {

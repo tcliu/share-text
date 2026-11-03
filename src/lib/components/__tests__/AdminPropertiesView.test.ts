@@ -2,7 +2,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminPropertiesViewHost from './AdminPropertiesViewHost.svelte'
-import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
+import type { useAdminProperties } from '#lib/use-admin-properties.svelte.js'
 
 vi.mock('@codepg/ui-lib/components/LazyCodeEditor.svelte', async () => {
   const { default: Stub } = await import('./LazyCodeEditorStub.svelte')

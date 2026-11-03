@@ -1,14 +1,13 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { DOCUMENT_SEARCH_KEYS } from '$lib/server/document-query'
-import { listDocumentsForOwnedUser } from '$lib/server/document-admin'
-import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '$lib/server/parse-query'
-import { resolveViewer } from '$lib/server/viewer'
+import { DOCUMENT_SEARCH_KEYS } from '#lib/server/document-query.js'
+import { listDocumentsForOwnedUser } from '#lib/server/document-admin.js'
+import { parseNonNegativeInt, parsePositiveInt, parseSearchParams } from '#lib/server/parse-query.js'
+import { resolveViewer } from '#lib/server/viewer.js'
 
 export const GET: RequestHandler = async event => {
   const viewer = await resolveViewer(event)
   if (viewer.type !== 'user') {
-    return json({ error: 'Authentication required' }, { status: 401 })
+    return Response.json({ error: 'Authentication required' }, { status: 401 })
   }
 
   const limitParam = event.url.searchParams.get('limit')
@@ -20,12 +19,12 @@ export const GET: RequestHandler = async event => {
   const limit = limitParam === null ? undefined : parsePositiveInt(limitParam)
   const offset = parseNonNegativeInt(offsetParam)
   if ((limitParam !== null && limit === null) || offset === null) {
-    return json({ error: 'Invalid pagination parameters' }, { status: 400 })
+    return Response.json({ error: 'Invalid pagination parameters' }, { status: 400 })
   }
 
   const invalidSearchKeys = searchKeys.filter(key => !DOCUMENT_SEARCH_KEYS.includes(key))
   if (invalidSearchKeys.length > 0) {
-    return json({ error: 'Invalid search-keys' }, { status: 400 })
+    return Response.json({ error: 'Invalid search-keys' }, { status: 400 })
   }
 
   const order = orderParam === 'asc' || orderParam === 'desc' ? orderParam : undefined
@@ -37,5 +36,5 @@ export const GET: RequestHandler = async event => {
     sortBy: sortBy || undefined,
     order,
   })
-  return json(result)
+  return Response.json(result)
 }

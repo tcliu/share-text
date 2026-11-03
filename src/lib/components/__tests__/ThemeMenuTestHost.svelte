@@ -1,6 +1,6 @@
 <script lang="ts">
   import ThemeMenu from '../ThemeMenu.svelte'
-  import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { createAppI18n, setI18nContext } from '#lib/i18n.svelte.js'
 
   setI18nContext(createAppI18n())
 </script>

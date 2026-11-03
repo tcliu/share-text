@@ -1,6 +1,6 @@
 <script lang="ts">
   import Menu, { type MenuItemState } from '@codepg/ui-lib/components/Menu.svelte'
-  import { LOCALES, getI18nContext } from '$lib/i18n.svelte'
+  import { LOCALES, getI18nContext } from '#lib/i18n.svelte.js'
   import GlobeIcon from '@codepg/ui-lib/icons/GlobeIcon.svelte'
 
   const i18n = getI18nContext()

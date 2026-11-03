@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { USER_SESSION_COOKIE } from '$lib/server/user-auth'
+import { USER_SESSION_COOKIE } from '#lib/server/user-auth.js'
 
 const mocks = vi.hoisted(() => ({
   isAdminSession: vi.fn(),
@@ -8,20 +8,20 @@ const mocks = vi.hoisted(() => ({
   findUserById: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', () => ({
+vi.mock('#lib/server/admin-auth.js', () => ({
   getAdminUsername: mocks.getAdminUsername,
   isAdminSession: mocks.isAdminSession,
 }))
 
-vi.mock('$lib/server/user-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/user-auth')>('$lib/server/user-auth')
+vi.mock('#lib/server/user-auth.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/user-auth.js')>('#lib/server/user-auth.js')
   return {
     ...actual,
     getCurrentUserId: mocks.getCurrentUserId,
   }
 })
 
-vi.mock('$lib/server/users', () => ({
+vi.mock('#lib/server/users.js', () => ({
   findUserById: mocks.findUserById,
 }))
 

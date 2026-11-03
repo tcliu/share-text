@@ -5,7 +5,7 @@ documents. Documents are public by default; visitors can register an account to
 own, share, and make documents private. Built with SvelteKit and deployed to
 Vercel with a Neon PostgreSQL store.
 
-- SvelteKit 2 + Svelte 5 (runes), Tailwind CSS v4, CodeMirror 6
+- SvelteKit 3 + Svelte 5 (runes), Tailwind CSS v4, CodeMirror 6
 - Shared UI surface consumed from the `@codepg/ui-lib` package (components,
   icons, actions, i18n store and stylesheet)
 - Two-pane layout: document list on the left, editor on the right
@@ -13,7 +13,7 @@ Vercel with a Neon PostgreSQL store.
 
 ## Requirements
 
-- Node.js 22+ (dev uses `better-sqlite3`, which requires Node 22+)
+- Node.js 22.17+ (SvelteKit 3's floor; dev also uses `better-sqlite3`, which requires Node 22+)
 - `prod` requires a PostgreSQL database (Neon); `dev` needs none
 
 ## Install

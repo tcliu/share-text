@@ -2,9 +2,9 @@
   import Button from '@codepg/ui-lib/components/Button.svelte'
   import Buttons from '@codepg/ui-lib/components/Buttons.svelte'
   import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
-  import { LOCALES, getI18nContext, type Locale } from '$lib/i18n.svelte'
+  import { LOCALES, getI18nContext, type Locale } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import type { useAdminPreferences } from '$lib/use-admin-preferences.svelte'
+  import type { useAdminPreferences } from '#lib/use-admin-preferences.svelte.js'
 
   interface Props {
     preferencesState: ReturnType<typeof useAdminPreferences>

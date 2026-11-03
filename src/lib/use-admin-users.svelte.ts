@@ -9,11 +9,11 @@ import {
   updateAdminUser,
   type AdminUser,
   type AdminUserStatus,
-} from '$lib/admin'
-import { downloadJson } from '$lib/download-json'
-import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
-import { createPageSelection } from '$lib/use-page-selection.svelte'
-import { getI18nContext } from '$lib/i18n.svelte'
+} from '#lib/admin.js'
+import { downloadJson } from '#lib/download-json.js'
+import { useAdminDocumentsSearch } from '#lib/use-admin-documents-search.svelte.js'
+import { createPageSelection } from '#lib/use-page-selection.svelte.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 export type UserDialogMode = 'add' | 'edit'
 

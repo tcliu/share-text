@@ -2,7 +2,7 @@
 import { render, fireEvent } from '@testing-library/svelte'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import LanguageMenuTestHost from './LanguageMenuTestHost.svelte'
-import type { I18nStore } from '$lib/i18n.svelte'
+import type { I18nStore } from '#lib/i18n.svelte.js'
 
 Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})
 

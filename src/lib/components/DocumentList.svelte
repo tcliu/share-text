@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { OwnedDocumentSummary } from '$lib/documents'
-  import { measureHeaderMinWidth } from '$lib/document-list-helpers'
+  import type { OwnedDocumentSummary } from '#lib/documents.js'
+  import { measureHeaderMinWidth } from '#lib/document-list-helpers.js'
   import Button from '@codepg/ui-lib/components/Button.svelte'
   import RefreshIcon from '@codepg/ui-lib/icons/RefreshIcon.svelte'
   import DoubleChevronLeftIcon from '@codepg/ui-lib/icons/DoubleChevronLeftIcon.svelte'
@@ -8,10 +8,10 @@
   import LockIcon from '@codepg/ui-lib/icons/LockIcon.svelte'
   import SearchInput from '@codepg/ui-lib/components/SearchInput.svelte'
   import Chip from '@codepg/ui-lib/components/Chip.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import { getDocumentType } from '$lib/document-types'
-  import { tagChipClass, tagChipStyle } from '$lib/tag-colors'
+  import { getDocumentType } from '#lib/document-types.js'
+  import { tagChipClass, tagChipStyle } from '#lib/tag-colors.js'
 
   interface Props {
     documents: OwnedDocumentSummary[]

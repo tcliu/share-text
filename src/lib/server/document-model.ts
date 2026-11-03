@@ -2,8 +2,8 @@ import { randomBytes } from 'node:crypto'
 import { isUniqueViolation } from './db/errors'
 import { toIsoString } from './iso-string'
 import { getDocumentKeyLength } from './admin-properties'
-import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '$lib/document-type-values'
-import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '$lib/tag-colors'
+import { DOCUMENT_TYPE_VALUES, isDocumentTypeValue, type DocumentTypeValue } from '#lib/document-type-values.js'
+import { getDefaultTagColor, isTagColor, pickTagColor, sameColorFamily, type Tag } from '#lib/tag-colors.js'
 
 export const MAX_NAME_LENGTH = 200
 export const MAX_CONTENT_BYTES = 1024 * 1024

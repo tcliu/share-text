@@ -7,8 +7,8 @@ const documentsMocks = vi.hoisted(() => ({
   fetchDocumentVersion: vi.fn(),
 }))
 
-vi.mock('$lib/documents', async () => {
-  const actual = await vi.importActual<typeof import('$lib/documents')>('$lib/documents')
+vi.mock('#lib/documents.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/documents.js')>('#lib/documents.js')
   return {
     ...actual,
     fetchDocumentVersions: documentsMocks.fetchDocumentVersions,

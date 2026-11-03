@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
-import type { FormatSpec } from '$lib/document-types'
-import { getI18nContext } from '$lib/i18n.svelte'
+import type { FormatSpec } from '#lib/document-types.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 export function useFormat(options: {
   format: () => FormatSpec | undefined

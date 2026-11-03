@@ -6,8 +6,8 @@ const documentsMocks = vi.hoisted(() => ({
   resolveDocumentAccess: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-store', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
+vi.mock('#lib/server/document-store.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-store.js')>('#lib/server/document-store.js')
   return {
     ...actual,
     updateDocument: documentsMocks.updateDocument,
@@ -19,16 +19,16 @@ const loggingMocks = vi.hoisted(() => ({
   logEvent: vi.fn(),
 }))
 
-vi.mock('$lib/server/logging', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/logging')>('$lib/server/logging')
+vi.mock('#lib/server/logging.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/logging.js')>('#lib/server/logging.js')
   return {
     ...actual,
     logEvent: loggingMocks.logEvent,
   }
 })
 
-vi.mock('$lib/server/document-access', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
+vi.mock('#lib/server/document-access.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-access.js')>('#lib/server/document-access.js')
   return {
     ...actual,
     resolveDocumentAccess: documentsMocks.resolveDocumentAccess,
@@ -40,8 +40,8 @@ const settingsMocks = vi.hoisted(() => ({
   getMaxContentLength: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-properties', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-properties')>('$lib/server/admin-properties')
+vi.mock('#lib/server/admin-properties.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-properties.js')>('#lib/server/admin-properties.js')
   return {
     ...actual,
     getDocumentKeyLength: settingsMocks.getDocumentKeyLength,
@@ -50,7 +50,7 @@ vi.mock('$lib/server/admin-properties', async () => {
 })
 
 import { DELETE, PUT } from '../+server'
-import { ADMIN_SESSION_COOKIE, createSessionToken } from '$lib/server/admin-auth'
+import { ADMIN_SESSION_COOKIE, createSessionToken } from '#lib/server/admin-auth.js'
 
 describe('PUT /api/documents/[id]', () => {
   beforeEach(() => {

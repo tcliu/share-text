@@ -4,8 +4,8 @@ const authMocks = vi.hoisted(() => ({
   verifySessionToken: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-auth')>('$lib/server/admin-auth')
+vi.mock('#lib/server/admin-auth.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-auth.js')>('#lib/server/admin-auth.js')
   return {
     ...actual,
     verifySessionToken: authMocks.verifySessionToken,
@@ -13,7 +13,7 @@ vi.mock('$lib/server/admin-auth', async () => {
 })
 
 import { handle } from './hooks.server'
-import { ADMIN_SESSION_COOKIE } from '$lib/server/admin-auth'
+import { ADMIN_SESSION_COOKIE } from '#lib/server/admin-auth.js'
 
 function makeEvent(pathname: string, token: string | undefined) {
   const resolve = vi.fn().mockResolvedValue(new Response('ok'))

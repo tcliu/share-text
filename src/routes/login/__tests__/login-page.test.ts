@@ -6,13 +6,13 @@ const authMocks = vi.hoisted(() => ({
   isUserSession: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', async () => {
-  const actual = (await vi.importActual('$lib/server/admin-auth')) as Record<string, unknown>
+vi.mock('#lib/server/admin-auth.js', async () => {
+  const actual = (await vi.importActual('#lib/server/admin-auth.js')) as Record<string, unknown>
   return { ...actual, isAdminSession: authMocks.isAdminSession }
 })
 
-vi.mock('$lib/server/user-auth', async () => {
-  const actual = (await vi.importActual('$lib/server/user-auth')) as Record<string, unknown>
+vi.mock('#lib/server/user-auth.js', async () => {
+  const actual = (await vi.importActual('#lib/server/user-auth.js')) as Record<string, unknown>
   return { ...actual, isUserSession: authMocks.isUserSession }
 })
 

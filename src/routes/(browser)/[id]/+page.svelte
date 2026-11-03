@@ -9,15 +9,15 @@
     updateDocumentAccess,
     type Document,
     type User,
-  } from '$lib/documents'
+  } from '#lib/documents.js'
   import { goto } from '$app/navigation'
-  import { getDocumentType } from '$lib/document-types'
-  import { getShareTextContext } from '$lib/share-text-context'
-  import { clearDraft, loadDraft, loadDraftDocType, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '$lib/document-drafts'
-  import type { Tag } from '$lib/tag-colors'
-  import DocumentEditorPane from '$lib/components/DocumentEditorPane.svelte'
-  import ShareDialog from '$lib/components/ShareDialog.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getDocumentType } from '#lib/document-types.js'
+  import { getShareTextContext } from '#lib/share-text-context.js'
+  import { clearDraft, loadDraft, loadDraftDocType, saveDraft, NEW_DOCUMENT_DRAFT_ID } from '#lib/document-drafts.js'
+  import type { Tag } from '#lib/tag-colors.js'
+  import DocumentEditorPane from '#lib/components/DocumentEditorPane.svelte'
+  import ShareDialog from '#lib/components/ShareDialog.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   let { data }: PageProps = $props()

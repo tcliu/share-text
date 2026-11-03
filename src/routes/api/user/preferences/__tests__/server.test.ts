@@ -5,8 +5,8 @@ const userConfigMocks = vi.hoisted(() => ({
   saveUserPreferences: vi.fn(),
 }))
 
-vi.mock('$lib/server/user-config', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/user-config')>('$lib/server/user-config')
+vi.mock('#lib/server/user-config.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/user-config.js')>('#lib/server/user-config.js')
   return {
     ...actual,
     getUserPreferences: userConfigMocks.getUserPreferences,
@@ -16,8 +16,8 @@ vi.mock('$lib/server/user-config', async () => {
 
 const viewerMocks = vi.hoisted(() => ({ resolveViewer: vi.fn() }))
 
-vi.mock('$lib/server/viewer', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/viewer')>('$lib/server/viewer')
+vi.mock('#lib/server/viewer.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/viewer.js')>('#lib/server/viewer.js')
   return {
     ...actual,
     resolveViewer: viewerMocks.resolveViewer,
@@ -26,10 +26,10 @@ vi.mock('$lib/server/viewer', async () => {
 
 const loggingMocks = vi.hoisted(() => ({ logAccess: vi.fn() }))
 
-vi.mock('$lib/server/logging', () => ({ logAccess: loggingMocks.logAccess }))
+vi.mock('#lib/server/logging.js', () => ({ logAccess: loggingMocks.logAccess }))
 
 import { GET, PUT } from '../+server'
-import { normalizePreferencesInput } from '$lib/server/user-config'
+import { normalizePreferencesInput } from '#lib/server/user-config.js'
 
 function userViewer() {
   return { type: 'user' as const, userId: 1, username: 'alice', ip: '127.0.0.1', name: 'alice' }

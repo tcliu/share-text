@@ -1,10 +1,10 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
-  import { parseStructured, parseXmlStructure, serializeXmlStructure } from '$lib/document-type-utils'
-  import type { PreviewProps } from '$lib/document-types'
+  import { parseStructured, parseXmlStructure, serializeXmlStructure } from '#lib/document-type-utils.js'
+  import type { PreviewProps } from '#lib/document-types.js'
   import StructureTree from '@codepg/ui-lib/components/StructureTree.svelte'
   import { detectFormat, isContainer, renameKeyAtPath, setAtPath } from '@codepg/ui-lib/components/structure-value'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()

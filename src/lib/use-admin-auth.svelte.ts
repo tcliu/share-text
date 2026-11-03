@@ -1,8 +1,8 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
 import { page } from '$app/state'
-import { AdminAuthError, fetchAdminSession, logout } from '$lib/admin'
-import { getI18nContext } from '$lib/i18n.svelte'
+import { AdminAuthError, fetchAdminSession, logout } from '#lib/admin.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 export type AdminAuthState = 'checking' | 'unauthenticated' | 'authenticated' | 'error'
 

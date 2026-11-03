@@ -4,8 +4,8 @@ import {
   ADMIN_SESSION_REMEMBER_TTL_MS,
   ADMIN_SESSION_TTL_MS,
   ADMIN_SESSION_MAX_AGE,
-} from '$lib/server/admin-auth'
-import { USER_SESSION_MAX_AGE, USER_SESSION_TTL_MS } from '$lib/server/user-auth'
+} from '#lib/server/admin-auth.js'
+import { USER_SESSION_MAX_AGE, USER_SESSION_TTL_MS } from '#lib/server/user-auth.js'
 
 const mocks = vi.hoisted(() => ({
   isLoginRateLimited: vi.fn(),
@@ -20,8 +20,8 @@ const mocks = vi.hoisted(() => ({
   resolveProfile: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-auth')>('$lib/server/admin-auth')
+vi.mock('#lib/server/admin-auth.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-auth.js')>('#lib/server/admin-auth.js')
   return {
     ...actual,
     isAdminConfigured: mocks.isAdminConfigured,
@@ -31,8 +31,8 @@ vi.mock('$lib/server/admin-auth', async () => {
   }
 })
 
-vi.mock('$lib/server/rate-limit', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/rate-limit')>('$lib/server/rate-limit')
+vi.mock('#lib/server/rate-limit.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/rate-limit.js')>('#lib/server/rate-limit.js')
   return {
     ...actual,
     isLoginRateLimited: mocks.isLoginRateLimited,
@@ -41,24 +41,24 @@ vi.mock('$lib/server/rate-limit', async () => {
   }
 })
 
-vi.mock('$lib/server/users', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/users')>('$lib/server/users')
+vi.mock('#lib/server/users.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/users.js')>('#lib/server/users.js')
   return {
     ...actual,
     findUserByCredentials: mocks.findUserByCredentials,
   }
 })
 
-vi.mock('$lib/server/document-store', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
+vi.mock('#lib/server/document-store.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-store.js')>('#lib/server/document-store.js')
   return {
     ...actual,
     claimAnonymousDocuments: mocks.claimAnonymousDocuments,
   }
 })
 
-vi.mock('$lib/server/profile', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/profile')>('$lib/server/profile')
+vi.mock('#lib/server/profile.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/profile.js')>('#lib/server/profile.js')
   return {
     ...actual,
     resolveProfile: mocks.resolveProfile,

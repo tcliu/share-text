@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createDocument, deleteDocument, fetchDocument, fetchDocumentSummaries, updateDocument } from '$lib/documents'
-import type { Tag } from '$lib/tag-colors'
+import { createDocument, deleteDocument, fetchDocument, fetchDocumentSummaries, updateDocument } from '#lib/documents.js'
+import type { Tag } from '#lib/tag-colors.js'
 
 const summary = {
   id: 'a1b2c3',

@@ -5,9 +5,9 @@
   import PasswordInput from '@codepg/ui-lib/components/PasswordInput.svelte'
   import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
-  import type { AdminUser } from '$lib/admin'
-  import type { UserDialogInput } from '$lib/use-admin-users.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import type { AdminUser } from '#lib/admin.js'
+  import type { UserDialogInput } from '#lib/use-admin-users.svelte.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

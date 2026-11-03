@@ -12,16 +12,16 @@ const documentsMocks = vi.hoisted(() => ({
   missingSharees: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-model', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-model')>('$lib/server/document-model')
+vi.mock('#lib/server/document-model.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-model.js')>('#lib/server/document-model.js')
   return {
     ...actual,
     normalizeDocumentKey: documentsMocks.normalizeDocumentKey,
   }
 })
 
-vi.mock('$lib/server/document-store', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
+vi.mock('#lib/server/document-store.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-store.js')>('#lib/server/document-store.js')
   return {
     ...actual,
     fetchDocument: documentsMocks.fetchDocument,
@@ -30,8 +30,8 @@ vi.mock('$lib/server/document-store', async () => {
   }
 })
 
-vi.mock('$lib/server/document-admin', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-admin')>('$lib/server/document-admin')
+vi.mock('#lib/server/document-admin.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-admin.js')>('#lib/server/document-admin.js')
   return {
     ...actual,
     listDocumentsForAdmin: documentsMocks.listDocumentsForAdmin,
@@ -39,8 +39,8 @@ vi.mock('$lib/server/document-admin', async () => {
   }
 })
 
-vi.mock('$lib/server/document-access', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
+vi.mock('#lib/server/document-access.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-access.js')>('#lib/server/document-access.js')
   return {
     ...actual,
     getDocumentAccess: documentsMocks.getDocumentAccess,
@@ -53,8 +53,8 @@ const settingsMocks = vi.hoisted(() => ({
   getMaxContentLength: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-properties', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-properties')>('$lib/server/admin-properties')
+vi.mock('#lib/server/admin-properties.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-properties.js')>('#lib/server/admin-properties.js')
   return {
     ...actual,
     getMaxContentLength: settingsMocks.getMaxContentLength,
@@ -63,7 +63,7 @@ vi.mock('$lib/server/admin-properties', async () => {
 
 // The PUT now runs both writes in one `Db.transaction`; the route only needs
 // the callback to be invoked with an injected query.
-vi.mock('$lib/server/db', () => ({
+vi.mock('#lib/server/db/index.js', () => ({
   getDb: async () => ({
     query: async () => ({ rows: [], rowCount: 0 }),
     transaction: async (fn: (query: unknown) => Promise<unknown>) => fn(async () => ({ rows: [], rowCount: 0 })),

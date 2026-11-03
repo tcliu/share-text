@@ -8,9 +8,9 @@
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
   import CloseIcon from '@codepg/ui-lib/icons/CloseIcon.svelte'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
-  import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
+  import { getI18nContext, type MessageKey } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
+  import type { useAdminProperties } from '#lib/use-admin-properties.svelte.js'
 
   interface Props {
     settingsState: ReturnType<typeof useAdminProperties>

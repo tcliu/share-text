@@ -3,10 +3,10 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
-import { hashPassword } from '$lib/server/password'
-import { insertDocument } from '$lib/server/document-store'
-import { setDocumentAccess } from '$lib/server/document-access'
+import { getDb } from '#lib/server/db/index.js'
+import { hashPassword } from '#lib/server/password.js'
+import { insertDocument } from '#lib/server/document-store.js'
+import { setDocumentAccess } from '#lib/server/document-access.js'
 import {
   createUser,
   deleteUser,
@@ -23,7 +23,7 @@ import {
   normalizeUsername,
   searchUsers,
   updateUser,
-} from '$lib/server/users'
+} from '#lib/server/users.js'
 
 beforeEach(async () => {
   const db = await getDb()

@@ -4,8 +4,8 @@ const authMocks = vi.hoisted(() => ({
   isAdminSession: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-auth', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-auth')>('$lib/server/admin-auth')
+vi.mock('#lib/server/admin-auth.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-auth.js')>('#lib/server/admin-auth.js')
   return {
     ...actual,
     isAdminSession: authMocks.isAdminSession,

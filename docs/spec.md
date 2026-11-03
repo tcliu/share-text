@@ -304,7 +304,8 @@ components and supplies the app-specific data, labels and canvas styles.
   shared `useNavigationDiscard` guard (`src/lib/use-navigation-discard.svelte.ts`)
   cancels a leaving navigation while the settings draft is dirty and lets
   navigations within `/admin` through without prompting, since the shared state
-  survives tab switches, and the admin layout renders no top header row until the
+  survives tab switches (it also ignores shallow navigations, which only rewrite
+  the current URL), and the admin layout renders no top header row until the
   session is `authenticated`.
   The browser-level account login/register form lives in the header's embedded
   auth dialog (`UserAuthPanel`); it accepts both user and admin credentials
@@ -378,7 +379,7 @@ components and supplies the app-specific data, labels and canvas styles.
   fetches the export endpoints (passing the currently selected ids when any
   rows are selected, otherwise exporting all records) and saves the returned
   JSON array as `documents-export.json` / `users-export.json` via
-  `downloadJson` (`$lib/download-json.ts`), toasting the exported count.
+  `downloadJson` (`#lib/download-json.ts`), toasting the exported count.
 - Both admin data tables are deletion-toolbar-driven: there are no per-row
   delete buttons. A **Delete selected** toolbar button (enabled when
   `selectedCount > 0`) opens a `ConfirmDialog` and runs a bulk delete
@@ -674,7 +675,7 @@ while staying below the `z-50` dev tag.
 ### UI Localization (i18n)
 
 Both the browser app and the admin console are localized through
-`$lib/i18n.svelte`, which layers the app's dictionary over the shared store
+`#lib/i18n.svelte`, which layers the app's dictionary over the shared store
 from `@codepg/ui-lib`; the admin console has its own `admin.*` key namespace and
 uses that store throughout (tabs, toolbars, DataTable headers, dialogs, login
 panel, admin hooks).
@@ -719,7 +720,7 @@ panel, admin hooks).
   headers, `AdminPropertiesView` source labels) are built in `$derived.by` so
   they follow a locale switch.
 - Setting labels and descriptions come from each property's `labelKey` /
-  `descriptionKey` in `$lib/server/property-definitions.ts` (`setting.<key>` /
+  `descriptionKey` in `#lib/server/property-definitions.ts` (`setting.<key>` /
   `setting.<key>Description` message pairs) and are translated client-side via
   `i18n.t(labelKey)` in `AdminPropertiesView` and the `useAdminProperties`
   validation/revert toasts. Messages produced by the server (API `error` fields)
@@ -816,7 +817,8 @@ page while an admin sign-in redirects to `/admin/general`), and for a signed-in 
 Settings button (gear icon, to `/settings` for a normal user and `/admin` for
 an admin session) plus Sign out (explicit sign-out lands on `/`; only expired
 sessions redirect to `/login`, which serves no form — unauthenticated visitors
-are redirected to `/?login=1`, auto-opening the dialog once). The admin header
+are redirected to `/?login=1`, auto-opening the dialog once and stripping the
+param with a shallow `goto` so no reload or dirty-editor prompt is involved). The admin header
 adds back-to-documents and sign-out beside the menus and renders in every auth
 state; the settings header follows the same row. `/api/auth/session` reports
 the signed-in `user` and, when an admin session is present, an
@@ -840,6 +842,8 @@ point; `/api/auth/logout` clears both the user and admin session cookies.
   `usePreviewMode` holds the editor/split/preview tri-state and reads/writes it
   to the URL (`?preview=true`, `?editor=false`) via two toggle setters
   (`setEditor`/`setPreview`) that always land on split when turning a pane on,
+  writing through a shallow `goto(url, { shallow: true, replace: true })` so the
+  page is never reloaded (both navigation guards skip shallow navigations),
   `usePreviewContent` debounces the source, and a `Splitter` in percentage mode
   divides the panes with the ratio persisted via `editor-preview-split.ts`.
   On desktop the split lays the editor left and preview right with a vertical

@@ -1,8 +1,8 @@
 import { toast } from 'svelte-sonner'
-import { fetchUserSession, login, logout, register, type AdminIdentity } from '$lib/user-auth'
-import type { User } from '$lib/documents'
-import { fetchUserPreferences } from '$lib/user-settings'
-import { getI18nContext, type Locale } from '$lib/i18n.svelte'
+import { fetchUserSession, login, logout, register, type AdminIdentity } from '#lib/user-auth.js'
+import type { User } from '#lib/documents.js'
+import { fetchUserPreferences } from '#lib/user-settings.js'
+import { getI18nContext, type Locale } from '#lib/i18n.svelte.js'
 
 export type UserAuthState = 'checking' | 'signedOut' | 'signedIn'
 

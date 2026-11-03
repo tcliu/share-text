@@ -1,5 +1,5 @@
-import type { Handle } from '@sveltejs/kit'
-import { ADMIN_SESSION_COOKIE, verifySessionToken } from '$lib/server/admin-auth'
+import type { Handle } from '@sveltejs/kit/hooks'
+import { ADMIN_SESSION_COOKIE, verifySessionToken } from '#lib/server/admin-auth.js'
 
 const PUBLIC_ADMIN_PATHS = new Set(['/api/admin/session'])
 

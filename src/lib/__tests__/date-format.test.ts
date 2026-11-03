@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatTimestamp } from '$lib/date-format'
+import { formatTimestamp } from '#lib/date-format.js'
 
 describe('formatTimestamp', () => {
   it('formats an ISO timestamp as YYYY-MM-DD HH:MM:SS in local time', () => {

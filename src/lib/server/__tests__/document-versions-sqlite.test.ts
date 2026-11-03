@@ -3,10 +3,10 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
-import { deleteDocument, insertDocument, updateDocument } from '$lib/server/document-store'
-import { fetchDocumentVersion, fetchDocumentVersions } from '$lib/server/document-versions'
-import { clearPropertiesCache, getMaxDocumentVersions } from '$lib/server/admin-properties'
+import { getDb } from '#lib/server/db/index.js'
+import { deleteDocument, insertDocument, updateDocument } from '#lib/server/document-store.js'
+import { fetchDocumentVersion, fetchDocumentVersions } from '#lib/server/document-versions.js'
+import { clearPropertiesCache, getMaxDocumentVersions } from '#lib/server/admin-properties.js'
 
 beforeEach(async () => {
   const db = await getDb()

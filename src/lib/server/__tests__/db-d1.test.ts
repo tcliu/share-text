@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createD1Db, isD1Database, type D1DatabaseLike } from '$lib/server/db/d1'
-import { resolveDbConfig } from '$lib/server/db'
-import { D1_BINDING_NAME } from '$lib/server/d1-binding.mjs'
+import { createD1Db, isD1Database, type D1DatabaseLike } from '#lib/server/db/d1.js'
+import { resolveDbConfig } from '#lib/server/db/index.js'
+import { D1_BINDING_NAME } from '#lib/server/d1-binding.mjs'
 
 interface RecordedStatement {
   sql: string

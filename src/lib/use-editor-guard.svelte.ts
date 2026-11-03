@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation'
 import { beforeNavigate } from '$app/navigation'
-import type { EditorGuard } from '$lib/share-text-context'
+import type { EditorGuard } from '#lib/share-text-context.js'
 
 type PendingAction =
   | { kind: 'new' }
@@ -57,6 +57,8 @@ export function useEditorGuard() {
   }
 
   beforeNavigate(navigation => {
+    // Shallow navigations rewrite the current page's URL without leaving it.
+    if (navigation.shallow) return
     if (canLeaveCurrentDocument()) return
     const url = navigation.to?.url
     if (!url) return

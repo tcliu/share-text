@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Component } from 'svelte'
-  import type { PreviewProps } from '$lib/document-types'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import type { PreviewProps } from '#lib/document-types.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

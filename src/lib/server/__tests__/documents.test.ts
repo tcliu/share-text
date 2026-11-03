@@ -15,8 +15,8 @@ import {
   normalizeUpdatedBy,
   toDocument,
   toDocumentSummary,
-} from '$lib/server/document-model'
-import { getDefaultTagColor, nextTagColor, pickTagColor, sameColorFamily, TAG_COLORS } from '$lib/tag-colors'
+} from '#lib/server/document-model.js'
+import { getDefaultTagColor, nextTagColor, pickTagColor, sameColorFamily, TAG_COLORS } from '#lib/tag-colors.js'
 
 describe('isDocumentKey', () => {
   it('accepts six lowercase alphanumeric characters by default', () => {

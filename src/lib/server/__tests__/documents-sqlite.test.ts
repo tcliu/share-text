@@ -3,8 +3,8 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
-import { DocumentLimitError, normalizeDocumentKey } from '$lib/server/document-model'
+import { getDb } from '#lib/server/db/index.js'
+import { DocumentLimitError, normalizeDocumentKey } from '#lib/server/document-model.js'
 import {
   deleteDocument,
   fetchDocument,
@@ -12,16 +12,16 @@ import {
   insertDocument,
   listDistinctTags,
   updateDocument,
-} from '$lib/server/document-store'
+} from '#lib/server/document-store.js'
 import {
   exportDocumentsForAdmin,
   fetchDocumentForAdmin,
   importDocumentsForAdmin,
   listDocumentsForAdmin,
-} from '$lib/server/document-admin'
-import { getMaxDocumentsPerUser, setPropertyValue } from '$lib/server/admin-properties'
-import { sameColorFamily } from '$lib/tag-colors'
-import type { Viewer } from '$lib/server/viewer'
+} from '#lib/server/document-admin.js'
+import { getMaxDocumentsPerUser, setPropertyValue } from '#lib/server/admin-properties.js'
+import { sameColorFamily } from '#lib/tag-colors.js'
+import type { Viewer } from '#lib/server/viewer.js'
 
 beforeEach(async () => {
   const db = await getDb()

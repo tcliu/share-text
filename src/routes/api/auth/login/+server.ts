@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   ADMIN_SESSION_COOKIE,
@@ -10,12 +9,12 @@ import {
   getAdminUsername,
   isAdminConfigured,
   verifyAdminCredentials,
-} from '$lib/server/admin-auth'
-import { claimAnonymousDocuments } from '$lib/server/document-store'
-import { logEvent } from '$lib/server/logging'
-import { isBodyRecord } from '$lib/server/request-utils'
-import { resolveProfile } from '$lib/server/profile'
-import { isLoginRateLimited, recordLoginAttempt, resetLoginAttempts } from '$lib/server/rate-limit'
+} from '#lib/server/admin-auth.js'
+import { claimAnonymousDocuments } from '#lib/server/document-store.js'
+import { logEvent } from '#lib/server/logging.js'
+import { isBodyRecord } from '#lib/server/request-utils.js'
+import { resolveProfile } from '#lib/server/profile.js'
+import { isLoginRateLimited, recordLoginAttempt, resetLoginAttempts } from '#lib/server/rate-limit.js'
 import {
   USER_SESSION_COOKIE,
   USER_SESSION_MAX_AGE,
@@ -23,20 +22,20 @@ import {
   USER_SESSION_REMEMBER_TTL_MS,
   USER_SESSION_TTL_MS,
   createUserSessionToken,
-} from '$lib/server/user-auth'
-import { findUserByCredentials } from '$lib/server/users'
+} from '#lib/server/user-auth.js'
+import { findUserByCredentials } from '#lib/server/users.js'
 
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const ip = getClientAddress()
 
   if (await isLoginRateLimited(ip)) {
     logEvent({ ip, action: 'user_login_rate_limited', details: { level: 'WARN' } })
-    return json({ error: 'Too many login attempts. Try again later.' }, { status: 429 })
+    return Response.json({ error: 'Too many login attempts. Try again later.' }, { status: 429 })
   }
 
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
-    return json({ error: 'Invalid request body' }, { status: 400 })
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   const identifier = typeof body.identifier === 'string' ? body.identifier : ''
@@ -48,7 +47,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     if (!(await verifyAdminCredentials(adminUsername, password))) {
       await recordLoginAttempt(ip)
       logEvent({ ip, action: 'admin_login_failed', details: { username: adminUsername, via: 'user-auth' } })
-      return json({ error: 'Invalid username/email or password' }, { status: 401 })
+      return Response.json({ error: 'Invalid username/email or password' }, { status: 401 })
     }
     await resetLoginAttempts(ip)
     const ttlMs = rememberMe ? ADMIN_SESSION_REMEMBER_TTL_MS : ADMIN_SESSION_TTL_MS
@@ -64,14 +63,14 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
       action: 'admin_login',
       details: { username: adminUsername, remember_me: rememberMe, via: 'user-auth' },
     })
-    return json({ admin: true })
+    return Response.json({ admin: true })
   }
 
   const user = await findUserByCredentials(identifier, password)
   if (!user) {
     await recordLoginAttempt(ip)
     logEvent({ ip, action: 'user_login_failed' })
-    return json({ error: 'Invalid username/email or password' }, { status: 401 })
+    return Response.json({ error: 'Invalid username/email or password' }, { status: 401 })
   }
 
   await resetLoginAttempts(ip)
@@ -89,5 +88,5 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     action: 'user_login',
     details: { username: user.username, remember_me: rememberMe, documents_claimed: documentsClaimed },
   })
-  return json({ user })
+  return Response.json({ user })
 }

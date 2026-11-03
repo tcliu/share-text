@@ -2,7 +2,7 @@
 import { render, fireEvent } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import TagsDialog from '../TagsDialog.svelte'
-import type { Tag } from '$lib/tag-colors'
+import type { Tag } from '#lib/tag-colors.js'
 
 const tags: Tag[] = [
   { name: 'alpha', color: '#00F0FF' },

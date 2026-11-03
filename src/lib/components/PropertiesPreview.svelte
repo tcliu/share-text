@@ -1,10 +1,10 @@
 <script lang="ts">
   import DataGrid from '@codepg/ui-lib/components/DataGrid.svelte'
-  import type { PreviewProps } from '$lib/document-types'
-  import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import type { PreviewProps } from '#lib/document-types.js'
+  import { parseProperties, serializeProperties } from '#lib/document-type-utils.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   import { useContentReconcile } from './use-content-reconcile.svelte'
-  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
+  import { COLUMN_WIDTH_PREFIX } from '#lib/column-widths.js'
   const i18n = getI18nContext()
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()

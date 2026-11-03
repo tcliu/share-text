@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { setShareTextContext } from '$lib/share-text-context'
-  import type { Document } from '$lib/documents'
+  import { setShareTextContext } from '#lib/share-text-context.js'
+  import type { Document } from '#lib/documents.js'
   import DocumentEditorPane from '../DocumentEditorPane.svelte'
 
   interface Props {

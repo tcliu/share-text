@@ -1,4 +1,4 @@
-import { isDocumentKeyChars } from '$lib/server/document-model'
+import { isDocumentKeyChars } from '#lib/server/document-model.js'
 
 export function isBodyRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

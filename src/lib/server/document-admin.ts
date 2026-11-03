@@ -21,7 +21,7 @@ import { ADMIN_SEARCH_COLUMNS, ADMIN_SORT_COLUMNS, DOCUMENT_SEARCH_COLUMNS } fro
 import { runQuery } from './db/query'
 import { invalidateTagsCache, updateDocument } from './document-store'
 import { insertDocumentVersion } from './document-versions'
-import type { Tag } from '$lib/tag-colors'
+import type { Tag } from '#lib/tag-colors.js'
 
 export interface AdminDocumentSummary {
   id: string

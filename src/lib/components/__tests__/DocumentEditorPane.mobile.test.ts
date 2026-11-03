@@ -13,7 +13,6 @@ describe('DocumentEditorPane mobile header', () => {
       disconnect() {}
     }
     vi.stubGlobal('ResizeObserver', ResizeObserverStub)
-    vi.spyOn(history, 'replaceState').mockImplementation(() => {})
     Object.defineProperty(Range.prototype, 'getClientRects', {
       configurable: true,
       value: () => [],

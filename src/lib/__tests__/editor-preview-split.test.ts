@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadEditorPreviewSplit, saveEditorPreviewSplit } from '$lib/editor-preview-split'
+import { loadEditorPreviewSplit, saveEditorPreviewSplit } from '#lib/editor-preview-split.js'
 
 describe('editor-preview-split localStorage helpers', () => {
   beforeEach(() => {

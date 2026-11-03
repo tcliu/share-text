@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte'
 import { describe, expect, it, vi } from 'vitest'
 import DataGrid from '@codepg/ui-lib/components/DataGrid.svelte'
-import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
+import { COLUMN_WIDTH_PREFIX } from '#lib/column-widths.js'
 
 function gridCell(root: HTMLElement, ri: number, ci: number): HTMLElement {
   const cell = root.querySelector(`[data-row="${ri}"][data-col="${ci}"]`) as HTMLElement | null

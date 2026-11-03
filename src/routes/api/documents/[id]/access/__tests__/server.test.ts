@@ -7,8 +7,8 @@ const documentMocks = vi.hoisted(() => ({
   setDocumentAccess: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-access', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-access')>('$lib/server/document-access')
+vi.mock('#lib/server/document-access.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-access.js')>('#lib/server/document-access.js')
   return {
     ...actual,
     resolveDocumentAccess: documentMocks.resolveDocumentAccess,
@@ -20,15 +20,15 @@ vi.mock('$lib/server/document-access', async () => {
 
 const viewerMocks = vi.hoisted(() => ({ resolveViewer: vi.fn() }))
 
-vi.mock('$lib/server/viewer', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/viewer')>('$lib/server/viewer')
+vi.mock('#lib/server/viewer.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/viewer.js')>('#lib/server/viewer.js')
   return {
     ...actual,
     resolveViewer: viewerMocks.resolveViewer,
   }
 })
 
-vi.mock('$lib/server/logging', () => ({ logEvent: vi.fn() }))
+vi.mock('#lib/server/logging.js', () => ({ logEvent: vi.fn() }))
 
 import { GET, PUT } from '../+server'
 

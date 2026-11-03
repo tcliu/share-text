@@ -3,9 +3,9 @@
   import type { LayoutData } from './$types'
   import '../styles.css'
   import { Toaster, toast } from 'svelte-sonner'
-  import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
-  import { setTipBox, tipState } from '$lib/actions/tooltip.svelte'
-  import { useTheme } from '$lib/use-theme.svelte'
+  import { createAppI18n, setI18nContext } from '#lib/i18n.svelte.js'
+  import { setTipBox, tipState } from '#lib/actions/tooltip.svelte.js'
+  import { useTheme } from '#lib/use-theme.svelte.js'
 
   let { children, data }: { children: Snippet; data?: LayoutData } = $props()
 

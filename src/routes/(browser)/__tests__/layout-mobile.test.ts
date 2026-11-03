@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Snippet } from 'svelte'
 import Layout from '../+layout.svelte'
 import LayoutDrawerHost from './LayoutDrawerHost.svelte'
-import { setPage } from '../../../test/mocks/app-stores'
+import { setPage } from '../../../test/mocks/app-state.svelte.js'
 
 const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
 

@@ -1,6 +1,6 @@
-import { replaceState } from '$app/navigation'
+import { goto } from '$app/navigation'
 import { page } from '$app/state'
-import { loadEditorPreviewSplit, saveEditorPreviewSplit } from '$lib/editor-preview-split'
+import { loadEditorPreviewSplit, saveEditorPreviewSplit } from '#lib/editor-preview-split.js'
 
 export type PreviewMode = 'editor' | 'split' | 'preview'
 
@@ -12,7 +12,7 @@ function previewModeFromUrl(): PreviewMode {
 }
 
 function applyPreviewMode(mode: PreviewMode) {
-  const url = new URL(page.url)
+  const url = new URL(page.url.href)
   if (mode === 'editor') {
     url.searchParams.delete('preview')
     url.searchParams.delete('editor')
@@ -24,7 +24,7 @@ function applyPreviewMode(mode: PreviewMode) {
       url.searchParams.delete('editor')
     }
   }
-  replaceState(url, page.state)
+  void goto(url, { shallow: true, replace: true, state: page.state })
 }
 
 export function usePreviewMode(hasPreview: () => boolean) {

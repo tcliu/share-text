@@ -1,9 +1,9 @@
 <script lang="ts">
   import DataGrid from '@codepg/ui-lib/components/DataGrid.svelte'
-  import type { PreviewProps } from '$lib/document-types'
-  import { parseCsv, serializeCsv } from '$lib/csv-utils'
+  import type { PreviewProps } from '#lib/document-types.js'
+  import { parseCsv, serializeCsv } from '#lib/csv-utils.js'
   import { useContentReconcile } from './use-content-reconcile.svelte'
-  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
+  import { COLUMN_WIDTH_PREFIX } from '#lib/column-widths.js'
 
   let { content, onContentChange, editable = true }: PreviewProps = $props()
 

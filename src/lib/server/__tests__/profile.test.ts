@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveProfile } from '$lib/server/profile'
+import { resolveProfile } from '#lib/server/profile.js'
 
 describe('resolveProfile', () => {
   it('defaults to dev', () => {

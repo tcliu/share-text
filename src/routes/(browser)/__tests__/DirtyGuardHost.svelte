@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getShareTextContext } from '$lib/share-text-context'
+  import { getShareTextContext } from '#lib/share-text-context.js'
 
   const context = getShareTextContext()
 

@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit'
 import type { LayoutServerLoad } from './$types'
-import { resolveViewer } from '$lib/server/viewer'
+import { resolveViewer } from '#lib/server/viewer.js'
 
 export const load: LayoutServerLoad = async event => {
   const viewer = await resolveViewer(event)

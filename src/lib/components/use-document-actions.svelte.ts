@@ -1,6 +1,6 @@
 import { toast } from 'svelte-sonner'
-import { getDocumentType } from '$lib/document-types'
-import { getI18nContext } from '$lib/i18n.svelte'
+import { getDocumentType } from '#lib/document-types.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 const MAX_UPLOAD_BYTES = 1024 * 1024
 

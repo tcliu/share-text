@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const viewerMocks = vi.hoisted(() => ({ resolveViewer: vi.fn() }))
 
-vi.mock('$lib/server/viewer', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/viewer')>('$lib/server/viewer')
+vi.mock('#lib/server/viewer.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/viewer.js')>('#lib/server/viewer.js')
   return {
     ...actual,
     resolveViewer: viewerMocks.resolveViewer,
@@ -12,8 +12,8 @@ vi.mock('$lib/server/viewer', async () => {
 
 const usersMocks = vi.hoisted(() => ({ listRecentSharees: vi.fn() }))
 
-vi.mock('$lib/server/users', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/users')>('$lib/server/users')
+vi.mock('#lib/server/users.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/users.js')>('#lib/server/users.js')
   return {
     ...actual,
     listRecentSharees: usersMocks.listRecentSharees,

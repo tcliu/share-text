@@ -1,4 +1,4 @@
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 export type UiTheme =
   'dark' | 'light' | 'ember' | 'sepia' | 'nebula' | 'sky' | 'forest' | 'midnight' | 'mint' | 'lavender'

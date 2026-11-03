@@ -3,11 +3,11 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
-import { claimAnonymousDocuments, fetchDocumentSummaries, insertDocument } from '$lib/server/document-store'
-import { getDocumentAccess, resolveDocumentAccess, setDocumentAccess } from '$lib/server/document-access'
-import { createUser, updateUser, type User } from '$lib/server/users'
-import type { Viewer } from '$lib/server/viewer'
+import { getDb } from '#lib/server/db/index.js'
+import { claimAnonymousDocuments, fetchDocumentSummaries, insertDocument } from '#lib/server/document-store.js'
+import { getDocumentAccess, resolveDocumentAccess, setDocumentAccess } from '#lib/server/document-access.js'
+import { createUser, updateUser, type User } from '#lib/server/users.js'
+import type { Viewer } from '#lib/server/viewer.js'
 
 const anonymous = (ip: string): Viewer => ({ type: 'anonymous', userId: null, username: null, ip, name: ip })
 const userViewer = (user: User, ip = '10.0.0.99'): Viewer => ({

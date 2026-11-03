@@ -1,8 +1,8 @@
 <script lang="ts">
   import LazyCodeEditor from '@codepg/ui-lib/components/LazyCodeEditor.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
+  import type { useAdminProperties } from '#lib/use-admin-properties.svelte.js'
 
   interface Props {
     settingsState: ReturnType<typeof useAdminProperties>

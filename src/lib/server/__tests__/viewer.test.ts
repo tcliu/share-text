@@ -3,10 +3,10 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
-import { USER_SESSION_COOKIE, createUserSessionToken } from '$lib/server/user-auth'
-import { createUser, updateUser } from '$lib/server/users'
-import { resolveViewer } from '$lib/server/viewer'
+import { getDb } from '#lib/server/db/index.js'
+import { USER_SESSION_COOKIE, createUserSessionToken } from '#lib/server/user-auth.js'
+import { createUser, updateUser } from '#lib/server/users.js'
+import { resolveViewer } from '#lib/server/viewer.js'
 
 function eventWithCookie(token: string | null) {
   return {

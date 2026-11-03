@@ -1,13 +1,13 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDefaultTagColor } from '$lib/tag-colors'
+import { getDefaultTagColor } from '#lib/tag-colors.js'
 
 const documentsMocks = vi.hoisted(() => ({
   importDocumentsForAdmin: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-admin', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-admin')>('$lib/server/document-admin')
+vi.mock('#lib/server/document-admin.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-admin.js')>('#lib/server/document-admin.js')
   return {
     ...actual,
     importDocumentsForAdmin: documentsMocks.importDocumentsForAdmin,

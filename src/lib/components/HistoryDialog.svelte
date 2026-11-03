@@ -9,12 +9,12 @@
     fetchDocumentVersions,
     type DocumentVersion,
     type DocumentVersionSummary,
-  } from '$lib/documents'
-  import { formatTimestamp } from '$lib/date-format'
-  import { buildSideBySideRows } from '$lib/version-diff'
+  } from '#lib/documents.js'
+  import { formatTimestamp } from '#lib/date-format.js'
+  import { buildSideBySideRows } from '#lib/version-diff.js'
   import CompareIcon from '@codepg/ui-lib/icons/CompareIcon.svelte'
   import RestoreIcon from '@codepg/ui-lib/icons/RestoreIcon.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

@@ -7,13 +7,13 @@
   import UserDialog from './UserDialog.svelte'
   import ImportDialog from './ImportDialog.svelte'
   import Button from '@codepg/ui-lib/components/Button.svelte'
-  import type { useAdminUsers } from '$lib/use-admin-users.svelte'
-  import type { AdminUser } from '$lib/admin'
-  import { formatTimestamp } from '$lib/date-format'
+  import type { useAdminUsers } from '#lib/use-admin-users.svelte.js'
+  import type { AdminUser } from '#lib/admin.js'
+  import { formatTimestamp } from '#lib/date-format.js'
   import PlainCell from './PlainCell.svelte'
-  import { COLUMN_WIDTH_PREFIX } from '$lib/column-widths'
-  import { useSupportsHover } from '$lib/use-supports-hover.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { COLUMN_WIDTH_PREFIX } from '#lib/column-widths.js'
+  import { useSupportsHover } from '#lib/use-supports-hover.svelte.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

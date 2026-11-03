@@ -14,8 +14,8 @@
     tagChipStyle,
     tagDotStyle,
     type Tag,
-  } from '$lib/tag-colors'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  } from '#lib/tag-colors.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

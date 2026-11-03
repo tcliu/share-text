@@ -10,12 +10,12 @@ import {
   updateAdminDocument,
   type AdminDocumentSummary,
   type AdminSharee,
-} from '$lib/admin'
-import { downloadJson } from '$lib/download-json'
-import { useAdminDocumentsSearch } from '$lib/use-admin-documents-search.svelte'
-import { createPageSelection } from '$lib/use-page-selection.svelte'
-import { arraysEqualUnordered } from '$lib/array-utils'
-import { getI18nContext } from '$lib/i18n.svelte'
+} from '#lib/admin.js'
+import { downloadJson } from '#lib/download-json.js'
+import { useAdminDocumentsSearch } from '#lib/use-admin-documents-search.svelte.js'
+import { createPageSelection } from '#lib/use-page-selection.svelte.js'
+import { arraysEqualUnordered } from '#lib/array-utils.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 export function useAdminDocuments(params: {
   onSignedOut: () => void

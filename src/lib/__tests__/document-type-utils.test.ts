@@ -13,8 +13,8 @@ import {
   validateJson,
   validateProperties,
   validateYaml,
-} from '$lib/document-type-utils'
-import { parseCsv, serializeCsv, validateCsv } from '$lib/csv-utils'
+} from '#lib/document-type-utils.js'
+import { parseCsv, serializeCsv, validateCsv } from '#lib/csv-utils.js'
 
 describe('validateJson', () => {
   it('accepts valid JSON', () => {

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
   "scripts": {
     "dev": "vite dev --host",
     "build": "svelte-kit sync && vite build",
@@ -40,9 +43,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "@sveltejs/adapter-cloudflare": "^7.2.9",
-    "@sveltejs/adapter-vercel": "^6.3.4",
-    "@sveltejs/kit": "^2.61.1",
+    "@sveltejs/adapter-cloudflare": "^8.0.2",
+    "@sveltejs/adapter-vercel": "^7.0.2",
+    "@sveltejs/kit": "^3.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tailwindcss/vite": "^4.3.1",
     "@testing-library/svelte": "^5.4.2",
@@ -62,14 +65,14 @@
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3",
     "vite": "^8.1.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.156.2"
   },
   "overrides": {
-    "cookie": "^0.7.2"
+    "glob": "^14.0.3"
   },
   "allowScripts": {
     "better-sqlite3": true,
-    "esbuild@0.28.1": true,
     "esbuild@0.28.2": true,
     "fsevents": true,
     "workerd": true

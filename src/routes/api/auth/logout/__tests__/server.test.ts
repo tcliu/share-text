@@ -10,15 +10,15 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('$lib/server/logging', () => ({
+vi.mock('#lib/server/logging.js', () => ({
   logEvent: mocks.logEvent,
 }))
 
-vi.mock('$lib/server/user-auth', () => ({
+vi.mock('#lib/server/user-auth.js', () => ({
   USER_SESSION_COOKIE: mocks.USER_SESSION_COOKIE,
 }))
 
-vi.mock('$lib/server/admin-auth', () => ({
+vi.mock('#lib/server/admin-auth.js', () => ({
   ADMIN_SESSION_COOKIE: mocks.ADMIN_SESSION_COOKIE,
 }))
 

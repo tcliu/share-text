@@ -1,24 +1,23 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { claimAnonymousDocuments } from '$lib/server/document-store'
-import { logEvent } from '$lib/server/logging'
-import { isBodyRecord } from '$lib/server/request-utils'
-import { resolveProfile } from '$lib/server/profile'
-import { isLoginRateLimited, recordLoginAttempt, resetLoginAttempts } from '$lib/server/rate-limit'
-import { USER_SESSION_COOKIE, USER_SESSION_MAX_AGE, createUserSessionToken } from '$lib/server/user-auth'
-import { createUser } from '$lib/server/users'
+import { claimAnonymousDocuments } from '#lib/server/document-store.js'
+import { logEvent } from '#lib/server/logging.js'
+import { isBodyRecord } from '#lib/server/request-utils.js'
+import { resolveProfile } from '#lib/server/profile.js'
+import { isLoginRateLimited, recordLoginAttempt, resetLoginAttempts } from '#lib/server/rate-limit.js'
+import { USER_SESSION_COOKIE, USER_SESSION_MAX_AGE, createUserSessionToken } from '#lib/server/user-auth.js'
+import { createUser } from '#lib/server/users.js'
 
 export const POST: RequestHandler = async ({ request, getClientAddress, cookies }) => {
   const ip = getClientAddress()
 
   if (await isLoginRateLimited(ip)) {
     logEvent({ ip, action: 'user_register_rate_limited', details: { level: 'WARN' } })
-    return json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
+    return Response.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })
   }
 
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
-    return json({ error: 'Invalid request body' }, { status: 400 })
+    return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
   const username = typeof body.username === 'string' ? body.username : ''
@@ -32,7 +31,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     await recordLoginAttempt(ip)
     const message = error instanceof Error ? error.message : 'Failed to create account'
     logEvent({ ip, action: 'user_register_failed', details: { username: username.trim(), error: message } })
-    return json({ error: message }, { status: 400 })
+    return Response.json({ error: message }, { status: 400 })
   }
 
   await resetLoginAttempts(ip)
@@ -45,5 +44,5 @@ export const POST: RequestHandler = async ({ request, getClientAddress, cookies 
     maxAge: USER_SESSION_MAX_AGE,
   })
   logEvent({ ip, action: 'user_register', details: { username: user.username, documents_claimed: documentsClaimed } })
-  return json({ user }, { status: 201 })
+  return Response.json({ user }, { status: 201 })
 }

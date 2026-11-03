@@ -3,7 +3,7 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDb } from '$lib/server/db'
+import { getDb } from '#lib/server/db/index.js'
 import {
   createSessionToken,
   getAdminUsername,
@@ -15,7 +15,7 @@ import {
   verifyAdminCredentials,
   verifyPassword,
   verifySessionToken,
-} from '$lib/server/admin-auth'
+} from '#lib/server/admin-auth.js'
 
 beforeEach(async () => {
   const db = await getDb()

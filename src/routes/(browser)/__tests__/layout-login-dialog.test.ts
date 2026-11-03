@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LayoutCollapseHost from './LayoutCollapseHost.svelte'
 import { goto } from '$app/navigation'
-import { setPage } from '../../../test/mocks/app-stores'
+import { setPage } from '../../../test/mocks/app-state.svelte.js'
 
 const signedInUser = { id: 1, username: 'alice', email: 'alice@example.com' }
 

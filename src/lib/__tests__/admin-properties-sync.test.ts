@@ -2,7 +2,7 @@
 import { render, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminSettingsStateHost from './AdminPropertiesStateHost.svelte'
-import type { useAdminProperties } from '$lib/use-admin-properties.svelte'
+import type { useAdminProperties } from '#lib/use-admin-properties.svelte.js'
 
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 

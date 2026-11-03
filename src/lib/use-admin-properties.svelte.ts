@@ -6,9 +6,9 @@ import {
   resetAdminProperty,
   updateAdminProperties,
   type AdminProperty,
-} from '$lib/admin'
-import { parseProperties, serializeProperties } from '$lib/document-type-utils'
-import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
+} from '#lib/admin.js'
+import { parseProperties, serializeProperties } from '#lib/document-type-utils.js'
+import { getI18nContext, type MessageKey } from '#lib/i18n.svelte.js'
 
 function parseNumberWithSeparators(raw: string): number {
   return Number(raw.replace(/,/g, ''))

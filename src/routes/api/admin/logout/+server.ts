@@ -1,8 +1,7 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { ADMIN_SESSION_COOKIE } from '$lib/server/admin-auth'
-import { logEvent } from '$lib/server/logging'
-import { resolveProfile } from '$lib/server/profile'
+import { ADMIN_SESSION_COOKIE } from '#lib/server/admin-auth.js'
+import { logEvent } from '#lib/server/logging.js'
+import { resolveProfile } from '#lib/server/profile.js'
 
 export const POST: RequestHandler = async ({ cookies, getClientAddress }) => {
   let ip = 'unknown'
@@ -17,5 +16,5 @@ export const POST: RequestHandler = async ({ cookies, getClientAddress }) => {
     secure: resolveProfile() === 'prod',
   })
   logEvent({ ip, action: 'admin_logout' })
-  return json({ ok: true })
+  return Response.json({ ok: true })
 }

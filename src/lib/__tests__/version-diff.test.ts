@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as diff from 'diff'
-import { buildSideBySideRows } from '$lib/version-diff'
+import { buildSideBySideRows } from '#lib/version-diff.js'
 
 describe('buildSideBySideRows', () => {
   it('pairs removed and added blocks into aligned context rows', () => {

@@ -1,8 +1,8 @@
 <script lang="ts">
   import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
-  import { LOCALES, getI18nContext, type Locale } from '$lib/i18n.svelte'
+  import { LOCALES, getI18nContext, type Locale } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import type { useUserSettings } from '$lib/use-user-settings.svelte'
+  import type { useUserSettings } from '#lib/use-user-settings.svelte.js'
 
   interface Props {
     settingsState: ReturnType<typeof useUserSettings>

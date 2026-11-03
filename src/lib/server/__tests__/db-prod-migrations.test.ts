@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PROD_MIGRATIONS } from '$lib/server/db'
+import { PROD_MIGRATIONS } from '#lib/server/db/index.js'
 
 const mocks = vi.hoisted(() => ({
   resolveProfile: vi.fn(),
@@ -9,22 +9,22 @@ const mocks = vi.hoisted(() => ({
   logEvent: vi.fn(),
 }))
 
-vi.mock('$lib/server/profile', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/profile')>('$lib/server/profile')
+vi.mock('#lib/server/profile.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/profile.js')>('#lib/server/profile.js')
   return { ...actual, resolveProfile: mocks.resolveProfile }
 })
 
-vi.mock('$lib/server/db/neon', () => ({ createNeonDb: mocks.createNeonDb }))
-vi.mock('$lib/server/db/sqlite', () => ({ createSqliteDb: mocks.createSqliteDb }))
+vi.mock('#lib/server/db/neon.js', () => ({ createNeonDb: mocks.createNeonDb }))
+vi.mock('#lib/server/db/sqlite.js', () => ({ createSqliteDb: mocks.createSqliteDb }))
 
-vi.mock('$lib/server/logging', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/logging')>('$lib/server/logging')
+vi.mock('#lib/server/logging.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/logging.js')>('#lib/server/logging.js')
   return { ...actual, logEvent: mocks.logEvent }
 })
 
 async function importFresh() {
   vi.resetModules()
-  return import('$lib/server/db')
+  return import('#lib/server/db/index.js')
 }
 
 const OPTIONAL_STATEMENT = PROD_MIGRATIONS.find(statement => /pg_trgm|gin_trgm_ops/i.test(statement))!

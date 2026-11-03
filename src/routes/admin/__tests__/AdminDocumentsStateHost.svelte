@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { useAdminDocuments } from '$lib/use-admin-documents.svelte'
-  import { createAppI18n, setI18nContext } from '$lib/i18n.svelte'
+  import { useAdminDocuments } from '#lib/use-admin-documents.svelte.js'
+  import { createAppI18n, setI18nContext } from '#lib/i18n.svelte.js'
 
   type AdminDocumentsState = ReturnType<typeof useAdminDocuments>
 

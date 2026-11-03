@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { TypeActionsProps } from '$lib/document-types'
+  import type { TypeActionsProps } from '#lib/document-types.js'
   import Button from '@codepg/ui-lib/components/Button.svelte'
   import FormatDialog from './FormatDialog.svelte'
   import FormatIcon from '@codepg/ui-lib/icons/FormatIcon.svelte'

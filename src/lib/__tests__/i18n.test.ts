@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createI18nStore, createAppI18n, type I18nStore } from '$lib/i18n.svelte'
+import { createI18nStore, createAppI18n, type I18nStore } from '#lib/i18n.svelte.js'
 
 describe('i18n', () => {
   let i18n: I18nStore

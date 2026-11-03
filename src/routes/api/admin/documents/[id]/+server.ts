@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   assertContentWithinLimit,
@@ -10,28 +9,28 @@ import {
   normalizeName,
   normalizeUpdatedBy,
   type DocumentType,
-} from '$lib/server/document-model'
-import { deleteDocument, fetchDocument, updateDocument } from '$lib/server/document-store'
-import { fetchDocumentForAdmin } from '$lib/server/document-admin'
-import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess, type DocumentAccessState } from '$lib/server/document-access'
-import { getDb } from '$lib/server/db'
-import { getMaxContentLength, getMaxDocumentVersions } from '$lib/server/admin-properties'
-import { logEvent } from '$lib/server/logging'
-import { isBodyRecord, parseDocumentKey } from '$lib/server/request-utils'
+} from '#lib/server/document-model.js'
+import { deleteDocument, fetchDocument, updateDocument } from '#lib/server/document-store.js'
+import { fetchDocumentForAdmin } from '#lib/server/document-admin.js'
+import { getDocumentAccess, MAX_SHAREES, missingSharees, setDocumentAccess, type DocumentAccessState } from '#lib/server/document-access.js'
+import { getDb } from '#lib/server/db/index.js'
+import { getMaxContentLength, getMaxDocumentVersions } from '#lib/server/admin-properties.js'
+import { logEvent } from '#lib/server/logging.js'
+import { isBodyRecord, parseDocumentKey } from '#lib/server/request-utils.js'
 
 export const GET: RequestHandler = async ({ params }) => {
   const id = await parseDocumentKey(params.id)
   if (!id) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const document = await fetchDocumentForAdmin(id)
   if (!document) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const access = await getDocumentAccess(id)
-  return json({
+  return Response.json({
     document: {
       ...document,
       sharedWith: access?.sharedWith ?? [],
@@ -42,12 +41,12 @@ export const GET: RequestHandler = async ({ params }) => {
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
   const id = await parseDocumentKey(params.id)
   if (!id) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
-    return json({ error: 'Request body must be a JSON object' }, { status: 400 })
+    return Response.json({ error: 'Request body must be a JSON object' }, { status: 400 })
   }
 
   const changes: {
@@ -67,12 +66,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     try {
       changes.name = normalizeName(body.name)
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid name' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid name' }, { status: 400 })
     }
   }
   if (typeof body.documentType === 'string') {
     if (!isValidDocumentType(body.documentType)) {
-      return json({ error: 'Invalid document type' }, { status: 400 })
+      return Response.json({ error: 'Invalid document type' }, { status: 400 })
     }
     changes.documentType = body.documentType
   }
@@ -80,21 +79,21 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     try {
       changes.updatedBy = normalizeUpdatedBy(body.updatedBy)
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid updatedBy' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid updatedBy' }, { status: 400 })
     }
   }
   if (typeof body.createdBy === 'string') {
     try {
       changes.createdBy = normalizeCreatedBy(body.createdBy)
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid createdBy' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid createdBy' }, { status: 400 })
     }
   }
   if (typeof body.key === 'string') {
     try {
       changes.key = await normalizeDocumentKey(body.key)
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid document key' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid document key' }, { status: 400 })
     }
   }
   if (typeof body.isPublic === 'boolean') {
@@ -106,12 +105,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
       assertContentWithinLimit(body.content, maxContentLength)
       changes.content = body.content
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid content' }, { status: 400 })
     }
   }
   if (body.sharedWith !== undefined) {
     if (!Array.isArray(body.sharedWith) || body.sharedWith.some(value => typeof value !== 'string')) {
-      return json({ error: 'sharedWith must be an array of usernames or emails' }, { status: 400 })
+      return Response.json({ error: 'sharedWith must be an array of usernames or emails' }, { status: 400 })
     }
     changes.sharedWith = body.sharedWith.map(value => value.trim()).filter(value => value.length > 0)
   }
@@ -125,7 +124,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     changes.documentType === undefined &&
     changes.sharedWith === undefined
   ) {
-    return json(
+    return Response.json(
       {
         error:
           'Request body must include a name, updatedBy, createdBy, key, isPublic, content, documentType, or sharedWith',
@@ -136,16 +135,16 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
 
   const existing = await fetchDocumentForAdmin(id)
   if (!existing) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   if (changes.sharedWith !== undefined) {
     if (changes.sharedWith.length > MAX_SHAREES) {
-      return json({ error: `A document can be shared with at most ${MAX_SHAREES} users` }, { status: 400 })
+      return Response.json({ error: `A document can be shared with at most ${MAX_SHAREES} users` }, { status: 400 })
     }
     const missing = await missingSharees(changes.sharedWith, true)
     if (missing.length > 0) {
-      return json({ error: `Not shared: ${missing.join(', ')}`, missing }, { status: 400 })
+      return Response.json({ error: `Not shared: ${missing.join(', ')}`, missing }, { status: 400 })
     }
   }
 
@@ -186,7 +185,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     })
   } catch (error) {
     if (isUniqueKeyViolation(error)) {
-      return json({ error: 'Document key already exists' }, { status: 409 })
+      return Response.json({ error: 'Document key already exists' }, { status: 409 })
     }
     logEvent({
       ip,
@@ -196,7 +195,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     throw error
   }
   if (!updated) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const details: Record<string, string | number | boolean> = {
@@ -260,25 +259,25 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     isPublic: changes.isPublic ?? existing.isPublic,
     content: updated.content,
   }
-  return json({ document })
+  return Response.json({ document })
 }
 
 export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
   const id = await parseDocumentKey(params.id)
   if (!id) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const existing = await fetchDocument(id)
   if (!existing) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   const ip = getClientAddress()
   const startedAt = Date.now()
   const deleted = await deleteDocument(id)
   if (!deleted) {
-    return json({ error: 'Document not found' }, { status: 404 })
+    return Response.json({ error: 'Document not found' }, { status: 404 })
   }
 
   logEvent({

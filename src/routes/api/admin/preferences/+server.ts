@@ -1,11 +1,10 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { getAdminUsername } from '$lib/server/admin-auth'
-import { getAdminPreferences, normalizeAdminPreferencesInput, saveAdminPreferences } from '$lib/server/admin-config'
-import { logEvent } from '$lib/server/logging'
+import { getAdminUsername } from '#lib/server/admin-auth.js'
+import { getAdminPreferences, normalizeAdminPreferencesInput, saveAdminPreferences } from '#lib/server/admin-config.js'
+import { logEvent } from '#lib/server/logging.js'
 
 export const GET: RequestHandler = async () => {
-  return json(await getAdminPreferences(getAdminUsername()))
+  return Response.json(await getAdminPreferences(getAdminUsername()))
 }
 
 export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
@@ -19,8 +18,8 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
       action: 'admin_preferences_save',
       details: { username: getAdminUsername(), preferred_language: saved.preferredLanguage },
     })
-    return json(saved)
+    return Response.json(saved)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'Invalid preferences' }, { status: 400 })
+    return Response.json({ error: error instanceof Error ? error.message : 'Invalid preferences' }, { status: 400 })
   }
 }

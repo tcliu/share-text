@@ -2,7 +2,7 @@
 import { render, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminDocumentsStateHost from './AdminDocumentsStateHost.svelte'
-import type { useAdminDocuments } from '$lib/use-admin-documents.svelte'
+import type { useAdminDocuments } from '#lib/use-admin-documents.svelte.js'
 
 type AdminDocumentsState = ReturnType<typeof useAdminDocuments>
 

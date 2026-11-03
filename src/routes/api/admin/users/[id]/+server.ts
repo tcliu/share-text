@@ -1,8 +1,7 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { logEvent } from '$lib/server/logging'
-import { isBodyRecord } from '$lib/server/request-utils'
-import { deleteUser, findAdminUserById, normalizeStatus, updateUser } from '$lib/server/users'
+import { logEvent } from '#lib/server/logging.js'
+import { isBodyRecord } from '#lib/server/request-utils.js'
+import { deleteUser, findAdminUserById, normalizeStatus, updateUser } from '#lib/server/users.js'
 
 function parseUserId(value: string | undefined) {
   if (!value || !/^\d+$/.test(value)) {
@@ -15,12 +14,12 @@ function parseUserId(value: string | undefined) {
 export const PUT: RequestHandler = async ({ params, request, getClientAddress }) => {
   const id = parseUserId(params.id)
   if (!id) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body)) {
-    return json({ error: 'Request body must be a JSON object' }, { status: 400 })
+    return Response.json({ error: 'Request body must be a JSON object' }, { status: 400 })
   }
 
   const changes: { username?: string; email?: string; password?: string; status?: 'active' | 'inactive' } = {}
@@ -37,7 +36,7 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     try {
       changes.status = normalizeStatus(body.status)
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid status' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid status' }, { status: 400 })
     }
   }
   if (
@@ -46,12 +45,12 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     changes.password === undefined &&
     changes.status === undefined
   ) {
-    return json({ error: 'Request body must include a username, email, password, or status' }, { status: 400 })
+    return Response.json({ error: 'Request body must include a username, email, password, or status' }, { status: 400 })
   }
 
   const existing = await findAdminUserById(id)
   if (!existing) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   let updated
@@ -60,17 +59,17 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update user'
     if (message === 'username or email is already taken') {
-      return json({ error: message }, { status: 409 })
+      return Response.json({ error: message }, { status: 409 })
     }
-    return json({ error: message }, { status: 400 })
+    return Response.json({ error: message }, { status: 400 })
   }
   if (!updated) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   const result = await findAdminUserById(id)
   if (!result) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   const details: Record<string, string | number | boolean> = { id }
@@ -100,23 +99,23 @@ export const PUT: RequestHandler = async ({ params, request, getClientAddress })
     logEvent({ ip: getClientAddress(), action, details })
   }
 
-  return json({ user: result })
+  return Response.json({ user: result })
 }
 
 export const DELETE: RequestHandler = async ({ params, getClientAddress }) => {
   const id = parseUserId(params.id)
   if (!id) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   const existing = await findAdminUserById(id)
   if (!existing) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   const deleted = await deleteUser(id)
   if (!deleted) {
-    return json({ error: 'User not found' }, { status: 404 })
+    return Response.json({ error: 'User not found' }, { status: 404 })
   }
 
   logEvent({

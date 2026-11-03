@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   assertKnownPropertyKey,
@@ -6,18 +5,18 @@ import {
   listProperties,
   setPropertyValue,
   validatePropertyValue,
-} from '$lib/server/admin-properties'
-import { logEvent } from '$lib/server/logging'
-import { isBodyRecord } from '$lib/server/request-utils'
+} from '#lib/server/admin-properties.js'
+import { logEvent } from '#lib/server/logging.js'
+import { isBodyRecord } from '#lib/server/request-utils.js'
 
 export const GET: RequestHandler = async () => {
-  return json({ settings: await listProperties() })
+  return Response.json({ settings: await listProperties() })
 }
 
 export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
   const body = await request.json().catch(() => ({}))
   if (!isBodyRecord(body) || !Array.isArray(body.settings)) {
-    return json({ error: 'Request body must include a settings array' }, { status: 400 })
+    return Response.json({ error: 'Request body must include a settings array' }, { status: 400 })
   }
 
   const before = await listProperties()
@@ -27,21 +26,21 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
 
   for (const item of body.settings) {
     if (!isBodyRecord(item) || typeof item.key !== 'string') {
-      return json({ error: 'Each setting must include a key and value' }, { status: 400 })
+      return Response.json({ error: 'Each setting must include a key and value' }, { status: 400 })
     }
     if (item.value === null) {
       try {
         assertKnownPropertyKey(item.key)
         updates.push({ key: item.key, value: null })
       } catch (error) {
-        return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
+        return Response.json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
       }
       continue
     }
     try {
       updates.push({ key: item.key, value: validatePropertyValue(item.key, item.value) })
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
+      return Response.json({ error: error instanceof Error ? error.message : 'Invalid setting' }, { status: 400 })
     }
   }
 
@@ -74,5 +73,5 @@ export const PUT: RequestHandler = async ({ request, getClientAddress }) => {
     })
   }
 
-  return json({ settings: await listProperties() })
+  return Response.json({ settings: await listProperties() })
 }

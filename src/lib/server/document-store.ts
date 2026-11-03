@@ -24,7 +24,7 @@ import { DOCUMENT_SEARCH_COLUMNS } from './document-query'
 import { insertDocumentVersion } from './document-versions'
 import type { Viewer } from './viewer'
 import type { User } from './users'
-import type { Tag } from '$lib/tag-colors'
+import type { Tag } from '#lib/tag-colors.js'
 
 export interface FetchDocumentSummariesOptions {
   search?: string

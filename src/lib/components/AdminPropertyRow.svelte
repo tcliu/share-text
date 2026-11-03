@@ -3,8 +3,8 @@
   import NumberInput from '@codepg/ui-lib/components/NumberInput.svelte'
   import SelectDropdown from '@codepg/ui-lib/components/SelectDropdown.svelte'
   import ResetIcon from '@codepg/ui-lib/icons/ResetIcon.svelte'
-  import { getI18nContext, type MessageKey } from '$lib/i18n.svelte'
-  import type { AdminProperty } from '$lib/admin'
+  import { getI18nContext, type MessageKey } from '#lib/i18n.svelte.js'
+  import type { AdminProperty } from '#lib/admin.js'
 
   interface Props {
     property: AdminProperty

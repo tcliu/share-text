@@ -1,14 +1,14 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import type { User } from '$lib/documents'
-  import { searchUsers, fetchRecentSharees } from '$lib/user-auth'
+  import type { User } from '#lib/documents.js'
+  import { searchUsers, fetchRecentSharees } from '#lib/user-auth.js'
   import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
   import FormDialog from '@codepg/ui-lib/components/FormDialog.svelte'
   import FormField from '@codepg/ui-lib/components/FormField.svelte'
   import ShareeCombobox from './ShareeCombobox.svelte'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
-  import { arraysEqualUnordered } from '$lib/array-utils'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { arraysEqualUnordered } from '#lib/array-utils.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

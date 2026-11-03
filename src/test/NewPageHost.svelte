@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { setShareTextContext } from '$lib/share-text-context'
+  import { setShareTextContext } from '#lib/share-text-context.js'
   import NewPage from '../routes/(browser)/new/+page.svelte'
 
   setShareTextContext({

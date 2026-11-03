@@ -19,9 +19,9 @@ vi.mock('node:crypto', async importOriginal => {
   }
 })
 
-import { getDb } from '$lib/server/db'
-import { MAX_KEY_ATTEMPTS } from '$lib/server/document-model'
-import { insertDocument } from '$lib/server/document-store'
+import { getDb } from '#lib/server/db/index.js'
+import { MAX_KEY_ATTEMPTS } from '#lib/server/document-model.js'
+import { insertDocument } from '#lib/server/document-store.js'
 
 const A1B2C3 = [10, 1, 11, 2, 12, 3]
 const D4E5F6 = [13, 4, 14, 5, 15, 6]

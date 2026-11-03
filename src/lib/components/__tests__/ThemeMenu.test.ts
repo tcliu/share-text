@@ -2,7 +2,7 @@
 import { render, fireEvent } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it } from 'vitest'
 import ThemeMenuTestHost from './ThemeMenuTestHost.svelte'
-import { useTheme } from '$lib/use-theme.svelte'
+import { useTheme } from '#lib/use-theme.svelte.js'
 
 Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || (() => {})
 

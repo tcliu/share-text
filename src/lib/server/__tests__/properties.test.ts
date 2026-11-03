@@ -3,7 +3,7 @@ process.env.PROFILE = 'dev'
 process.env.SQLITE_PATH = ':memory:'
 
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getDb } from '$lib/server/db'
+import { getDb } from '#lib/server/db/index.js'
 import {
   clearPropertiesCache,
   deletePropertyValue,
@@ -17,7 +17,7 @@ import {
   listProperties,
   setPropertyValue,
   validatePropertyValue,
-} from '$lib/server/admin-properties'
+} from '#lib/server/admin-properties.js'
 
 beforeEach(async () => {
   clearPropertiesCache()

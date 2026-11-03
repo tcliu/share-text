@@ -15,6 +15,9 @@ export function useNavigationDiscard(options: {
   let pendingUrl = $state<string | null>(null)
 
   beforeNavigate(navigation => {
+    // Shallow navigations only rewrite the URL of the current page (preview
+    // toggles, the login param strip), so they never leave the draft behind.
+    if (navigation.shallow) return
     if (!options.isDirty()) return
     const url = navigation.to?.url
     if (!url) return

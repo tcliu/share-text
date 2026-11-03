@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toast } from 'svelte-sonner'
-  import type { Document } from '$lib/documents'
+  import type { Document } from '#lib/documents.js'
   import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
   import EditableText from '@codepg/ui-lib/components/EditableText.svelte'
   import Button from '@codepg/ui-lib/components/Button.svelte'
@@ -29,16 +29,16 @@
   import Spinner from '@codepg/ui-lib/components/Spinner.svelte'
   import Chip from '@codepg/ui-lib/components/Chip.svelte'
   import Copyable from '@codepg/ui-lib/components/Copyable.svelte'
-  import { DOCUMENT_TYPES, getDocumentType } from '$lib/document-types'
-  import { tagChipClass, tagChipStyle, type Tag } from '$lib/tag-colors'
+  import { DOCUMENT_TYPES, getDocumentType } from '#lib/document-types.js'
+  import { tagChipClass, tagChipStyle, type Tag } from '#lib/tag-colors.js'
   import { usePreviewMode } from './use-preview-mode.svelte'
-  import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '$lib/editor-preview-split'
+  import { EDITOR_PREVIEW_MIN_PCT, EDITOR_PREVIEW_MAX_PCT } from '#lib/editor-preview-split.js'
   import { usePreviewContent } from './use-preview-content.svelte'
   import { useFormat } from './use-format.svelte'
   import { useDocumentActions } from './use-document-actions.svelte'
-  import { getShareTextContext } from '$lib/share-text-context'
-  import { formatTimestamp } from '$lib/date-format'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getShareTextContext } from '#lib/share-text-context.js'
+  import { formatTimestamp } from '#lib/date-format.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   const DOCUMENT_TYPE_OPTIONS = DOCUMENT_TYPES.map(type => ({ value: type.value, label: type.label }))

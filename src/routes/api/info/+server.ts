@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
 import {
   CATALOG_APP_DESCRIPTION,
@@ -10,17 +9,17 @@ import {
   CATALOG_APP_STATUS,
   CATALOG_APP_TAGS,
   CATALOG_APP_URL,
-} from '$lib/server/catalog-app'
-import { getAppActive } from '$lib/server/admin-properties'
-import { normalizeCard } from '$lib/server/card'
-import { resolveProfile } from '$lib/server/profile'
+} from '#lib/server/catalog-app.js'
+import { getAppActive } from '#lib/server/admin-properties.js'
+import { normalizeCard } from '#lib/server/card.js'
+import { resolveProfile } from '#lib/server/profile.js'
 
 const NO_STORE = { 'cache-control': 'no-store, max-age=0' }
 
 export const GET: RequestHandler = async () => {
   // Runtime branch, not a static prop: worktree tag in dev, commit ref on Vercel.
   const branch = (process.env.DEV_TAG || process.env.VERCEL_GIT_COMMIT_REF || '').trim() || null
-  return json(
+  return Response.json(
     // The shared card contract owns the response shape: this app supplies its
     // own props, the shared normalizer owns the key set and the value rules.
     normalizeCard({

@@ -1,13 +1,13 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { invalidateAll } from '$app/navigation'
+  import { refreshAll } from '$app/navigation'
   import Button from '@codepg/ui-lib/components/Button.svelte'
   import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
   import FormField from '@codepg/ui-lib/components/FormField.svelte'
   import PasswordInput from '@codepg/ui-lib/components/PasswordInput.svelte'
-  import { login, register } from '$lib/user-auth'
+  import { login, register } from '#lib/user-auth.js'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
   export type AuthPanelMode = 'signin' | 'register'
 
@@ -69,7 +69,7 @@
       // The session cookie is fresh from the login response; re-run loads so
       // session-derived UI reflects the new session. Navigation stays with
       // the host via onAuthenticated; in-dialog hosts react via onsuccess.
-      await invalidateAll()
+      await refreshAll()
       onAuthenticated?.(admin)
       onsuccess?.()
     } catch (err) {
@@ -89,7 +89,7 @@
     try {
       await register(username.trim(), email.trim(), password)
       // Same as sign-in: force fresh loads so the header shows the profile.
-      await invalidateAll()
+      await refreshAll()
       onAuthenticated?.(false)
       onsuccess?.()
     } catch (err) {

@@ -7,11 +7,11 @@
   import Checkbox from '@codepg/ui-lib/components/Checkbox.svelte'
   import ShareeCombobox from './ShareeCombobox.svelte'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
-  import { DOCUMENT_TYPE_VALUES, getDocumentType } from '$lib/document-types'
-  import type { AdminDocumentSummary, AdminSharee } from '$lib/admin'
-  import { searchUsers } from '$lib/user-auth'
-  import { arraysEqualUnordered } from '$lib/array-utils'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { DOCUMENT_TYPE_VALUES, getDocumentType } from '#lib/document-types.js'
+  import type { AdminDocumentSummary, AdminSharee } from '#lib/admin.js'
+  import { searchUsers } from '#lib/user-auth.js'
+  import { arraysEqualUnordered } from '#lib/array-utils.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

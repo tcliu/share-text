@@ -1,6 +1,6 @@
 <script lang="ts">
   import LanguageMenu from '../LanguageMenu.svelte'
-  import { createAppI18n, setI18nContext, type I18nStore } from '$lib/i18n.svelte'
+  import { createAppI18n, setI18nContext, type I18nStore } from '#lib/i18n.svelte.js'
 
   interface Props {
     onReady: (i18n: I18nStore) => void

@@ -2,11 +2,11 @@
   import type { Snippet } from 'svelte'
   import { tick } from 'svelte'
   import { toast } from 'svelte-sonner'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { goto, afterNavigate } from '$app/navigation'
   import type { LayoutData } from './$types'
-  import { setShareTextContext } from '$lib/share-text-context'
-  import DocumentList from '$lib/components/DocumentList.svelte'
+  import { setShareTextContext } from '#lib/share-text-context.js'
+  import DocumentList from '#lib/components/DocumentList.svelte'
   import AppShell from '@codepg/ui-lib/components/AppShell.svelte'
   import Button from '@codepg/ui-lib/components/Button.svelte'
   import ProfileIcon from '@codepg/ui-lib/icons/ProfileIcon.svelte'
@@ -14,14 +14,14 @@
   import MenuIcon from '@codepg/ui-lib/icons/MenuIcon.svelte'
   import ConfirmDialog from '@codepg/ui-lib/components/ConfirmDialog.svelte'
   import BaseDialog from '@codepg/ui-lib/components/BaseDialog.svelte'
-  import UserAuthPanel, { type AuthPanelMode } from '$lib/components/UserAuthPanel.svelte'
-  import LanguageMenu from '$lib/components/LanguageMenu.svelte'
-  import ThemeMenu from '$lib/components/ThemeMenu.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import UserAuthPanel, { type AuthPanelMode } from '#lib/components/UserAuthPanel.svelte'
+  import LanguageMenu from '#lib/components/LanguageMenu.svelte'
+  import ThemeMenu from '#lib/components/ThemeMenu.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
-  import { useDocuments } from '$lib/use-documents.svelte'
-  import { useEditorGuard } from '$lib/use-editor-guard.svelte'
-  import { useUserAuth } from '$lib/use-user-auth.svelte'
+  import { useDocuments } from '#lib/use-documents.svelte.js'
+  import { useEditorGuard } from '#lib/use-editor-guard.svelte.js'
+  import { useUserAuth } from '#lib/use-user-auth.svelte.js'
   import SignOutIcon from '@codepg/ui-lib/icons/SignOutIcon.svelte'
   import { APP_SHELL_DEFAULT_WIDTH, APP_SHELL_MAX_WIDTH, APP_SHELL_MIN_WIDTH } from '@codepg/ui-lib/app-shell'
 
@@ -47,8 +47,8 @@
   let loginOpen = $state(false)
   let loginMode: AuthPanelMode = $state('signin')
 
-  const selectedId = $derived($page.params.id ?? null)
-  const showingEditor = $derived($page.params.id != null || $page.url.pathname === '/new')
+  const selectedId = $derived(page.params.id ?? null)
+  const showingEditor = $derived(page.params.id != null || page.url.pathname === '/new')
 
   const profileIdentity = $derived(userAuthState.admin ?? userAuthState.user)
   const isAdminIdentity = $derived(userAuthState.admin !== null)
@@ -74,7 +74,7 @@
       editorGuardState.requestDiscard({ kind: 'new' })
       return
     }
-    if ($page.url.pathname === '/new') {
+    if (page.url.pathname === '/new') {
       // Only the floating drawer overlaps the editor; a docked pane stays put.
       if (paneFloating) closeDrawer()
       await tick()
@@ -194,15 +194,15 @@
     void userAuthState.checkSession()
   })
 
-  // /login redirects here with ?login=1: auto-open the dialog once, then
-  // strip the param with replaceState so no navigation (and no dirty-editor
-  // prompt) is involved.
+  // /login redirects here with ?login=1: auto-open the dialog once, then strip
+  // the param with a shallow navigation so the page is not reloaded (and no
+  // dirty-editor prompt is involved; the guards skip shallow navigations).
   $effect(() => {
-    if ($page.url.searchParams.get('login') === null) return
+    if (page.url.searchParams.get('login') === null) return
     loginOpen = true
-    const url = new URL($page.url)
+    const url = new URL(page.url.href)
     url.searchParams.delete('login')
-    history.replaceState(null, '', url.pathname + (url.search ? `?${url.searchParams}` : '') + url.hash)
+    void goto(url, { shallow: true, replace: true })
   })
 
   // While the pane floats it is an overlay: keep it open on the list route and

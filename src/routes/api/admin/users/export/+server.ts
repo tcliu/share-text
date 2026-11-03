@@ -1,7 +1,6 @@
-import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types'
-import { logEvent } from '$lib/server/logging'
-import { exportUsersForAdmin } from '$lib/server/users'
+import { logEvent } from '#lib/server/logging.js'
+import { exportUsersForAdmin } from '#lib/server/users.js'
 
 export const GET: RequestHandler = async ({ url, getClientAddress }) => {
   const idsParam = url.searchParams.get('ids')
@@ -10,7 +9,7 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     for (const raw of idsParam.split(',')) {
       const id = Number(raw.trim())
       if (!Number.isInteger(id) || id <= 0) {
-        return json({ error: 'Invalid user id in export selection' }, { status: 400 })
+        return Response.json({ error: 'Invalid user id in export selection' }, { status: 400 })
       }
       ids.push(id)
     }
@@ -24,5 +23,5 @@ export const GET: RequestHandler = async ({ url, getClientAddress }) => {
     action: 'admin_user_export',
     details: { count: records.length, elapsed_ms: Date.now() - startedAt },
   })
-  return json(records)
+  return Response.json(records)
 }

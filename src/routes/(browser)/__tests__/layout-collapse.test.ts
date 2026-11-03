@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/svelte'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import LayoutCollapseHost from './LayoutCollapseHost.svelte'
 import { goto } from '$app/navigation'
-import { setPage } from '../../../test/mocks/app-stores'
+import { setPage } from '../../../test/mocks/app-state.svelte.js'
 
 const existingDoc = { id: 'aaaaaa', name: 'Existing', updatedAt: '2026-08-01T00:00:00.000Z', updatedBy: '203.0.113.7' }
 const signedInUser = { id: 1, username: 'alice', email: 'alice@example.com' }

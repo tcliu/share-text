@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { User } from '$lib/documents'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import type { User } from '#lib/documents.js'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

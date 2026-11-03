@@ -3,10 +3,10 @@ import { render, fireEvent } from '@testing-library/svelte'
 import type { ComponentProps } from 'svelte'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import ShareDialog from '../ShareDialog.svelte'
-import { fetchRecentSharees, searchUsers } from '$lib/user-auth'
-import { getDefaultTagColor } from '$lib/tag-colors'
+import { fetchRecentSharees, searchUsers } from '#lib/user-auth.js'
+import { getDefaultTagColor } from '#lib/tag-colors.js'
 
-vi.mock('$lib/user-auth', () => ({
+vi.mock('#lib/user-auth.js', () => ({
   searchUsers: vi.fn(),
   fetchRecentSharees: vi.fn(),
 }))

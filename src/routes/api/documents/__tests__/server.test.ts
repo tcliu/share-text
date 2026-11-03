@@ -5,8 +5,8 @@ const documentsMocks = vi.hoisted(() => ({
   insertDocument: vi.fn(),
 }))
 
-vi.mock('$lib/server/document-store', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/document-store')>('$lib/server/document-store')
+vi.mock('#lib/server/document-store.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/document-store.js')>('#lib/server/document-store.js')
   return {
     ...actual,
     fetchDocumentSummaries: documentsMocks.fetchDocumentSummaries,
@@ -18,8 +18,8 @@ const settingsMocks = vi.hoisted(() => ({
   getMaxContentLength: vi.fn(),
 }))
 
-vi.mock('$lib/server/admin-properties', async () => {
-  const actual = await vi.importActual<typeof import('$lib/server/admin-properties')>('$lib/server/admin-properties')
+vi.mock('#lib/server/admin-properties.js', async () => {
+  const actual = await vi.importActual<typeof import('#lib/server/admin-properties.js')>('#lib/server/admin-properties.js')
   return {
     ...actual,
     getMaxContentLength: settingsMocks.getMaxContentLength,

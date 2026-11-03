@@ -1,9 +1,9 @@
 import { toast } from 'svelte-sonner'
 import { goto } from '$app/navigation'
-import type { OwnedDocumentSummary } from '$lib/documents'
-import { DEFAULT_DOCUMENTS_PAGE_SIZE, deleteDocument, fetchDocumentSummaries } from '$lib/documents'
-import { clearDraft } from '$lib/document-drafts'
-import { getI18nContext } from '$lib/i18n.svelte'
+import type { OwnedDocumentSummary } from '#lib/documents.js'
+import { DEFAULT_DOCUMENTS_PAGE_SIZE, deleteDocument, fetchDocumentSummaries } from '#lib/documents.js'
+import { clearDraft } from '#lib/document-drafts.js'
+import { getI18nContext } from '#lib/i18n.svelte.js'
 
 const DOCUMENT_SEARCH_KEYS = ['name', 'tags', 'id']
 

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createSqliteDb, toSqliteSql } from '$lib/server/db/sqlite'
+import { createSqliteDb, toSqliteSql } from '#lib/server/db/sqlite.js'
 
 describe('toSqliteSql', () => {
   it('converts $n placeholders to ?', () => {

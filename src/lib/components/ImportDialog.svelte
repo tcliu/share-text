@@ -8,7 +8,7 @@
   import Tabs from '@codepg/ui-lib/components/Tabs.svelte'
   import HelpIcon from '@codepg/ui-lib/icons/HelpIcon.svelte'
   import UploadIcon from '@codepg/ui-lib/icons/UploadIcon.svelte'
-  import { getI18nContext } from '$lib/i18n.svelte'
+  import { getI18nContext } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
 
   interface Props {

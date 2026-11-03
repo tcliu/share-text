@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { createUserSessionToken, verifyUserSessionToken } from '$lib/server/user-auth'
+import { createUserSessionToken, verifyUserSessionToken } from '#lib/server/user-auth.js'
 
 describe('user session token', () => {
   it('round-trips the user id', () => {
