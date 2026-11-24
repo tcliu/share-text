@@ -40,3 +40,6 @@ export const requiredEnv = config.requiredEnv
 // plaintext [vars] entry. App-specific names live in `deploy.config.json` so
 // this module stays identical across apps.
 export const secretKeys = config.secretKeys
+// Deployment Protection for the production aliases (`public`, `preview`, or
+// `all`); absent leaves the dashboard setting untouched.
+export const vercelProtection = config.vercelProtection

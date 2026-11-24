@@ -21,5 +21,7 @@ data/
 !.env.*.example
 .sqlite
 
-# Generated Cloudflare Pages config (npm run env:sync:cloudflare); never commit.
+# Generated Cloudflare Workers config and adapter output (npm run
+# env:sync:cloudflare, npm run build); never commit.
 wrangler.toml
+.wrangler/

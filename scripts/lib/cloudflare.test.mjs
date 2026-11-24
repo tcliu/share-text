@@ -1,126 +1,98 @@
-import { execFileSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  desiredPagesVars,
-  detectProductionBranch,
+  desiredWorkerVars,
   ensureD1Database,
-  ensurePagesProject,
+  fetchWorkersSubdomain,
   findD1DatabaseId,
   generatedWranglerProjectName,
-  getPagesProjectDomain,
+  listWorkerScripts,
   renderWranglerConfig,
   resolveCloudflareAppUrl,
   resolveCloudflareProjectName,
   resolveD1DatabaseName,
   splitCloudflareEnv,
+  workerExists,
+  workersHost,
 } from './cloudflare.mjs'
 
-const PAGES_JSON = JSON.stringify([
-  {
-    'Project Name': 'share-text',
-    'Project Domains': 'share-text-b1s.pages.dev',
-    'Git Provider': 'No',
-    'Last Modified': '6 minutes ago',
-  },
-  {
-    'Project Name': 'share-text-v2',
-    'Project Domains': 'share-text-v2.pages.dev',
-    'Git Provider': 'No',
-    'Last Modified': '1 hour ago',
-  },
-])
-
-function stubRunner({ listOutput = PAGES_JSON, listStatus = 0, createStatus = 0 } = {}) {
-  const calls = []
-  const runner = (args, _options) => {
-    calls.push(args.join(' '))
-    if (args.includes('create')) {
-      return { status: createStatus, output: '' }
-    }
-    return { status: listStatus, output: listOutput }
-  }
-  return { calls, runner }
+function jsonFetch(payload, status = 200) {
+  return async () => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => payload,
+  })
 }
 
-describe('ensurePagesProject', () => {
-  it('does nothing when the project already exists', () => {
-    const { calls, runner } = stubRunner()
-    expect(ensurePagesProject('share-text', runner, '/root', 'master')).toBe('exists')
-    expect(calls).toEqual(['pages project list --json'])
-  })
-
-  it('does not collide with prefix names', () => {
-    const { calls, runner } = stubRunner()
-    expect(ensurePagesProject('share-text-v', runner, '/root', 'master')).toBe('created')
-    expect(calls).toEqual([
-      'pages project list --json',
-      'pages project create share-text-v --production-branch master',
+describe('listWorkerScripts', () => {
+  it('returns the script list', async () => {
+    const fetchImpl = jsonFetch({ success: true, result: [{ id: 'app' }, { id: 'other' }] })
+    expect(await listWorkerScripts({ accountId: 'acct', token: 'tok', fetchImpl })).toEqual([
+      { id: 'app' },
+      { id: 'other' },
     ])
   })
 
-  it('creates the project when it is missing', () => {
-    const { calls, runner } = stubRunner({ listOutput: '[]' })
-    expect(ensurePagesProject('share-text', runner, '/root', 'master')).toBe('created')
-    expect(calls).toEqual(['pages project list --json', 'pages project create share-text --production-branch master'])
+  it('treats a non-array result as empty', async () => {
+    const fetchImpl = jsonFetch({ success: true, result: null })
+    expect(await listWorkerScripts({ accountId: 'acct', token: 'tok', fetchImpl })).toEqual([])
   })
 
-  it('throws when listing fails', () => {
-    const { runner } = stubRunner({ listStatus: 1 })
-    expect(() => ensurePagesProject('share-text', runner, '/root')).toThrow('project list failed')
-  })
-
-  it('throws when creation fails', () => {
-    const { runner } = stubRunner({ listOutput: '[]', createStatus: 1 })
-    expect(() => ensurePagesProject('share-text', runner, '/root', 'master')).toThrow(
-      'Failed to create Cloudflare Pages project',
+  it('throws on an API error so the auth step fails loudly', async () => {
+    const fetchImpl = jsonFetch({ success: false, errors: [{ message: 'Authentication error' }] }, 403)
+    await expect(listWorkerScripts({ accountId: 'acct', token: 'tok', fetchImpl })).rejects.toThrow(
+      'Cloudflare API 403: Authentication error',
     )
-  })
-
-  it('treats non-JSON output as missing', () => {
-    const { calls, runner } = stubRunner({ listOutput: 'not json' })
-    expect(ensurePagesProject('share-text', runner, '/root', 'master')).toBe('created')
-    expect(calls).toEqual(['pages project list --json', 'pages project create share-text --production-branch master'])
   })
 })
 
-function jsonRunner(output) {
-  return () => ({ status: 0, output })
-}
-
-describe('getPagesProjectDomain', () => {
-  it('returns the production hostname from the JSON list', () => {
-    expect(getPagesProjectDomain('share-text', jsonRunner(PAGES_JSON), '/root')).toBe(
-      'share-text-b1s.pages.dev',
-    )
+describe('workerExists', () => {
+  it('matches the script id exactly, never by prefix', async () => {
+    const fetchImpl = jsonFetch({ success: true, result: [{ id: 'sample-app' }, { id: 'sample-app-v2' }] })
+    expect(await workerExists('sample-app', { accountId: 'a', token: 't', fetchImpl })).toBe(true)
+    expect(await workerExists('sample-app-v', { accountId: 'a', token: 't', fetchImpl })).toBe(false)
   })
+})
 
-  it('returns empty when the project is absent or the list fails', () => {
-    expect(getPagesProjectDomain('missing', jsonRunner(PAGES_JSON), '/root')).toBe('')
-    expect(getPagesProjectDomain('share-text', jsonRunner('[]'), '/root')).toBe('')
-    expect(getPagesProjectDomain('share-text', jsonRunner('not json'), '/root')).toBe('')
+describe('fetchWorkersSubdomain', () => {
+  it('returns the account subdomain and empty when unset', async () => {
     expect(
-      getPagesProjectDomain(
-        'share-text',
-        () => ({ status: 1, output: '' }),
-        '/root',
-      ),
+      await fetchWorkersSubdomain({
+        accountId: 'a',
+        token: 't',
+        fetchImpl: jsonFetch({ success: true, result: { subdomain: 'team' } }),
+      }),
+    ).toBe('team')
+    expect(
+      await fetchWorkersSubdomain({
+        accountId: 'a',
+        token: 't',
+        fetchImpl: jsonFetch({ success: true, result: {} }),
+      }),
     ).toBe('')
+  })
+})
+
+describe('workersHost', () => {
+  it('builds the Workers.dev hostname only from both parts', () => {
+    expect(workersHost('sample-app', 'team')).toBe('sample-app.team.workers.dev')
+    expect(workersHost('', 'team')).toBe('')
+    expect(workersHost('sample-app', '')).toBe('')
   })
 })
 
 describe('resolveCloudflareProjectName', () => {
   it('prefers the overlay key over the generated file', () => {
-    expect(resolveCloudflareProjectName({ CLOUDFLARE_PROJECT: 'codepg-projects' }, 'share-text')).toBe(
-      'codepg-projects',
+    expect(resolveCloudflareProjectName({ CLOUDFLARE_PROJECT: 'sample-project' }, 'sample-app')).toBe(
+      'sample-project',
     )
   })
 
   it('falls back to the generated name', () => {
-    expect(resolveCloudflareProjectName({}, 'share-text')).toBe('share-text')
+    expect(resolveCloudflareProjectName({}, 'sample-app')).toBe('sample-app')
   })
 
   it('returns empty when neither is set', () => {
@@ -141,37 +113,53 @@ describe('generatedWranglerProjectName', () => {
 })
 
 describe('resolveCloudflareAppUrl', () => {
-  it('derives the live URL from the Pages production domain', () => {
+  it('derives the live URL from the Workers.dev host', async () => {
     expect(
-      resolveCloudflareAppUrl({ env: { CLOUDFLARE_PROJECT: 'share-text' }, runner: jsonRunner(PAGES_JSON) }),
-    ).toBe('https://share-text-b1s.pages.dev')
+      await resolveCloudflareAppUrl({
+        env: { CLOUDFLARE_PROJECT: 'sample-app', CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_API_TOKEN: 'tok' },
+        fetchImpl: jsonFetch({ success: true, result: { subdomain: 'team' } }),
+      }),
+    ).toBe('https://sample-app.team.workers.dev')
   })
 
-  it('throws when the project is missing', () => {
-    expect(() =>
+  it('falls back to APP_BASE_URL when the subdomain is unavailable', async () => {
+    expect(
+      await resolveCloudflareAppUrl({
+        env: { CLOUDFLARE_PROJECT: 'sample-app', APP_BASE_URL: 'https://app.example.com/' },
+        fetchImpl: async () => {
+          throw new Error('offline')
+        },
+      }),
+    ).toBe('https://app.example.com')
+  })
+
+  it('throws when the Worker name is missing', async () => {
+    await expect(
       resolveCloudflareAppUrl({
         env: {},
-        runner: jsonRunner(PAGES_JSON),
         root: mkdtempSync(join(tmpdir(), 'wrangler-noproj-')),
+        fetchImpl: jsonFetch({ success: true, result: { subdomain: 'team' } }),
       }),
-    ).toThrow('Missing CLOUDFLARE_PROJECT')
+    ).rejects.toThrow('Missing CLOUDFLARE_PROJECT')
   })
 
-  it('throws when the production domain is unresolvable', () => {
-    expect(() =>
-      resolveCloudflareAppUrl({ env: { CLOUDFLARE_PROJECT: 'missing' }, runner: jsonRunner(PAGES_JSON) }),
-    ).toThrow('Could not resolve the Pages production domain for project missing')
+  it('throws when neither the host nor APP_BASE_URL resolves', async () => {
+    await expect(
+      resolveCloudflareAppUrl({
+        env: { CLOUDFLARE_PROJECT: 'missing', CLOUDFLARE_ACCOUNT_ID: 'a', CLOUDFLARE_API_TOKEN: 't' },
+        fetchImpl: jsonFetch({ success: false, errors: [{ message: 'Authentication error' }] }, 403),
+      }),
+    ).rejects.toThrow('Could not resolve the Workers.dev host for missing')
   })
 })
 
 describe('renderWranglerConfig', () => {
-  it('renders name + static stanza + pruned vars', () => {
-    expect(renderWranglerConfig({ project: 'codepg-projects', vars: { ADMIN_USERNAME: 'admin' } })).toBe(
+  it('renders name + Workers stanza + pruned vars', () => {
+    expect(renderWranglerConfig({ project: 'sample-project', vars: { ADMIN_USERNAME: 'admin' } })).toBe(
       [
-        'name = "codepg-projects"',
+        'name = "sample-project"',
         'compatibility_date = "2026-09-01"',
         'compatibility_flags = ["nodejs_compat"]',
-        'pages_build_output_dir = ".svelte-kit/cloudflare"',
         '',
         '[vars]',
         'ADMIN_USERNAME = "admin"',
@@ -179,20 +167,24 @@ describe('renderWranglerConfig', () => {
       ].join('\n'),
     )
   })
+
+  it('never emits the retired Pages build setting', () => {
+    expect(renderWranglerConfig({ project: 'x', vars: {} })).not.toContain('pages_build_output_dir')
+  })
 })
 
-describe('desiredPagesVars', () => {
+describe('desiredWorkerVars', () => {
   it('appends the forced build vars', () => {
-    expect(desiredPagesVars({ ADMIN_USERNAME: 'admin' })).toEqual({
+    expect(desiredWorkerVars({ ADMIN_USERNAME: 'admin' })).toEqual({
       ADMIN_USERNAME: 'admin',
-      CF_PAGES: '1',
+      CF_WORKER: '1',
       PROFILE: 'prod',
     })
   })
 
-  it('forces CF_PAGES and PROFILE even when the overlay disagrees', () => {
-    expect(desiredPagesVars({ CF_PAGES: '0', PROFILE: 'dev' })).toEqual({
-      CF_PAGES: '1',
+  it('forces CF_WORKER and PROFILE even when the overlay disagrees', () => {
+    expect(desiredWorkerVars({ CF_WORKER: '0', PROFILE: 'dev' })).toEqual({
+      CF_WORKER: '1',
       PROFILE: 'prod',
     })
   })
@@ -202,7 +194,7 @@ describe('splitCloudflareEnv', () => {
   it('splits vars, secrets, and local-only keys; drops empties and forbidden keys', () => {
     expect(
       splitCloudflareEnv({
-        CLOUDFLARE_PROJECT: 'codepg-projects',
+        CLOUDFLARE_PROJECT: 'sample-project',
         APP_BASE_URL: 'https://x.pages.dev',
         ADMIN_USERNAME: 'admin',
         EMPTY: '',
@@ -212,7 +204,7 @@ describe('splitCloudflareEnv', () => {
         CLOUDFLARE_SCAN_TOKEN: 't',
       }),
     ).toEqual({
-      project: 'codepg-projects',
+      project: 'sample-project',
       vars: { ADMIN_USERNAME: 'admin' },
       secrets: { CRON_SECRET: 's', CLOUDFLARE_SCAN_TOKEN: 't' },
     })
@@ -311,10 +303,46 @@ describe('ensureD1Database', () => {
   })
 })
 
-describe('detectProductionBranch', () => {
-  it('reads the checkout branch', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'prod-branch-'))
-    execFileSync('git', ['init', '-b', 'trunk'], { cwd: dir, stdio: 'pipe' })
-    expect(detectProductionBranch(dir)).toBe('trunk')
+describe('CLOUDFLARE_SECRET_KEYS', () => {
+  // The set is built from the shared defaults plus the app's own credential
+  // names, read from `secretKeys` in the ungated `deploy.config.json`. The
+  // config is a module-level read, so the module is re-imported against a
+  // mocked config to observe the union.
+  async function loadWithConfig(secretKeys) {
+    vi.resetModules()
+    vi.doMock('../deploy.config.mjs', () => ({ secretKeys }))
+    return import('./cloudflare.mjs')
+  }
+
+  afterEach(() => {
+    vi.doUnmock('../deploy.config.mjs')
+    vi.resetModules()
+  })
+
+  it('keeps the shared credential defaults when the app configures none', async () => {
+    const { CLOUDFLARE_SECRET_KEYS } = await loadWithConfig(undefined)
+    expect(CLOUDFLARE_SECRET_KEYS.has('SESSION_SECRET')).toBe(true)
+    expect(CLOUDFLARE_SECRET_KEYS.has('CRON_SECRET')).toBe(true)
+  })
+
+  it("adds an app's configured credential names to the shared defaults", async () => {
+    const { CLOUDFLARE_SECRET_KEYS } = await loadWithConfig(['APP_TOKEN'])
+    expect(CLOUDFLARE_SECRET_KEYS.has('APP_TOKEN')).toBe(true)
+    expect(CLOUDFLARE_SECRET_KEYS.has('SESSION_SECRET')).toBe(true)
+  })
+
+  it('routes a configured credential name to the secret store, not to plain vars', async () => {
+    const { splitCloudflareEnv } = await loadWithConfig(['APP_TOKEN'])
+    const { vars, secrets } = splitCloudflareEnv({ APP_TOKEN: 'token-value', SESSION_SECRET: 'secret-value', PLAIN: 'plain-value' })
+    expect(secrets.APP_TOKEN).toBe('token-value')
+    expect(vars.APP_TOKEN).toBeUndefined()
+    expect(secrets.SESSION_SECRET).toBe('secret-value')
+    expect(vars.PLAIN).toBe('plain-value')
+  })
+
+  it('ignores a malformed secretKeys value instead of failing the import', async () => {
+    const { CLOUDFLARE_SECRET_KEYS } = await loadWithConfig('not-an-array')
+    expect(CLOUDFLARE_SECRET_KEYS.has('SESSION_SECRET')).toBe(true)
+    expect(CLOUDFLARE_SECRET_KEYS.has('not-an-array')).toBe(false)
   })
 })

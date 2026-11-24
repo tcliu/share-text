@@ -21,7 +21,7 @@ function usage() {
 
 Targets (--target):
   vercel       Point the scan job at the Vercel deployment (default).
-  cloudflare   Point the scan job at the Cloudflare Pages deployment.
+  cloudflare   Point the scan job at the Cloudflare Workers deployment.
 
 Providers (--provider):
   cron-job   Upsert + enable the cron-job.org scan job (needs
@@ -99,15 +99,15 @@ async function main() {
   }
   let result
   try {
-    // The Cloudflare live URL is the Pages production domain derived from
-    // the project: resolve it instead of reading APP_BASE_URL (absent on
-    // that target). Wrangler authenticates from the process env, so seed
-    // the operator token from .env.local first — shell values always win.
+    // The Cloudflare live URL is the Worker's Workers.dev host derived from
+    // the name: resolve it instead of reading APP_BASE_URL (absent on that
+    // target). Wrangler authenticates from the process env, so seed the
+    // operator token from .env.local first — shell values always win.
     let baseUrl
     if (target === 'cloudflare') {
       const merged = loadTargetEnv('cloudflare', ROOT_DIR)
       seedCloudflareCredentials({ token: merged, accountId: merged })
-      baseUrl = resolveCloudflareAppUrl()
+      baseUrl = await resolveCloudflareAppUrl()
     }
     result = await applyHeartbeat(provider, undefined, target, { baseUrl })
   } catch (error) {

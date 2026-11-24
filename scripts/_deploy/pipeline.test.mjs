@@ -10,8 +10,8 @@ import { syncProjectDomains } from '../_vercel-domains.mjs'
 
 // The assembled sequence is the contract: it must match the historical
 // hard-coded step order so the plugin pipeline stays behavior-preserving.
-const EXPECTED_CF = ['auth', 'project', 'env-sync', 'isolation', 'd1', 'schema', 'build', 'deploy']
-const EXPECTED_CF_NO_SYNC = ['auth', 'project', 'isolation', 'd1', 'schema', 'build', 'deploy']
+const EXPECTED_CF = ['auth', 'env-sync', 'isolation', 'd1', 'schema', 'build', 'deploy']
+const EXPECTED_CF_NO_SYNC = ['auth', 'isolation', 'd1', 'schema', 'build', 'deploy']
 const EXPECTED_VERCEL = ['auth', 'env-sync', 'schema', 'domains', 'deploy', 'ready']
 const EXPECTED_VERCEL_NO_SYNC = ['auth', 'schema', 'domains', 'deploy', 'ready']
 
@@ -75,6 +75,18 @@ describe('vercel pipeline', () => {
       'ready',
     ])
   })
+
+  it('inserts the protection step after auth when configured', () => {
+    expect(
+      stepNames(vercelTarget, vercelCtx({ syncEnv: 'yes', vercelProtection: 'preview' }), ['env-sync']),
+    ).toEqual(['auth', 'protection', 'env-sync', 'schema', 'domains', 'deploy', 'ready'])
+  })
+
+  it('rejects an unknown protection mode', () => {
+    expect(() => stepNames(vercelTarget, vercelCtx({ vercelProtection: 'sometimes' }), [])).toThrow(
+      /vercelProtection must be/,
+    )
+  })
 })
 
 describe('vercel domain step', () => {
@@ -106,7 +118,7 @@ describe('heartbeat placement', () => {
       ...pluginSteps(resolvePlugins(['env-sync']), cf),
       ...heartbeatPlugin.steps(cf),
     ]).map(step => step.name)
-    expect(cfNames).toEqual(['auth', 'project', 'env-sync', 'isolation', 'd1', 'schema', 'heartbeat', 'build', 'deploy'])
+    expect(cfNames).toEqual(['auth', 'env-sync', 'isolation', 'd1', 'schema', 'heartbeat', 'build', 'deploy'])
 
     const vercel = vercelCtx({ syncEnv: 'yes' })
     const vercelNames = assembleSteps(vercelTarget.slots, [

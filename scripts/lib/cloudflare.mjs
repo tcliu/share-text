@@ -1,10 +1,13 @@
 #!/usr/bin/env node
-// Shared Cloudflare Pages project helpers: ensure the Pages project exists
-// before steps that need it (`secret put`, `pages deploy`), mirroring
-// `ensureRemoteProject` in `scripts/deploy.mjs` for Vercel.
+// Shared Cloudflare Workers helpers: the generated root wrangler config, the
+// worker-scoped wrangler commands, the Workers.dev host resolution, and D1
+// provisioning. The generated config must sit at the project root under a
+// standard name so every wrangler command auto-discovers it; the adapter's
+// build output config (referenced from `.wrangler/deploy/config.json`) carries
+// the Worker entry and static-asset directory.
 //
-// The runner is injectable so tests can stub wrangler without network; the
-// default uses spawnSync like the other scripts.
+// The runner and the fetch implementation are injectable so tests stay
+// hermetic.
 import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -18,16 +21,18 @@ import { logEvent } from '../log-event.mjs'
 import { echoCommand } from '../_run.mjs'
 import { loadTargetEnv } from './target-env.mjs'
 
-// Generated wrangler config must sit at the project root under a standard
-// name: `wrangler pages deploy` rejects a custom `--config` path and only
-// auto-discovers `wrangler.json`/`wrangler.jsonc`/`wrangler.toml` in cwd. The
-// file is gitignored and regenerated from the overlay on every run.
 export const GENERATED_WRANGLER_CONFIG = 'wrangler.toml'
+export const CF_API_BASE = 'https://api.cloudflare.com/client/v4'
 
-// Static Pages stanza: compat + build output. [vars] below is rewritten by
+// Static Workers stanza: compat only. `[vars]` below is rewritten by
 // renderWranglerConfig (pruned to desired), so per-target values live in
-// `.env.prod` + `.env.cloudflare`, never here.
-const WRANGLER_STATIC_STANZA = ['compatibility_date = "2026-09-01"', 'compatibility_flags = ["nodejs_compat"]', 'pages_build_output_dir = ".svelte-kit/cloudflare"', '']
+// `.env.prod` + `.env.cloudflare`, never here. No `main` (the adapter sets the
+// Worker entry) and no `assets` (the adapter fills the output config).
+const WRANGLER_STATIC_STANZA = [
+  'compatibility_date = "2026-09-01"',
+  'compatibility_flags = ["nodejs_compat"]',
+  '',
+]
 
 // `npx wrangler` pays package resolution on every invocation; a PATH
 // wrangler skips it. Resolved once per process (every caller is short-lived,
@@ -49,8 +54,9 @@ export function wranglerArgs(args, bin = wranglerBin()) {
 
 export function defaultWranglerRunner(args, { cwd, input, capture = false } = {}) {
   const bin = wranglerBin()
-  // No `--config`: Pages rejects custom config paths, and the generated root
-  // config is auto-discovered from `cwd`.
+  // No `--config`: every worker command auto-discovers the generated root
+  // config from `cwd`, and `deploy` follows `.wrangler/deploy/config.json` to
+  // the adapter output.
   const fullArgs = wranglerArgs(args, bin)
   // Echo before every run, including captured ones, so logs show what executed.
   echoCommand(bin, fullArgs)
@@ -77,115 +83,70 @@ export function tailWranglerOutput(output, maxLines = 8) {
     .trim()
 }
 
-export function listPagesProjects(runner = defaultWranglerRunner, cwd = process.cwd()) {
-  // `--json` (never the table): machine-read, no box-drawing parse.
-  const { status, output } = runner(['pages', 'project', 'list', '--json'], { cwd, capture: true })
-  if (status !== 0) {
-    const detail = tailWranglerOutput(output)
-    throw new Error(`wrangler pages project list failed (exit ${status})${detail ? `: ${detail}` : '.'}`)
-  }
-  return output
-}
-
-function parseJsonArray(output) {
-  try {
-    const parsed = JSON.parse(String(output || ''))
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function projectEntry(project, output) {
-  return parseJsonArray(output).find(entry => String(entry?.['Project Name'] || '').trim() === project)
-}
-
-// Production hostname for a Pages project, from `pages project list --json`
-// (authoritative: the account may suffix the subdomain, e.g.
-// `<project>-<hash>.pages.dev`). Bare hostname, or ''
-// when unresolvable.
-export function getPagesProjectDomain(project, runner = defaultWranglerRunner, cwd = process.cwd()) {
-  let output = ''
-  try {
-    const result = runner(['pages', 'project', 'list', '--json'], { cwd, capture: true })
-    if (result.status !== 0) {
-      const detail = tailWranglerOutput(result.output)
-      logEvent({
-        action: 'cloudflare_project_list_warn',
-        details: { exit_code: result.status, error: detail, level: 'WARN' },
-      })
-      return ''
-    }
-    output = result.output
-  } catch (error) {
-    logEvent({
-      action: 'cloudflare_project_list_warn',
-      details: { error: error?.message || error, level: 'WARN' },
-    })
-    return ''
-  }
-  const entry = projectEntry(project, output)
-  if (!entry) {
-    return ''
-  }
-  const domains = String(entry?.['Project Domains'] || '')
-    .split(/[,\s]+/)
-    .map(domain => domain.trim())
+function apiError(status, payload) {
+  const detail = (payload?.errors || [])
+    .map(error => error?.message)
     .filter(Boolean)
-  const production = domains.find(domain => domain.endsWith('.pages.dev')) ?? domains[0] ?? ''
-  return production.replace(/^https?:\/\//, '')
+    .join('; ')
+  return new Error(`Cloudflare API ${status}${detail ? `: ${detail}` : ''}`)
 }
 
-// Production branch for a new Pages project: the checkout's current branch
-// (this repo deploys from master). Direct-upload deploys ignore it, but the
-// create API requires a value.
-export function detectProductionBranch(cwd = process.cwd()) {
-  try {
-    const result = spawnSync('git', ['branch', '--show-current'], { cwd, encoding: 'utf8' })
-    const branch = String(result.stdout || '').trim()
-    if (branch) {
-      return branch
-    }
-    logEvent({
-      action: 'cloudflare_branch_warn',
-      details: { reason: 'no-current-branch', level: 'WARN' },
-    })
-  } catch (error) {
-    logEvent({
-      action: 'cloudflare_branch_warn',
-      details: { reason: 'read-error', error: error?.message || error, level: 'WARN' },
-    })
+async function cfRequest({
+  path,
+  accountId,
+  token,
+  method = 'GET',
+  body,
+  fetchImpl = globalThis.fetch,
+}) {
+  if (!String(token || '').trim()) {
+    throw new Error('CLOUDFLARE_API_TOKEN is empty: cannot manage the Workers deployment.')
   }
-  return 'main'
+  if (!String(accountId || '').trim()) {
+    throw new Error('CLOUDFLARE_ACCOUNT_ID is empty: cannot manage the Workers deployment.')
+  }
+  const response = await fetchImpl(`${CF_API_BASE}/accounts/${accountId}${path}`, {
+    method,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok || payload.success === false) {
+    throw apiError(response.status, payload)
+  }
+  return payload.result
 }
 
-export function ensurePagesProject(
-  project,
-  runner = defaultWranglerRunner,
-  cwd = process.cwd(),
-  productionBranch = detectProductionBranch(cwd),
-) {
-  const output = listPagesProjects(runner, cwd)
-  // JSON entries: match the name exactly (prefix names must not collide).
-  const exists = parseJsonArray(output).some(
-    entry => String(entry?.['Project Name'] || '').trim() === project,
-  )
-  if (exists) {
-    return 'exists'
-  }
-  console.log(`-> Creating Cloudflare Pages project ${project}...`)
-  const created = runner(['pages', 'project', 'create', project, '--production-branch', productionBranch], { cwd })
-  if (created.status !== 0) {
-    const detail = tailWranglerOutput(created.output)
-    throw new Error(
-      `Failed to create Cloudflare Pages project ${project} (exit ${created.status})${detail ? `: ${detail}` : '.'} Create it in the dashboard and retry.`,
-    )
-  }
-  return 'created'
+// Workers in the account. Doubles as the auth check: a bad token or account id
+// fails here, before any deploy CLI runs.
+export async function listWorkerScripts({ accountId, token, fetchImpl } = {}) {
+  const result = await cfRequest({ path: '/workers/scripts', accountId, token, fetchImpl })
+  return Array.isArray(result) ? result : []
 }
 
-// Project name from the last generated config: fallback so a checkout that
-// predates CLOUDFLARE_PROJECT keeps working. Shared by the env sync and the
+export async function workerExists(project, options = {}) {
+  const scripts = await listWorkerScripts(options)
+  return scripts.some(entry => String(entry?.id || entry?.name || '').trim() === project)
+}
+
+// Account's workers.dev subdomain (`''` when the API is unavailable).
+export async function fetchWorkersSubdomain({ accountId, token, fetchImpl } = {}) {
+  const result = await cfRequest({ path: '/workers/subdomain', accountId, token, fetchImpl })
+  return String(result?.subdomain || '').trim()
+}
+
+// Stable hostname for a Worker: `<worker>.<account-subdomain>.workers.dev`.
+export function workersHost(project, subdomain) {
+  const name = String(project || '').trim()
+  const zone = String(subdomain || '').trim()
+  if (!name || !zone) {
+    return ''
+  }
+  return `${name}.${zone}.workers.dev`
+}
+
+// Name from the last generated config: fallback so a checkout that predates
+// CLOUDFLARE_PROJECT keeps working. Shared by the env sync and the
 // deploy/heartbeat flows so the fallback cannot drift.
 export function generatedWranglerProjectName(root = process.cwd()) {
   try {
@@ -196,11 +157,11 @@ export function generatedWranglerProjectName(root = process.cwd()) {
   }
 }
 
-// Pages project name: the `CLOUDFLARE_PROJECT` overlay key owns it (mirrors
+// Worker name: the `CLOUDFLARE_PROJECT` overlay key owns it (mirrors
 // VERCEL_PROJECT for Vercel); a stale generated config is the fallback so a
-// checkout that predates the key keeps working. `merged` is the unified
-// target env (loadTargetEnv('cloudflare')); `generatedName` lets tests inject
-// the file value without touching disk.
+// checkout that predates the key keeps working. `merged` is the unified target
+// env (loadTargetEnv('cloudflare')); `generatedName` lets tests inject the file
+// value without touching disk.
 export function resolveCloudflareProjectName(merged = {}, generatedName = '') {
   const fromOverlay = String(merged?.CLOUDFLARE_PROJECT || '').trim()
   if (fromOverlay) {
@@ -209,35 +170,43 @@ export function resolveCloudflareProjectName(merged = {}, generatedName = '') {
   return String(generatedName || '').trim()
 }
 
-
-// Production app URL for the Cloudflare target, derived from the Pages
-// project instead of APP_BASE_URL: the live hostname is the production
-// domain (the account may suffix the subdomain), so no overlay key can
-// disagree with it. `env` is injectable so tests stay hermetic (the default
-// reads the real target env, shell included); the wrangler runner is
-// injectable for the same reason. Throws when the project or its production
-// domain cannot be resolved.
-export function resolveCloudflareAppUrl({ root = process.cwd(), runner = defaultWranglerRunner, env } = {}) {
+// Production app URL for the Cloudflare target: the Worker's Workers.dev host,
+// with `APP_BASE_URL` as the fallback for a custom domain. Throws when neither
+// resolves. `env` and `fetchImpl` are injectable so tests stay hermetic (the
+// default reads the real target env).
+export async function resolveCloudflareAppUrl({ root = process.cwd(), env, fetchImpl } = {}) {
   const merged = env ?? loadTargetEnv('cloudflare', root)
   const project = resolveCloudflareProjectName(merged, generatedWranglerProjectName(root))
   if (!project) {
-    throw new Error('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Pages project name.')
+    throw new Error('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Worker name.')
   }
-  const host = getPagesProjectDomain(project, runner, root)
-  if (!host) {
-    throw new Error(
-      `Could not resolve the Pages production domain for project ${project}: check wrangler auth and retry.`,
-    )
+  const subdomain = await fetchWorkersSubdomain({
+    accountId: merged.CLOUDFLARE_ACCOUNT_ID,
+    token: merged.CLOUDFLARE_API_TOKEN,
+    fetchImpl,
+  }).catch(error => {
+    logEvent({ action: 'cloudflare_subdomain_warn', details: { error: error?.message || error, level: 'WARN' } })
+    return ''
+  })
+  const host = workersHost(project, subdomain)
+  if (host) {
+    return `https://${host}`
   }
-  return `https://${host}`
+  const configured = String(merged.APP_BASE_URL || '').trim()
+  if (configured) {
+    return configured.replace(/\/+$/, '')
+  }
+  throw new Error(
+    `Could not resolve the Workers.dev host for ${project}: set a Workers Metadata Read token or APP_BASE_URL in .env.cloudflare.`,
+  )
 }
 
 // Splits a file-env merge into the generator inputs: `project` from the
-// overlay, `vars` (plain [vars], forced CF_PAGES/PROFILE applied at render),
-// `secrets` (secret-store only). Local-only keys never sync; empty values
-// keep the remote value. Shared by sync-cloudflare-env.mjs and deploy.mjs
-// (auth-step generation) so the split cannot drift.
-// Credential key names pushed to the Pages secret store instead of a plaintext
+// overlay, `vars` (plain [vars], forced CF_WORKER/PROFILE applied at render),
+// `secrets` (secret-store only). Local-only keys never sync; empty values keep
+// the remote value. Shared by sync-cloudflare-env.mjs and deploy.mjs (auth-step
+// generation) so the split cannot drift.
+// Credential key names uploaded as Worker secrets instead of a plaintext
 // [vars] entry. The defaults cover the shared surface; an app adds its own
 // database/credential names through `secretKeys` in the ungated
 // `deploy.config.json`, so a project-owned key never has to be hardcoded here.
@@ -257,10 +226,10 @@ export const CLOUDFLARE_SECRET_KEYS = new Set([
   ...(Array.isArray(deployConfig.secretKeys) ? deployConfig.secretKeys : []),
 ])
 
-// Keys that must never exist on the Cloudflare Pages project, whatever the
-// app: a synced Neon URL silently wins over the D1 binding, and synced Vercel
-// credentials would re-couple the Cloudflare target to Vercel. The env sync
-// removes them; deploy.mjs re-reads to prove it before deploying.
+// Keys that must never exist on the Worker, whatever the app: a synced Neon URL
+// silently wins over the D1 binding, and synced Vercel credentials would
+// re-couple the Cloudflare target to Vercel. The env sync removes secrets; the
+// deploy's `[vars]` replaces plain vars.
 export const CLOUDFLARE_FORBIDDEN_KEYS = new Set([
   'DATABASE_URL',
   'VERCEL_TOKEN',
@@ -271,8 +240,8 @@ export const CLOUDFLARE_FORBIDDEN_KEYS = new Set([
 ])
 
 // Forbidden keys outside D1 mode: Vercel credentials must never exist on the
-// Pages project, but the Neon URL is the backend there. Derived by suffix so
-// no per-app database key name lives in shared code.
+// Worker, but the Neon URL is the backend there. Derived by suffix so no
+// per-app database key name lives in shared code.
 export const NEON_MODE_FORBIDDEN_KEYS = new Set(
   [...CLOUDFLARE_FORBIDDEN_KEYS].filter(key => !key.endsWith('DATABASE_URL')),
 )
@@ -293,7 +262,7 @@ export function splitCloudflareEnv(raw = {}, { forbidden = CLOUDFLARE_FORBIDDEN_
   const secrets = {}
   for (const [key, value] of Object.entries(raw)) {
     // Forbidden keys are neither vars nor secrets: a Neon URL or Vercel
-    // credential left in the overlay must never be written to the project.
+    // credential left in the overlay must never be written to the Worker.
     // The set is injectable so Neon-backed apps (no D1) can forbid only
     // Vercel credentials; the default is the full isolation set.
     if (!value || CLOUDFLARE_LOCAL_ONLY_KEYS.has(key) || forbidden.has(key)) continue
@@ -306,23 +275,22 @@ export function splitCloudflareEnv(raw = {}, { forbidden = CLOUDFLARE_FORBIDDEN_
   return { project, vars, secrets }
 }
 
-// Build vars forced into every Pages deploy, placed last so the overlay can
+// Build vars forced into every Workers deploy, placed last so the overlay can
 // never set a dev profile or a non-CF build. Single source of truth for the
-// renderer and the env-var diff (sync-cloudflare-env.mjs compares the same
-// set it renders).
-export const FORCED_PAGES_VARS = { CF_PAGES: '1', PROFILE: 'prod' }
+// renderer and the env-var log.
+export const FORCED_WORKER_VARS = { CF_WORKER: '1', PROFILE: 'prod' }
 
-// Desired `[vars]` for a Pages deploy: overlay vars with the forced build
-// vars last. Callers pass the result to renderWranglerConfig and to the
-// remote diff, so the deployed set and the compared set cannot drift.
-export function desiredPagesVars(vars = {}) {
-  return { ...vars, ...FORCED_PAGES_VARS }
+// Desired `[vars]` for a Workers deploy: overlay vars with the forced build
+// vars last. Callers pass the result to renderWranglerConfig, so the deployed
+// set and the rendered set cannot drift.
+export function desiredWorkerVars(vars = {}) {
+  return { ...vars, ...FORCED_WORKER_VARS }
 }
 
 // Renders the generated wrangler config: `name` from the overlay, the static
-// Pages stanza, and `[vars]` pruned to exactly `vars`. Local-only keys must
+// Workers stanza, and `[vars]` pruned to exactly `vars`. Local-only keys must
 // already be excluded by the caller, and the forced build vars come from
-// desiredPagesVars. Pure (string in, string out) so tests assert it without
+// desiredWorkerVars. Pure (string in, string out) so tests assert it without
 // disk.
 export function renderWranglerConfig({ project, vars = {}, d1 = null }) {
   const lines = [`name = ${JSON.stringify(project)}`, ...WRANGLER_STATIC_STANZA, '[vars]']
@@ -359,13 +327,20 @@ export function resolveD1DatabaseName(merged = {}) {
 // D1 database id from `wrangler d1 list --json`; '' when absent. Field names
 // vary across wrangler versions (uuid vs database_id), so accept both.
 export function findD1DatabaseId(listOutput, name) {
-  const entry = parseJsonArray(listOutput).find(db => String(db?.name || '').trim() === name)
+  const entry = (() => {
+    try {
+      const parsed = JSON.parse(String(listOutput || ''))
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  })().find(db => String(db?.name || '').trim() === name)
   return entry ? String(entry.uuid || entry.database_id || '').trim() : ''
 }
 
 // Idempotent D1 provisioning: list, create when missing, re-list for the id
-// (wrangler's create output is not machine-readable). Mirrors
-// `ensurePagesProject`; the runner is injectable so tests stub wrangler.
+// (wrangler's create output is not machine-readable). The runner is injectable
+// so tests stub wrangler.
 export function ensureD1Database(name, runner = defaultWranglerRunner, cwd = process.cwd()) {
   const list = () => runner(['d1', 'list', '--json'], { cwd, capture: true })
   const listed = list()

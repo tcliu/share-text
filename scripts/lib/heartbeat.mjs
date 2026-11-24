@@ -98,8 +98,8 @@ export async function syncCronJobHeartbeat(target = 'vercel', { confirmOverwrite
   }
   const { cronSecret, baseUrl: envBaseUrl, apiKey } = heartbeatSecrets(target)
   // An explicit baseUrl wins: the Cloudflare deploy derives the production
-  // URL from the Pages project (no APP_BASE_URL on that target) and passes
-  // it in; every other caller reads the overlay key.
+  // URL from the Worker (no APP_BASE_URL on that target) and passes it in;
+  // every other caller reads the overlay key.
   const resolvedBaseUrl = String(baseUrl || envBaseUrl || '').trim()
   if (!apiKey) {
     throw new Error('CRONJOB_API_KEY is empty: set it in the shell env or .env.local (cron-job.org console Settings > API key; .env.local is never synced to Vercel).')

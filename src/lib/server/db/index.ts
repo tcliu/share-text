@@ -111,10 +111,10 @@ function databaseUrl(env: NodeJS.ProcessEnv): string {
 
 // Cloudflare Workers expose bindings (the D1 database included) on the request
 // `env`, not on `process.env`; `nodejs_compat` only mirrors vars/secrets/version
-// metadata. The deploy flow forces `CF_PAGES=1`, so it marks the Workers runtime
-// without a probe that would run on Node.
+// metadata. The deploy flow forces `CF_WORKER=1`, so it marks the Workers
+// runtime without a probe that would run on Node.
 function isCloudflareRuntime(env: NodeJS.ProcessEnv): boolean {
-  return String(env.CF_PAGES ?? '').trim() === '1'
+  return String(env.CF_WORKER ?? '').trim() === '1'
 }
 
 // The specifier is built through a function so a non-Cloudflare bundle does not
@@ -132,7 +132,7 @@ let cloudflareWorkersModule: Promise<CloudflareWorkersModule | null> | null = nu
 
 function importCloudflareWorkers(): Promise<CloudflareWorkersModule | null> {
   if (!cloudflareWorkersModule) {
-    // Only reachable on a Workers runtime (the caller gates on `CF_PAGES`), so a
+    // Only reachable on a Workers runtime (the caller gates on `CF_WORKER`), so a
     // failure means the binding could not be read — surface it once.
     cloudflareWorkersModule = import(/* @vite-ignore */ cloudflareWorkersSpecifier()).catch(error => {
       logEvent({

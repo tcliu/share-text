@@ -6,22 +6,47 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { errorMessage, logEvent } from '../../log-event.mjs'
+import { readJsonFile } from '../../env-file.mjs'
 import { assembleSteps, formatElapsedTime, pluginSteps, ROOT_DIR, runScript, runSteps } from '../core.mjs'
 import {
   checkVercelAuth,
   extractDeploymentId,
   extractDeploymentUrl,
   runDeployWithRetry,
+  runVercelApi,
   waitForReadyDeployment,
 } from '../../_vercel-cli.mjs'
 import { configuredBaseUrl, syncProjectDomains } from '../../_vercel-domains.mjs'
+
+
+// Deployment Protection for the production aliases (`deploy.config.json` →
+// `vercelProtection`). `public` disables Vercel Authentication, `preview` keeps
+// preview deployments protected while production stays open, and `all` protects
+// everything. Absent leaves the dashboard setting untouched.
+function normalizeProtection(value) {
+  const mode = String(value ?? '').trim().toLowerCase()
+  if (!mode) return ''
+  if (!['public', 'preview', 'all'].includes(mode)) {
+    throw new Error(`deploy.config.json vercelProtection must be "public", "preview", or "all" (got "${value}")`)
+  }
+  return mode
+}
+
+function readVercelLink() {
+  const link = readJsonFile(join(ROOT_DIR, '.vercel', 'project.json'), {})
+  return {
+    projectId: String(link?.projectId || '').trim(),
+    orgId: String(link?.orgId || '').trim(),
+  }
+}
 
 // Intrinsic Vercel steps: link/auth, the schema apply, the ship + READY wait,
 // and production-domain reconciliation. Env sync is appended by the plugin
 // pipeline.
 function vercelSteps(ctx) {
   const { applySchema, profile, state } = ctx
-  return [
+  const protection = normalizeProtection(ctx.vercelProtection)
+  const steps = [
     {
       name: 'auth',
       phase: 'setup',
@@ -31,6 +56,30 @@ function vercelSteps(ctx) {
         }
         checkVercelAuth()
         console.log(`-> Profile: ${profile}`)
+      },
+    },
+    {
+      name: 'protection',
+      phase: 'setup',
+      run: () => {
+        const { projectId, orgId } = readVercelLink()
+        if (!projectId) {
+          console.warn('-> Deployment protection skipped: no projectId in .vercel/project.json.')
+          return
+        }
+        const body = { ssoProtection: protection === 'public' ? null : { deploymentType: protection } }
+        const query = orgId ? `?teamId=${encodeURIComponent(orgId)}` : ''
+        const { status, output } = runVercelApi(`/v9/projects/${projectId}${query}`, [], {
+          method: 'PATCH',
+          body,
+        })
+        if (status !== 0) {
+          console.warn(
+            `-> Deployment protection update failed; the dashboard setting is unchanged. ${String(output).trim().split('\n')[0]}`,
+          )
+          return
+        }
+        console.log(`-> Deployment protection: ${protection}`)
       },
     },
     {
@@ -76,6 +125,7 @@ function vercelSteps(ctx) {
       run: () => waitForReadyDeployment(state.deploymentUrl, state.deploymentId),
     },
   ]
+  return protection ? steps : steps.filter(step => step.name !== 'protection')
 }
 
 export const vercelTarget = {
@@ -94,7 +144,15 @@ export const vercelTarget = {
   steps: vercelSteps,
 }
 
-export async function runVercelFlow({ profile, syncEnv, applySchema, heartbeat, projectFlag, plugins = [] } = {}) {
+export async function runVercelFlow({
+  profile,
+  syncEnv,
+  applySchema,
+  heartbeat,
+  projectFlag,
+  vercelProtection,
+  plugins = [],
+} = {}) {
   const startedAt = Date.now()
   let appVersion = 'unknown'
   try {
@@ -118,6 +176,7 @@ export async function runVercelFlow({ profile, syncEnv, applySchema, heartbeat, 
     syncEnv,
     applySchema,
     heartbeat,
+    vercelProtection,
     projectFlag,
     state: { appVersion, deploymentUrl: '', deploymentId: '', deployOutput: '' },
   }

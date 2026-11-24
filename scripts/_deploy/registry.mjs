@@ -49,7 +49,7 @@ export const TARGETS = [
   { value: 'vercel', description: 'Deploy the app to Vercel' },
   {
     value: 'cloudflare',
-    description: 'Deploy the app to Cloudflare Pages',
+    description: 'Deploy the app to Cloudflare Workers',
   },
 ]
 

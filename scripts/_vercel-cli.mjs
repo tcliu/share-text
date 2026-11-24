@@ -3,7 +3,7 @@
 // production-domain sync: binary resolution, API calls, output parsing, and
 // deployment readiness waits. Dependency-light so both callers can import it
 // without a cycle.
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, spawnSync } from 'node:child_process'
@@ -80,10 +80,21 @@ export function runVercelCliAsync(args, { cwd = ROOT_DIR, input } = {}) {
   })
 }
 
-export function runVercelApi(path, extraArgs = [], { capture = true } = {}) {
+export function runVercelApi(path, extraArgs = [], { capture = true, method, body } = {}) {
   const apiDir = mkdtempSync(join(tmpdir(), 'deploy-api-'))
   try {
-    return runVercelCli(['api', path, ...extraArgs], { cwd: apiDir, capture })
+    const args = ['api', path, ...extraArgs]
+    if (method) {
+      args.push('-X', method)
+    }
+    if (body !== undefined) {
+      // `vercel api` reads a JSON body from a file; write it inside the
+      // throwaway cwd so the caller never owns temp-file cleanup.
+      const bodyFile = join(apiDir, 'body.json')
+      writeFileSync(bodyFile, JSON.stringify(body))
+      args.push('--input', bodyFile)
+    }
+    return runVercelCli(args, { cwd: apiDir, capture })
   } finally {
     rmSync(apiDir, { recursive: true, force: true })
   }

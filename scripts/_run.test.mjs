@@ -54,7 +54,7 @@ describe('formatCommand', () => {
   })
 
   it('masks --value when no add positional is present', () => {
-    expect(formatCommand('wrangler', ['pages', 'deploy', '--value', 's3cr3t'])).toBe('wrangler pages deploy --value ***')
+    expect(formatCommand('wrangler', ['deploy', '--value', 's3cr3t'])).toBe('wrangler deploy --value ***')
   })
 
   it('masks the inline --value form', () => {

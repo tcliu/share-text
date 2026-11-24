@@ -1,18 +1,17 @@
 #!/usr/bin/env node
-// Syncs `.env.prod` overlaid by `.env.cloudflare` to the Cloudflare Pages
-// project (CLOUDFLARE_PROJECT owns the project name; the live URL is the
-// Pages production domain derived from it, never an overlay key).
-// Generates the gitignored root `wrangler.toml` (name + static Pages
-// stanza + `[vars]`) that `wrangler pages deploy` auto-discovers, and pushes
-// secrets via `wrangler pages secret put` (value on stdin, never argv).
+// Syncs `.env.prod` overlaid by `.env.cloudflare` to the Cloudflare Worker
+// (CLOUDFLARE_PROJECT owns the Worker name; the live URL is the Worker's
+// Workers.dev host derived from it, never an overlay key).
+// Generates the gitignored root `wrangler.toml` (name + Workers stanza +
+// `[vars]`) that `wrangler deploy` auto-discovers, and pushes secrets via
+// `wrangler secret put` (value on stdin, never argv).
 //
-// `wrangler pages deploy` treats `[vars]` as the complete managed plain-var
-// set: a config-managed plain var absent from it is DELETED from the project.
-// The sync therefore always writes the full desired set — an early version
-// wrote only the drifted subset and wiped every plain var, because the deploy
-// replaces rather than merges. The remote read still reports
-// missing/changed/unchanged and drives `--prune`:
-//   * vars    — report drift, then write every desired var.
+// `wrangler deploy` replaces every plain var with the generated `[vars]`: a
+// var absent from it is DELETED from the Worker. The sync therefore always
+// writes the full desired set — writing only the drifted subset would wipe
+// every plain var, because the deploy replaces rather than merges. Secrets are
+// never deleted by a deployment, so they are diffed and pruned explicitly:
+//   * vars    — write every desired var; drift is not used to shrink the set.
 //   * secrets — put only with `--secrets=missing`, which skips the names
 //               already present. Cloudflare never returns secret values, so an
 //               updated value is undetectable; the default `always` re-puts
@@ -23,6 +22,9 @@
 //               the Neon URL (a synced Neon URL silently wins over the D1
 //               binding) and Vercel creds; a Neon-backed app forbids only
 //               Vercel creds, since the Neon URL is its backend.
+// A Worker that has never been deployed has no secret store yet: the sync
+// defers secret writes (and deletion) to the deploy, which uploads them with
+// `--secrets-file` on the same run.
 // `--dry-run` reports the plan without writing. Empty local values are skipped
 // (the remote value survives); local-only keys are never synced.
 import { spawn } from 'node:child_process'
@@ -39,8 +41,7 @@ import { resolveDeployBackend } from './_deploy/backend.mjs'
 import {
   CLOUDFLARE_LOCAL_ONLY_KEYS,
   cloudflareForbiddenKeys,
-  desiredPagesVars,
-  ensurePagesProject,
+  desiredWorkerVars,
   GENERATED_WRANGLER_CONFIG,
   generatedWranglerProjectName,
   renderWranglerConfig,
@@ -50,11 +51,9 @@ import {
 } from './lib/cloudflare.mjs'
 import {
   diffDesiredSecrets,
-  diffDesiredVars,
-  fetchPagesEnvState,
-  findOrphanKeys,
-  patchPagesEnvVars,
-} from './lib/cloudflare-pages-env.mjs'
+  findOrphanSecrets,
+  readWorkerSecretNames,
+} from './lib/cloudflare-worker-env.mjs'
 import { runWithConcurrency } from './lib/concurrency.mjs'
 import {
   loadTargetFileEnv,
@@ -95,9 +94,13 @@ function runWranglerAsync(args, { input } = {}) {
   })
 }
 
-async function putSecret(project, key, value) {
-  await runWranglerAsync(['pages', 'secret', 'put', key, '--project', project], { input: value })
+async function putSecret(worker, key, value) {
+  await runWranglerAsync(['secret', 'put', key, '--name', worker], { input: value })
   logEvent({ action: 'cloudflare_env_secret_synced', details: { key } })
+}
+
+async function deleteSecret(worker, key) {
+  await runWranglerAsync(['secret', 'delete', key, '--name', worker])
 }
 
 async function main() {
@@ -136,113 +139,100 @@ async function main() {
       logEvent({ action: 'cloudflare_env_empty_skip', details: { key } })
     }
   }
-  const project = overlayProject || generatedWranglerProjectName(ROOT_DIR)
-  if (!project) {
-    failExit('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Pages project name.')
+  const worker = overlayProject || generatedWranglerProjectName(ROOT_DIR)
+  if (!worker) {
+    failExit('Missing CLOUDFLARE_PROJECT in .env.cloudflare: set it to the Worker name.')
   }
-  logEvent({ action: 'cloudflare_env_sync_start', details: { project, dry_run: dryRun, secrets_mode: secretsMode } })
+  logEvent({ action: 'cloudflare_env_sync_start', details: { project: worker, dry_run: dryRun, secrets_mode: secretsMode } })
 
   // The desired set always carries the forced build vars, matching what
-  // renderWranglerConfig would emit for a full write.
-  const desiredVars = desiredPagesVars(vars)
+  // renderWranglerConfig emits for a full write.
+  const desiredVars = desiredWorkerVars(vars)
   const desiredKeys = [...Object.keys(desiredVars), ...Object.keys(secrets)]
 
-  // Remote state drives the missing/updated skip and --prune. A failed read
-  // degrades vars to a full write; `--secrets=missing` cannot be honored
-  // without it, so it fails loudly rather than silently overwriting.
-  let remote = null
-  try {
-    remote = await fetchPagesEnvState({
-      project,
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-      token: process.env.CLOUDFLARE_API_TOKEN,
-    })
-  } catch (error) {
-    if (secretsMode === 'missing') {
-      failExit(`Cannot use --secrets=missing without remote env vars: ${error?.message || error}`)
-    }
-    logEvent({
-      action: 'cloudflare_env_read_fallback',
-      details: { error: error?.message || error, level: 'WARN' },
-    })
+  // Remote secret names drive the missing/updated skip and --prune. A Worker
+  // without a deployment has no secret store yet, so the read yields null and
+  // the deploy uploads the secrets with `--secrets-file`; `--secrets=missing`
+  // cannot be honored there, so it fails loudly rather than guessing.
+  const remoteSecretNames = readWorkerSecretNames({ worker, cwd: ROOT_DIR })
+  if (remoteSecretNames === null && secretsMode === 'missing') {
+    failExit(
+      `Cannot use --secrets=missing before the Worker ${worker} exists: deploy it first or use --secrets=always.`,
+    )
   }
-
-  const varDiff = remote
-    ? diffDesiredVars(desiredVars, remote.envVars)
-    : { missing: Object.keys(desiredVars), changed: [], unchanged: [], drift: Object.keys(desiredVars) }
-  const secretDiff = remote
-    ? diffDesiredSecrets(secrets, remote.envVars)
+  const secretDiff = remoteSecretNames
+    ? diffDesiredSecrets(secrets, remoteSecretNames)
     : { missing: Object.keys(secrets), present: [] }
-  if (remote) {
-    const drifted = varDiff.drift
-    logEvent({
-      action: 'cloudflare_env_drift',
-      details: {
-        vars_missing: varDiff.missing.length,
-        vars_changed: varDiff.changed.length,
-        vars_unchanged: varDiff.unchanged.length,
-        drifted,
-        secrets_missing: secretDiff.missing.length,
-        secrets_present: secretDiff.present.length,
-      },
-    })
-  }
+  logEvent({
+    action: 'cloudflare_env_drift',
+    details: {
+      vars: Object.keys(desiredVars).length,
+      secrets_missing: secretDiff.missing.length,
+      secrets_present: secretDiff.present.length,
+      remote_known: remoteSecretNames !== null,
+    },
+  })
 
-  // Always write the full desired set: the deploy replaces the managed plain
-  // vars with exactly `[vars]`, so omitting unchanged keys deletes them. Drift
-  // is reported above but never used to shrink the written set.
-  const varsToWrite = { ...desiredVars }
+  // Always write the full desired set: the deploy replaces the Worker's plain
+  // vars with exactly `[vars]`, so omitting unchanged keys deletes them.
   if (dryRun) {
-    for (const key of Object.keys(varsToWrite)) {
+    for (const key of Object.keys(desiredVars)) {
       logEvent({ action: 'cloudflare_env_var_synced', details: { key, dry_run: true } })
     }
   } else {
-    writeFileSync(GENERATED_FILE, renderWranglerConfig({ project, vars: varsToWrite }))
-    for (const key of Object.keys(varsToWrite)) {
+    writeFileSync(GENERATED_FILE, renderWranglerConfig({ project: worker, vars: desiredVars }))
+    for (const key of Object.keys(desiredVars)) {
       logEvent({ action: 'cloudflare_env_var_synced', details: { key } })
     }
   }
 
   // Secrets: `always` re-puts every secret so a rotated value lands; `missing`
   // skips the names already present (values are write-only, so only existence
-  // can be compared).
-  const secretsToPut = secretsMode === 'missing' ? secretDiff.missing : Object.keys(secrets)
+  // can be compared). A Worker that has never been deployed defers to the
+  // deploy's `--secrets-file` upload.
+  const secretsToPut =
+    remoteSecretNames === null
+      ? []
+      : secretsMode === 'missing'
+        ? secretDiff.missing
+        : Object.keys(secrets)
+  if (remoteSecretNames === null) {
+    logEvent({
+      action: 'cloudflare_env_secrets_deferred',
+      details: { keys: Object.keys(secrets), hint: 'the deploy uploads them with --secrets-file' },
+    })
+  }
   for (const key of secretDiff.present) {
     if (!secretsToPut.includes(key)) {
       logEvent({ action: 'cloudflare_env_secret_kept', details: { key } })
     }
-  }
-  if (!dryRun && secretsToPut.length > 0 && process.env.PAGES_PROJECT_ASSURED !== '1') {
-    // Secrets need the Pages project to exist; first sync creates it. The
-    // deploy flow assures the project in its auth step and passes
-    // PAGES_PROJECT_ASSURED=1, skipping this second listing.
-    ensurePagesProject(project)
   }
   const pendingSecrets = secretsToPut.map(key => [key, secrets[key]])
   if (dryRun) {
     for (const [key] of pendingSecrets) {
       logEvent({ action: 'cloudflare_env_secret_synced', details: { key, dry_run: true } })
     }
-  } else {
+  } else if (pendingSecrets.length > 0) {
     await runWithConcurrency(
       pendingSecrets.map(([key, value]) => async () => {
-        await putSecret(project, key, value)
+        await putSecret(worker, key, value)
         return key
       }),
       SECRET_CONCURRENCY,
     )
   }
 
-  // Forbidden keys for this backend must never exist on the Pages project.
-  // Remove them unconditionally, unlike the opt-in --prune below.
-  const forbidden = remote ? Object.keys(remote.envVars).filter(key => forbiddenKeys.has(key)) : []
+  // Forbidden keys for this backend must never exist on the Worker. Remove the
+  // secret ones unconditionally (plain vars are dropped by the deploy's
+  // `[vars]` replacement), unlike the opt-in --prune below.
+  const forbidden =
+    remoteSecretNames === null ? [] : remoteSecretNames.filter(key => forbiddenKeys.has(key))
   // Prune: remote secrets no longer in the .env universe (opt-in, like the
   // Vercel sync). Forbidden keys are excluded here — they are always removed.
-  const unmanaged = remote
-    ? findOrphanKeys(remote.envVars, desiredKeys).filter(
-        key => remote.envVars[key]?.type !== 'plain_text' && !forbiddenKeys.has(key),
-      )
-    : []
+  const unmanaged =
+    remoteSecretNames === null
+      ? []
+      : findOrphanSecrets(remoteSecretNames, desiredKeys).filter(key => !forbiddenKeys.has(key))
   if (forbidden.length > 0) {
     logEvent({ action: 'cloudflare_env_forbidden_remove', details: { keys: forbidden, dry_run: dryRun } })
   }
@@ -252,18 +242,16 @@ async function main() {
       details: { keys: unmanaged, hint: 're-run with --prune to remove them' },
     })
   }
-  // One PATCH carries both deletions so the config hash is read once and the
-  // forbidden-key removal cannot race the prune's stale hash.
   const toDelete = [...new Set([...forbidden, ...(prune ? unmanaged : [])])]
   if (toDelete.length > 0) {
     if (!dryRun) {
-      await patchPagesEnvVars({
-        project,
-        envVars: Object.fromEntries(toDelete.map(key => [key, null])),
-        configHash: remote.configHash,
-        accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-        token: process.env.CLOUDFLARE_API_TOKEN,
-      })
+      await runWithConcurrency(
+        toDelete.map(key => async () => {
+          await deleteSecret(worker, key)
+          return key
+        }),
+        SECRET_CONCURRENCY,
+      )
     }
     for (const key of forbidden) {
       logEvent({ action: 'cloudflare_env_forbidden_removed', details: { key, dry_run: dryRun } })
@@ -278,8 +266,8 @@ async function main() {
   logEvent({
     action: 'cloudflare_env_sync_end',
     details: {
-      project,
-      vars: Object.keys(varsToWrite).length,
+      project: worker,
+      vars: Object.keys(desiredVars).length,
       secrets_put: secretsToPut.length,
       secrets_total: Object.keys(secrets).length,
       dry_run: dryRun,

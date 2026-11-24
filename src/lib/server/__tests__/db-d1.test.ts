@@ -172,7 +172,7 @@ describe('resolveDbConfig', () => {
   it('falls back to Neon on a Cloudflare runtime when no binding resolves', async () => {
     // `cloudflare:workers` is absent off-Workers; the probe must degrade to Neon.
     vi.spyOn(console, 'log').mockImplementation(() => {})
-    expect((await resolveDbConfig({ PROFILE: 'prod', CF_PAGES: '1' } as unknown as NodeJS.ProcessEnv)).kind).toBe(
+    expect((await resolveDbConfig({ PROFILE: 'prod', CF_WORKER: '1' } as unknown as NodeJS.ProcessEnv)).kind).toBe(
       'neon',
     )
   })

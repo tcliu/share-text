@@ -43,11 +43,11 @@ export default defineConfig(async ({ command, mode }) => {
     loadDevEnv(mode)
   }
   const isTest = process.env.VITEST === 'true'
-  // Second deploy target: `CF_PAGES=1` selects the Cloudflare Pages adapter,
+  // Second deploy target: `CF_WORKERS=1` selects the Cloudflare Workers adapter,
   // otherwise the Vercel adapter stays the default. Deploys run through
   // `scripts/deploy.mjs --target cloudflare` on the existing Neon backend.
   // Read after `loadDevEnv` so a dotenv-provided flag is honored too.
-  const useCloudflare = process.env.CF_PAGES === '1'
+  const useCloudflare = process.env.CF_WORKERS === '1'
   let plugins = isTest
     ? [svelte({ compilerOptions: { dev: true } }), tailwindcss()]
     : [
