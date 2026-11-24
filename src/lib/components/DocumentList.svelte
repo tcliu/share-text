@@ -100,7 +100,7 @@
     ? 'flex h-full min-h-0 w-full flex-col gap-2 bg-slate-900/50'
     : 'flex h-full w-full shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-900/50 lg:w-[var(--aside-w,100%)]'}
   style={bare || width === undefined ? undefined : `--aside-w: ${width}px`}>
-  <div bind:this={headerRef} class="flex items-center gap-1 px-2 pt-2">
+  <div bind:this={headerRef} class="flex items-center gap-1 px-3 pt-2">
     {#if onToggleCollapse}
       <Button
         ariaLabel={i18n.t('list.collapse')}
@@ -131,9 +131,9 @@
     onkeydown={onSearchKeydown}
     ariaLabel={i18n.t('list.searchDocuments')}
     placeholder={i18n.t('list.searchDocumentsPlaceholder')}
-    wrapperClass="px-2" />
+    wrapperClass="px-3" />
 
-  <div class="flex min-h-0 flex-1 flex-col overflow-y-auto">
+  <div class="flex min-h-0 flex-1 flex-col overflow-y-auto px-3">
     {#if loading && documents.length === 0}
       <p class="p-2 text-sm text-slate-400">{i18n.t('list.loadingDocuments')}</p>
     {:else if documents.length === 0}

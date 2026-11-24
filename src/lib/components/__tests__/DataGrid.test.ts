@@ -2297,8 +2297,10 @@ describe('DataGrid (column resize)', () => {
         showHeaders: false,
       })
       const root = await screen.findByTestId('data-grid')
-      const viewport = root.querySelector('.overflow-hidden.rounded-md') as HTMLElement
       const body = root.querySelector('.overflow-auto') as HTMLElement
+      // The body wrapper's parent is the outer viewport the column rescale
+      // watches; the root above it also carries the toolbar.
+      const viewport = body.parentElement as HTMLElement
       // The header-padding observer tracks the body wrapper's scrollbar...
       expect(observed).toContain(body)
       // ...while the column rescale watches the outer viewport, so a scrollbar

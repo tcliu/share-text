@@ -6,7 +6,7 @@
   import Chip from '@codepg/ui-lib/components/Chip.svelte'
   import AdminPropertyRow from './AdminPropertyRow.svelte'
   import AdminPropertiesCodeView from './AdminPropertiesCodeView.svelte'
-  import CloseIcon from '@codepg/ui-lib/icons/CloseIcon.svelte'
+  import ClearButton from '@codepg/ui-lib/components/ClearButton.svelte'
   import { caretAtEndOnKeyboardFocus } from '@codepg/ui-lib/actions/caret-at-end-on-keyboard-focus'
   import { getI18nContext, type MessageKey } from '#lib/i18n.svelte.js'
   const i18n = getI18nContext()
@@ -73,11 +73,7 @@
               onclick={() => toggleTag(tag)} />
           {/each}
           {#if selectedTags.size > 0}
-            <Button ariaLabel={i18n.t('admin.clearTagFilters')} onClick={() => (selectedTags = new Set())}>
-              {#snippet icon()}
-                <CloseIcon />
-              {/snippet}
-            </Button>
+            <ClearButton ariaLabel={i18n.t('admin.clearTagFilters')} onClick={() => (selectedTags = new Set())} />
           {/if}
         </div>
       {/if}

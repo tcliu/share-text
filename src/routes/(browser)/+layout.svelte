@@ -311,10 +311,11 @@
 {/snippet}
 
 {#snippet browserHeader(api: import('@codepg/ui-lib/app-shell').AppShellHeaderApi)}
-  <div class="flex items-center gap-2">
-    <!-- -ml-1 puts the button box flush with the document search box below (header px-3 vs pane px-2). -->
+  <div class="flex items-center gap-[var(--shell-title-gap)]">
+    <!-- The pane shares this header's `px-3` inset, so the toggle box sits
+         flush with the toolbar and search field below with no negative margin. -->
     <Button
-      className="-ml-1"
+      size={api.size}
       ariaLabel={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
       tooltip={api.open ? i18n.t('list.collapse') : i18n.t('list.showDocumentList')}
       ariaExpanded={api.open}
@@ -324,7 +325,7 @@
         <MenuIcon />
       {/snippet}
     </Button>
-    <h1 class="text-base font-semibold tracking-tight whitespace-nowrap text-slate-200 sm:text-lg">
+    <h1 class="text-[length:var(--shell-title)] font-semibold tracking-tight whitespace-nowrap text-slate-200">
       {i18n.t('app.name')}
     </h1>
   </div>
