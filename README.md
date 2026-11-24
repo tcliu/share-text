@@ -168,9 +168,9 @@ npm test
    This builds, deploys to production, waits for the deployment to reach
    `READY`, and syncs the project's production domain to `APP_BASE_URL`.
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare Workers
 
-Second deploy target: `CF_PAGES=1` selects `@sveltejs/adapter-cloudflare` (see
+Second deploy target: `CF_WORKERS=1` selects `@sveltejs/adapter-cloudflare` (see
 `svelte.config.js`).
 
 ```bash
@@ -202,5 +202,5 @@ target. See `.env.example` for all knobs.
 | `npm run schema:recreate` | Drop and recreate the schema (`PROFILE=prod` required, idempotent in `dev`) |
 | `ADMIN_PASSWORD=secret node scripts/hash-password.mjs` | Generate a scrypt password hash for `ADMIN_PASSWORD_HASH` (or pipe the password on stdin) |
 | `npm run env:sync:vercel` | Sync `.env` + `.env.vercel` to Vercel |
-| `npm run env:sync:cloudflare` | Sync `.env.prod` + `.env.cloudflare` to Cloudflare Pages |
-| `npm run deploy` | Deploy to Vercel (add `--target cloudflare` for Cloudflare Pages) |
+| `npm run env:sync:cloudflare` | Sync `.env.prod` + `.env.cloudflare` to Cloudflare Workers |
+| `npm run deploy` | Deploy to Vercel (add `--target cloudflare` for Cloudflare Workers) |

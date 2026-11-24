@@ -21,7 +21,9 @@ The page is split into two vertical panes.
     language picker, and — depending on sign-in state — **Login**, or a
     **Settings** (gear) + **Sign out** button for any signed-in account (all
     with tooltips). The language picker also
-    appears on the collapsed rail.
+    appears on the collapsed rail. The pane's toolbar, search field, and rows
+    share the app header's inset, so the header's collapse toggle lines up with
+    the controls below.
   - The pane lists the documents the visitor can view — public documents, their
     own documents, and documents shared with them — most recently edited first.
     New documents are added to the list automatically.
